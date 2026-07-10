@@ -70,3 +70,37 @@ The user supplied the official logo directly and a folder of candidate assets
   wiring them in — do not assume a visually-transparent-looking checkerboard
   preview means real alpha.
 
+## Update — 2026-07-10, third pass same day: mascot poses and product renders resolved
+
+The user supplied two new composite sheets, both properly background-removed
+this time (`Gemini_Generated_Image_barnl1barnl1barn-removebg-preview.png` and
+`Gemini_Generated_Image_b6j2rib6j2rib6j2-removebg-preview.png` in
+`randomassets/`) — confirmed via `sharp` metadata (`hasAlpha: true` on both,
+unlike the earlier checkerboard-baked batch).
+
+- **Extracted 13 individual assets** using connected-component analysis
+  (`scripts/find-components.mjs` to locate bounding boxes,
+  `scripts/extract-components.mjs` to mask out and crop each element by its
+  actual pixel footprint — necessary because several elements' bounding boxes
+  overlapped in the source collage, so a naive rectangular crop bled
+  neighboring elements into each other). One tiny disconnected fragment (a
+  sparkle icon, 111px, separated from the thumbs-up pose by anti-aliasing)
+  was found and merged back into its parent component.
+- **One element was excluded on purpose:** a mock "Order saved" /
+  `AED 353.50` card in the second sheet — same literal-"AED"-text violation
+  as the earlier `randomassets/...(4).png` card. Not cropped, not used.
+- **Resolved:** ghost mascot artwork (10 poses: wave, wave-alt, cart, wallet,
+  cooldown, thumbsup, trio, phone-list, checkout-phone, combo) and product
+  renders (sneaker, perfume) now live at `public/mascot/*.png` and
+  `public/products/*.png` with genuine alpha, wired into `GhostMascot`
+  (now pose-based, real `<img>`) and every `DEMO_PRODUCTS`/hero/story
+  placement that previously used CSS-drawn shapes. Verified via
+  `naturalWidth`/`complete` checks on every `<img>` in the live DOM (screenshot
+  tooling was unavailable this session — see
+  `docs/visual-verification-log.md`) plus exercising the double-click →
+  Fake Checkout → Ghost Receipt flow to confirm the receipt-state mascot
+  renders correctly.
+- **Still missing:** the official UAE Dirham symbol asset. Nothing else is
+  blocked on assets at this point — remaining gaps are structural
+  (Try the Demo section's visual framing, per `docs/current-state.md`).
+

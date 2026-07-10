@@ -155,3 +155,39 @@ Status legend: **Aligned** (structurally matches reference intent), **Partial**
   "Ghost it" button alternative; hold-to-cool is a distinct button; FAQ
   accordion uses native `<details>`/`<summary>` (keyboard operable); nothing
   new introduced in this pass depends on hover, drag, or double-click alone.
+
+---
+
+## Follow-up — 2026-07-10, third asset session: mascot/product images wired in
+
+Method note: the browser preview tool's `screenshot` action timed out
+repeatedly this session (dev server itself responded normally — `GET /`
+200s in server logs throughout, no console errors). Verification used
+non-screenshot signals instead:
+
+- **Image load check**: `document.querySelectorAll('img')` → mapped to
+  `{src, naturalWidth, complete}` for all 21 `<img>` elements on the page.
+  Every one loaded (`complete: true`) with a non-zero `naturalWidth` — no
+  broken images, no 404s (confirmed separately via `preview_network`
+  filtered to `failed`, zero results).
+- **Positioning check**: `preview_inspect` on each newly-positioned
+  decorative element (`.hero-mascot`, `.demo-mascot`, `.phone-wallet-mascot`,
+  `.footer-badge`) confirmed `opacity: 1`, `visibility: visible`, and sane
+  bounding-box dimensions matching the CSS-specified width.
+- **Interaction check**: dispatched a `dblclick` on a demo product card,
+  then clicked "Complete Fake Checkout" via `preview_eval`; confirmed
+  `.receipt-mascot` (the thumbs-up pose) rendered in the resulting Ghost
+  Receipt state with correct `opacity`/`visibility`/dimensions.
+- **Content check**: grepped the built output for `$[0-9]` and `AED` —
+  zero matches, confirming the excluded "Order saved / AED" card from the
+  source sheet was not accidentally included anywhere.
+- Build (`npm run build`), tests (`node --test tests/rendered-html.test.mjs`),
+  and lint (`npm run lint`) all pass with no new errors (lint warnings are
+  the pre-existing, expected `@next/next/no-img-element` notices).
+
+**Status**: high confidence the integration renders correctly, but this is
+DOM/network/computed-style verification, not literal pixel-level visual
+confirmation. If the screenshot tool recovers in a future session, a
+follow-up visual pass against `design/web-ui/desktop/` would still be
+worthwhile to confirm composition/spacing reads well at a glance, not just
+that elements are present and positioned per their CSS.

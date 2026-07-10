@@ -103,3 +103,51 @@ Append-only. Do not rewrite or delete earlier entries — only add new ones.
   the whole file, not just the flagged problem items — respecting that
   literally rather than partially proceeding on the "safe" icons without
   being asked to.
+
+## 2026-07-10 — Claude Code (raw assets pushed to GitHub, same day)
+
+- **Committed the entire `randomassets/` drop folder to the repository**,
+  removing it from `.gitignore`, on explicit user request ("push all the
+  files from random assets to github also"). **Why:** it had previously
+  been treated as local-only staging (gitignored) on the assumption that raw
+  AI-generated source material didn't belong in permanent history; the user
+  overrode that assumption directly, so the correct move was to comply, not
+  to re-litigate the earlier judgment call.
+
+## 2026-07-10 — Claude Code (mascot/product assets resolved, same day)
+
+- **Wired in 13 assets extracted from two new composite sheets, this time
+  with real alpha.** The user flagged two files with a `-removebg-preview`
+  suffix; `sharp` metadata confirmed genuine transparency
+  (`hasAlpha: true`), unlike the earlier batch. Used connected-component
+  analysis (new scripts `find-components.mjs` / `extract-components.mjs`)
+  rather than rectangular grid cropping, because bounding boxes of adjacent
+  elements overlapped in the collage (a first attempt at rectangular
+  cropping bled a neighboring element's pixels into the sneaker crop). Wired
+  the results into `GhostMascot` (now pose-based) and every place that
+  previously used CSS/SVG placeholders for mascot or product art. **Why do
+  the extra masking work instead of simple crops:** a visibly-bled crop
+  would have repeated the exact quality problem that caused the previous
+  revert — worth the extra script complexity to get it right this time
+  given that history.
+
+- **Excluded the "Order saved / AED 353.50" card from the second sheet.**
+  Same literal-currency-text violation as an earlier rejected asset. **Why:**
+  the rule against writing "AED" as text (vs. using the official Dirham
+  symbol asset) is a hard content rule, not a quality judgment call — it
+  applies regardless of how clean the surrounding artwork is.
+
+- **Verified the integration without the browser preview's screenshot
+  tool**, which timed out repeatedly this session (the dev server itself
+  responded normally — likely an infra-level issue with the screenshot
+  capture path specifically, not a rendering problem). Used
+  `naturalWidth`/`complete` on every `<img>` in the live DOM,
+  `getBoundingClientRect` plus computed-style checks on each newly
+  positioned decorative element, a network-failure check, and exercised the
+  full double-click → Fake Checkout → Ghost Receipt interaction to confirm
+  the receipt-state mascot renders. **Why this counts as sufficient
+  verification:** each check targets a different failure mode a broken
+  integration would produce (missing file → `complete`/`naturalWidth` catches
+  it; wrong CSS → bounding-box/computed-style catches it; broken state
+  wiring → the interaction test catches it) — together they cover what a
+  screenshot would have shown, even without the screenshot itself.

@@ -8,11 +8,12 @@ type DemoProduct = {
   note: string;
   category: string;
   tone: string;
+  image?: string;
 };
 
 const DEMO_PRODUCTS: DemoProduct[] = [
-  { id: "sneakers", name: "The white sneakers", note: "Saved after a late-night scroll", category: "Fashion", tone: "tone-ice" },
-  { id: "perfume", name: "The blind-buy perfume", note: "A review made it feel urgent", category: "Beauty", tone: "tone-smoke" },
+  { id: "sneakers", name: "The white sneakers", note: "Saved after a late-night scroll", category: "Fashion", tone: "tone-ice", image: "/products/sneaker.png" },
+  { id: "perfume", name: "The blind-buy perfume", note: "A review made it feel urgent", category: "Beauty", tone: "tone-smoke", image: "/products/perfume.png" },
   { id: "burger", name: "The midnight combo", note: "Built from boredom, not hunger", category: "Delivery", tone: "tone-paper" },
   { id: "headphones", name: "The extra headphones", note: "A deal you did not need yesterday", category: "Tech", tone: "tone-mint" },
 ];
@@ -35,22 +36,21 @@ function Wordmark({ inverted = false }: { inverted?: boolean }) {
   );
 }
 
-function GhostMascot({ className = "" }: { className?: string }) {
-  return (
-    <svg
-      className={`ghost-mascot ${className}`}
-      viewBox="0 0 120 130"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path
-        d="M20,100 V56 A40,40 0 0 1 100,56 V100 Q92,86 84,100 Q76,114 68,100 Q60,86 52,100 Q44,114 36,100 Q28,86 20,100 Z"
-        className="ghost-mascot-body"
-      />
-      <ellipse className="ghost-mascot-eye" cx="46" cy="60" rx="6" ry="8" />
-      <ellipse className="ghost-mascot-eye" cx="76" cy="60" rx="6" ry="8" />
-    </svg>
-  );
+const MASCOT_POSES = {
+  wave: "/mascot/mascot-wave.png",
+  waveAlt: "/mascot/mascot-wave-alt.png",
+  cart: "/mascot/mascot-cart.png",
+  wallet: "/mascot/mascot-wallet.png",
+  cooldown: "/mascot/mascot-cooldown.png",
+  thumbsup: "/mascot/mascot-thumbsup.png",
+  trio: "/mascot/mascot-trio.png",
+  phoneList: "/mascot/mascot-phone-list.png",
+  checkoutPhone: "/mascot/mascot-checkout-phone.png",
+  combo: "/mascot/mascot-combo.png",
+} as const;
+
+function GhostMascot({ pose = "wave", className = "" }: { pose?: keyof typeof MASCOT_POSES; className?: string }) {
+  return <img className={`ghost-mascot ${className}`} src={MASCOT_POSES[pose]} alt="" aria-hidden="true" />;
 }
 
 const ICON_PATHS: Record<string, string> = {
@@ -116,6 +116,7 @@ function PhoneMockup({
             <p className="phone-kicker">GOOD EVENING, GHOSTER</p>
             <h2>Today&rsquo;s focus: stay present.</h2>
             <div className="phone-wallet-chip">
+              <GhostMascot pose="wallet" className="phone-wallet-mascot" />
               <span>Ghost Wallet</span>
               <strong>Protected amount this week</strong>
             </div>
@@ -236,11 +237,11 @@ export default function Home() {
           <div className="orbit orbit-one" aria-hidden="true" />
           <div className="orbit orbit-two" aria-hidden="true" />
           <div className="floating-card floating-card-one">
-            <span className="product-shape shape-shoe" aria-hidden="true" />
+            <img className="product-shape shape-shoe" src="/products/sneaker.png" alt="" aria-hidden="true" />
             <p>Late-night find</p><strong>Still want it tomorrow?</strong>
           </div>
           <div className="floating-card floating-card-two">
-            <span className="product-shape shape-bottle" aria-hidden="true" />
+            <img className="product-shape shape-bottle" src="/products/perfume.png" alt="" aria-hidden="true" />
             <p>Impulse paused</p><strong>Cooling for 24 hours</strong>
           </div>
           <PhoneMockup
@@ -248,7 +249,7 @@ export default function Home() {
             className="hero-phone"
             onCheckout={() => document.querySelector("#demo")?.scrollIntoView({ behavior: "smooth" })}
           />
-          <GhostMascot className="hero-mascot" />
+          <GhostMascot pose="cart" className="hero-mascot" />
           <div className="hero-stamp"><span>THE FEELING</span><strong>without the spending</strong></div>
           <div className="hero-toast" role="status">
             <span className="hero-toast-check" aria-hidden="true">✓</span>
@@ -266,7 +267,7 @@ export default function Home() {
           </div>
           <div className="how-phone-wrap">
             <PhoneMockup variant="list" className="how-phone" />
-            <GhostMascot className="how-mascot" />
+            <GhostMascot pose="wave" className="how-mascot" />
           </div>
         </div>
 
@@ -275,7 +276,7 @@ export default function Home() {
             <span className="step-badge">1</span>
             <h3>Add to cart.</h3>
             <p>Add anything you want.<br />No rules.</p>
-            <div className="step-art art-sneakers" aria-hidden="true"><span /></div>
+            <div className="step-art art-sneakers" aria-hidden="true"><img src="/products/sneaker.png" alt="" /></div>
           </article>
           <span className="step-arrow" aria-hidden="true">→</span>
           <article className="how-step how-step-dark">
@@ -307,6 +308,7 @@ export default function Home() {
         <div className="section-heading demo-heading" data-reveal>
           <div><p className="eyebrow eyebrow-dark">A working browser preview</p><h2 id="demo-title">Try the feeling.<br /><em>Skip the spending.</em></h2></div>
           <div className="demo-heading-actions">
+            <GhostMascot pose="cooldown" className="demo-mascot" />
             <p>Click “Ghost it,” double-click a card, or press and hold to cool it down.</p>
             <button type="button" className="focus-toggle" onClick={() => setFocusMode((current) => !current)} aria-pressed={focusMode}>{focusMode ? "Exit focus" : "Explore section"}</button>
           </div>
@@ -320,7 +322,9 @@ export default function Home() {
               const ghosted = ghostedIds.includes(product.id);
               return (
                 <article className={`demo-product ${product.tone} ${inCart ? "is-selected" : ""}`} key={product.id} onDoubleClick={() => addToCart(product.id)}>
-                  <div className={`demo-product-art art-${product.id}`} aria-hidden="true"><span /></div>
+                  <div className={`demo-product-art art-${product.id}`} aria-hidden="true">
+                    {product.image ? <img src={product.image} alt="" /> : <span />}
+                  </div>
                   <p className="demo-category">{product.category}</p>
                   <h3>{product.name}</h3>
                   <p>{product.note}</p>
@@ -350,7 +354,7 @@ export default function Home() {
               </>
             ) : (
               <div className="receipt-card" role="status">
-                <div className="receipt-mark" aria-hidden="true">✓</div>
+                <GhostMascot pose="thumbsup" className="receipt-mascot" />
                 <p className="eyebrow eyebrow-dark">Ghost Receipt</p>
                 <h3>Nothing purchased.<br />Craving completed.</h3>
                 <div className="receipt-rule" />
@@ -397,8 +401,8 @@ export default function Home() {
             <div className="comparison-label ghost-label">Ghost it <span aria-hidden="true">✓</span></div>
             <ol className="comparison-steps">
               <li><Icon name="cartHeart" /><span>See something you want</span></li>
-              <li><GhostMascot className="comparison-ghost-icon" /><span>Ghost Cart checkout</span></li>
-              <li><GhostMascot className="comparison-ghost-icon" /><span>Feel the rush. Skip the cost.</span></li>
+              <li><GhostMascot pose="cart" className="comparison-ghost-icon" /><span>Ghost Cart checkout</span></li>
+              <li><GhostMascot pose="thumbsup" className="comparison-ghost-icon" /><span>Feel the rush. Skip the cost.</span></li>
               <li><span className="comparison-glyph" aria-hidden="true">☺</span><span>Feel in control. Move on.</span></li>
               <li><Icon name="walletCheck" /><span>Money saved. You win.</span></li>
             </ol>
@@ -449,8 +453,8 @@ export default function Home() {
           <p>These are illustrative scenarios, not customer testimonials. The moments are familiar because the impulse usually is.</p>
         </div>
         <div className="story-collage" data-reveal>
-          <article className="story-card story-large"><span className="story-time">11:47 PM</span><div className="story-art story-food"><i/><i/><i/></div><h3>“I built the whole order. Then realized I was just bored.”</h3><p>Delivery craving · Ghosted before checkout</p><span className="story-persona">Midnight Browser · sample persona</span></article>
-          <article className="story-card story-tall"><span className="story-time">PAYDAY + 2H</span><div className="story-art story-fashion"><i/><i/></div><h3>“The sale felt urgent. The item didn’t.”</h3><p>Fashion cart · Cooling mode</p><span className="story-persona">Mindful Minimalist · sample persona</span></article>
+          <article className="story-card story-large"><span className="story-time">11:47 PM</span><div className="story-art story-food"><img src="/mascot/mascot-combo.png" alt="" /></div><h3>“I built the whole order. Then realized I was just bored.”</h3><p>Delivery craving · Ghosted before checkout</p><span className="story-persona">Midnight Browser · sample persona</span></article>
+          <article className="story-card story-tall"><span className="story-time">PAYDAY + 2H</span><div className="story-art story-fashion"><img src="/products/sneaker.png" alt="" /></div><h3>“The sale felt urgent. The item didn’t.”</h3><p>Fashion cart · Cooling mode</p><span className="story-persona">Mindful Minimalist · sample persona</span></article>
           <article className="story-card story-quote"><p>YOUR REAL CARTS ARE FULL FOR A REASON.</p><h3>Give every “maybe” one quiet place to wait.</h3><span>Almost-Bought Archive</span></article>
           <article className="story-card story-wide"><span className="story-time">DAY 2</span><div><p className="eyebrow">The next-day test</p><h3>Still want it—or was it just the scroll?</h3></div><button type="button" onClick={() => document.querySelector("#demo")?.scrollIntoView({behavior:"smooth"})}>Try the demo</button></article>
         </div>
@@ -503,6 +507,7 @@ export default function Home() {
 
         <footer className="site-footer section-dark">
           <div className="footer-curve footer-curve-one" aria-hidden="true" /><div className="footer-curve footer-curve-two" aria-hidden="true" />
+          <img className="footer-badge" src="/brand/fake-checkout-real-control-badge.png" alt="" aria-hidden="true" />
           <div className="footer-main">
             <div className="footer-brand"><Wordmark inverted /><h2>Fake checkout.<br /><span>Real control.</span></h2><p>Save your cravings for later.<br />Keep your money now.</p></div>
             <div className="footer-links"><div><strong>Explore</strong><a href="#how">How it works</a><a href="#demo">Try the demo</a><a href="#why">Why Ghost Cart</a></div><div><strong>Information</strong><a href="#faq">FAQ</a><span>Privacy · coming soon</span><span>Terms · coming soon</span></div><div><strong>Social</strong><span>Instagram · coming soon</span><span>TikTok · coming soon</span><span>LinkedIn · coming soon</span></div></div>
