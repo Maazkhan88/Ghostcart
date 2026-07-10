@@ -51,10 +51,8 @@ em { color: var(--green); font-family: Georgia, "Times New Roman", serif; font-w
 }
 .nav-brand { display: flex; }
 .wordmark { display: inline-flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 800; letter-spacing: -0.04em; white-space: nowrap; }
-.wordmark-dot { width: 20px; height: 20px; border: 6px solid var(--ink); border-radius: 50% 50% 46% 46%; position: relative; }
-.wordmark-dot::after { content: ""; position: absolute; left: 50%; bottom: -9px; width: 7px; height: 7px; border-radius: 0 0 7px 7px; background: currentColor; transform: translateX(-50%); }
+.wordmark-icon { display: block; width: 26px; height: 26px; border-radius: 22%; }
 .wordmark-inverted { color: #fff; }
-.wordmark-inverted .wordmark-dot { border-color: #fff; }
 .nav-links { display: flex; align-items: center; gap: 26px; font-size: 13px; color: rgba(255, 255, 255, 0.72); }
 .nav-links a { transition: color 180ms ease; }
 .nav-links a:hover { color: #fff; }

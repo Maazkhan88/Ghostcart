@@ -29,7 +29,7 @@ const FAQS = [
 function Wordmark({ inverted = false }: { inverted?: boolean }) {
   return (
     <span className={`wordmark ${inverted ? "wordmark-inverted" : ""}`} aria-label="Ghost Cart">
-      <span className="wordmark-dot" aria-hidden="true" />
+      <img className="wordmark-icon" src="/brand/ghost-cart-icon.png" alt="" aria-hidden="true" width={32} height={32} />
       <span>Ghost Cart</span>
     </span>
   );
