@@ -104,3 +104,18 @@ unlike the earlier checkerboard-baked batch).
   blocked on assets at this point — remaining gaps are structural
   (Try the Demo section's visual framing, per `docs/current-state.md`).
 
+## Update — 2026-07-10, Codex continuation
+
+- The Try the Demo structural gap is now resolved without adding unapproved
+  assets. The portal effect is code-native, and the approved logo, mascot,
+  sneaker, and perfume files remain in use.
+- All current PNGs under `public/brand/`, `public/mascot/`, and
+  `public/products/` were rechecked before implementation: they report a real
+  alpha channel and transparent corner pixels. No invalid candidate was copied
+  into the public asset library.
+- Still missing: the official UAE Dirham symbol and a clean standalone
+  headphones render. Currency remains hidden rather than approximated; the
+  headphones tile remains a neutral CSS placeholder.
+- `randomassets/fun icons.png` remains source-only and must not be extracted or
+  published without a fresh user decision and a content/quality review.
+

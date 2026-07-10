@@ -108,3 +108,31 @@ functionality or tests.
 | Ghost mascot | No source asset exists; build one small reusable inline SVG/CSS component used consistently in hero, how-it-works, demo, community, footer. P1, low risk, must be original (not traced from reference pixels). |
 | Currency / dollar signs | Confirmed zero `$` usage in current copy (verified by grep); must stay zero through this pass and going forward. P0 guardrail, not a change. |
 | Terminology | "Ghost Wallet" is not yet mentioned anywhere in current copy despite being a named simulated feature; add at least one clear, labeled mention (community/dashboard section) reinforcing it is simulated only. P1. |
+
+---
+
+## Codex continuation update — 2026-07-10
+
+### 3. Try the Demo — aligned
+
+- Reference: `design/web-ui/desktop/03-try-the-demo-dark.png`
+- Implemented the reference's three-part desktop composition: instruction
+  legend rail, browser-style interactive canvas, and persistent "Almost
+  bought" rail.
+- Added the restrained swirling portal glow and browser chrome without using
+  the reference screenshot as a flat background.
+- Added real native drag-and-drop to the portal while retaining double-click,
+  visible `Ghost it`, and `Hold to cool` alternatives.
+- Preserved the existing Fake Checkout → Ghost Receipt flow.
+- Added deliberate tablet/mobile stacking and confirmed no horizontal overflow
+  at 1024, 768, 390, and 360 px.
+- Current screenshots:
+  - `tests/visual/current/demo-desktop-1440.png`
+  - `tests/visual/current/demo-desktop-receipt-1440.png`
+  - `tests/visual/current/demo-mobile-390.png`
+  - `tests/visual/current/demo-mobile-panel-390.png`
+  - `tests/visual/current/demo-mobile-browser-390.png`
+- Remaining difference: the reference contains a bespoke headphones render;
+  the implementation keeps the documented CSS placeholder until a clean,
+  approved standalone asset is supplied.
+- Status: **Aligned and interaction-verified**.

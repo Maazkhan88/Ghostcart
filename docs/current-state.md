@@ -1,7 +1,7 @@
 # Current State
 
-Last updated: 2026-07-10 (Claude Code session — web UI reference alignment,
-plus two same-day follow-up asset passes).
+Last updated: 2026-07-10 (Codex continuation of Claude Code's web UI
+alignment and asset work).
 
 ## What currently works
 
@@ -10,9 +10,10 @@ plus two same-day follow-up asset passes).
   try-the-demo → light why-Ghost-Cart → dark community & dashboard → light
   stories → light FAQ → dark final CTA → dark footer (CTA and footer now
   visually fused, no seam).
-- Working interactive demo: double-click to ghost, visible "Ghost it" button
-  alternative, hold-to-cool with a distinct button, Fake Checkout producing a
-  Ghost Receipt, focus-mode toggle. All verified live in-browser this session.
+- Working interactive demo: native drag into the Ghost portal, double-click to
+  ghost, visible "Ghost it" button alternative, hold-to-cool with a distinct
+  button, Fake Checkout producing a Ghost Receipt, and focus-mode toggle. The
+  complete flow was verified live in-browser at desktop and mobile sizes.
 - FAQ accordion (native `<details>`/`<summary>`, keyboard operable), waitlist
   email capture (saved to `localStorage` for this preview build only).
 - Production build (`npm run build`), test suite (`node --test
@@ -150,15 +151,31 @@ and asked to check them, then to wire them in.
   earlier sessions is now closed. Only the official UAE Dirham symbol
   remains as a missing asset.
 
+## What changed in the Codex continuation
+
+- Read the full Claude handoff, audited all branches, the open draft PR, the
+  eight imported desktop references, and every current public PNG asset before
+  changing code.
+- Rebuilt the **Try the Demo** presentation to match
+  `design/web-ui/desktop/03-try-the-demo-dark.png`: left instruction rail,
+  browser-chrome frame, central product canvas, restrained Ghost portal glow,
+  persistent "Almost bought" rail, and mobile stacking.
+- Added real browser drag-and-drop to the existing demo while preserving the
+  visible button, double-click, and hold-to-cool alternatives.
+- Preserved the existing Fake Checkout and Ghost Receipt state machine and
+  verified it live from add-to-cart through receipt completion.
+- Added persisted desktop and mobile screenshots under
+  `tests/visual/current/` and verified no horizontal overflow at 1440, 1024,
+  768, 390, and 360 px.
+- Implementation commit: `cabf6f5`.
+
 ## What remains incomplete
 
-1. **Try the Demo section visual alignment** — the reference's instruction
-   legend rail (icons for drag / hold / double-click), browser-chrome framing,
-   and swirling portal glow around the drop target were **not** implemented
-   this pass. The underlying interactions (double-click, hold-to-cool) already
-   work and were left untouched to avoid regression risk; only the visual
-   presentation is behind.
-2. **Product photography / 3D renders — resolved.** Sneaker and perfume
+1. **Try the Demo visual alignment — resolved.** The instruction legend,
+   browser chrome, portal glow, persistent almost-bought rail, responsive
+   layout, and real drag behavior are implemented. Accessible alternatives and
+   the existing state logic remain intact.
+2. **Product photography / 3D renders — mostly resolved.** Sneaker and perfume
    product shots (`public/products/*.png`, real alpha) now replace the
    CSS-drawn shapes in the hero, how-it-works, demo grid, and stories
    sections. Headphones and the burger/fries/drink combo still use CSS
@@ -182,15 +199,10 @@ and asked to check them, then to wire them in.
 5. **Dashboard chart variety** — the reference's donut chart and mood
    line-chart in the Community & Dashboard section were not added; the
    existing bar-chart component was reused for "Protected this week" instead.
-6. **Persisted visual-regression screenshots** — no PNG files were saved
-   under `tests/visual/current/` because no headless-browser tool
-   (Playwright/Puppeteer) is installed in this environment and installing one
-   failed (no network path to fetch browser binaries); the interactive
-   browser preview's own screenshot tool was also unavailable in the third
-   asset session (timed out repeatedly, likely an infra issue — the dev
-   server itself responded normally throughout). Verification has
-   consistently relied on live DOM/network/computed-style inspection
-   instead; see `docs/visual-verification-log.md` for details each time.
+6. **Persisted visual-regression screenshots — resolved for the modified demo.**
+   Desktop, receipt-state, and mobile screenshots now exist under
+   `tests/visual/current/`. Other sections retain the live-verification records
+   from the Claude sessions and can gain snapshots incrementally when edited.
 7. Minor polish items noted in the design manifest but not addressed: FAQ
    section's floating decorative product renders in the margins; headphones
    still has no clean product render (CSS shape only).
@@ -224,9 +236,7 @@ section-alignment instructions (still current). For the asset situation:
    `public/brand|mascot|products/`, reference with a plain `<img>` (this
    repo uses plain `<img>`, not `next/image` — see `docs/decisions-log.md`
    for why).
-5. Pick up item 1 in "What remains incomplete" above (Try the Demo visual
-   alignment) — it's the largest remaining structural gap and is
-   independent of the asset situation.
-6. Consider adding Playwright as a dev dependency to unblock persisted
-   visual-regression screenshots for future passes — the interactive
-   preview's screenshot tool has now been unreliable more than once.
+5. Do not rebuild the aligned demo. The next visual polish candidates are the
+   dashboard chart variety and the FAQ's optional decorative product renders.
+6. Keep adding browser screenshots under `tests/visual/current/` for any
+   section modified in future passes.

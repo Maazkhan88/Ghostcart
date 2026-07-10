@@ -191,3 +191,37 @@ confirmation. If the screenshot tool recovers in a future session, a
 follow-up visual pass against `design/web-ui/desktop/` would still be
 worthwhile to confirm composition/spacing reads well at a glance, not just
 that elements are present and positioned per their CSS.
+
+---
+
+## Codex continuation — 2026-07-10: Try the Demo
+
+- Section: Try the Demo
+- Reference: `design/web-ui/desktop/03-try-the-demo-dark.png`
+- Current screenshots:
+  - `tests/visual/current/demo-desktop-1440.png`
+  - `tests/visual/current/demo-desktop-receipt-1440.png`
+  - `tests/visual/current/demo-mobile-390.png`
+  - `tests/visual/current/demo-mobile-panel-390.png`
+  - `tests/visual/current/demo-mobile-browser-390.png`
+- Differences fixed:
+  - added the left instruction legend for drag, hold, and double-click
+  - added browser-chrome framing around the interactive canvas
+  - added a restrained swirling portal/drop target
+  - added the persistent right-hand "Almost bought" list
+  - tightened the product grid and simulated cart into the reference's central
+    composition
+  - added intentional tablet/mobile stacking
+- Interaction checks completed live:
+  - visible `Ghost it` button added the sneaker to the simulated cart
+  - `Complete Fake Checkout` became enabled only after an item was added
+  - Fake Checkout produced the Ghost Receipt state
+  - real amount charged remained `Zero`
+  - visible button alternatives remained available alongside drag, hold, and
+    double-click
+- Responsive checks: no horizontal overflow at 1440, 1024, 768, 390, or 360
+  px.
+- Browser console: no warnings or errors during the mobile verification pass.
+- Differences remaining: clean standalone headphones and official UAE Dirham
+  symbol assets are still unavailable; no currency appears in this section.
+- Status: **Aligned**.

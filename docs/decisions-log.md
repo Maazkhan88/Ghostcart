@@ -151,3 +151,29 @@ Append-only. Do not rewrite or delete earlier entries — only add new ones.
   it; wrong CSS → bounding-box/computed-style catches it; broken state
   wiring → the interaction test catches it) — together they cover what a
   screenshot would have shown, even without the screenshot itself.
+
+## 2026-07-10 — Codex (Claude handover continuation)
+
+- **Continued on `agent/ghost-cart-web-v1` and the existing draft PR.** The
+  branch contained the latest valid Claude work and was already connected to
+  PR #1. No replacement branch, history rewrite, reset, or force-push was
+  needed.
+- **Treated `design/web-ui/desktop/03-try-the-demo-dark.png` as the visual
+  source of truth without flattening it into the page.** The instruction rail,
+  browser chrome, portal, product grid, and almost-bought rail were recreated
+  as semantic React and responsive CSS.
+- **Added native drag-and-drop while preserving every accessible alternative.**
+  Drag is now functional, but users can still double-click, tap/click the
+  visible `Ghost it` button, or use `Hold to cool`; drag is never mandatory.
+- **Kept the existing Fake Checkout and Ghost Receipt state logic.** The
+  alignment work changes presentation and adds drag input without replacing
+  the tested state machine.
+- **Used a restrained CSS portal glow instead of importing a new generated
+  effect.** This avoids introducing an unapproved visual asset while keeping
+  the reference's depth and focal point.
+- **Did not use or extract anything from `fun icons.png`.** The earlier ruling
+  remains in force because that sheet includes baked copy/currency problems
+  and a conflicting visual style.
+- **Persisted browser screenshots for the modified section.** The current
+  desktop, receipt-state, and mobile views live in `tests/visual/current/` and
+  are the verification record for implementation commit `cabf6f5`.
