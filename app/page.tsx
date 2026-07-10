@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, PointerEvent, useEffect, useMemo, useRef, useState } from "react";
+import { DragEvent, FormEvent, PointerEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type DemoProduct = {
   id: string;
@@ -64,6 +64,9 @@ const ICON_PATHS: Record<string, string> = {
   walletCheck: "M3 7h15a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h11M15 12l1.5 1.5L19 11",
   brain: "M9 3a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5h.5A3.5 3.5 0 0 0 10 12.5V6a3 3 0 0 0-1-3zM15 3a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5h-.5A3.5 3.5 0 0 1 14 12.5V6a3 3 0 0 1 1-3zM12 6v10",
   wallet: "M3 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7zM16 12h.01",
+  drag: "M8 11V5a2 2 0 0 1 4 0v6M12 8V5a2 2 0 0 1 4 0v7M16 9a2 2 0 0 1 4 0v5c0 4-3 7-7 7h-1c-3 0-5-1-7-4l-2-3a2 2 0 0 1 3-2l2 2",
+  cool: "M12 2v20M4.2 6.5l15.6 11M4.2 17.5l15.6-11M9 4l3 3 3-3M9 20l3-3 3 3M4 10l4 1-1 4M20 14l-4-1 1-4",
+  sparkle: "M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3zM18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8L18 15z",
 };
 
 function Icon({ name }: { name: keyof typeof ICON_PATHS }) {
@@ -186,6 +189,17 @@ export default function Home() {
     holdTimer.current = null;
   };
 
+  const beginDrag = (event: DragEvent<HTMLElement>, id: string) => {
+    event.dataTransfer.setData("text/plain", id);
+    event.dataTransfer.effectAllowed = "copy";
+  };
+
+  const dropIntoGhostCart = (event: DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    const id = event.dataTransfer.getData("text/plain");
+    if (DEMO_PRODUCTS.some((product) => product.id === id)) addToCart(id);
+  };
+
   const fakeCheckout = () => {
     if (!cartIds.length) return;
     setGhostedIds((current) => Array.from(new Set([...current, ...cartIds])));
@@ -305,67 +319,112 @@ export default function Home() {
 
       <section id="demo" className={`demo section-dark ${focusMode ? "demo-focused" : ""}`} aria-labelledby="demo-title">
         <div className="demo-background-word" aria-hidden="true">GHOST IT</div>
-        <div className="section-heading demo-heading" data-reveal>
-          <div><p className="eyebrow eyebrow-dark">A working browser preview</p><h2 id="demo-title">Try the feeling.<br /><em>Skip the spending.</em></h2></div>
-          <div className="demo-heading-actions">
-            <GhostMascot pose="cooldown" className="demo-mascot" />
-            <p>Click “Ghost it,” double-click a card, or press and hold to cool it down.</p>
-            <button type="button" className="focus-toggle" onClick={() => setFocusMode((current) => !current)} aria-pressed={focusMode}>{focusMode ? "Exit focus" : "Explore section"}</button>
-          </div>
-        </div>
+        <div className="demo-experience" data-reveal>
+          <aside className="demo-instruction-rail" aria-label="Demo instructions">
+            <p className="eyebrow eyebrow-dark">Try the demo</p>
+            <h2 id="demo-title">Ghost it.<br /><em>Don&rsquo;t</em> buy it.</h2>
+            <p className="demo-intro">Move a temptation into Ghost Cart, close the loop with Fake Checkout, and leave the real purchase behind.</p>
 
-        <div className="demo-layout" data-reveal>
-          <div className="product-grid" aria-label="Demo almost-buys">
-            {DEMO_PRODUCTS.map((product) => {
-              const inCart = cartIds.includes(product.id);
-              const cooled = cooledIds.includes(product.id);
-              const ghosted = ghostedIds.includes(product.id);
-              return (
-                <article className={`demo-product ${product.tone} ${inCart ? "is-selected" : ""}`} key={product.id} onDoubleClick={() => addToCart(product.id)}>
-                  <div className={`demo-product-art art-${product.id}`} aria-hidden="true">
-                    {product.image ? <img src={product.image} alt="" /> : <span />}
-                  </div>
-                  <p className="demo-category">{product.category}</p>
-                  <h3>{product.name}</h3>
-                  <p>{product.note}</p>
-                  <div className="product-status" aria-live="polite">
-                    {cooled ? "Cooling mode active" : ghosted ? "Ghosted successfully" : inCart ? "In your Ghost Cart" : "Ready to ghost"}
-                  </div>
-                  <div className="product-actions">
-                    {inCart ? <button type="button" className="product-button secondary" onClick={() => removeFromCart(product.id)}>Undo</button> : <button type="button" className="product-button" onClick={() => addToCart(product.id)}>Ghost it</button>}
-                    <button type="button" className="hold-button" onPointerDown={(event) => beginCooling(event, product.id)} onPointerUp={cancelCooling} onPointerCancel={cancelCooling} onPointerLeave={cancelCooling}>Hold to cool</button>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+            <div className="demo-legend">
+              <div><span><Icon name="drag" /></span><p><strong>Drag into Ghost Cart</strong><small>Drop an item into the portal</small></p></div>
+              <div><span><Icon name="cool" /></span><p><strong>Hold to cool down</strong><small>Press for a calmer decision</small></p></div>
+              <div><span><Icon name="sparkle" /></span><p><strong>Double-click to ghost it</strong><small>Or use the visible Ghost it button</small></p></div>
+            </div>
 
-          <aside className="demo-cart" aria-label="Simulated Ghost Cart">
-            <div className="cart-topline"><Wordmark inverted /><span>{cartProducts.length} item{cartProducts.length === 1 ? "" : "s"}</span></div>
-            {!receiptVisible ? (
-              <>
-                <div className="cart-copy"><p className="eyebrow eyebrow-dark">Your Ghost Cart</p><h3>{cartProducts.length ? "The urge has somewhere to go." : "Add an almost-buy."}</h3><p>{cartProducts.length ? "Nothing here will be purchased or delivered." : "Choose any card to begin the simulation."}</p></div>
-                <div className="cart-items">
-                  {cartProducts.map((product) => <div key={product.id}><span className={`cart-item-shape ${product.tone}`} /><p><strong>{product.name}</strong><small>Simulated item</small></p><button type="button" onClick={() => removeFromCart(product.id)} aria-label={`Remove ${product.name}`}>×</button></div>)}
+            <div className="cooling-visual" aria-hidden="true">
+              <GhostMascot pose="cooldown" className="demo-mascot" />
+              <div className="cooling-ring"><span><Icon name="cool" /></span></div>
+              <p>Cooling down…</p>
+            </div>
+
+            <button type="button" className="focus-toggle" onClick={() => setFocusMode((current) => !current)} aria-pressed={focusMode}>{focusMode ? "Exit focus" : "Explore in focus"}</button>
+            <div className="demo-safety-note"><Icon name="shield" /><p><strong>This is a simulation.</strong><small>No real payment. No real delivery.</small></p></div>
+          </aside>
+
+          <div className="demo-browser" aria-label="Interactive Ghost Cart browser demo">
+            <div className="demo-browser-bar" aria-hidden="true"><span /><span /><span /><b>Ghost Cart · interactive preview</b></div>
+            <div className="demo-browser-body">
+              <section className="demo-catalog" aria-labelledby="browse-temptation-title">
+                <header><div><p className="eyebrow eyebrow-dark">Browse temptation</p><h3 id="browse-temptation-title">Choose an almost-buy.</h3></div><span>Drag, hold, double-click, or tap</span></header>
+                <div className="product-grid" aria-label="Demo almost-buys">
+                  {DEMO_PRODUCTS.map((product) => {
+                    const inCart = cartIds.includes(product.id);
+                    const cooled = cooledIds.includes(product.id);
+                    const ghosted = ghostedIds.includes(product.id);
+                    return (
+                      <article
+                        className={`demo-product ${product.tone} ${inCart ? "is-selected" : ""}`}
+                        key={product.id}
+                        draggable
+                        onDragStart={(event) => beginDrag(event, product.id)}
+                        onDoubleClick={() => addToCart(product.id)}
+                      >
+                        <div className={`demo-product-art art-${product.id}`} aria-hidden="true">
+                          {product.image ? <img src={product.image} alt="" /> : <span />}
+                        </div>
+                        <p className="demo-category">{product.category}</p>
+                        <h3>{product.name}</h3>
+                        <p>{product.note}</p>
+                        <div className="product-status" aria-live="polite">
+                          {cooled ? "Cooling mode active" : ghosted ? "Ghosted successfully" : inCart ? "In your Ghost Cart" : "Ready to ghost"}
+                        </div>
+                        <div className="product-actions">
+                          {inCart ? <button type="button" className="product-button secondary" onClick={() => removeFromCart(product.id)}>Undo</button> : <button type="button" className="product-button" onClick={() => addToCart(product.id)}>Ghost it</button>}
+                          <button type="button" className="hold-button" onPointerDown={(event) => beginCooling(event, product.id)} onPointerUp={cancelCooling} onPointerCancel={cancelCooling} onPointerLeave={cancelCooling}>Hold to cool</button>
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
-                <div className="cart-summary"><span>Real amount charged</span><strong>Zero</strong></div>
-                <button type="button" className="button button-primary button-full" disabled={!cartProducts.length} onClick={fakeCheckout}>Complete Fake Checkout</button>
-                <small>Simulation only. No payment details. No delivery.</small>
-              </>
-            ) : (
-              <div className="receipt-card" role="status">
-                <GhostMascot pose="thumbsup" className="receipt-mascot" />
-                <p className="eyebrow eyebrow-dark">Ghost Receipt</p>
-                <h3>Nothing purchased.<br />Craving completed.</h3>
-                <div className="receipt-rule" />
-                <p>{ghostedIds.length} almost-buy{ghostedIds.length === 1 ? "" : "s"} ghosted in this demo.</p>
-                <strong>Real amount charged: Zero</strong>
-                <button type="button" className="button button-outline" onClick={() => setReceiptVisible(false)}>Ghost another cart</button>
-                <small>Not an invoice or proof of purchase.</small>
-              </div>
-            )}
+              </section>
+
+              <aside
+                className={`demo-cart ${cartProducts.length ? "has-items" : ""}`}
+                aria-label="Simulated Ghost Cart drop area"
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={dropIntoGhostCart}
+              >
+                <div className="cart-topline"><Wordmark inverted /><span>{cartProducts.length} item{cartProducts.length === 1 ? "" : "s"}</span></div>
+                {!receiptVisible ? (
+                  <>
+                    <div className="ghost-portal" aria-hidden="true"><span className="portal-ring portal-ring-one" /><span className="portal-ring portal-ring-two" /><GhostMascot pose="waveAlt" className="portal-mascot" /></div>
+                    <div className="cart-copy"><p className="eyebrow eyebrow-dark">Your Ghost Cart</p><h3>{cartProducts.length ? "The urge has somewhere to go." : "Drag items here."}</h3><p>{cartProducts.length ? "Nothing here will be purchased or delivered." : "Or use any visible Ghost it button."}</p></div>
+                    <div className="cart-items">
+                      {cartProducts.map((product) => <div key={product.id}><span className={`cart-item-shape ${product.tone}`} /><p><strong>{product.name}</strong><small>Simulated item</small></p><button type="button" onClick={() => removeFromCart(product.id)} aria-label={`Remove ${product.name}`}>×</button></div>)}
+                    </div>
+                    <div className="cart-summary"><span>Real amount charged</span><strong>Zero</strong></div>
+                    <button type="button" className="button button-primary button-full" disabled={!cartProducts.length} onClick={fakeCheckout}>Complete Fake Checkout</button>
+                    <small>Simulation only. No payment details. No delivery.</small>
+                  </>
+                ) : (
+                  <div className="receipt-card" role="status">
+                    <GhostMascot pose="thumbsup" className="receipt-mascot" />
+                    <p className="eyebrow eyebrow-dark">Ghost Receipt</p>
+                    <h3>Nothing purchased.<br />Craving completed.</h3>
+                    <div className="receipt-rule" />
+                    <p>{ghostedIds.length} almost-buy{ghostedIds.length === 1 ? "" : "s"} ghosted in this demo.</p>
+                    <strong>Real amount charged: Zero</strong>
+                    <button type="button" className="button button-outline" onClick={() => setReceiptVisible(false)}>Ghost another cart</button>
+                    <small>Not an invoice or proof of purchase.</small>
+                  </div>
+                )}
+              </aside>
+            </div>
+          </div>
+
+          <aside className="almost-bought-rail" aria-label="Example almost-bought list">
+            <header><div><p className="eyebrow eyebrow-dark">Almost bought</p><h3>Your demo list</h3></div><span>{DEMO_PRODUCTS.length}</span></header>
+            <p>Everything you wanted. Zero commitment.</p>
+            <div className="almost-bought-list">
+              {DEMO_PRODUCTS.map((product) => {
+                const status = ghostedIds.includes(product.id) ? "Ghosted" : cooledIds.includes(product.id) ? "Cooling" : cartIds.includes(product.id) ? "In Ghost Cart" : "Ready";
+                return <div key={product.id}><span className={`almost-thumb art-${product.id}`}>{product.image ? <img src={product.image} alt="" /> : <span />}</span><p><strong>{product.name}</strong><small>{status}</small></p></div>;
+              })}
+            </div>
+            <a href="#stories">Explore example moments <span aria-hidden="true">↗</span></a>
           </aside>
         </div>
+        <p className="demo-pro-tip"><span aria-hidden="true">✦</span> Pro tip: use the cooldown before an impulse becomes a purchase.</p>
       </section>
 
       <section id="why" className="why section-light">

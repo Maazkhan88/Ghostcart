@@ -22,7 +22,10 @@ test("server-renders the complete Ghost Cart experience", async () => {
   const html = await response.text();
   assert.match(html, /<title>Ghost Cart — Add to cart\. Checkout\. Keep your money\.<\/title>/i);
   assert.match(html, /The fake checkout app for everything you almost bought/i);
-  assert.match(html, /Try the feeling/i);
+  assert.match(html, /Ghost it/i);
+  assert.match(html, /Drag into Ghost Cart/i);
+  assert.match(html, /Browse temptation/i);
+  assert.match(html, /Almost bought/i);
   assert.match(html, /Complete Fake Checkout/i);
   assert.match(html, /Ghost Receipt/i);
   assert.match(html, /Simulation only/i);
@@ -43,6 +46,8 @@ test("keeps payment and brand safety rules in the production source", async () =
   assert.match(page, /const DEMO_PRODUCTS/);
   assert.match(page, /onDoubleClick/);
   assert.match(page, /onPointerDown/);
+  assert.match(page, /onDragStart/);
+  assert.match(page, /onDrop/);
   assert.match(page, /localStorage\.setItem/);
   assert.match(page, /aria-live="polite"/);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
