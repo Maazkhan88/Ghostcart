@@ -1,7 +1,7 @@
 # Current State
 
-Last updated: 2026-07-10 (Claude Code continuation of Codex's Try the Demo
-alignment — dashboard chart variety and FAQ decorative renders added).
+Last updated: 2026-07-11 (Codex verification and compliance follow-up after
+Claude Code's dashboard chart and FAQ decoration pass).
 
 ## What currently works
 
@@ -211,6 +211,25 @@ polish items Codex had explicitly flagged as the next candidates:
   previously numbered by Codex) — dashboard chart variety and the FAQ
   decorative renders are no longer gaps.
 
+## What changed in the Codex verification follow-up
+
+- Fast-forwarded the canonical `Documents\Ghost Cart` checkout to Claude's
+  `1ad245f` commit; the separate Downloads checkout remains untouched as a
+  backup.
+- Moved all illustrative dashboard values into an explicit
+  `DASHBOARD_DEMO_DATA` source object and added a visible "Sample data · not a
+  user claim" disclaimer to the mood card.
+- Added a stable `#dashboard-charts` deep link and source-level tests for the
+  demo-data contract.
+- Added `/.claude/settings.local.json` to `.gitignore` so machine-local Claude
+  permissions cannot be committed accidentally.
+- Completed screenshot-based verification for the dashboard and FAQ at 1440,
+  768, and 390 px. The pass found and fixed two responsive issues that the
+  earlier DOM-only review missed: overlapping chart disclaimers at 390 px and
+  a clipped donut legend at 768 px.
+- Confirmed no horizontal overflow at 1440, 1024, 768, or 390 px and no browser
+  console warnings/errors during the modified-section verification.
+
 ## What remains incomplete
 
 1. **Try the Demo visual alignment — resolved.** The instruction legend,
@@ -242,14 +261,9 @@ polish items Codex had explicitly flagged as the next candidates:
    category", CSS conic-gradient + legend) and a mood line chart ("Your
    weekly mood & mindset", inline SVG polyline) as a third dashboard-grid row.
    The existing bar-chart ("Protected this week") is unchanged.
-6. **Persisted visual-regression screenshots — resolved for the modified demo.**
-   Desktop, receipt-state, and mobile screenshots now exist under
-   `tests/visual/current/` (from the Codex continuation). The dashboard
-   chart and FAQ decoration changes in this pass were verified via DOM/
-   computed-style checks instead — the browser preview's screenshot tool was
-   unavailable this session too (`computer`/`screenshot` time out; this has
-   now happened in two separate sessions and may be worth flagging as an
-   environment issue rather than assuming it will resolve itself).
+6. **Persisted visual-regression screenshots — resolved for every recently
+   modified section.** Demo, dashboard charts, and FAQ screenshots now exist
+   under `tests/visual/current/` at desktop, tablet, and mobile sizes.
 7. **FAQ decorative renders — resolved.** Sneaker, perfume, and a mascot pose
    now float in the FAQ intro's margin (hidden below 760px). Headphones
    still has no clean product render (CSS shape only) — waiting on assets,
@@ -290,11 +304,9 @@ section-alignment instructions (still current). For the asset situation:
    out of scope for this simulation-only preview (production waitlist
    backend, privacy/terms/contact destinations).
 6. Keep adding browser screenshots under `tests/visual/current/` for any
-   section modified in future passes — when the screenshot tooling is
-   available. It has failed with a timeout in two consecutive sessions now
-   (both this one and the prior asset-integration session); if it keeps
-   failing, consider that a signal to prioritize adding Playwright as a dev
-   dependency instead of relying on the interactive preview tool.
+   section modified in future passes. The current browser workflow successfully
+   persisted the dashboard and FAQ evidence, so a new screenshot dependency is
+   not currently necessary.
 7. **The "Workers Builds: nameless-d98e" Cloudflare check will keep
    failing** regardless of what code changes — it has never passed on any
    commit on this PR, including the original Codex commit, and fails in 0

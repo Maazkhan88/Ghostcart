@@ -18,6 +18,25 @@ const DEMO_PRODUCTS: DemoProduct[] = [
   { id: "headphones", name: "The extra headphones", note: "A deal you did not need yesterday", category: "Tech", tone: "tone-mint" },
 ];
 
+const DASHBOARD_DEMO_DATA = {
+  minimumGhostedCount: 4,
+  topPattern: "Late-night scrolling",
+  coolingStreakDays: 3,
+  protectedBars: [18, 28, 44, 76, 68, 82],
+  categories: [
+    { label: "Food & drinks", share: 35, dotClass: "dot-1" },
+    { label: "Fashion", share: 20, dotClass: "dot-2" },
+    { label: "Tech", share: 15, dotClass: "dot-3" },
+    { label: "Entertainment", share: 15, dotClass: "dot-4" },
+    { label: "Other", share: 15, dotClass: "dot-5" },
+  ],
+  mood: {
+    points: "10,55 52,68 94,40 136,58 178,30 220,42 270,15",
+    finalPoint: { x: 270, y: 15 },
+    days: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+  },
+} as const;
+
 const FAQS = [
   ["Is Ghost Cart a real shopping app?", "No. Ghost Cart is a simulation designed for almost-buys and impulse cooling. Products shown in the demo are generic references, not items for sale."],
   ["Do I pay anything during Fake Checkout?", "No. Fake Checkout never asks for card details and never processes a payment."],
@@ -485,32 +504,28 @@ export default function Home() {
               <div className="dashboard-main">
                 <header><div><p>Good evening</p><h3>Your control dashboard</h3></div><span className="avatar-placeholder">YOU</span></header>
                 <div className="dashboard-grid">
-                  <article className="metric-card metric-primary"><p>Weekly ghost receipt</p><strong>{Math.max(ghostedIds.length, 4)}</strong><span>Almost-buys ghosted this session</span><div className="metric-rings" /></article>
-                  <article className="metric-card"><p>Top almost-buys</p><strong>Late-night scrolling</strong><span>Example pattern</span></article>
-                  <article className="metric-card chart-card"><p>Protected this week</p><div className="bar-chart" aria-label="Sample chart showing a rising protected amount"><i style={{height:"18%"}}/><i style={{height:"28%"}}/><i style={{height:"44%"}}/><i style={{height:"76%"}}/><i style={{height:"68%"}}/><i style={{height:"82%"}}/></div><span>Sample data · not a user claim</span></article>
-                  <article className="metric-card streak-card"><p>Cooling mode streak</p><strong>3 days</strong><span>Keep the streak alive</span></article>
-                  <article className="metric-card cravings-card">
+                  <article className="metric-card metric-primary"><p>Weekly ghost receipt</p><strong>{Math.max(ghostedIds.length, DASHBOARD_DEMO_DATA.minimumGhostedCount)}</strong><span>Almost-buys ghosted this session</span><div className="metric-rings" /></article>
+                  <article className="metric-card"><p>Top almost-buys</p><strong>{DASHBOARD_DEMO_DATA.topPattern}</strong><span>Example pattern</span></article>
+                  <article className="metric-card chart-card"><p>Protected this week</p><div className="bar-chart" aria-label="Sample chart showing a rising protected amount">{DASHBOARD_DEMO_DATA.protectedBars.map((height, index) => <i key={`${height}-${index}`} style={{height:`${height}%`}} />)}</div><span>Sample data · not a user claim</span></article>
+                  <article className="metric-card streak-card"><p>Cooling mode streak</p><strong>{DASHBOARD_DEMO_DATA.coolingStreakDays} days</strong><span>Keep the streak alive</span></article>
+                  <article id="dashboard-charts" className="metric-card cravings-card">
                     <p>Cravings by category</p>
                     <div className="donut-wrap">
                       <div className="donut-chart" aria-label="Sample chart showing craving categories" role="img" />
                       <ul className="donut-legend">
-                        <li><i className="legend-dot dot-1" />Food &amp; drinks<b>35%</b></li>
-                        <li><i className="legend-dot dot-2" />Fashion<b>20%</b></li>
-                        <li><i className="legend-dot dot-3" />Tech<b>15%</b></li>
-                        <li><i className="legend-dot dot-4" />Entertainment<b>15%</b></li>
-                        <li><i className="legend-dot dot-5" />Other<b>15%</b></li>
+                        {DASHBOARD_DEMO_DATA.categories.map((category) => <li key={category.label}><i className={`legend-dot ${category.dotClass}`} aria-hidden="true" />{category.label}<b>{category.share}%</b></li>)}
                       </ul>
                     </div>
                     <span>Sample data · not a user claim</span>
                   </article>
                   <article className="metric-card mood-card">
                     <p>Your weekly mood &amp; mindset</p>
-                    <svg className="mood-chart" viewBox="0 0 280 90" aria-label="Sample chart showing mood trending upward across the week">
-                      <polyline points="10,55 52,68 94,40 136,58 178,30 220,42 270,15" />
-                      <circle cx="270" cy="15" r="4" />
+                    <svg className="mood-chart" viewBox="0 0 280 90" aria-label="Sample chart showing mood trending upward across the week" role="img">
+                      <polyline points={DASHBOARD_DEMO_DATA.mood.points} />
+                      <circle cx={DASHBOARD_DEMO_DATA.mood.finalPoint.x} cy={DASHBOARD_DEMO_DATA.mood.finalPoint.y} r="4" />
                     </svg>
-                    <div className="mood-axis"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
-                    <span>Check in. Reflect. Reset.</span>
+                    <div className="mood-axis">{DASHBOARD_DEMO_DATA.mood.days.map((day) => <span key={day}>{day}</span>)}</div>
+                    <span>Sample data · not a user claim</span>
                   </article>
                 </div>
               </div>

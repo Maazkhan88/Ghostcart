@@ -211,3 +211,30 @@ Append-only. Do not rewrite or delete earlier entries — only add new ones.
   tool itself:** it's outside this repo's code, and the DOM-level checks
   cover the same failure modes a screenshot would catch (missing image,
   wrong CSS, broken layout) even without a literal picture.
+
+## 2026-07-11 — Codex (Claude polish verification follow-up)
+
+- **Made the dashboard's illustrative numbers explicit demo data.** Category
+  shares, mood points, protected-bar heights, streak days, and example pattern
+  now live under `DASHBOARD_DEMO_DATA` instead of being scattered literals in
+  JSX. **Why:** `AGENTS.md` requires sample interaction data to be identified
+  as demo data in source code, not only described as sample content visually.
+- **Added the same visible sample-data disclaimer to the mood chart used by the
+  other dashboard charts.** **Why:** the new mood line previously relied only
+  on its accessibility label to say it was sample data; sighted visitors need
+  the same clear disclosure.
+- **Changed the chart layout at 820 px instead of waiting for the 760 px mobile
+  breakpoint.** Screenshot verification at 768 px showed the donut legend
+  clipped inside a two-column card. The targeted breakpoint stacks only the
+  dashboard charts and hides FAQ decorations, preserving the rest of the tablet
+  design.
+- **Added 58 px of footer space to the two new chart cards.** The first 390 px
+  screenshot showed the absolutely-positioned sample disclaimer overlapping
+  the donut legend and weekday axis. The corrected screenshots measure 24–25
+  px of separation.
+- **Kept the Downloads Claude checkout untouched.** The canonical Documents
+  checkout was fast-forwarded from the already-pushed branch, avoiding manual
+  copying between repositories and preserving identical Git history.
+- **Ignored only `.claude/settings.local.json`, not the whole `.claude`
+  directory.** The tracked launch configuration remains shared, while local
+  permission choices stay machine-specific.

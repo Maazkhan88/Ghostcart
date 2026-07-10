@@ -32,6 +32,8 @@ test("server-renders the complete Ghost Cart experience", async () => {
   assert.match(html, /No real payment/i);
   assert.match(html, /No real delivery/i);
   assert.match(html, /Your questions/i);
+  assert.match(html, /Your weekly mood &amp; mindset/i);
+  assert.match(html, /Cravings by category/i);
   assert.match(html, /Fake checkout\.<br\/><span>Real control\./i);
 });
 
@@ -44,6 +46,8 @@ test("keeps payment and brand safety rules in the production source", async () =
   ]);
 
   assert.match(page, /const DEMO_PRODUCTS/);
+  assert.match(page, /const DASHBOARD_DEMO_DATA/);
+  assert.ok((page.match(/Sample data · not a user claim/g) ?? []).length >= 3);
   assert.match(page, /onDoubleClick/);
   assert.match(page, /onPointerDown/);
   assert.match(page, /onDragStart/);

@@ -225,3 +225,42 @@ that elements are present and positioned per their CSS.
 - Differences remaining: clean standalone headphones and official UAE Dirham
   symbol assets are still unavailable; no currency appears in this section.
 - Status: **Aligned**.
+
+---
+
+## Codex follow-up — 2026-07-11: Dashboard charts and FAQ
+
+### Community & Dashboard
+
+- Reference: `design/web-ui/desktop/05-community-dashboard-dark.png`
+- Current screenshots:
+  - `tests/visual/current/dashboard-desktop-1440.png`
+  - `tests/visual/current/dashboard-charts-desktop-1440.png`
+  - `tests/visual/current/dashboard-charts-tablet-768.png`
+  - `tests/visual/current/dashboard-charts-mobile-390.png`
+- Differences fixed:
+  - illustrative values moved into `DASHBOARD_DEMO_DATA`
+  - mood card now visibly says `Sample data · not a user claim`
+  - 390 px disclaimers no longer overlap the legend or weekday axis
+  - 768 px chart grid stacks before the donut legend can clip
+- Measured results:
+  - no horizontal overflow at 1440, 1024, 768, or 390 px
+  - mobile disclaimer gaps: 24 px on the donut card and 25 px on the mood card
+  - 768 px donut wrapper: `scrollWidth === clientWidth` after the fix
+  - all three charts expose descriptive accessible labels
+- Status: **Aligned and screenshot-verified**.
+
+### FAQ
+
+- Reference: `design/web-ui/desktop/07-faq-light.png`
+- Current screenshots:
+  - `tests/visual/current/faq-desktop-1440.png`
+  - `tests/visual/current/faq-mobile-390.png`
+- Results:
+  - sneaker, perfume, and mascot decorations are visible with clean dimensions
+    at 1440 px
+  - decorative images are hidden at 820 px and below to protect tablet/mobile
+    readability
+  - native FAQ accordion remains readable and touch-friendly at 390 px
+  - no horizontal overflow at desktop or mobile
+- Status: **Aligned and screenshot-verified**.
