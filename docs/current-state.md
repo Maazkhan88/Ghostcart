@@ -1,7 +1,7 @@
 # Current State
 
-Last updated: 2026-07-10 (Codex continuation of Claude Code's web UI
-alignment and asset work).
+Last updated: 2026-07-10 (Claude Code continuation of Codex's Try the Demo
+alignment — dashboard chart variety and FAQ decorative renders added).
 
 ## What currently works
 
@@ -168,6 +168,48 @@ and asked to check them, then to wire them in.
   `tests/visual/current/` and verified no horizontal overflow at 1440, 1024,
   768, 390, and 360 px.
 - Implementation commit: `cabf6f5`.
+- Also investigated the failing "Workers Builds: nameless-d98e" Cloudflare
+  check reported by a CI-monitor event. Confirmed via
+  `gh api repos/.../commits/<sha>/check-runs` across every commit on this PR
+  — including the very first Codex commit, before any agent touched this
+  repo — that the check has **never passed** and fails in 0 seconds every
+  time (`started_at === completed_at`), meaning it never actually runs
+  `npm install`/`npm run build`. This is a Cloudflare dashboard-side
+  configuration issue (missing build command, missing secrets, or
+  incomplete project setup for `nameless-d98e`), not a code bug — not
+  fixable from a commit. Posted findings as a PR comment; flagged here so
+  no future session re-investigates from scratch.
+
+## What changed in the second Claude continuation (same day)
+
+Picked up where Codex's continuation left off — the two remaining "optional"
+polish items Codex had explicitly flagged as the next candidates:
+
+- **Dashboard chart variety — resolved.** Added a third row to the Community
+  & Dashboard grid: a "Cravings by category" donut chart (pure CSS
+  `conic-gradient`, five-item legend with percentages) and a "Your weekly
+  mood & mindset" line chart (inline SVG `polyline` across a Mon–Sun axis).
+  Both are explicitly labeled sample data, matching the existing pattern
+  elsewhere in the dashboard. Mobile: `donut-wrap` switches to a stacked
+  column layout via the existing 760px breakpoint.
+- **FAQ decorative renders — resolved.** Added the sneaker, perfume, and a
+  mascot pose (`waveAlt`) as small absolutely-positioned decorative images
+  in the FAQ intro column's margin, matching
+  `design/web-ui/desktop/07-faq-light.png`. Hidden below 760px
+  (`.faq-decor { display: none }`) to avoid mobile clutter, per the
+  responsive requirements.
+- Verified via: build/test/lint (all pass, only the pre-existing
+  `no-img-element` warnings), live DOM checks (`complete`/`naturalWidth` on
+  every new `<img>`, computed-style checks on the donut gradient and SVG
+  polyline points), and `scrollWidth === clientWidth` at 1440px and 390px
+  (no horizontal overflow at either). The browser preview's screenshot tool
+  was unavailable again this session (same infra issue as the prior asset
+  session — `computer`/`screenshot` actions time out, but console, network,
+  and DOM state are all clean), so no screenshots were captured; this is
+  DOM/computed-style verification, not pixel-level visual confirmation.
+- This closes items 5 and 7 from "What remains incomplete" below (as
+  previously numbered by Codex) — dashboard chart variety and the FAQ
+  decorative renders are no longer gaps.
 
 ## What remains incomplete
 
@@ -196,18 +238,24 @@ and asked to check them, then to wire them in.
    values), and (c) either matching the flat geometric mascot style from
    the approved logo, or the user should confirm adopting a new mascot
    style — do not silently mix both styles.
-5. **Dashboard chart variety** — the reference's donut chart and mood
-   line-chart in the Community & Dashboard section were not added; the
-   existing bar-chart component was reused for "Protected this week" instead.
+5. **Dashboard chart variety — resolved.** Added a donut chart ("Cravings by
+   category", CSS conic-gradient + legend) and a mood line chart ("Your
+   weekly mood & mindset", inline SVG polyline) as a third dashboard-grid row.
+   The existing bar-chart ("Protected this week") is unchanged.
 6. **Persisted visual-regression screenshots — resolved for the modified demo.**
    Desktop, receipt-state, and mobile screenshots now exist under
-   `tests/visual/current/`. Other sections retain the live-verification records
-   from the Claude sessions and can gain snapshots incrementally when edited.
-7. Minor polish items noted in the design manifest but not addressed: FAQ
-   section's floating decorative product renders in the margins; headphones
-   still has no clean product render (CSS shape only).
+   `tests/visual/current/` (from the Codex continuation). The dashboard
+   chart and FAQ decoration changes in this pass were verified via DOM/
+   computed-style checks instead — the browser preview's screenshot tool was
+   unavailable this session too (`computer`/`screenshot` time out; this has
+   now happened in two separate sessions and may be worth flagging as an
+   environment issue rather than assuming it will resolve itself).
+7. **FAQ decorative renders — resolved.** Sneaker, perfume, and a mascot pose
+   now float in the FAQ intro's margin (hidden below 760px). Headphones
+   still has no clean product render (CSS shape only) — waiting on assets,
+   same as items 2–3 below.
 
-## What Codex should do next
+## What's next
 
 See the full handoff in
 `docs/agent-log/2026-07-10-claude-code-web-ui-alignment.md` for the original
@@ -236,7 +284,21 @@ section-alignment instructions (still current). For the asset situation:
    `public/brand|mascot|products/`, reference with a plain `<img>` (this
    repo uses plain `<img>`, not `next/image` — see `docs/decisions-log.md`
    for why).
-5. Do not rebuild the aligned demo. The next visual polish candidates are the
-   dashboard chart variety and the FAQ's optional decorative product renders.
+5. **Do not rebuild the aligned demo, dashboard, or FAQ sections** — all the
+   structural/visual alignment work from the design manifest is now done.
+   Remaining gaps are asset-blocked (Dirham symbol, headphones render) or
+   out of scope for this simulation-only preview (production waitlist
+   backend, privacy/terms/contact destinations).
 6. Keep adding browser screenshots under `tests/visual/current/` for any
-   section modified in future passes.
+   section modified in future passes — when the screenshot tooling is
+   available. It has failed with a timeout in two consecutive sessions now
+   (both this one and the prior asset-integration session); if it keeps
+   failing, consider that a signal to prioritize adding Playwright as a dev
+   dependency instead of relying on the interactive preview tool.
+7. **The "Workers Builds: nameless-d98e" Cloudflare check will keep
+   failing** regardless of what code changes — it has never passed on any
+   commit on this PR, including the original Codex commit, and fails in 0
+   seconds (never actually runs a build). This needs the Cloudflare
+   dashboard (Settings → Build configuration for `nameless-d98e`), not a
+   code fix. Don't re-investigate this from scratch; see the PR comment at
+   https://github.com/Maazkhan88/Ghostcart/pull/1 for the full findings.

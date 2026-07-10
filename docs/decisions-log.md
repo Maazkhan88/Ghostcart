@@ -177,3 +177,37 @@ Append-only. Do not rewrite or delete earlier entries — only add new ones.
 - **Persisted browser screenshots for the modified section.** The current
   desktop, receipt-state, and mobile views live in `tests/visual/current/` and
   are the verification record for implementation commit `cabf6f5`.
+
+## 2026-07-10 — Claude Code (second continuation, same day)
+
+- **Confirmed the failing "Workers Builds: nameless-d98e" Cloudflare check
+  is not fixable by any code change.** Queried the GitHub check-runs API
+  across every commit on this PR back to the original Codex commit
+  (`3b50f0f`, before any agent session touched this repo) — every single
+  one failed in 0 seconds (`started_at === completed_at`), meaning the
+  build never actually runs against the repo's code. **Why this matters:**
+  a CI-monitor event had asked to "fix the failing check," but chasing a
+  code-side fix for a check that fails before code is even fetched would
+  be pure guesswork; posted the evidence as a PR comment instead so the
+  actual owner can look at the Cloudflare dashboard's build configuration,
+  which is where the real problem must live.
+
+- **Picked up Codex's two explicitly-flagged "next candidates" (dashboard
+  chart variety, FAQ decorative renders) rather than idling after Codex's
+  commit was reviewed.** Both were additive, low-risk, didn't require new
+  assets (reused already-approved sneaker/perfume/mascot PNGs), and directly
+  closed items Codex's own handoff doc pointed at as the logical next step.
+  **Why:** the user's instruction was "start working," and these were the
+  lowest-risk, highest-consensus next steps across three separate handoff
+  documents (mine, the Claude asset sessions, and Codex's).
+
+- **Verified without screenshots again.** The browser preview's
+  `computer`/`screenshot` actions timed out in this session too — the same
+  failure mode as the prior asset-integration session, now observed twice.
+  Used the same DOM/computed-style/network verification pattern established
+  then (image `complete`/`naturalWidth` checks, computed `background-image`
+  and SVG attribute inspection, `scrollWidth`/`clientWidth` overflow
+  checks). **Why no further attempts at troubleshooting the screenshot
+  tool itself:** it's outside this repo's code, and the DOM-level checks
+  cover the same failure modes a screenshot would catch (missing image,
+  wrong CSS, broken layout) even without a literal picture.

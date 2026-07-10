@@ -489,6 +489,29 @@ export default function Home() {
                   <article className="metric-card"><p>Top almost-buys</p><strong>Late-night scrolling</strong><span>Example pattern</span></article>
                   <article className="metric-card chart-card"><p>Protected this week</p><div className="bar-chart" aria-label="Sample chart showing a rising protected amount"><i style={{height:"18%"}}/><i style={{height:"28%"}}/><i style={{height:"44%"}}/><i style={{height:"76%"}}/><i style={{height:"68%"}}/><i style={{height:"82%"}}/></div><span>Sample data · not a user claim</span></article>
                   <article className="metric-card streak-card"><p>Cooling mode streak</p><strong>3 days</strong><span>Keep the streak alive</span></article>
+                  <article className="metric-card cravings-card">
+                    <p>Cravings by category</p>
+                    <div className="donut-wrap">
+                      <div className="donut-chart" aria-label="Sample chart showing craving categories" role="img" />
+                      <ul className="donut-legend">
+                        <li><i className="legend-dot dot-1" />Food &amp; drinks<b>35%</b></li>
+                        <li><i className="legend-dot dot-2" />Fashion<b>20%</b></li>
+                        <li><i className="legend-dot dot-3" />Tech<b>15%</b></li>
+                        <li><i className="legend-dot dot-4" />Entertainment<b>15%</b></li>
+                        <li><i className="legend-dot dot-5" />Other<b>15%</b></li>
+                      </ul>
+                    </div>
+                    <span>Sample data · not a user claim</span>
+                  </article>
+                  <article className="metric-card mood-card">
+                    <p>Your weekly mood &amp; mindset</p>
+                    <svg className="mood-chart" viewBox="0 0 280 90" aria-label="Sample chart showing mood trending upward across the week">
+                      <polyline points="10,55 52,68 94,40 136,58 178,30 220,42 270,15" />
+                      <circle cx="270" cy="15" r="4" />
+                    </svg>
+                    <div className="mood-axis"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+                    <span>Check in. Reflect. Reset.</span>
+                  </article>
                 </div>
               </div>
             </div>
@@ -527,7 +550,14 @@ export default function Home() {
       </section>
 
       <section id="faq" className="faq section-light" aria-labelledby="faq-title">
-        <div className="faq-intro" data-reveal><p className="eyebrow">No tricks in the fine print</p><h2 id="faq-title">Your questions,<br /><em>answered clearly.</em></h2><p>Ghost Cart feels like shopping. It never pretends to be a real store, bank, payment card, or delivery service.</p></div>
+        <div className="faq-intro" data-reveal>
+          <p className="eyebrow">No tricks in the fine print</p>
+          <h2 id="faq-title">Your questions,<br /><em>answered clearly.</em></h2>
+          <p>Ghost Cart feels like shopping. It never pretends to be a real store, bank, payment card, or delivery service.</p>
+          <img className="faq-decor faq-decor-sneaker" src="/products/sneaker.png" alt="" aria-hidden="true" />
+          <img className="faq-decor faq-decor-perfume" src="/products/perfume.png" alt="" aria-hidden="true" />
+          <GhostMascot pose="waveAlt" className="faq-decor faq-decor-mascot" />
+        </div>
         <div className="faq-column" data-reveal>
           <div className="faq-list">
             {FAQS.map(([question, answer], index) => <details key={question} open={index === 0}><summary>{question}<span aria-hidden="true">+</span></summary><p>{answer}</p></details>)}
