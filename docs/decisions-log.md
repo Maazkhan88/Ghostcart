@@ -71,3 +71,35 @@ Append-only. Do not rewrite or delete earlier entries — only add new ones.
   `docs/visual-verification-log.md`. **Why:** documented as a known
   environment limitation rather than fabricating screenshot files or skipping
   verification entirely — the live comparison was genuinely performed.
+
+## 2026-07-10 — Claude Code (asset follow-up, same day)
+
+- **Wired in the official logo, reverted the mascot/product photo set.** The
+  user supplied real brand assets after the section-alignment session ended.
+  The logo (icon mark + two lockups) processed cleanly into transparent PNGs
+  and is now live in `Wordmark`. A separate batch of AI-generated mascot
+  poses and product renders looked transparent on preview but had the
+  checkerboard "transparency" convention baked into the RGB pixels, not a
+  real alpha channel (`hasAlpha: false` confirmed via `sharp`). A
+  border-anchored flood-fill recovered clean results for simple product
+  shapes but produced visible smudging on detailed mascot poses. All of it
+  was wired in, screenshotted live, and then **fully reverted** on explicit
+  user instruction ("don't compromise on quality — I'll give you proper
+  assets later"). **Why:** shipping a visibly-degraded mascot cutout would
+  be worse than keeping the clean CSS/SVG placeholder; better to wait for a
+  source file with genuine alpha than to ship a lossy workaround.
+
+- **Declined to extract anything from `fun icons.png`.** This is a single
+  flattened sprite sheet (22 icons on a non-transparent blurred gradient
+  background) containing baked-in typos, a mock checkout card with literal
+  "AED 353.50" text (violates the Dirham-symbol-asset rule), and a
+  cute/painterly mascot style that visually conflicts with the flat
+  geometric mascot in the approved logo. Asked the user whether to adopt the
+  new mascot style, keep only the flat one, or use both in different
+  contexts; **user chose to wait for a proper asset batch instead of
+  answering the style question or extracting the clean subset (product
+  icons, action glyphs) now.** Nothing from this file was cropped,
+  processed, or wired in. **Why:** the user's instruction to wait applies to
+  the whole file, not just the flagged problem items — respecting that
+  literally rather than partially proceeding on the "safe" icons without
+  being asked to.
