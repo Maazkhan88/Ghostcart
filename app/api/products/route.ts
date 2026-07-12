@@ -2,6 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { merchants, products } from "../../../db/schema";
 import { slugify, toRouteErrorMessage } from "../../../lib/api-helpers";
+import { requireAdminApiUser } from "../../../lib/admin-auth";
 
 const MISSING_TABLE_HINT =
   "The products table is unavailable. Generate the migration locally with `npm run db:generate`, then deploy so the platform can apply the generated SQL to the real D1 database.";
@@ -57,6 +58,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const unauthorized = await requireAdminApiUser();
+  if (unauthorized) return unauthorized;
+
   try {
     const payload = (await request.json()) as {
       merchantId?: number;

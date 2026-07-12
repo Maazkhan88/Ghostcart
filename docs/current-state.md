@@ -1,6 +1,15 @@
 # Current State
 
-Last updated: 2026-07-12 (Claude session — verified the Android v2 build for real, fixed a genuine compile error, and built the first pass of the products/merchants backend).
+Last updated: 2026-07-12 (Codex session — added the authenticated catalog admin, protected backend writes, connected the web demo to D1 catalog data with a safe demo fallback, and prepared Sites-managed D1 deployment).
+
+## Catalog admin and protected backend (Codex, 2026-07-12)
+
+- Added an authenticated `/admin` workspace linked from the main desktop/mobile navigation and footer. It supports merchant and product creation, editing, removal, search, active/featured flags, responsive layouts, and explicit simulation-only safety language.
+- The admin UI follows the website visual system: ink/paper/soft-gray surfaces, editorial scale, rounded panels, official Ghost Cart logo/mascot assets, and restrained `#64D64A` positive actions.
+- All catalog write endpoints now require a signed-in ChatGPT user whose email is present in the hosted `GHOST_CART_ADMIN_EMAILS` allowlist. Anonymous writes return 401 and signed-in non-admin writes return 403. Catalog reads remain public because the demo needs them.
+- The main website now fetches active products from `/api/products`; if D1 is unavailable or empty, the explicitly named `DEMO_PRODUCTS` array remains the safe simulation fallback.
+- Enabled the logical Sites D1 binding (`.openai/hosting.json` → `"d1": "DB"`). The existing migration is included in the production package. Sites owns the real database resource and binding; the prior placeholder ID remains build-only.
+- Verified with `npm test` (3 passing tests, including admin authentication/rendering), `npm run build`, `npm run lint` (0 errors; existing `<img>` advisories only), and `git diff --check`.
 
 ## Backend: products & merchants CRUD (Claude, 2026-07-12)
 

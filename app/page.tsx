@@ -19,6 +19,29 @@ const DEMO_PRODUCTS: DemoProduct[] = [
   { id: "headphones", name: "The extra headphones", note: "A deal you did not need yesterday", category: "Tech", tone: "tone-mint", icon: "headphones" },
 ];
 
+type CatalogProduct = {
+  id: number;
+  merchantName: string | null;
+  name: string;
+  description: string;
+  category: string;
+  imageUrl: string | null;
+  isActive: boolean;
+};
+
+function toDemoProduct(product: CatalogProduct, index: number): DemoProduct {
+  const tones = ["tone-ice", "tone-smoke", "tone-paper", "tone-mint"];
+  return {
+    id: `catalog-${product.id}`,
+    name: product.name,
+    note: product.description || `Demo catalog item from ${product.merchantName || "Ghost Cart"}`,
+    category: product.category,
+    tone: tones[index % tones.length],
+    image: product.imageUrl || undefined,
+    icon: product.imageUrl ? undefined : "sparkle",
+  };
+}
+
 const DASHBOARD_DEMO_DATA = {
   minimumGhostedCount: 4,
   topPattern: "Late-night scrolling",
@@ -159,6 +182,7 @@ function PhoneMockup({
 }
 
 export default function Home() {
+  const [catalogProducts, setCatalogProducts] = useState<DemoProduct[]>(DEMO_PRODUCTS);
   const [cartIds, setCartIds] = useState<string[]>([]);
   const [ghostedIds, setGhostedIds] = useState<string[]>([]);
   const [cooledIds, setCooledIds] = useState<string[]>([]);
@@ -172,9 +196,24 @@ export default function Home() {
   const dragDepth = useRef(0);
 
   const cartProducts = useMemo(
-    () => DEMO_PRODUCTS.filter((product) => cartIds.includes(product.id)),
-    [cartIds],
+    () => catalogProducts.filter((product) => cartIds.includes(product.id)),
+    [cartIds, catalogProducts],
   );
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/products", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((data: { products?: CatalogProduct[] }) => {
+        const products = (data.products ?? []).filter((product) => product.isActive);
+        if (active && products.length) setCatalogProducts(products.map(toDemoProduct));
+      })
+      .catch(() => {
+        // The named DEMO_PRODUCTS remain the explicit simulation fallback when
+        // D1 is not bound yet or the catalog has not been seeded.
+      });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -248,7 +287,7 @@ export default function Home() {
   const dropIntoGhostCart = (event: DragEvent<HTMLElement>) => {
     event.preventDefault();
     const id = event.dataTransfer.getData("text/plain");
-    if (DEMO_PRODUCTS.some((product) => product.id === id)) addToCart(id);
+    if (catalogProducts.some((product) => product.id === id)) addToCart(id);
   };
 
   const fakeCheckout = () => {
@@ -282,6 +321,7 @@ export default function Home() {
           <a href="#why">Features</a>
           <a href="#waitlist">Coming soon</a>
           <a href="#faq">FAQ</a>
+          <a href="/admin">Admin</a>
         </div>
         <a className="button button-small button-light nav-cta" href="#waitlist">Join waitlist</a>
         <button
@@ -301,6 +341,7 @@ export default function Home() {
         <a href="#why" onClick={() => setNavOpen(false)}>Features</a>
         <a href="#waitlist" onClick={() => setNavOpen(false)}>Coming soon</a>
         <a href="#faq" onClick={() => setNavOpen(false)}>FAQ</a>
+        <a href="/admin" onClick={() => setNavOpen(false)}>Admin</a>
         <a className="button button-primary" href="#waitlist" onClick={() => setNavOpen(false)}>Join waitlist</a>
       </div>
 
@@ -423,7 +464,7 @@ export default function Home() {
               <section className="demo-catalog" aria-labelledby="browse-temptation-title">
                 <header><div><p className="eyebrow eyebrow-dark">Browse temptation</p><h3 id="browse-temptation-title">Choose an almost-buy.</h3></div><span>Drag, hold, double-click, or tap</span></header>
                 <div className="product-grid" aria-label="Demo almost-buys">
-                  {DEMO_PRODUCTS.map((product) => {
+                  {catalogProducts.map((product) => {
                     const inCart = cartIds.includes(product.id);
                     const cooled = cooledIds.includes(product.id);
                     const ghosted = ghostedIds.includes(product.id);
@@ -592,10 +633,10 @@ export default function Home() {
           </div>
 
           <aside className="almost-bought-rail" aria-label="Example almost-bought list">
-            <header><div><p className="eyebrow eyebrow-dark">Almost bought</p><h3>Your demo list</h3></div><span>{DEMO_PRODUCTS.length}</span></header>
+            <header><div><p className="eyebrow eyebrow-dark">Almost bought</p><h3>Your demo list</h3></div><span>{catalogProducts.length}</span></header>
             <p>Everything you wanted. Zero commitment.</p>
             <div className="almost-bought-list">
-              {DEMO_PRODUCTS.map((product) => {
+              {catalogProducts.map((product) => {
                 const status = ghostedIds.includes(product.id) ? "Ghosted" : cooledIds.includes(product.id) ? "Cooling" : cartIds.includes(product.id) ? "In Ghost Cart" : "Ready";
                 return <div key={product.id}><span className={`almost-thumb art-${product.id}`}>{product.image ? <img src={product.image} alt="" /> : product.icon ? <Icon name={product.icon} /> : <span />}</span><p><strong>{product.name}</strong><small>{status}</small></p></div>;
               })}
@@ -773,7 +814,7 @@ export default function Home() {
           <div className="footer-curve footer-curve-one" aria-hidden="true" /><div className="footer-curve footer-curve-two" aria-hidden="true" />
           <div className="footer-main">
             <div className="footer-brand"><Wordmark inverted /><h2>Fake checkout.<br /><span>Real control.</span></h2><p>Save your cravings for later.<br />Keep your money now.</p></div>
-            <div className="footer-links"><div><strong>Explore</strong><a href="#how">How it works</a><a href="#demo">Try the demo</a><a href="#why">Why Ghost Cart</a></div><div><strong>Information</strong><a href="#faq">FAQ</a><span>Privacy · coming soon</span><span>Terms · coming soon</span></div><div><strong>Social</strong><span>Instagram · coming soon</span><span>TikTok · coming soon</span><span>LinkedIn · coming soon</span></div></div>
+            <div className="footer-links"><div><strong>Explore</strong><a href="#how">How it works</a><a href="#demo">Try the demo</a><a href="#why">Why Ghost Cart</a></div><div><strong>Information</strong><a href="#faq">FAQ</a><a href="/admin">Catalog admin</a><span>Privacy · coming soon</span></div><div><strong>Social</strong><span>Instagram · coming soon</span><span>TikTok · coming soon</span><span>LinkedIn · coming soon</span></div></div>
           </div>
           <div className="footer-bottom"><span>© 2026 Ghost Cart</span><p>Simulation only. No real payment. No real delivery.</p><a href="#top">Back to top ↑</a></div>
         </footer>

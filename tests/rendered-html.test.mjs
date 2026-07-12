@@ -2,17 +2,35 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-async function render() {
+async function render(path = "/", headers = {}) {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
 
   return worker.fetch(
-    new Request("http://localhost/", { headers: { accept: "text/html" } }),
+    new Request(`http://localhost${path}`, { headers: { accept: "text/html", ...headers } }),
     { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } },
     { waitUntil() {}, passThroughOnException() {} },
   );
 }
+
+test("protects and renders the Ghost Cart catalog admin", async () => {
+  process.env.GHOST_CART_ADMIN_EMAILS = "owner@example.com";
+
+  const anonymousResponse = await render("/admin");
+  assert.ok([302, 303, 307, 308].includes(anonymousResponse.status));
+  assert.match(anonymousResponse.headers.get("location") ?? "", /signin-with-chatgpt/i);
+
+  const response = await render("/admin", {
+    "oai-authenticated-user-email": "owner@example.com",
+  });
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /Simulation catalog control/i);
+  assert.match(html, /Manage merchants and demo products/i);
+  assert.match(html, /No real payment/i);
+  assert.match(html, /No real delivery/i);
+});
 
 test("server-renders the complete Ghost Cart experience", async () => {
   const response = await render();

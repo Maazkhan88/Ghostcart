@@ -331,3 +331,24 @@ Append-only. Do not rewrite or delete earlier entries — only add new ones.
   admin/internal catalog seeding, not a public-facing API — but flagged
   explicitly so it isn't forgotten before anything here is exposed outside
   the team.
+
+## 2026-07-12 — Codex (catalog admin and backend activation)
+
+- **Used the existing Sites/ChatGPT identity path for admin access.** `/admin`
+  requires sign-in, and backend writes independently enforce the hosted
+  `GHOST_CART_ADMIN_EMAILS` allowlist. This keeps authorization server-side and
+  avoids adding a second password or OAuth system to the project.
+- **Kept catalog reads public and writes protected.** The public simulation
+  needs to read active products, while create/update/delete operations are
+  owner-only administrative actions.
+- **Connected the website to D1 without removing the named demo fallback.**
+  Active API products replace the cards when present; `DEMO_PRODUCTS` remains
+  explicit source-identified demo data when D1 is unavailable or empty. This
+  lets the existing public experience continue to work during rollout.
+- **Matched the admin to the established brand rather than introducing generic
+  dashboard styling.** The page reuses the official logo and mascot assets,
+  ink/paper/soft-gray palette, editorial typography scale, rounded surfaces,
+  visible focus states, responsive controls, and sparse green positive actions.
+- **Enabled the logical `DB` binding through `.openai/hosting.json`.** Sites is
+  responsible for provisioning the real D1 resource and applying the packaged
+  Drizzle migration; no real payment, order, delivery, or banking data is added.
