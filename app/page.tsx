@@ -9,13 +9,14 @@ type DemoProduct = {
   category: string;
   tone: string;
   image?: string;
+  icon?: keyof typeof ICON_PATHS;
 };
 
 const DEMO_PRODUCTS: DemoProduct[] = [
   { id: "sneakers", name: "The white sneakers", note: "Saved after a late-night scroll", category: "Fashion", tone: "tone-ice", image: "/products/sneaker.png" },
   { id: "perfume", name: "The blind-buy perfume", note: "A review made it feel urgent", category: "Beauty", tone: "tone-smoke", image: "/products/perfume.png" },
-  { id: "burger", name: "The midnight combo", note: "Built from boredom, not hunger", category: "Delivery", tone: "tone-paper" },
-  { id: "headphones", name: "The extra headphones", note: "A deal you did not need yesterday", category: "Tech", tone: "tone-mint" },
+  { id: "burger", name: "The midnight combo", note: "Built from boredom, not hunger", category: "Delivery", tone: "tone-paper", image: "/mascot/mascot-combo.png" },
+  { id: "headphones", name: "The extra headphones", note: "A deal you did not need yesterday", category: "Tech", tone: "tone-mint", icon: "headphones" },
 ];
 
 const DASHBOARD_DEMO_DATA = {
@@ -86,6 +87,13 @@ const ICON_PATHS: Record<string, string> = {
   drag: "M8 11V5a2 2 0 0 1 4 0v6M12 8V5a2 2 0 0 1 4 0v7M16 9a2 2 0 0 1 4 0v5c0 4-3 7-7 7h-1c-3 0-5-1-7-4l-2-3a2 2 0 0 1 3-2l2 2",
   cool: "M12 2v20M4.2 6.5l15.6 11M4.2 17.5l15.6-11M9 4l3 3 3-3M9 20l3-3 3 3M4 10l4 1-1 4M20 14l-4-1 1-4",
   sparkle: "M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3zM18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8L18 15z",
+  smile: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8.5 10v.01M15.5 10v.01M8 14.5c1 1.5 2.4 2.3 4 2.3s3-.8 4-2.3",
+  frown: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8.5 10v.01M15.5 10v.01M16 16.5c-1-1.5-2.4-2.3-4-2.3s-3 .8-4 2.3",
+  check: "M5 12.5l4.5 4.5L19 7",
+  menu: "M4 7h16M4 12h16M4 17h16",
+  close: "M6 6l12 12M18 6L6 18",
+  arrowRight: "M4 12h15M13 6l6 6-6 6",
+  headphones: "M4 13v-1a8 8 0 0 1 16 0v1M4 13a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H4zM20 13a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-1a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1h1z",
 };
 
 function Icon({ name }: { name: keyof typeof ICON_PATHS }) {
@@ -157,6 +165,7 @@ export default function Home() {
   const [receiptVisible, setReceiptVisible] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const cartProducts = useMemo(
@@ -180,10 +189,20 @@ export default function Home() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setFocusMode(false);
+      if (event.key === "Escape") {
+        setFocusMode(false);
+        setNavOpen(false);
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 1100px)");
+    const onChange = () => { if (!mql.matches) setNavOpen(false); };
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
   }, []);
 
   const addToCart = (id: string) => {
@@ -244,8 +263,26 @@ export default function Home() {
           <a href="#waitlist">Coming soon</a>
           <a href="#faq">FAQ</a>
         </div>
-        <a className="button button-small button-light" href="#waitlist">Join waitlist</a>
+        <a className="button button-small button-light nav-cta" href="#waitlist">Join waitlist</a>
+        <button
+          type="button"
+          className="nav-menu-toggle"
+          aria-expanded={navOpen}
+          aria-controls="mobile-nav-panel"
+          aria-label={navOpen ? "Close menu" : "Open menu"}
+          onClick={() => setNavOpen((current) => !current)}
+        >
+          <Icon name={navOpen ? "close" : "menu"} />
+        </button>
       </nav>
+
+      <div id="mobile-nav-panel" className={`nav-mobile-panel ${navOpen ? "is-open" : ""}`}>
+        <a href="#how" onClick={() => setNavOpen(false)}>How it works</a>
+        <a href="#why" onClick={() => setNavOpen(false)}>Features</a>
+        <a href="#waitlist" onClick={() => setNavOpen(false)}>Coming soon</a>
+        <a href="#faq" onClick={() => setNavOpen(false)}>FAQ</a>
+        <a className="button button-primary" href="#waitlist" onClick={() => setNavOpen(false)}>Join waitlist</a>
+      </div>
 
       <section className="hero section-dark" aria-labelledby="hero-title">
         <div className="hero-grain" aria-hidden="true" />
@@ -325,7 +362,7 @@ export default function Home() {
             <span className="step-badge">3</span>
             <h3>Keep your money.</h3>
             <p>The urge is satisfied.<br />Your money stays yours.</p>
-            <div className="step-art art-smile" aria-hidden="true">☺</div>
+            <div className="step-art art-smile" aria-hidden="true"><Icon name="smile" /></div>
           </article>
         </div>
 
@@ -379,7 +416,7 @@ export default function Home() {
                         onDoubleClick={() => addToCart(product.id)}
                       >
                         <div className={`demo-product-art art-${product.id}`} aria-hidden="true">
-                          {product.image ? <img src={product.image} alt="" /> : <span />}
+                          {product.image ? <img src={product.image} alt="" /> : product.icon ? <Icon name={product.icon} /> : <span />}
                         </div>
                         <p className="demo-category">{product.category}</p>
                         <h3>{product.name}</h3>
@@ -437,13 +474,13 @@ export default function Home() {
             <div className="almost-bought-list">
               {DEMO_PRODUCTS.map((product) => {
                 const status = ghostedIds.includes(product.id) ? "Ghosted" : cooledIds.includes(product.id) ? "Cooling" : cartIds.includes(product.id) ? "In Ghost Cart" : "Ready";
-                return <div key={product.id}><span className={`almost-thumb art-${product.id}`}>{product.image ? <img src={product.image} alt="" /> : <span />}</span><p><strong>{product.name}</strong><small>{status}</small></p></div>;
+                return <div key={product.id}><span className={`almost-thumb art-${product.id}`}>{product.image ? <img src={product.image} alt="" /> : product.icon ? <Icon name={product.icon} /> : <span />}</span><p><strong>{product.name}</strong><small>{status}</small></p></div>;
               })}
             </div>
             <a href="#stories">Explore example moments <span aria-hidden="true">↗</span></a>
           </aside>
         </div>
-        <p className="demo-pro-tip"><span aria-hidden="true">✦</span> Pro tip: use the cooldown before an impulse becomes a purchase.</p>
+        <p className="demo-pro-tip"><Icon name="sparkle" /> Pro tip: use the cooldown before an impulse becomes a purchase.</p>
       </section>
 
       <section id="why" className="why section-light">
@@ -470,7 +507,7 @@ export default function Home() {
               <li><Icon name="cartHeart" /><span>See something you want</span></li>
               <li><Icon name="cardX" /><span>Pay without thinking</span></li>
               <li><Icon name="boxX" /><span>Wait for it to arrive</span></li>
-              <li><span className="comparison-glyph" aria-hidden="true">☹</span><span>Feel guilty afterwards</span></li>
+              <li><span className="comparison-glyph" aria-hidden="true"><Icon name="frown" /></span><span>Feel guilty afterwards</span></li>
               <li><Icon name="wallet" /><span>Money gone. Regret stays.</span></li>
             </ol>
           </div>
@@ -481,7 +518,7 @@ export default function Home() {
               <li><Icon name="cartHeart" /><span>See something you want</span></li>
               <li><GhostMascot pose="cart" className="comparison-ghost-icon" /><span>Ghost Cart checkout</span></li>
               <li><GhostMascot pose="thumbsup" className="comparison-ghost-icon" /><span>Feel the rush. Skip the cost.</span></li>
-              <li><span className="comparison-glyph" aria-hidden="true">☺</span><span>Feel in control. Move on.</span></li>
+              <li><span className="comparison-glyph" aria-hidden="true"><Icon name="smile" /></span><span>Feel in control. Move on.</span></li>
               <li><Icon name="walletCheck" /><span>Money saved. You win.</span></li>
             </ol>
           </div>
@@ -611,7 +648,6 @@ export default function Home() {
 
         <footer className="site-footer section-dark">
           <div className="footer-curve footer-curve-one" aria-hidden="true" /><div className="footer-curve footer-curve-two" aria-hidden="true" />
-          <img className="footer-badge" src="/brand/fake-checkout-real-control-badge.png" alt="" aria-hidden="true" />
           <div className="footer-main">
             <div className="footer-brand"><Wordmark inverted /><h2>Fake checkout.<br /><span>Real control.</span></h2><p>Save your cravings for later.<br />Keep your money now.</p></div>
             <div className="footer-links"><div><strong>Explore</strong><a href="#how">How it works</a><a href="#demo">Try the demo</a><a href="#why">Why Ghost Cart</a></div><div><strong>Information</strong><a href="#faq">FAQ</a><span>Privacy · coming soon</span><span>Terms · coming soon</span></div><div><strong>Social</strong><span>Instagram · coming soon</span><span>TikTok · coming soon</span><span>LinkedIn · coming soon</span></div></div>

@@ -1,7 +1,7 @@
 # Current State
 
-Last updated: 2026-07-11 (Codex verification and compliance follow-up after
-Claude Code's dashboard chart and FAQ decoration pass).
+Last updated: 2026-07-12 (Claude design-critique cleanup pass — mobile nav,
+icon system, green accent audit, footer dedup, burger/headphones placeholders).
 
 ## What currently works
 
@@ -29,6 +29,38 @@ Claude Code's dashboard chart and FAQ decoration pass).
   pass, see below). `GhostMascot` renders real PNGs (10 poses) instead of
   the SVG placeholder; sneaker/perfume product shots replace the CSS-drawn
   shapes in the hero, how-it-works, demo grid, and stories sections.
+
+## What changed in the design-critique cleanup pass (Claude, same day)
+
+Actioned the senior-design critique that had been flagged verbally in an
+earlier session but never written down (mixed asset fidelity, Unicode-glyph
+icons, a crude hand-rolled icon set, green accent creep, a duplicated footer
+headline, and no mobile nav below 1100px):
+
+- Added a hamburger toggle + slide-down mobile nav panel below 1100px (the
+  links previously just disappeared with no replacement way to reach them).
+- Replaced the ☺ / ☹ / ✦ unicode glyphs with proper SVG icons from the
+  existing `Icon`/`ICON_PATHS` system (new `smile`, `frown`, `check`, `menu`,
+  `close`, `arrowRight`, `headphones` paths).
+- Audited and reduced `--green` usage from ~30 decorative instances down to
+  the intentional ones (primary CTAs, the single hero metric number, headline
+  accents, focus states, the ghost-side comparison icons, single-instance
+  chart elements) — repeated decorative uses (avatars, badges, six benefit
+  underlines, feature-strip icons) now use ink/neutral instead.
+- Fixed the footer's duplicated headline by removing the `footer-badge` image
+  that repeated the live `<h2>` text verbatim, rather than rewording either.
+- Replaced the CSS-gradient burger placeholder (which had a baked-in green
+  stripe) with the real `mascot-combo.png` render already used in Stories.
+- Rebuilt the headphones placeholder as a flat SVG icon instead of a
+  border/pseudo-element hack; `DemoProduct` now supports an optional `icon`
+  fallback for any future asset-less item.
+- Full detail and rationale in `docs/decisions-log.md`.
+- **Not yet done:** live-preview / screenshot confirmation — `vinext dev`
+  couldn't reach its Cloudflare `Request.cf` setup call from this sandbox's
+  network egress. `npm run build`, `npm test`, `npm run lint` all pass
+  cleanly (only the pre-existing `no-img-element` warnings). Next session
+  should screenshot the mobile nav panel and the icon swaps to visually
+  confirm before calling this pixel-verified.
 
 ## What changed in this Claude session
 

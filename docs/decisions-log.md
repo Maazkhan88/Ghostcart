@@ -238,3 +238,53 @@ Append-only. Do not rewrite or delete earlier entries — only add new ones.
 - **Ignored only `.claude/settings.local.json`, not the whole `.claude`
   directory.** The tracked launch configuration remains shared, while local
   permission choices stay machine-specific.
+
+## Design-critique cleanup pass (Claude, same day)
+
+- **Footer duplicate headline — removed the badge image, not the live text.**
+  `footer-badge` (`fake-checkout-real-control-badge.png`) sat directly above
+  an `<h2>` that said the exact same words ("Fake checkout. Real control.").
+  Kept the live, accessible text and deleted the redundant decorative image
+  (and its now-dead CSS) rather than trying to reword one of them.
+- **Unicode glyphs standing in for icons (☺ ☹ ✦) replaced with the existing
+  `Icon`/`ICON_PATHS` SVG system.** Added `smile`, `frown`, `check`, `menu`,
+  `close`, `arrowRight`, and `headphones` paths. Left universally-understood
+  symbols alone (✓ × ↑ ↓ ↗) since those aren't the "crude icon set" problem —
+  the smiley faces and the sparkle were.
+- **Green accent audit.** `--green` was applied to ~30 elements, many of them
+  repeated decorative ones (community feed avatars, phone-mockup mini badges,
+  the almost-bought numbered badge, six benefit-card underlines, three
+  feature-strip icons, three story-callout icons, the streak-card number).
+  Pulled those back to ink/neutral so green reads as a deliberate accent
+  (primary CTAs, the single metric-primary number, the accent-text/`em`
+  headline treatment, focus states, the ghost-side comparison icons) instead
+  of a wash across the page. Did not touch the donut/mood chart or dot-1,
+  since those are single-instance data-viz uses of the brand color, not
+  decorative repetition.
+- **Burger placeholder replaced with the real `mascot-combo.png` render**
+  (already used in the Stories section) instead of a hand-rolled CSS gradient
+  blob that had a baked-in green stripe. This closes both the "mixed asset
+  fidelity" note and one more stray green use in the same edit.
+- **Headphones placeholder rebuilt as a flat SVG icon** (new `headphones`
+  path) instead of the border/pseudo-element hack that approximated an
+  over-ear shape. Still not a real product photo — that's asset-blocked, per
+  `docs/missing-assets.md` — but it now reads as an intentional icon rather
+  than a crude shape. `DemoProduct` gained an optional `icon` field so any
+  future asset-less item has a clean fallback instead of an empty `<span>`.
+- **Mobile nav — added the missing menu.** Below 1100px, `.nav-links` was
+  simply `display: none` with no replacement, so the how-it-works/features/
+  FAQ/waitlist links were unreachable from the nav on any phone or small
+  tablet. Added a hamburger toggle (`nav-menu-toggle`) and a slide-down panel
+  (`nav-mobile-panel`) with the same links plus the primary CTA, closes on
+  Escape, on link tap, and automatically if the viewport is resized back past
+  1100px.
+- **Verification note:** `npm run build`, `npm test`, and `npm run lint` all
+  pass (only the pre-existing `no-img-element` warnings). The dev server's
+  live preview could not be reached in this session — `vinext dev` fails
+  during Cloudflare `Request.cf` setup because the sandbox's network egress
+  doesn't allow the trace endpoint it calls. This is the same class of infra
+  limitation noted in earlier sessions' screenshot-tool timeouts, not a code
+  issue. No new screenshots were captured; verification here is code-review
+  plus build/test/lint. **Next session should get a live-preview
+  confirmation of the mobile nav panel and the icon swaps before this is
+  considered pixel-verified.**
