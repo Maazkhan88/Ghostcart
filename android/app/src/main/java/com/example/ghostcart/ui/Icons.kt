@@ -264,6 +264,7 @@ fun GhostCartWordmark(modifier: Modifier = Modifier, contentDescription: String?
         painter = painterResource(R.drawable.ghost_cart_logo_horizontal),
         contentDescription = contentDescription,
         contentScale = ContentScale.Fit,
+        alignment = androidx.compose.ui.Alignment.CenterStart,
         modifier = modifier
     )
 }

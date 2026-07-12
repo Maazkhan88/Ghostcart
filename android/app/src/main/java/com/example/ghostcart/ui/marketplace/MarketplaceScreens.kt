@@ -122,21 +122,21 @@ fun HomeMarketplaceScreen(
                 ForwardChevron()
             }
 
-            MarketplaceSectionHeader(title = "Most Ghosted Today", onViewAll = {})
+            MarketplaceSectionHeader(title = "Most Ghosted Today", onViewAll = { onOpenCategory("most_ghosted") })
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(vertical = 12.dp)) {
                 items(Marketplace.mostGhostedToday) { product ->
                     MarketplaceProductCard(product, onClick = { onOpenProduct(product.id) }, onAdd = { onAddToCart(product.id) })
                 }
             }
 
-            MarketplaceSectionHeader(title = "Fake Flash Deals", onViewAll = {})
+            MarketplaceSectionHeader(title = "Fake Flash Deals", onViewAll = { onOpenCategory("flash_deals") })
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(vertical = 12.dp)) {
                 items(Marketplace.fakeFlashDeals) { product ->
                     MarketplaceProductCard(product, onClick = { onOpenProduct(product.id) }, onAdd = { onAddToCart(product.id) })
                 }
             }
 
-            MarketplaceSectionHeader(title = "Salary Protection Picks", onViewAll = {})
+            MarketplaceSectionHeader(title = "Salary Protection Picks", onViewAll = { onOpenCategory("all") })
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -169,7 +169,7 @@ fun HomeMarketplaceScreen(
                 Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Paper, modifier = Modifier.size(16.dp))
             }
 
-            MarketplaceSectionHeader(title = "Sponsored Simulations", onViewAll = {})
+            MarketplaceSectionHeader(title = "Sponsored Simulations", onViewAll = { onOpenCategory("all") })
             LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 12.dp, horizontal = 0.dp)) {
                 items(Marketplace.sponsoredBrands) { brand ->
                     Column(
@@ -282,8 +282,19 @@ fun CategoryBrowseScreen(
             }
         }
 
-        Text(text = "🍔☕ Food & Coffee Cravings", color = Ink, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 18.dp))
-        Text(text = "It wasn't hunger. It was boredom with sauce.", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+        val (title, subtitle) = when (categoryId) {
+            "food" -> "🍔☕ Food & Coffee Cravings" to "It wasn't hunger. It was boredom with sauce."
+            "beauty" -> "✨💄 Beauty & Self-Care" to "Because skincare details felt extremely urgent at 2 AM."
+            "fashion" -> "👟🧥 Fashion Cravings" to "Avoid late-night wardrobe additions you don't need."
+            "gadgets" -> "🔌🎧 Cool Tech & Gadgets" to "A deals banner won't make you use that extra keyboard."
+            "most_ghosted" -> "👻🔥 Most Ghosted Cravings" to "Top trending impulse items our users successfully ghosted today."
+            "flash_deals" -> "⚡💸 Fake Flash Deals" to "Urgency is fake, but the savings are 100% real."
+            "all" -> "📦🛍️ Almost-Spent Catalog" to "Browse through all simulation items you can add to cart."
+            else -> "🛍️ Shop Cravings" to "Simulate and protect your budget."
+        }
+
+        Text(text = title, color = Ink, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 18.dp))
+        Text(text = subtitle, color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
 
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 14.dp)) {
             items(filters) { filter ->

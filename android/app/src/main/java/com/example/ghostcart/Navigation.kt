@@ -195,6 +195,9 @@ fun MainNavigation() {
                 "beauty" -> prod.category.contains("Beauty", true)
                 "fashion" -> prod.category.contains("Fashion", true)
                 "gadgets" -> prod.category.contains("Gadgets", true) || prod.category.contains("Tech", true)
+                "most_ghosted" -> Marketplace.mostGhostedToday.any { it.id == prod.id } || (prod.id.startsWith("dummy") && prod.price > 200)
+                "flash_deals" -> Marketplace.fakeFlashDeals.any { it.id == prod.id } || (prod.id.startsWith("dummy") && prod.price < 100)
+                "all" -> true
                 else -> true
               }
             }
