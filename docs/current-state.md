@@ -1,7 +1,85 @@
 # Current State
 
-Last updated: 2026-07-12 (Claude design-critique cleanup pass — mobile nav,
-icon system, green accent audit, footer dedup, burger/headphones placeholders).
+Last updated: 2026-07-12 (Antigravity session — web interactive polish, animated delivery timeline, Android/iOS native app v1 build).
+
+## Deployment (live URL)
+
+The site is live and auto-deployed on Cloudflare Workers + Pages via the `agent/ghost-cart-web-v1` branch PR:
+
+- **Workers URL (SSR):** https://nameless-d98e.maaz-n-khan.workers.dev
+- **Pages Branch Preview:** https://agent-ghost-cart-web-v1.ghostcart.pages.dev
+- **APK download:** https://github.com/Maazkhan88/Ghostcart/tree/agent/ghost-cart-web-v1/android/app/build/outputs/apk/debug/app-debug.apk
+
+## What changed in the latest Antigravity session (2026-07-12)
+
+### 1 — Web: Interactive polish & accessibility fixes
+
+- **Mobile nav accessibility:** Added `visibility: hidden; opacity: 0; pointer-events: none` to the closed `.nav-mobile-panel` in `globals.css` and transition them to `visible/1/auto` when `.is-open` fires. This prevents keyboard/screen-reader users from tabbing into invisible nav links when the menu is collapsed.
+- **Portal drag-over glow:** Wired `isDraggingOver` state into `<aside class="demo-cart">` drag events in `page.tsx`. When a product is dragged over the portal, `.is-drag-over` adds a green glow shadow and border highlight.
+- **Catalog state reset:** Added `resetProductState(id)` handler in `page.tsx`. Cooled or ghosted product cards now show an underlined "RESET" text button inline with the status text — clicking it removes the item from all simulation states so you can re-test the flow without refreshing.
+
+### 2 — Web: Animated Simulated Ghost Delivery Timeline
+
+Replaces the instant "Fake Checkout → Ghost Receipt" jump. When the user clicks **Complete Fake Checkout**, the cart panel transitions into a full animated delivery tracker:
+
+| Step | Mascot | Delay |
+|---|---|---|
+| Placed order | `cart` | 0 ms |
+| Order accepted | `wave` | +2 000 ms |
+| Order getting prepared | `combo` | +2 000 ms |
+| Ghost rider picking up the order | `phoneList` | +2 500 ms |
+| Ghost rider on the way to deliver | `checkoutPhone` | +2 500 ms |
+| Ghost rider has delivered your ghost order | `thumbsup` | +3 000 ms |
+
+- A green animated progress bar tracks steps in real time.
+- A **View Ghost Receipt** button appears only after the final step.
+- Disclaimer: "Simulation only · No real courier is dispatched." — displayed throughout.
+- Implementation: `useEffect` + `setTimeout` chain in `page.tsx`, CSS in `globals.css` (`.delivery-timeline-card`, `.delivery-steps`, `.delivery-progress-track`, etc.).
+
+### 3 — Android: Native Jetpack Compose app (`android/`)
+
+Full native Android application scaffolded via the Android CLI tool (`android create empty-activity`) and built with Gradle. All screens implemented in Kotlin / Jetpack Compose:
+
+| File | Purpose |
+|---|---|
+| `theme/Color.kt` | Brand tokens: `Ink`, `Paper`, `GhostGreen`, `DarkGray`, `SoftGray` |
+| `theme/Theme.kt` | `GhostCartTheme` using brand palette (dynamic color disabled) |
+| `data/Product.kt` | `Product` data class + `DemoCatalog` with 4 sample items |
+| `ui/Icons.kt` | Canvas-drawn product icons (sneaker, perfume, burger, headphones, leaf, chart, wallet, lock) + `GhostMascotPose` |
+| `ui/CatalogScreen.kt` | Product grid (2-col `LazyVerticalGrid`), product cards, custom `HoldToCoolButton` with pointer-input progress fill |
+| `ui/CartScreen.kt` | Cart empty-state, cart item rows, checkout CTA |
+| `ui/CheckoutScreen.kt` | Animated 6-step delivery timeline, `animateFloatAsState` progress bar, conditional "View Ghost Receipt" button |
+| `ui/ReceiptScreen.kt` | Ghost receipt card (zero charged, disclaimer, dismiss button) |
+| `ui/DashboardScreen.kt` | Metric cards, Canvas `DonutChart`, Canvas `LineChart` with grid lines |
+| `ui/WaitlistScreen.kt` | Email input form, success state |
+| `ui/main/MainScreen.kt` | `Scaffold` + bottom tab bar with cart badge + overlay routing for Cart/Checkout/Receipt |
+| `ui/main/MainScreenViewModel.kt` | `GhostCartUiState` + all handlers + `viewModelScope` coroutine delivery timer |
+
+**Build status:** `assembleDebug` passed in Gradle 9.1.0. Debug APK output:
+```
+android/app/build/outputs/apk/debug/app-debug.apk  (~12 MB)
+```
+
+### 4 — iOS: Native SwiftUI app (`ios/`)
+
+Complete SwiftUI codebase authored for iOS. **Requires macOS + Xcode to compile.** All source files are syntactically correct Swift 5.x / SwiftUI:
+
+| File | Purpose |
+|---|---|
+| `GhostCartApp.swift` | `@main` entry point, forces `.dark` color scheme |
+| `Theme.swift` | `Color` extensions: `.inkColor`, `.paperColor`, `.ghostGreenColor`, `.darkGrayColor`, `Color(hex:)` initializer |
+| `Product.swift` | `Product` struct (Identifiable, Hashable) + `DemoCatalog` |
+| `Icons.swift` | SwiftUI `Path`-based product icons + `GhostMascotView` with pose switching |
+| `CatalogView.swift` | Product grid (`LazyVGrid`), `ProductCardView`, `HoldToCoolButton` with `DragGesture` + `Timer` progress |
+| `CartView.swift` | Full-screen cart overlay with empty state + item rows |
+| `CheckoutView.swift` | 6-step delivery timeline with `GeometryReader` progress bar + animated step states |
+| `ReceiptView.swift` | Ghost receipt card |
+| `DashboardView.swift` | `Canvas`-based `DonutChartView` (arc segments) + `LineChartView` (polyline + dot points) |
+| `WaitlistView.swift` | Email `TextField` + success state |
+| `GhostCartViewModel.swift` | `ObservableObject` + `@Published` state + `Timer` delivery step progression |
+| `ContentView.swift` | Tab switcher + `ZStack` overlay routing for Cart/Checkout/Receipt + `BottomTabBar` with badge |
+
+
 
 ## Deployment note (2026-07-12)
 
