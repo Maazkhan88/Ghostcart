@@ -22,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AcUnit
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
@@ -466,7 +467,7 @@ fun GoalsScreen(goals: List<SavingsGoal> = WalletDemoData.goals, onAllocateSavin
             Text(text = "+${Marketplace.currency} 420", color = GhostGreen, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
         }
 
-        PrimaryButton(text = "Allocate Savings", onClick = onAllocateSavings, leadingIcon = null, trailingIcon = androidx.compose.material.icons.Icons.Filled.ChevronRight)
+        PrimaryButton(text = "Allocate Savings", onClick = onAllocateSavings, leadingIcon = null, trailingIcon = Icons.Filled.ChevronRight)
         SecondaryButton(text = "Create New Goal", onClick = onCreateGoal, modifier = Modifier.padding(top = 10.dp))
     }
 }
