@@ -166,6 +166,8 @@ export default function Home() {
   const [focusMode, setFocusMode] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [deliveryStep, setDeliveryStep] = useState<number>(-1);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const cartProducts = useMemo(
@@ -205,6 +207,16 @@ export default function Home() {
     return () => mql.removeEventListener("change", onChange);
   }, []);
 
+  useEffect(() => {
+    if (deliveryStep >= 0 && deliveryStep < 5) {
+      const stepDurations = [2000, 2000, 2500, 2500, 3000];
+      const timer = setTimeout(() => {
+        setDeliveryStep((prev) => prev + 1);
+      }, stepDurations[deliveryStep]);
+      return () => clearTimeout(timer);
+    }
+  }, [deliveryStep]);
+
   const addToCart = (id: string) => {
     setReceiptVisible(false);
     setCartIds((current) => (current.includes(id) ? current : [...current, id]));
@@ -240,9 +252,16 @@ export default function Home() {
 
   const fakeCheckout = () => {
     if (!cartIds.length) return;
+    setReceiptVisible(false);
+    setDeliveryStep(0);
     setGhostedIds((current) => Array.from(new Set([...current, ...cartIds])));
     setCartIds([]);
-    setReceiptVisible(true);
+  };
+
+  const resetProductState = (id: string) => {
+    setCooledIds((current) => current.filter((item) => item !== id));
+    setGhostedIds((current) => current.filter((item) => item !== id));
+    setCartIds((current) => current.filter((item) => item !== id));
   };
 
   const submitWaitlist = (event: FormEvent<HTMLFormElement>) => {
@@ -422,7 +441,21 @@ export default function Home() {
                         <h3>{product.name}</h3>
                         <p>{product.note}</p>
                         <div className="product-status" aria-live="polite">
-                          {cooled ? "Cooling mode active" : ghosted ? "Ghosted successfully" : inCart ? "In your Ghost Cart" : "Ready to ghost"}
+                          {cooled ? (
+                            <span className="status-flex">
+                              Cooling mode active
+                              <button type="button" className="text-reset-btn" onClick={() => resetProductState(product.id)} aria-label="Reset simulation state">Reset</button>
+                            </span>
+                          ) : ghosted ? (
+                            <span className="status-flex">
+                              Ghosted successfully
+                              <button type="button" className="text-reset-btn" onClick={() => resetProductState(product.id)} aria-label="Reset simulation state">Reset</button>
+                            </span>
+                          ) : inCart ? (
+                            "In your Ghost Cart"
+                          ) : (
+                            "Ready to ghost"
+                          )}
                         </div>
                         <div className="product-actions">
                           {inCart ? <button type="button" className="product-button secondary" onClick={() => removeFromCart(product.id)}>Undo</button> : <button type="button" className="product-button" onClick={() => addToCart(product.id)}>Ghost it</button>}
@@ -435,13 +468,95 @@ export default function Home() {
               </section>
 
               <aside
-                className={`demo-cart ${cartProducts.length ? "has-items" : ""}`}
+                className={`demo-cart ${cartProducts.length ? "has-items" : ""} ${isDraggingOver ? "is-drag-over" : ""}`}
                 aria-label="Simulated Ghost Cart drop area"
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={dropIntoGhostCart}
+                onDragEnter={() => setIsDraggingOver(true)}
+                onDragLeave={() => setIsDraggingOver(false)}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = "copy";
+                }}
+                onDrop={(event) => {
+                  setIsDraggingOver(false);
+                  dropIntoGhostCart(event);
+                }}
               >
                 <div className="cart-topline"><Wordmark inverted /><span>{cartProducts.length} item{cartProducts.length === 1 ? "" : "s"}</span></div>
-                {!receiptVisible ? (
+                {deliveryStep >= 0 ? (
+                  <div className="delivery-timeline-card" role="status">
+                    <div className="delivery-mascot-wrap">
+                      <GhostMascot
+                        pose={
+                          deliveryStep === 0
+                            ? "cart"
+                            : deliveryStep === 1
+                            ? "wave"
+                            : deliveryStep === 2
+                            ? "combo"
+                            : deliveryStep === 3
+                            ? "phoneList"
+                            : deliveryStep === 4
+                            ? "checkoutPhone"
+                            : "thumbsup"
+                        }
+                        className="delivery-mascot"
+                      />
+                    </div>
+                    <p className="eyebrow eyebrow-dark">Simulated Ghost Delivery</p>
+                    <h3>
+                      {deliveryStep === 5 ? (
+                        <>Ghost order<br />has arrived!</>
+                      ) : (
+                        <>Following your<br />ghost order...</>
+                      )}
+                    </h3>
+                    
+                    <div className="delivery-progress-track">
+                      <div className="delivery-progress-bar" style={{ width: `${(deliveryStep / 5) * 100}%` }} />
+                    </div>
+
+                    <div className="delivery-steps">
+                      {[
+                        "Placed order",
+                        "Order accepted",
+                        "Order getting prepared",
+                        "Ghost rider picking up the order",
+                        "Ghost rider on the way to deliver",
+                        "Ghost rider has delivered your ghost order",
+                      ].map((stepText, idx) => {
+                        const isCompleted = deliveryStep > idx;
+                        const isActive = deliveryStep === idx;
+                        return (
+                          <div
+                            key={stepText}
+                            className={`delivery-step-item ${isCompleted ? "is-completed" : ""} ${isActive ? "is-active" : ""}`}
+                          >
+                            <span className="step-check">
+                              {isCompleted ? "✓" : isActive ? "●" : "○"}
+                            </span>
+                            <span className="step-text">{stepText}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {deliveryStep === 5 && (
+                      <button
+                        type="button"
+                        className="button button-primary button-full view-receipt-btn"
+                        onClick={() => {
+                          setDeliveryStep(-1);
+                          setReceiptVisible(true);
+                        }}
+                      >
+                        View Ghost Receipt
+                      </button>
+                    )}
+                    <small className="delivery-simulation-disclaimer">
+                      Simulation only · No real courier is dispatched.
+                    </small>
+                  </div>
+                ) : !receiptVisible ? (
                   <>
                     <div className="ghost-portal" aria-hidden="true"><span className="portal-ring portal-ring-one" /><span className="portal-ring portal-ring-two" /><GhostMascot pose="waveAlt" className="portal-mascot" /></div>
                     <div className="cart-copy"><p className="eyebrow eyebrow-dark">Your Ghost Cart</p><h3>{cartProducts.length ? "The urge has somewhere to go." : "Drag items here."}</h3><p>{cartProducts.length ? "Nothing here will be purchased or delivered." : "Or use any visible Ghost it button."}</p></div>
