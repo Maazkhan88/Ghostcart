@@ -169,6 +169,7 @@ export default function Home() {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [deliveryStep, setDeliveryStep] = useState<number>(-1);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dragDepth = useRef(0);
 
   const cartProducts = useMemo(
     () => DEMO_PRODUCTS.filter((product) => cartIds.includes(product.id)),
@@ -470,13 +471,20 @@ export default function Home() {
               <aside
                 className={`demo-cart ${cartProducts.length ? "has-items" : ""} ${isDraggingOver ? "is-drag-over" : ""}`}
                 aria-label="Simulated Ghost Cart drop area"
-                onDragEnter={() => setIsDraggingOver(true)}
-                onDragLeave={() => setIsDraggingOver(false)}
+                onDragEnter={() => {
+                  dragDepth.current += 1;
+                  setIsDraggingOver(true);
+                }}
+                onDragLeave={() => {
+                  dragDepth.current = Math.max(0, dragDepth.current - 1);
+                  if (dragDepth.current === 0) setIsDraggingOver(false);
+                }}
                 onDragOver={(event) => {
                   event.preventDefault();
                   event.dataTransfer.dropEffect = "copy";
                 }}
                 onDrop={(event) => {
+                  dragDepth.current = 0;
                   setIsDraggingOver(false);
                   dropIntoGhostCart(event);
                 }}
