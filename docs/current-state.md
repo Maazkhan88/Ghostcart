@@ -3,6 +3,15 @@
 Last updated: 2026-07-12 (Claude design-critique cleanup pass — mobile nav,
 icon system, green accent audit, footer dedup, burger/headphones placeholders).
 
+## Deployment note (2026-07-12)
+
+The `nameless-d98e` Cloudflare Worker's Git integration had its Build command
+set to `None`, so every push ran `npx wrangler deploy` against a `dist/`
+directory that was never built (and is gitignored, so it never existed in
+CI). Fixed on the Cloudflare dashboard side to
+`npm install && npm run build`. This commit exists to trigger a fresh build
+against the corrected config.
+
 ## What currently works
 
 - Full single-page Ghost Cart site (`app/page.tsx` + `app/globals.css`) with
