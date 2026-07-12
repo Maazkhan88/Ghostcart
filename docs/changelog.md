@@ -4,6 +4,25 @@ All notable changes to the Ghost Cart project will be documented in this file.
 
 ---
 
+## [1.2.0] - 2026-07-12
+
+### Added
+- **Digital Ghost Card Application & Delivery:**
+  - Added "Apply for Ghost Card" promo card inside the Wallet tab.
+  - Implemented 1.5s simulated delivery animation with loading indicator that reveals the card details once completed.
+- **In-App Toast Messages:**
+  - Embedded a floating animated notification box in the root Navigation layout.
+  - Shows instant status updates for events like "Added to Cart," "Removed from Cart," and "Ghost Order Placed."
+- **Cart Item Quantity Adjustments:**
+  - Added quantity increment/decrement controls (`[-] Qty [+]`) to the Cart list items.
+  - Updated Checkout flows to factor item quantities into subtotal computations.
+
+### Changed
+- **Launcher Icon:** Reconfigured the Android app manifest to display the official Ghost Cart mascot icon directly instead of the generic green template.
+- **Uniform Cards:** Adjusted `MarketplaceProductCard` to use a fixed height layout with spacer weights, rendering all product cards uniformly.
+
+---
+
 ## [1.1.0] - 2026-07-12
 
 ### Added

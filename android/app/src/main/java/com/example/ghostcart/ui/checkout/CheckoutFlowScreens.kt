@@ -68,14 +68,15 @@ private const val PROMO_RATE = 0.10f
 
 @Composable
 fun GhostCartListScreen(
-    products: List<MarketplaceProduct>,
+    products: List<Pair<MarketplaceProduct, Int>>,
     onBack: () -> Unit,
+    onAdd: (String) -> Unit,
     onRemove: (String) -> Unit,
     onClearAll: () -> Unit,
     onCheckout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val subtotal = products.sumOf { it.price }
+    val subtotal = products.sumOf { (product, qty) -> product.price * qty }
 
     Column(modifier = modifier.fillMaxSize().background(Paper).padding(horizontal = 20.dp, vertical = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
@@ -109,7 +110,7 @@ fun GhostCartListScreen(
             )
         } else {
             LazyColumn(modifier = Modifier.weight(1f).padding(top = 16.dp)) {
-                items(products, key = { it.id }) { product ->
+                items(products, key = { it.first.id }) { (product, qty) ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
@@ -124,15 +125,32 @@ fun GhostCartListScreen(
                             Text(text = product.name, color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                             Text(text = "${Marketplace.currency} ${product.price}", color = MutedText, fontSize = 11.sp)
                         }
-                        Icon(
-                            Icons.Filled.Remove,
-                            contentDescription = "Remove",
-                            tint = MutedText,
-                            modifier = Modifier
-                                .size(20.dp)
-                                .clip(CircleShape)
-                                .clickable { onRemove(product.id) }
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(26.dp)
+                                    .clip(CircleShape)
+                                    .background(SoftGray)
+                                    .clickable { onRemove(product.id) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(text = "-", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Text(text = "$qty", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Box(
+                                modifier = Modifier
+                                    .size(26.dp)
+                                    .clip(CircleShape)
+                                    .background(SoftGray)
+                                    .clickable { onAdd(product.id) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(text = "+", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
                 }
             }
@@ -168,7 +186,7 @@ private fun SummaryLine(label: String, value: String, valueColor: Color = Ink, b
 
 @Composable
 fun GhostCheckoutScreen(
-    products: List<MarketplaceProduct>,
+    products: List<Pair<MarketplaceProduct, Int>>,
     walletBalance: Int,
     simulationIntervalMinutes: Int,
     onSelectInterval: (Int) -> Unit,
@@ -176,7 +194,7 @@ fun GhostCheckoutScreen(
     onPlaceOrder: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val subtotal = products.sumOf { it.price }
+    val subtotal = products.sumOf { (product, qty) -> product.price * qty }
     val promoDiscount = (subtotal * PROMO_RATE).toInt()
     val serviceFee = ((subtotal - promoDiscount) * SERVICE_FEE_RATE).toInt()
     val vat = ((subtotal - promoDiscount) * VAT_RATE).toInt()
@@ -241,13 +259,13 @@ fun GhostCheckoutScreen(
 
         Column(modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
             Text(text = "Order Summary", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
-            products.forEach { product ->
+            products.forEach { (product, qty) ->
                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(SoftGray), contentAlignment = Alignment.Center) {
                         ProductIcon(name = product.iconName, modifier = Modifier.size(24.dp), color = Ink)
                     }
-                    Text(text = product.name, color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).padding(horizontal = 10.dp))
-                    Text(text = "${Marketplace.currency} ${product.price}", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(text = "${product.name} (x$qty)", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).padding(horizontal = 10.dp))
+                    Text(text = "${Marketplace.currency} ${product.price * qty}", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
             Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).height(1.dp).background(FaintBorder))

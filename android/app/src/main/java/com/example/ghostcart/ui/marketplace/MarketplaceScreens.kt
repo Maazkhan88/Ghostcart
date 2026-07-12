@@ -216,6 +216,7 @@ fun MarketplaceProductCard(
     Column(
         modifier = modifier
             .width(150.dp)
+            .height(200.dp)
             .clip(RoundedCornerShape(16.dp))
             .border(1.dp, FaintBorder, RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
@@ -232,7 +233,10 @@ fun MarketplaceProductCard(
             ProductIcon(name = product.iconName, modifier = Modifier.size(42.dp), color = Ink)
         }
         Text(text = product.name, color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 2, modifier = Modifier.padding(top = 8.dp))
-        Text(text = "${Marketplace.currency} ${product.price}", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 2.dp, bottom = 8.dp))
+        Text(text = "${Marketplace.currency} ${product.price}", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 2.dp, bottom = 4.dp))
+        
+        androidx.compose.foundation.layout.Spacer(modifier = Modifier.weight(1f))
+        
         Box(
             modifier = Modifier
                 .fillMaxWidth()

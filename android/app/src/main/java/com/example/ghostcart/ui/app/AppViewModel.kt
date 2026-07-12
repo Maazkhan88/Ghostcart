@@ -26,13 +26,17 @@ data class AppUiState(
     val selectedOverspendIds: Set<String> = emptySet(),
     val selectedSavingsGoal: Int = 1000,
     val cartProductIds: List<String> = emptyList(),
+    val cartQuantities: Map<String, Int> = emptyMap(),
     val walletConfig: WalletConfig = WalletConfig(),
     val lastOrderId: String = "",
     val lastOrderTotal: Int = 0,
     val deliveryStep: Int = -1,
     val promoApplied: Boolean = true,
     val authEmail: String? = null,
-    val simulationIntervalMinutes: Int = 5 // User customizable time between steps
+    val simulationIntervalMinutes: Int = 5,
+    val hasAppliedForCard: Boolean = false,
+    val isApplying: Boolean = false,
+    val toastMessage: String? = null
 )
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
@@ -44,6 +48,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
 
     private var deliveryJob: Job? = null
+    private var toastJob: Job? = null
 
     val allProducts: List<MarketplaceProduct> =
         (Marketplace.mostGhostedToday + Marketplace.fakeFlashDeals + Marketplace.foodAndCoffeeCatalog)
@@ -54,7 +59,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun cartProducts(): List<MarketplaceProduct> =
         _uiState.value.cartProductIds.mapNotNull { findProduct(it) }
 
-    fun cartSubtotal(): Int = cartProducts().sumOf { it.price }
+    fun cartProductsWithQuantities(): List<Pair<MarketplaceProduct, Int>> =
+        _uiState.value.cartQuantities.mapNotNull { (id, qty) ->
+            findProduct(id)?.let { it to qty }
+        }
+
+    fun cartSubtotal(): Int = cartProductsWithQuantities().sumOf { (product, qty) ->
+        product.price * qty
+    }
 
     fun selectProfile(profile: String) {
         _uiState.update { it.copy(selectedProfile = profile) }
@@ -77,19 +89,53 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun addToCart(productId: String) {
         _uiState.update { current ->
-            if (current.cartProductIds.contains(productId)) current
-            else current.copy(cartProductIds = current.cartProductIds + productId)
+            val nextQty = (current.cartQuantities[productId] ?: 0) + 1
+            val nextMap = current.cartQuantities + (productId to nextQty)
+            val nextList = nextMap.keys.toList()
+            current.copy(
+                cartQuantities = nextMap,
+                cartProductIds = nextList
+            )
         }
+        val name = findProduct(productId)?.name ?: "item"
+        showToast("Added $name to Ghost Cart")
     }
 
     fun removeFromCart(productId: String) {
         _uiState.update { current ->
-            current.copy(cartProductIds = current.cartProductIds.filterNot { it == productId })
+            val nextQty = (current.cartQuantities[productId] ?: 0) - 1
+            val nextMap = if (nextQty <= 0) {
+                current.cartQuantities - productId
+            } else {
+                current.cartQuantities + (productId to nextQty)
+            }
+            val nextList = nextMap.keys.toList()
+            current.copy(
+                cartQuantities = nextMap,
+                cartProductIds = nextList
+            )
+        }
+        val name = findProduct(productId)?.name ?: "item"
+        showToast("Removed $name from Ghost Cart")
+    }
+
+    fun updateQuantity(productId: String, quantity: Int) {
+        _uiState.update { current ->
+            val nextMap = if (quantity <= 0) {
+                current.cartQuantities - productId
+            } else {
+                current.cartQuantities + (productId to quantity)
+            }
+            val nextList = nextMap.keys.toList()
+            current.copy(
+                cartQuantities = nextMap,
+                cartProductIds = nextList
+            )
         }
     }
 
     fun clearCart() {
-        _uiState.update { it.copy(cartProductIds = emptyList()) }
+        _uiState.update { it.copy(cartProductIds = emptyList(), cartQuantities = emptyMap()) }
     }
 
     fun updateWalletConfig(transform: (WalletConfig) -> WalletConfig) {
@@ -103,11 +149,32 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun authenticate(email: String) {
         sharedPrefs.edit().putString("auth_email", email).apply()
         _uiState.update { it.copy(authEmail = email) }
+        showToast("Signed in as $email")
     }
 
     fun signOut() {
         sharedPrefs.edit().remove("auth_email").apply()
         _uiState.update { it.copy(authEmail = null) }
+        showToast("Signed out successfully")
+    }
+
+    fun applyForGhostCard() {
+        if (_uiState.value.hasAppliedForCard || _uiState.value.isApplying) return
+        _uiState.update { it.copy(isApplying = true) }
+        viewModelScope.launch {
+            delay(1500) // simulated processing delay
+            _uiState.update { it.copy(hasAppliedForCard = true, isApplying = false) }
+            showToast("Ghost Card Digitally Delivered!")
+        }
+    }
+
+    fun showToast(message: String) {
+        toastJob?.cancel()
+        _uiState.update { it.copy(toastMessage = message) }
+        toastJob = viewModelScope.launch {
+            delay(2500)
+            _uiState.update { it.copy(toastMessage = null) }
+        }
     }
 
     fun placeSimulatedOrder() {
@@ -117,9 +184,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             it.copy(
                 lastOrderId = orderId,
                 lastOrderTotal = total,
-                cartProductIds = emptyList()
+                cartProductIds = emptyList(),
+                cartQuantities = emptyMap()
             )
         }
+        showToast("Ghost Order Placed Successfully!")
     }
 
     fun startDeliveryTracking() {

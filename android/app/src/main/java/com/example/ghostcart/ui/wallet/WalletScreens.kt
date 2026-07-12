@@ -72,6 +72,9 @@ import com.example.ghostcart.ui.common.materialIconFor
 
 @Composable
 fun WalletHomeScreen(
+    hasAppliedForCard: Boolean,
+    isApplying: Boolean,
+    onApplyForCard: () -> Unit,
     onBack: (() -> Unit)? = null,
     onGhostPay: () -> Unit,
     onViewWallet: () -> Unit,
@@ -86,18 +89,73 @@ fun WalletHomeScreen(
             RoundIconButton(icon = Icons.Filled.Notifications)
         }
 
-        GhostHeroCard(modifier = Modifier.padding(top = 16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth()) {
-                GhostMascotPose(poseName = "wave", modifier = Modifier.size(72.dp))
-                Column(modifier = Modifier.weight(1f).padding(start = 14.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        Text(text = "Ghost Card", color = Paper, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                        SimulationBadge(text = "Demo wallet", dark = true)
+        if (hasAppliedForCard) {
+            GhostHeroCard(modifier = Modifier.padding(top = 16.dp)) {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    GhostMascotPose(poseName = "wave", modifier = Modifier.size(72.dp))
+                    Column(modifier = Modifier.weight(1f).padding(start = 14.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Text(text = "Ghost Card", color = Paper, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                            SimulationBadge(text = "Demo wallet", dark = true)
+                        }
+                        Text(text = WalletDemoData.cardHolderName, color = Paper, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 10.dp))
+                        Text(text = "GC•••• ${WalletDemoData.cardLastFour}", color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
+                        Text(text = "Balance", color = Color.White.copy(alpha = 0.6f), fontSize = 10.sp, modifier = Modifier.padding(top = 12.dp))
+                        Text(text = "${Marketplace.currency} ${WalletDemoData.currentBalance}", color = Paper, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
                     }
-                    Text(text = WalletDemoData.cardHolderName, color = Paper, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 10.dp))
-                    Text(text = "GC•••• ${WalletDemoData.cardLastFour}", color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
-                    Text(text = "Balance", color = Color.White.copy(alpha = 0.6f), fontSize = 10.sp, modifier = Modifier.padding(top = 12.dp))
-                    Text(text = "${Marketplace.currency} ${WalletDemoData.currentBalance}", color = Paper, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
+                }
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Ink)
+                    .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                if (isApplying) {
+                    androidx.compose.material3.CircularProgressIndicator(color = GhostGreen, modifier = Modifier.size(36.dp))
+                    Text(
+                        text = "Digitally Delivering Your Card...",
+                        color = Paper,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 12.dp)
+                    )
+                } else {
+                    GhostMascotPose(poseName = "wallet", modifier = Modifier.size(64.dp))
+                    Text(
+                        text = "Protect Your Cravings",
+                        color = Paper,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier.padding(top = 12.dp)
+                    )
+                    Text(
+                        text = "Apply for your virtual Ghost Card. Start simulated salary protection and budget protection instantly.",
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = 11.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(GhostGreen)
+                            .clickable(onClick = onApplyForCard)
+                            .padding(vertical = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Apply for Ghost Card",
+                            color = Ink,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }

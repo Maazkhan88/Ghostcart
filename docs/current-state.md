@@ -1,6 +1,15 @@
 # Current State
 
-Last updated: 2026-07-12 (Version 1.1.0 — added timed splash screen, local WorkManager notifications, custom simulation speed selector, and real user authentication screens/API endpoints).
+Last updated: 2026-07-12 (Version 1.2.0 — added digital card application, in-app messaging toast banner, item quantity adjustments, launcher icon fix, and uniform product card heights).
+
+## Digital Card Application, Cart Quantities, In-App Notifications (Version 1.2.0, 2026-07-12)
+
+- **Digital Ghost Card Delivery:** Added an interactive "Apply for Ghost Card" promo card inside the Wallet tab. Clicking it triggers a 1.5s simulated delivery animation with loading indicator before revealing card details.
+- **In-App Toast Banners:** Embedded a floating animated notification box in the root Navigation layout that triggers instant popups for actions like "Added to Cart," "Removed from Cart," and "Ghost Order Placed."
+- **Cart Quantities:** Upgraded Cart lists and checkouts to support quantity adjustments (`[-] Qty [+]`) and factor quantities into total math.
+- **Launcher Icon:** Reconfigured manifest paths to directly use the mascot logo (`ghost_cart_icon.png`) for the Android app icon on the home screen.
+- **Uniform Product Cards:** Configured a fixed height of `200.dp` on `MarketplaceProductCard` to ensure identical heights in marketplace rows/grids.
+- **Compilation:** Rebuilt and verified `app-debug.apk` using Java 17 and Gradle.
 
 ## Timed Splash, Real Auth, Background Notifications (Version 1.1.0, 2026-07-12)
 

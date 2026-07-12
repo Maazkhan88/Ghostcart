@@ -2,10 +2,17 @@ package com.example.ghostcart
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
@@ -68,8 +75,11 @@ fun MainNavigation() {
   val current = backStack.lastOrNull()
   val showBottomNav = current != null && current in BOTTOM_NAV_DESTINATIONS
 
-  Scaffold(
-    containerColor = Paper,
+  val state by appViewModel.uiState.collectAsState()
+
+  androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize()) {
+    Scaffold(
+      containerColor = Paper,
     bottomBar = {
       if (showBottomNav) {
         GhostBottomNav(
@@ -205,8 +215,9 @@ fun MainNavigation() {
           entry<GhostCartList> {
             val state by appViewModel.uiState.collectAsState()
             GhostCartListScreen(
-              products = appViewModel.cartProducts(),
+              products = appViewModel.cartProductsWithQuantities(),
               onBack = { backStack.removeLastOrNull() },
+              onAdd = { appViewModel.addToCart(it) },
               onRemove = { appViewModel.removeFromCart(it) },
               onClearAll = { appViewModel.clearCart() },
               onCheckout = { backStack.add(GhostCheckout) }
@@ -215,7 +226,7 @@ fun MainNavigation() {
           entry<GhostCheckout> {
             val state by appViewModel.uiState.collectAsState()
             GhostCheckoutScreen(
-              products = appViewModel.cartProducts(),
+              products = appViewModel.cartProductsWithQuantities(),
               walletBalance = WalletDemoData.currentBalance,
               simulationIntervalMinutes = state.simulationIntervalMinutes,
               onSelectInterval = { appViewModel.setSimulationInterval(it) },
@@ -281,9 +292,13 @@ fun MainNavigation() {
 
           // Ghost Wallet
           entry<WalletHome> {
+            val state by appViewModel.uiState.collectAsState()
             WalletHomeScreen(
+              hasAppliedForCard = state.hasAppliedForCard,
+              isApplying = state.isApplying,
+              onApplyForCard = { appViewModel.applyForGhostCard() },
               onGhostPay = { backStack.add(PayWithGhostCard) },
-              onViewWallet = { backStack.add(WalletActivity) },
+              onViewWallet = { backStack.add(WalletSetup) },
               onViewActivity = { backStack.add(WalletActivity) },
               onViewGoals = { backStack.add(Goals) }
             )
@@ -353,6 +368,37 @@ fun MainNavigation() {
         },
     )
   }
+
+  val msg = state.toastMessage
+  if (msg != null) {
+    androidx.compose.foundation.layout.Box(
+      modifier = Modifier
+        .align(androidx.compose.ui.Alignment.TopCenter)
+        .padding(top = 40.dp, start = 16.dp, end = 16.dp)
+        .fillMaxWidth()
+        .clip(RoundedCornerShape(12.dp))
+        .background(Ink)
+        .border(1.dp, GhostGreen, RoundedCornerShape(12.dp))
+        .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+      Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Icon(
+          imageVector = Icons.Filled.CheckCircle,
+          contentDescription = null,
+          tint = GhostGreen,
+          modifier = Modifier.size(18.dp)
+        )
+        Text(
+          text = msg,
+          color = Paper,
+          fontSize = 13.sp,
+          fontWeight = FontWeight.Bold,
+          modifier = Modifier.padding(start = 8.dp)
+        )
+      }
+    }
+  }
+}
 }
 
 @Composable
