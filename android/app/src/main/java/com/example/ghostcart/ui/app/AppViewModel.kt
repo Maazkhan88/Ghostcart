@@ -51,7 +51,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private var toastJob: Job? = null
 
     val allProducts: List<MarketplaceProduct> =
-        (Marketplace.mostGhostedToday + Marketplace.fakeFlashDeals + Marketplace.foodAndCoffeeCatalog)
+        (Marketplace.mostGhostedToday + Marketplace.fakeFlashDeals + Marketplace.foodAndCoffeeCatalog + Marketplace.dummyCatalog)
             .distinctBy { it.id }
 
     fun findProduct(id: String): MarketplaceProduct? = allProducts.find { it.id == id }

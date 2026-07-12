@@ -254,6 +254,7 @@ fun MarketplaceProductCard(
 @Composable
 fun CategoryBrowseScreen(
     categoryId: String,
+    products: List<MarketplaceProduct>,
     cartItemCount: Int,
     cartTotal: Int,
     savedTotal: Int,
@@ -334,7 +335,7 @@ fun CategoryBrowseScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.weight(1f)
         ) {
-            items(Marketplace.foodAndCoffeeCatalog) { product ->
+            items(products) { product ->
                 MarketplaceProductCard(
                     product = product,
                     onClick = { onOpenProduct(product.id) },

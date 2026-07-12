@@ -189,8 +189,18 @@ fun MainNavigation() {
           }
           entry<CategoryBrowse> { key ->
             val state by appViewModel.uiState.collectAsState()
+            val categoryProducts = appViewModel.allProducts.filter { prod ->
+              when (key.categoryId) {
+                "food" -> prod.category.contains("Food", true) || prod.category.contains("Fast", true)
+                "beauty" -> prod.category.contains("Beauty", true)
+                "fashion" -> prod.category.contains("Fashion", true)
+                "gadgets" -> prod.category.contains("Gadgets", true) || prod.category.contains("Tech", true)
+                else -> true
+              }
+            }
             CategoryBrowseScreen(
               categoryId = key.categoryId,
+              products = categoryProducts,
               cartItemCount = state.cartProductIds.size,
               cartTotal = appViewModel.cartSubtotal(),
               savedTotal = Marketplace.savedThisWeekAcaiTotal,
