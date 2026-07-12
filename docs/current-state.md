@@ -1,6 +1,51 @@
 # Current State
 
-Last updated: 2026-07-12 (Antigravity session — web interactive polish, animated delivery timeline, Android/iOS native app v1 build).
+Last updated: 2026-07-12 (Claude session — Android v2 build against the `design/mobile-ui/` references: Ghost Wallet, Ghost Card, marketplace, and full checkout flow).
+
+## Android v2 pass (Claude, 2026-07-12)
+
+Built out the Android app to match all 20 screens catalogued in
+`design/mobile-ui/README.md`, on top of Antigravity's existing v1 scaffold
+(which is untouched: `MainActivity`'s old `Main` nav key, `MainScreen`,
+`CatalogScreen`, `CartScreen`, `CheckoutScreen`, `ReceiptScreen`,
+`DashboardScreen`, `WaitlistScreen` all still compile and are still reachable
+in principle, just no longer the app's start destination).
+
+**New navigation graph** (`Navigation.kt`, `NavigationKeys.kt`): the app now
+starts at `Splash` and flows through onboarding (`ProfileSelect` →
+`Personalization` → `WalletSetup`) into a 5-tab bottom nav (Home, Ghost Cart,
+Wallet, Trends, Profile) covering all 20 reference screens with real
+back-stack navigation (Nav3), not tab-swapping. A shared `AppViewModel`
+(`ui/app/AppViewModel.kt`) holds cart, onboarding choices, and wallet config
+state across every screen.
+
+**New packages**: `ui/onboarding`, `ui/marketplace`, `ui/checkout`,
+`ui/wallet`, `ui/common` (shared primitives: `GhostTopBar`, `PrimaryButton`,
+`SecondaryButton`, `GhostHeroCard`, `SimulationBadge`, `ThinProgressBar`,
+`CircularGoalRing`, `materialIconFor` string→icon lookup) plus new data
+models in `data/WalletModels.kt` and `data/MarketplaceModels.kt`. Added the
+`material-icons-extended` dependency for the much larger icon vocabulary
+these screens need (wallet, shield, goals, categories, etc.) — the existing
+hand-drawn Canvas `ProductIcon` set was kept only for actual product art
+(sneaker/perfume/burger/headphones/coffee/leaf), matching the original
+app's visual style for the shopping-catalog pieces.
+
+**Important limitation — not compiled or run.** This sandbox has no Android
+SDK and no network path to `dl.google.com` (the proxy returns a hard policy
+block), so `./gradlew assembleDebug` could not be run here, unlike
+Antigravity's original v1 session which apparently had SDK access. Every
+file was hand-verified instead: cross-checked every new screen's function
+signature against its call site in `Navigation.kt`, ran repeated grep-based
+import audits (catching and fixing 5 real bugs this way — a missing `Color`
+import, two missing `width`/`size`/`height` imports, a nonexistent
+`collectAsStateWithLifecycleCompat()` call left over from a rewrite, and a
+`current in Set<NavKey>` nullable-type mismatch that would not have
+compiled), verified brace/paren balance across every file, and walked the
+full navigation graph to confirm all 20 screens are actually reachable (one
+gap found and fixed: `WalletSetup` had no route to it until wired in as the
+last onboarding step). **The next session with real SDK access should still
+run a real build before trusting this further** — static review closes most
+gaps but is not a substitute for compiling.
 
 ## Deployment (live URL)
 

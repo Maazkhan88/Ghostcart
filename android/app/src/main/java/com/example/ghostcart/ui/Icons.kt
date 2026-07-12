@@ -194,6 +194,29 @@ fun ProductIcon(name: String, modifier: Modifier = Modifier, color: Color = Colo
                 drawLine(color, Offset(w * 0.5f, h * 0.8f), Offset(w * 0.5f, h * 0.2f), strokeWidth)
                 drawLine(color, Offset(w * 0.8f, h * 0.8f), Offset(w * 0.8f, h * 0.5f), strokeWidth)
             }
+            "coffee" -> {
+                // Cup body
+                drawRoundRect(
+                    color = color,
+                    topLeft = Offset(w * 0.2f, h * 0.35f),
+                    size = Size(w * 0.5f, h * 0.45f),
+                    cornerRadius = CornerRadius(w * 0.04f, w * 0.16f),
+                    style = Stroke(width = strokeWidth)
+                )
+                // Handle
+                drawArc(
+                    color = color,
+                    startAngle = -90f,
+                    sweepAngle = 180f,
+                    useCenter = false,
+                    topLeft = Offset(w * 0.68f, h * 0.42f),
+                    size = Size(w * 0.2f, h * 0.28f),
+                    style = Stroke(width = strokeWidth * 0.8f)
+                )
+                // Steam
+                drawLine(color, Offset(w * 0.32f, h * 0.28f), Offset(w * 0.38f, h * 0.16f), strokeWidth * 0.7f)
+                drawLine(color, Offset(w * 0.5f, h * 0.28f), Offset(w * 0.56f, h * 0.16f), strokeWidth * 0.7f)
+            }
         }
     }
 }

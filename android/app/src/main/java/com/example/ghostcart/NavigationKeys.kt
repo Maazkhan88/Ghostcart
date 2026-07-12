@@ -4,3 +4,29 @@ import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
 
 @Serializable data object Main : NavKey
+
+// Onboarding
+@Serializable data object Splash : NavKey
+@Serializable data object ProfileSelect : NavKey
+@Serializable data object Personalization : NavKey
+
+// Marketplace / shopping
+@Serializable data object Home : NavKey
+@Serializable data class CategoryBrowse(val categoryId: String) : NavKey
+@Serializable data class ProductDetail(val productId: String) : NavKey
+@Serializable data object GhostCartList : NavKey
+@Serializable data object GhostCheckout : NavKey
+@Serializable data object OrderGhostedSuccess : NavKey
+@Serializable data object FakeDeliveryTracking : NavKey
+@Serializable data object PayWithGhostCard : NavKey
+@Serializable data object OrderProtected : NavKey
+
+// Ghost Wallet
+@Serializable data object WalletHome : NavKey
+@Serializable data object WalletSetup : NavKey
+@Serializable data object SalaryShield : NavKey
+@Serializable data object Goals : NavKey
+@Serializable data object WalletActivity : NavKey
+@Serializable data object WeeklyStatement : NavKey
+@Serializable data object Trends : NavKey
+@Serializable data object GhostCardSettings : NavKey
