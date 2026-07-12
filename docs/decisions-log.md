@@ -288,3 +288,46 @@ Append-only. Do not rewrite or delete earlier entries — only add new ones.
   plus build/test/lint. **Next session should get a live-preview
   confirmation of the mobile nav panel and the icon swaps before this is
   considered pixel-verified.**
+
+## 2026-07-12 — Claude Code (products/merchants backend, first pass)
+
+- **Followed the scaffold's existing Drizzle + D1 convention instead of
+  introducing a new backend stack.** `drizzle-orm`, `drizzle-kit`, a
+  `sqlite`-dialect `drizzle.config.ts`, a `getDb()` helper already reading a
+  Cloudflare D1 binding, and a worked `examples/d1/` reference were already
+  present in the `site-creator-vinext-starter` scaffold, unused. Building
+  Next.js App Router route handlers against that (`app/api/merchants`,
+  `app/api/products`) means the backend deploys on the exact same Cloudflare
+  Workers pipeline already live for the site — no new hosting, no new
+  framework, no separate service to keep in sync. **Why:** the alternative
+  (a standalone Express/Postgres service, or a third-party BaaS like
+  Supabase) would add a second deployment target and a second thing to keep
+  the mobile apps and web app both pointed at, for no benefit the scaffold
+  wasn't already offering for free.
+- **Priced products in integer minor units (`priceCents`), with no currency
+  symbol anywhere in the schema or API.** **Why:** `AGENTS.md` requires the
+  official UAE Dirham symbol asset when it's available and forbids
+  approximating it — baking a `$` or a text "AED" into backend data would
+  either violate that directly or force a schema migration later once the
+  real glyph asset exists. Currency display is entirely a frontend
+  concern now.
+- **Did not provision a real Cloudflare D1 database or flip
+  `.openai/hosting.json`'s `"d1"` field on.** That field feeds directly into
+  the same `vite.config.ts` code path that generates the production
+  `wrangler.json` at build time — flipping it without a real, provisioned
+  database would make the next live deploy try to bind to a placeholder
+  all-zeros database ID that doesn't exist in the account, likely breaking
+  the currently-working production site. Verified the schema and every API
+  route end-to-end against **local** miniflare D1 instead (temporary,
+  uncommitted `wrangler.jsonc` + `wrangler d1 execute --local`, then
+  reverted). **Why:** going live requires `wrangler login`, which is an
+  interactive OAuth flow only the user can complete — provisioning billable
+  cloud infrastructure on their account without that step, or risking the
+  live site over it, isn't something to do unattended. Full steps to finish
+  this are in `docs/current-state.md` under "Backend: products & merchants
+  CRUD."
+- **No auth on the write endpoints (`POST`/`PATCH`/`DELETE`) yet.** Treated
+  as acceptable for this pass since the intended use right now is
+  admin/internal catalog seeding, not a public-facing API — but flagged
+  explicitly so it isn't forgotten before anything here is exposed outside
+  the team.

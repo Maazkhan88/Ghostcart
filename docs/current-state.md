@@ -1,6 +1,136 @@
 # Current State
 
-Last updated: 2026-07-12 (Claude session — Android v2 build against the `design/mobile-ui/` references: Ghost Wallet, Ghost Card, marketplace, and full checkout flow).
+Last updated: 2026-07-12 (Claude session — verified the Android v2 build for real, fixed a genuine compile error, and built the first pass of the products/merchants backend).
+
+## Backend: products & merchants CRUD (Claude, 2026-07-12)
+
+Started the real backend the user asked for, to replace the hardcoded
+`DEMO_PRODUCTS` mock array and eventually let products/merchants be added
+without a code change. This is a **content/catalog backend only** — no
+payment processing, no real checkout — consistent with `AGENTS.md`'s
+simulation-only rule.
+
+**Stack decision:** the `site-creator-vinext-starter` scaffold already
+anticipates this — `drizzle-orm`/`drizzle-kit` were dependencies from day
+one, `drizzle.config.ts` targets the `sqlite` dialect, `db/index.ts` already
+had a `getDb()` helper reading a Cloudflare D1 binding named `DB`, and
+`examples/d1/` contained a worked example (Next.js App Router route handlers
++ Drizzle + D1). Followed that existing pattern rather than introducing a
+new stack (no separate Express/Postgres/Supabase service) — it deploys on
+the same Cloudflare Workers pipeline already live for the site, no new
+hosting to stand up.
+
+**Schema** (`db/schema.ts`):
+- `merchants` — `name`, `slug` (unique), `category`, `logoUrl`,
+  `description`, `isSponsored` (for the "Sponsored Simulations" concept from
+  `design/mobile-ui/04-home-marketplace.png`), timestamps.
+- `products` — `merchantId` (FK → merchants, cascade delete), `name`,
+  `slug` (unique), `description`, `category`, `priceCents` (integer minor
+  units — currency-symbol-agnostic on purpose; the official AED Dirham glyph
+  is a display concern for whichever frontend renders it, not a backend
+  one), `imageUrl`, `isFlashDeal`, `isMostGhosted` (manual merchandising
+  flags, matching "Fake Flash Deals" / "Most Ghosted Today" from the same
+  reference), `isActive`, timestamps.
+- Migration generated via `npm run db:generate` → `drizzle/0000_tough_mandrill.sql`.
+
+**API** (Next.js App Router route handlers, following the `examples/d1/`
+pattern exactly — `getDb()`, `Response.json()`, a "table missing, run
+`npm run db:generate`" hint on `no such table` errors):
+- `GET/POST /api/merchants`, `GET/PATCH/DELETE /api/merchants/[id]`
+- `GET/POST /api/products` (list supports `?merchantId=`/`?category=`
+  filters and left-joins in `merchantName`), `GET/PATCH/DELETE /api/products/[id]`
+- Validates required fields, auto-derives a slug from `name` when one isn't
+  supplied (`lib/api-helpers.ts:slugify`), returns 409 on duplicate slugs and
+  400 on a `merchantId` that doesn't reference a real merchant (FK violation
+  translated to a friendly message).
+- **No auth on write endpoints yet** — acceptable for now since this is
+  admin/internal tooling to seed the catalog, not a public-facing API, but
+  flagged here so it isn't forgotten before anything is exposed publicly.
+
+**Verified end-to-end, locally, for real** — not just typecheck/lint. Ran
+`vinext dev`, applied the generated migration to the local D1 (miniflare)
+instance via a **temporary, uncommitted** `wrangler.jsonc` +
+`wrangler d1 execute DB --local`, then exercised every route with `curl`:
+create merchant → create product → list (with join) → get-by-id → patch →
+404 on missing id → delete product → delete merchant (confirmed cascade) →
+duplicate-slug 409 → bad-`merchantId` 400. All passed. `npx tsc --noEmit`
+and `npm run lint` both pass on the new files (pre-existing unrelated
+warnings/errors only — see below).
+
+**Deliberately NOT done — production D1 is not provisioned.**
+`.openai/hosting.json`'s `"d1"` field is still `null` (reverted back after
+local testing). Setting it to `"DB"` feeds directly into
+`vite.config.ts` → the same code path that generates `dist/server/wrangler.json`
+at build time, i.e. flipping it now would make the *next production deploy*
+try to bind to a D1 database that doesn't exist in the real Cloudflare
+account (the ID in `vite.config.ts` is a hardcoded all-zeros placeholder,
+fine for local miniflare emulation, **not** a real database) — likely
+breaking the currently-working live site. Going live needs:
+1. `wrangler login` (interactive OAuth in a real browser — needs the user).
+2. `wrangler d1 create ghostcart-db`, then wire the real `database_id` into
+   `vite.config.ts` (replacing `SITE_CREATOR_PLACEHOLDER_DATABASE_ID` for
+   production) and set `.openai/hosting.json`'s `"d1"` to `"DB"`.
+3. Apply the migration to the *remote* D1 with `wrangler d1 execute DB
+   --remote --file=./drizzle/0000_tough_mandrill.sql` (or a migrations
+   workflow) before/after first deploy.
+Do not attempt this without the user present for the login step.
+
+Pre-existing (unrelated to this work): `npx tsc --noEmit` reports 2 errors
+in `db/index.ts`/`worker/index.ts` for missing `cloudflare:workers` /
+`D1Database` ambient types — present before this session, not introduced by
+the new schema/routes, and not blocking `npm run build` (which uses Vite's
+own resolution, not raw `tsc`).
+
+## Android build verification (Claude, 2026-07-12)
+
+The previous session's Android v2 pass (20 screens, see below) was only ever
+statically reviewed — no Android SDK was available in that sandbox. This
+session ran on the user's actual machine, which has the SDK installed, so the
+build could finally be verified for real.
+
+- **JDK fix:** Gradle needs JVM 17+; the machine's default `java` on PATH is
+  1.8. Built with `JAVA_HOME` pointed at Android Studio's bundled JBR
+  (`C:\Program Files\Android\Android Studio\jbr`, JDK 21) instead of changing
+  any system-wide config.
+- **Local checkout was stale.** The working tree was 3 commits behind
+  `origin/agent/ghost-cart-web-v1` (missing `73c26b1`, `e93aa34`, `3de78ed` —
+  the actual 20-screen build). A first `assembleDebug` run appeared to
+  succeed but was silently compiling the *old* 4-screen scaffold; caught this
+  by noticing every task reported `UP-TO-DATE`/`FROM-CACHE` with no real
+  recompilation. Synced to `origin` (`git reset --hard`, no local work lost —
+  confirmed via `git status` first) before rebuilding.
+- **Real compile error found and fixed.** `./gradlew clean assembleDebug`
+  against the correct 20-screen source failed:
+  `WalletScreens.kt:469` referenced `androidx.compose.material.icons.Icons.Filled.ChevronRight`
+  by full qualification without importing it. Compose Material icons are
+  *extension properties*, not real nested members of `Icons.Filled` — fully
+  qualifying the path doesn't resolve them the way it would for an ordinary
+  class member; only an explicit `import` does. Fixed by adding
+  `import androidx.compose.material.icons.filled.ChevronRight` and using the
+  short form, matching the working pattern already used in
+  `MarketplaceScreens.kt`.
+- **Clean build now passes**: `./gradlew clean assembleDebug` and
+  `./gradlew lintDebug` both succeed (0 lint errors, 18 pre-existing
+  `AutoMirrored` deprecation warnings, non-blocking). The debug APK
+  previously committed to the repo (`be7b652`) predated the 20-screen build
+  and was stale; rebuilt and replaced it.
+- Commit: `dd2295c` — `fix(android): resolve ChevronRight compile error,
+  rebuild debug APK`. Pushed to `origin/agent/ghost-cart-web-v1`.
+- **Not yet done:** running the app on a device/emulator. No AVD is
+  configured on this machine yet — only compile + lint were verified, not
+  runtime behavior or the 20-screen nav flow on-screen.
+- **Mobile notifications investigated (not yet built):** the user reported
+  notifications don't work. Root cause — there is no notification system at
+  all, anywhere in the repo. The "Wallet notifications" toggle
+  (`WalletScreens.kt:623`, backed by `WalletConfig.walletNotificationsEnabled`
+  in `WalletModels.kt:29`) only flips an in-memory `StateFlow` boolean in
+  `AppViewModel` — no `NotificationChannel`/`NotificationManager`, no
+  `POST_NOTIFICATIONS` permission in `AndroidManifest.xml`, no FCM/APNs, and
+  no backend to trigger a push from in the first place. Several bell icons
+  elsewhere (`MarketplaceScreens.kt:91`, `CheckoutFlowScreens.kt:463,543`)
+  have empty `onClick = {}`. Not fixed this session — flagged as a real gap,
+  scoped as future work (local notifications are a small lift; real push
+  needs FCM/APNs plus the backend now being built, see below).
 
 ## Android v2 pass (Claude, 2026-07-12)
 
