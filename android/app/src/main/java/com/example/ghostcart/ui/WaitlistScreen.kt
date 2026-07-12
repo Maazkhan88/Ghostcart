@@ -70,7 +70,7 @@ fun WaitlistScreen(
                     textAlign = TextAlign.Center
                 )
                 Text(
-                    text = "Join our waitlist to know when the native Android application launches. No real payments, ever.",
+                    text = "Join our waitlist to know when the native Android application launches.",
                     color = Color.Gray,
                     fontSize = 13.sp,
                     textAlign = TextAlign.Center,

@@ -17,6 +17,13 @@ struct CatalogView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 4) {
+                GhostCartLogoView()
+                    .frame(width: 126, height: 48)
+                    .padding(.horizontal, 10)
+                    .background(Color.white)
+                    .cornerRadius(12)
+                    .padding(.bottom, 14)
+
                 Text("Browse Temptation".uppercased())
                     .font(.system(size: 11, weight: .bold))
                     .foregroundColor(.ghostGreenColor)

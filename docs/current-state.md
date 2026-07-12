@@ -1,6 +1,13 @@
 # Current State
 
-Last updated: 2026-07-12 (Codex session — added the authenticated catalog admin, protected backend writes, connected the web demo to D1 catalog data with a safe demo fallback, and prepared Sites-managed D1 deployment).
+Last updated: 2026-07-12 (Codex session — unified website artwork across Android/iOS and consolidated repetitive safety disclosures to key moments).
+
+## Shared web/mobile artwork and disclosure cleanup (Codex, 2026-07-12)
+
+- Copied the approved website logo, mascot poses, sneaker, perfume, and combo artwork into Android `drawable-nodpi` and iOS asset catalogs. Android's central `GhostMascotPose`/`ProductIcon` components and iOS's equivalent views now render those assets, so existing screens inherit the same artwork without per-screen duplicates.
+- Added the official horizontal Ghost Cart wordmark to Android onboarding/marketplace and the iOS catalog header. The old hand-drawn ghost and sneaker/perfume/burger placeholders are no longer used for those supported assets; icon-only fallbacks remain for products without approved artwork.
+- Reduced repetitive “Simulation only / No real payment / No real delivery” strings across the website and mobile apps. Clear disclosure remains at entry, the interactive demo/checkout, delivery, and relevant wallet/card moments, while repeated card badges, footer stamps, waitlist copy, product labels, and duplicate checkout notices were replaced with useful product copy.
+- Rebuilt the Android debug APK. `clean assembleDebug` and `lintDebug` pass; web build/tests/lint also pass (existing image optimization advisories only). iOS assets/source were updated but remain uncompiled because this Windows workspace has no Xcode toolchain and the checked-in Xcode project file is still only a minimal placeholder.
 
 ## Catalog admin and protected backend (Codex, 2026-07-12)
 

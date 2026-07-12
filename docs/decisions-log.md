@@ -352,3 +352,21 @@ Append-only. Do not rewrite or delete earlier entries — only add new ones.
 - **Enabled the logical `DB` binding through `.openai/hosting.json`.** Sites is
   responsible for provisioning the real D1 resource and applying the packaged
   Drizzle migration; no real payment, order, delivery, or banking data is added.
+
+## 2026-07-12 — Codex (shared mobile assets and disclosure hierarchy)
+
+- **Made the website asset set the mobile source of truth.** Android and iOS
+  now bundle the approved logo, mascot poses, sneaker, perfume, and combo
+  artwork from `public/` rather than maintaining separate hand-drawn versions.
+  Central image components select the approved asset when one exists and retain
+  vector fallbacks only for unsupported generic categories.
+- **Reduced disclosure repetition without removing the product's safety
+  boundary.** The user explicitly asked to stop showing “Simulation only”
+  everywhere. Repeated badges and footer/card copy were removed or rewritten,
+  while unambiguous disclosure remains at entry and transaction-like moments
+  (Fake Checkout, delivery, Ghost Card/wallet) as required by the product and
+  brand source-of-truth documents.
+- **Kept the mobile asset copies as platform-native resources.** Android uses
+  `drawable-nodpi`; iOS uses named `.imageset` entries. This avoids runtime web
+  fetching, preserves offline rendering, and keeps the app aligned with the
+  approved transparent PNG files.

@@ -88,7 +88,7 @@ fun DashboardScreen(
             MetricCard(
                 label = "Cooled Urges",
                 value = "$cooledCount",
-                disclaimer = "Simulated delay",
+                disclaimer = "Demo pattern",
                 modifier = Modifier.weight(1f)
             )
         }

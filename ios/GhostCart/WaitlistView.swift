@@ -22,7 +22,7 @@ struct WaitlistView: View {
                         .foregroundColor(.white)
                         .multilineTextAlignment(.center)
 
-                    Text("Join our waitlist to know when the native app launches. No real payments, ever.")
+                    Text("Join our waitlist to know when the native app launches.")
                         .font(.system(size: 13))
                         .foregroundColor(.gray)
                         .multilineTextAlignment(.center)

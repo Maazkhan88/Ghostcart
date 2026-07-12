@@ -158,7 +158,7 @@ fun CartScreen(
                 }
 
                 Text(
-                    text = "Simulation only · No payment details · No delivery",
+                    text = "Close the loop without entering checkout details",
                     color = Color.Gray,
                     fontSize = 8.sp,
                     textAlign = TextAlign.Center,
@@ -203,7 +203,7 @@ fun CartItemRow(
             modifier = Modifier.weight(1f)
         ) {
             Text(product.name, color = Paper, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Text("Simulated item", color = Color.Gray, fontSize = 9.sp)
+            Text("Almost-buy", color = Color.Gray, fontSize = 9.sp)
         }
 
         Text(

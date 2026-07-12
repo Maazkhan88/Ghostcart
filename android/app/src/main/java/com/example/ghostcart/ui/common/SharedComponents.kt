@@ -125,9 +125,9 @@ fun RoundIconButton(icon: ImageVector, modifier: Modifier = Modifier, onClick: (
     }
 }
 
-/** Small pill used everywhere the product must visibly disclaim it is simulated. */
+/** Compact disclosure used only at entry and sensitive checkout moments. */
 @Composable
-fun SimulationBadge(text: String = "Simulation only", modifier: Modifier = Modifier, dark: Boolean = false) {
+fun SimulationBadge(text: String = "Demo", modifier: Modifier = Modifier, dark: Boolean = false) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),

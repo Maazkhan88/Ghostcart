@@ -42,6 +42,7 @@ import com.example.ghostcart.theme.Ink
 import com.example.ghostcart.theme.MutedText
 import com.example.ghostcart.theme.Paper
 import com.example.ghostcart.ui.GhostMascotPose
+import com.example.ghostcart.ui.GhostCartWordmark
 import com.example.ghostcart.ui.common.PrimaryButton
 import com.example.ghostcart.ui.common.SimulationBadge
 import com.example.ghostcart.ui.common.materialIconFor
@@ -58,12 +59,11 @@ fun SplashScreen(onStart: () -> Unit, onGuest: () -> Unit, modifier: Modifier = 
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             GhostMascotPose(poseName = "wave", modifier = Modifier.size(96.dp))
-            Text(
-                text = "Ghost Cart",
-                color = Ink,
-                fontSize = 34.sp,
-                fontWeight = FontWeight.ExtraBold,
-                modifier = Modifier.padding(top = 20.dp)
+            GhostCartWordmark(
+                modifier = Modifier
+                    .fillMaxWidth(0.56f)
+                    .height(76.dp)
+                    .padding(top = 16.dp)
             )
             Text(
                 text = "Add to cart. Checkout.\nKeep your money.",

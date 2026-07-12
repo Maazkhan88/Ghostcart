@@ -58,13 +58,13 @@ import com.example.ghostcart.theme.MutedText
 import com.example.ghostcart.theme.Paper
 import com.example.ghostcart.theme.SoftGray
 import com.example.ghostcart.ui.GhostMascotPose
+import com.example.ghostcart.ui.GhostCartWordmark
 import com.example.ghostcart.ui.ProductIcon
 import com.example.ghostcart.ui.common.BackButton
 import com.example.ghostcart.ui.common.ForwardChevron
 import com.example.ghostcart.ui.common.PrimaryButton
 import com.example.ghostcart.ui.common.RoundIconButton
 import com.example.ghostcart.ui.common.SecondaryButton
-import com.example.ghostcart.ui.common.SimulationBadge
 import com.example.ghostcart.ui.common.materialIconFor
 
 @Composable
@@ -80,14 +80,7 @@ fun HomeMarketplaceScreen(
     Column(modifier = modifier.fillMaxSize().background(Paper)) {
         Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp).verticalScroll(rememberScrollState()).weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                GhostMascotPose(poseName = "wave", modifier = Modifier.size(38.dp))
-                Text(
-                    text = "Ghost Cart",
-                    color = Ink,
-                    fontSize = 19.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    modifier = Modifier.weight(1f).padding(start = 10.dp)
-                )
+                GhostCartWordmark(modifier = Modifier.height(42.dp).weight(1f))
                 RoundIconButton(icon = Icons.Filled.Notifications, onClick = {})
                 Spacer(modifier = Modifier.width(8.dp))
                 RoundIconButton(icon = Icons.Filled.Person, onClick = onOpenWallet)
@@ -237,7 +230,6 @@ fun MarketplaceProductCard(
             contentAlignment = Alignment.Center
         ) {
             ProductIcon(name = product.iconName, modifier = Modifier.size(42.dp), color = Ink)
-            SimulationBadge(modifier = Modifier.align(Alignment.TopStart).padding(6.dp))
         }
         Text(text = product.name, color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 2, modifier = Modifier.padding(top = 8.dp))
         Text(text = "${Marketplace.currency} ${product.price}", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 2.dp, bottom = 8.dp))
@@ -448,7 +440,6 @@ fun ProductDetailScreen(
             ForwardChevron()
         }
 
-        SimulationBadge(text = "Product reference for simulation only.\nNo real payment or delivery will happen.", modifier = Modifier.padding(top = 16.dp))
     }
 }
 

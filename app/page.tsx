@@ -162,7 +162,6 @@ function PhoneMockup({
               </div>
             </div>
             <button type="button" className="phone-cta" onClick={onCheckout}>Fake Checkout</button>
-            <small className="phone-disclaimer">Simulation only · no real payment</small>
           </>
         ) : (
           <>
@@ -173,7 +172,6 @@ function PhoneMockup({
               <span>Ghost Wallet</span>
               <strong>Protected amount this week</strong>
             </div>
-            <small className="phone-disclaimer">Simulated wallet · not a bank account</small>
           </>
         )}
       </div>
@@ -428,7 +426,7 @@ export default function Home() {
         </div>
 
         <div className="how-feature-strip" data-reveal>
-          <div><Icon name="shield" /><div><strong>Simulation only</strong><p>Everything is simulated. No real transactions.</p></div></div>
+          <div><Icon name="shield" /><div><strong>Built for the pause</strong><p>Give the impulse somewhere to go before you decide.</p></div></div>
           <div><Icon name="lock" /><div><strong>Private &amp; safe</strong><p>Your data stays private. We never charge.</p></div></div>
           <div><Icon name="leaf" /><div><strong>Better habits</strong><p>Make mindful choices. Build financial freedom.</p></div></div>
         </div>
@@ -610,11 +608,11 @@ export default function Home() {
                     <div className="ghost-portal" aria-hidden="true"><span className="portal-ring portal-ring-one" /><span className="portal-ring portal-ring-two" /><GhostMascot pose="waveAlt" className="portal-mascot" /></div>
                     <div className="cart-copy"><p className="eyebrow eyebrow-dark">Your Ghost Cart</p><h3>{cartProducts.length ? "The urge has somewhere to go." : "Drag items here."}</h3><p>{cartProducts.length ? "Nothing here will be purchased or delivered." : "Or use any visible Ghost it button."}</p></div>
                     <div className="cart-items">
-                      {cartProducts.map((product) => <div key={product.id}><span className={`cart-item-shape ${product.tone}`} /><p><strong>{product.name}</strong><small>Simulated item</small></p><button type="button" onClick={() => removeFromCart(product.id)} aria-label={`Remove ${product.name}`}>×</button></div>)}
+                      {cartProducts.map((product) => <div key={product.id}><span className={`cart-item-shape ${product.tone}`} /><p><strong>{product.name}</strong><small>Almost-buy</small></p><button type="button" onClick={() => removeFromCart(product.id)} aria-label={`Remove ${product.name}`}>×</button></div>)}
                     </div>
                     <div className="cart-summary"><span>Real amount charged</span><strong>Zero</strong></div>
                     <button type="button" className="button button-primary button-full" disabled={!cartProducts.length} onClick={fakeCheckout}>Complete Fake Checkout</button>
-                    <small>Simulation only. No payment details. No delivery.</small>
+                    <small>Close the loop without entering checkout details.</small>
                   </>
                 ) : (
                   <div className="receipt-card" role="status">
@@ -657,8 +655,8 @@ export default function Home() {
 
         <div className="benefit-grid" data-reveal>
           <article className="benefit-card"><Icon name="cartHeart" /><h3>Satisfy the urge</h3><p>Get the rush without the regret. Add, checkout, feel better.</p></article>
-          <article className="benefit-card"><Icon name="cardX" /><h3>No real payment</h3><p>No charges. No bills. Just the feeling of getting it.</p></article>
-          <article className="benefit-card"><Icon name="boxX" /><h3>No real delivery</h3><p>Nothing shows up at your door. Just peace of mind.</p></article>
+          <article className="benefit-card"><Icon name="cardX" /><h3>No checkout details</h3><p>Close the loop without typing card information or placing an order.</p></article>
+          <article className="benefit-card"><Icon name="boxX" /><h3>Nothing arrives</h3><p>The craving gets closure. Your doorstep stays exactly as it was.</p></article>
           <article className="benefit-card"><Icon name="chart" /><h3>Track almost-buys</h3><p>See your patterns. Understand your habits. Stay in control.</p></article>
           <article className="benefit-card"><Icon name="walletCheck" /><h3>Protect your salary</h3><p>Keep your money for what matters. Future you will thank you.</p></article>
           <article className="benefit-card"><Icon name="brain" /><h3>Cool off impulse</h3><p>Give yourself space. Most urges fade in 24 hours.</p></article>
@@ -798,9 +796,6 @@ export default function Home() {
             ) : (
               <div className="waitlist-success" role="status"><span aria-hidden="true">✓</span><div><strong>Preview saved.</strong><p>Live waitlist connection is the next build step.</p></div></div>
             )}
-            <div className="safety-row safety-row-center" aria-label="Safety information">
-              <span>Simulation only</span><span>No real payment</span><span>No real delivery</span>
-            </div>
             <div className="platform-row" aria-label="Planned platforms">
               <span className="platform-lead">Coming soon on</span>
               <span className="platform-chip">App Store</span>
@@ -816,7 +811,7 @@ export default function Home() {
             <div className="footer-brand"><Wordmark inverted /><h2>Fake checkout.<br /><span>Real control.</span></h2><p>Save your cravings for later.<br />Keep your money now.</p></div>
             <div className="footer-links"><div><strong>Explore</strong><a href="#how">How it works</a><a href="#demo">Try the demo</a><a href="#why">Why Ghost Cart</a></div><div><strong>Information</strong><a href="#faq">FAQ</a><a href="/admin">Catalog admin</a><span>Privacy · coming soon</span></div><div><strong>Social</strong><span>Instagram · coming soon</span><span>TikTok · coming soon</span><span>LinkedIn · coming soon</span></div></div>
           </div>
-          <div className="footer-bottom"><span>© 2026 Ghost Cart</span><p>Simulation only. No real payment. No real delivery.</p><a href="#top">Back to top ↑</a></div>
+          <div className="footer-bottom"><span>© 2026 Ghost Cart</span><p>Made for everything you almost bought.</p><a href="#top">Back to top ↑</a></div>
         </footer>
       </div>
     </main>

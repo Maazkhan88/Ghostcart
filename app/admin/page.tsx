@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Catalog Admin — Ghost Cart",
-  description: "Manage the simulation-only Ghost Cart merchant and product catalog.",
+  description: "Manage the Ghost Cart merchant and demo product catalog.",
 };
 
 export default async function AdminPage() {

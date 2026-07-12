@@ -86,7 +86,7 @@ struct CartView: View {
                                 .cornerRadius(12)
                         }
 
-                        Text("Simulation only · No payment details · No delivery")
+                        Text("Close the loop without entering checkout details")
                             .font(.system(size: 8))
                             .foregroundColor(.gray)
                             .multilineTextAlignment(.center)
@@ -128,7 +128,7 @@ struct CartItemRow: View {
                 Text(product.name)
                     .font(.system(size: 12, weight: .bold))
                     .foregroundColor(.white)
-                Text("Simulated item")
+                Text("Almost-buy")
                     .font(.system(size: 9))
                     .foregroundColor(.gray)
             }

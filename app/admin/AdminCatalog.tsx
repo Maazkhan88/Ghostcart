@@ -255,7 +255,7 @@ export default function AdminCatalog({
 
       <section className="admin-hero" aria-labelledby="admin-title">
         <div>
-          <p className="admin-eyebrow">Simulation catalog control</p>
+          <p className="admin-eyebrow">Demo catalog control</p>
           <h1 id="admin-title">Keep the temptation <em>curated.</em></h1>
           <p>Manage merchants and demo products shown inside Ghost Cart. Nothing here creates a real order, payment, or delivery.</p>
         </div>
@@ -265,7 +265,7 @@ export default function AdminCatalog({
       <section className="admin-metrics" aria-label="Catalog overview">
         <article><span>Products</span><strong>{products.length}</strong><small>{activeCount} active in the demo</small></article>
         <article><span>Merchants</span><strong>{merchants.length}</strong><small>Catalog sources</small></article>
-        <article className="admin-safety-card"><span>Status</span><strong>Simulation only</strong><small>No real payment · No real delivery</small></article>
+        <article className="admin-safety-card"><span>Catalog</span><strong>Demo mode</strong><small>Product references for Ghost Cart experiences</small></article>
       </section>
 
       <div className="admin-workspace">
@@ -296,7 +296,7 @@ export default function AdminCatalog({
               <label>Image URL <span>optional</span><input type="url" value={productForm.imageUrl} onChange={(event) => setProductForm({ ...productForm, imageUrl: event.target.value })} placeholder="https://…" /></label>
               <div className="admin-check-grid">
                 <label className="admin-check"><input type="checkbox" checked={productForm.isActive} onChange={(event) => setProductForm({ ...productForm, isActive: event.target.checked })} /><span><strong>Active</strong><small>May appear in the demo.</small></span></label>
-                <label className="admin-check"><input type="checkbox" checked={productForm.isFlashDeal} onChange={(event) => setProductForm({ ...productForm, isFlashDeal: event.target.checked })} /><span><strong>Fake flash deal</strong><small>Simulation label only.</small></span></label>
+                <label className="admin-check"><input type="checkbox" checked={productForm.isFlashDeal} onChange={(event) => setProductForm({ ...productForm, isFlashDeal: event.target.checked })} /><span><strong>Fake flash deal</strong><small>Promotional demo label.</small></span></label>
                 <label className="admin-check"><input type="checkbox" checked={productForm.isMostGhosted} onChange={(event) => setProductForm({ ...productForm, isMostGhosted: event.target.checked })} /><span><strong>Most ghosted</strong><small>Manual feature flag.</small></span></label>
               </div>
               <div className="admin-form-actions"><button className="admin-primary" disabled={saving || merchants.length === 0}>{saving ? "Saving…" : editingProductId ? "Save changes" : "Add product"}</button>{editingProductId && <button type="button" className="admin-secondary" onClick={cancelEdit}>Cancel</button>}</div>

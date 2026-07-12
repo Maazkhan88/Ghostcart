@@ -92,7 +92,7 @@ fun WalletHomeScreen(
                 Column(modifier = Modifier.weight(1f).padding(start = 14.dp)) {
                     Row(modifier = Modifier.fillMaxWidth()) {
                         Text(text = "Ghost Card", color = Paper, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                        SimulationBadge(dark = true)
+                        SimulationBadge(text = "Demo wallet", dark = true)
                     }
                     Text(text = WalletDemoData.cardHolderName, color = Paper, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 10.dp))
                     Text(text = "GC•••• ${WalletDemoData.cardLastFour}", color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
@@ -159,8 +159,8 @@ fun WalletHomeScreen(
         ) {
             Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = GhostGreen, modifier = Modifier.size(18.dp))
             Column(modifier = Modifier.weight(1f).padding(horizontal = 10.dp)) {
-                Text(text = "Simulation only — Internal use only", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                Text(text = "Ghost Wallet and Ghost Card are simulated features.", color = MutedText, fontSize = 10.sp)
+                Text(text = "Wallet controls", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(text = "Review goals, Salary Shield, and Ghost Card.", color = MutedText, fontSize = 10.sp)
             }
             ForwardChevron()
         }
@@ -247,8 +247,8 @@ fun WalletSetupScreen(
             ) {
                 Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = GhostGreen, modifier = Modifier.size(16.dp))
                 Column(modifier = Modifier.weight(1f).padding(horizontal = 10.dp)) {
-                    Text(text = "Simulation only — internal use only", color = Ink, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    Text(text = "Ghost Wallet and Ghost Cart are simulated features.", color = MutedText, fontSize = 9.sp)
+                    Text(text = "Ready when you are", color = Ink, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(text = "You can change these settings anytime.", color = MutedText, fontSize = 9.sp)
                 }
                 ForwardChevron()
             }
@@ -579,7 +579,7 @@ fun WeeklyStatementScreen(onBack: () -> Unit, onDownload: () -> Unit, onShare: (
             SecondaryButton(text = "Share Ghost Receipt", onClick = onShare, leadingIcon = Icons.Filled.Share, modifier = Modifier.weight(1f))
         }
         Text(
-            text = "Simulation summary only – not a bank statement.",
+            text = "Generated from demo activity.",
             color = MutedText,
             fontSize = 10.sp,
             modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
@@ -607,7 +607,7 @@ fun GhostCardSettingsScreen(
                 Column(modifier = Modifier.weight(1f).padding(start = 14.dp)) {
                     Row(modifier = Modifier.fillMaxWidth()) {
                         Text(text = "Ghost Card", color = Paper, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                        SimulationBadge(dark = true)
+                        SimulationBadge(text = "Demo card", dark = true)
                     }
                     Text(text = WalletDemoData.cardHolderName, color = Paper, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 8.dp))
                     Text(text = "GC•••• ${WalletDemoData.cardLastFour}", color = Color.White.copy(alpha = 0.6f), fontSize = 10.sp)

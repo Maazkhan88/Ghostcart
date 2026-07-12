@@ -61,7 +61,6 @@ import com.example.ghostcart.ui.common.GhostTopBar
 import com.example.ghostcart.ui.common.PrimaryButton
 import com.example.ghostcart.ui.common.RoundIconButton
 import com.example.ghostcart.ui.common.SecondaryButton
-import com.example.ghostcart.ui.common.SimulationBadge
 
 private const val SERVICE_FEE_RATE = 0.05f
 private const val VAT_RATE = 0.05f
@@ -156,7 +155,6 @@ fun GhostCartListScreen(
 
         PrimaryButton(text = "Proceed to Ghost Checkout", onClick = onCheckout, modifier = Modifier.padding(top = 14.dp))
         SecondaryButton(text = "I Don't Need This — Save Now", onClick = onClearAll, modifier = Modifier.padding(top = 10.dp))
-        SimulationBadge(text = "No payment. No delivery. Just self-control.", modifier = Modifier.padding(top = 12.dp))
     }
 }
 
@@ -228,11 +226,7 @@ fun GhostCheckoutScreen(
             SummaryLine("Total", "${Marketplace.currency} $total", bold = true)
         }
 
-        PrimaryButton(text = "Place Simulated Order", onClick = onPlaceOrder, trailingIcon = Icons.Filled.ArrowForward, modifier = Modifier.padding(top = 20.dp))
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 10.dp).align(Alignment.CenterHorizontally)) {
-            Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = GhostGreen, modifier = Modifier.size(12.dp))
-            Text(text = "100% safe. 100% simulated.", color = MutedText, fontSize = 10.sp, modifier = Modifier.padding(start = 6.dp))
-        }
+        PrimaryButton(text = "Place Fake Order", onClick = onPlaceOrder, trailingIcon = Icons.Filled.ArrowForward, modifier = Modifier.padding(top = 20.dp))
     }
 }
 
@@ -313,7 +307,6 @@ fun OrderGhostedSuccessScreen(
 
         PrimaryButton(text = "Track Fake Delivery", onClick = onTrackDelivery, trailingIcon = Icons.Filled.ArrowForward)
         SecondaryButton(text = "View My Savings", onClick = onViewSavings, modifier = Modifier.padding(top = 10.dp))
-        SimulationBadge(modifier = Modifier.padding(top = 14.dp))
     }
 }
 
@@ -446,7 +439,6 @@ fun FakeDeliveryTrackingScreen(
         }
 
         PrimaryButton(text = "View Ghost Receipt", onClick = onViewReceipt, modifier = Modifier.padding(top = 18.dp))
-        SimulationBadge(text = "This is a simulation. No real delivery. No real payment.\nJust real savings.", modifier = Modifier.padding(top = 12.dp))
     }
 }
 
@@ -462,7 +454,7 @@ fun PayWithGhostCardScreen(
     Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
         GhostTopBar(title = "Ghost Cart", onBack = onBack, trailing = { RoundIconButton(icon = Icons.Filled.Notifications) {} })
         Text(text = "Pay with Ghost Card", color = Ink, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 16.dp))
-        Text(text = "Simulation only – no real payment will be made.", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+        Text(text = "Ghost Card is a demo. Nothing will be charged.", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
 
         GhostHeroCard(modifier = Modifier.padding(top = 18.dp)) {
             Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
@@ -470,7 +462,6 @@ fun PayWithGhostCardScreen(
                 Column(modifier = Modifier.weight(1f).padding(start = 14.dp)) {
                     Row(modifier = Modifier.fillMaxWidth()) {
                         Text(text = "Ghost Card", color = Paper, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                        SimulationBadge(dark = true)
                     }
                     Text(text = WalletDemoData.cardHolderName, color = Paper, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 10.dp))
                     Text(text = "GC•••• ${WalletDemoData.cardLastFour}", color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
@@ -512,18 +503,6 @@ fun PayWithGhostCardScreen(
 
         PrimaryButton(text = "Confirm Ghost Pay", onClick = onConfirm, leadingIcon = null, trailingIcon = Icons.Filled.ArrowForward, modifier = Modifier.padding(top = 16.dp))
         SecondaryButton(text = "Cancel", onClick = onCancel, modifier = Modifier.padding(top = 10.dp))
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(GreenTint)
-                .padding(12.dp)
-        ) {
-            Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = GhostGreen, modifier = Modifier.size(14.dp))
-            Text(text = "No real payment will be made.", color = Ink, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
-        }
     }
 }
 
@@ -584,6 +563,5 @@ fun OrderProtectedScreen(
         Spacer(modifier = Modifier.weight(1f))
         PrimaryButton(text = "View Ghost Receipt", onClick = onViewReceipt)
         SecondaryButton(text = "Back to Wallet", onClick = onBackToWallet, modifier = Modifier.padding(top = 10.dp))
-        SimulationBadge(text = "Simulation complete – no money was charged.", modifier = Modifier.padding(top = 12.dp))
     }
 }

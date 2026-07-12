@@ -13,59 +13,19 @@ struct ProductIconView: View {
             Group {
                 switch name {
                 case "sneaker":
-                    Path { path in
-                        path.move(to: CGPoint(x: w * 0.1, y: h * 0.75))
-                        path.addLine(to: CGPoint(x: w * 0.9, y: h * 0.75))
-                        path.addLine(to: CGPoint(x: w * 0.9, y: h * 0.55))
-                        path.addQuadCurve(to: CGPoint(x: w * 0.65, y: h * 0.3), control: CGPoint(x: w * 0.75, y: h * 0.5))
-                        path.addLine(to: CGPoint(x: w * 0.45, y: h * 0.3))
-                        path.addLine(to: CGPoint(x: w * 0.35, y: h * 0.45))
-                        path.addQuadCurve(to: CGPoint(x: w * 0.1, y: h * 0.55), control: CGPoint(x: w * 0.2, y: h * 0.5))
-                        path.closeSubpath()
-                    }
-                    .stroke(color, lineWidth: strokeWidth)
+                    Image("ProductSneaker")
+                        .resizable()
+                        .scaledToFit()
                     
                 case "perfume":
-                    Group {
-                        RoundedRectangle(cornerRadius: w * 0.1)
-                            .stroke(color, lineWidth: strokeWidth)
-                            .frame(width: w * 0.6, height: h * 0.5)
-                            .offset(y: h * 0.1)
-                        
-                        Rectangle()
-                            .stroke(color, lineWidth: strokeWidth)
-                            .frame(width: w * 0.2, height: h * 0.2)
-                            .offset(y: -h * 0.25)
-                        
-                        Rectangle()
-                            .stroke(color, lineWidth: strokeWidth * 0.6)
-                            .frame(width: w * 0.3, height: h * 0.24)
-                            .offset(y: h * 0.1)
-                    }
-                    .frame(width: w, height: h)
+                    Image("ProductPerfume")
+                        .resizable()
+                        .scaledToFit()
                     
                 case "burger":
-                    Path { path in
-                        // Bun top
-                        path.move(to: CGPoint(x: w * 0.15, y: h * 0.4))
-                        path.addQuadCurve(to: CGPoint(x: w * 0.85, y: h * 0.4), control: CGPoint(x: w * 0.5, y: h * 0.1))
-                        path.closeSubpath()
-                        
-                        // Cheese/Meat
-                        path.move(to: CGPoint(x: w * 0.12, y: h * 0.46))
-                        path.addLine(to: CGPoint(x: w * 0.88, y: h * 0.46))
-                        path.addLine(to: CGPoint(x: w * 0.88, y: h * 0.56))
-                        path.addLine(to: CGPoint(x: w * 0.12, y: h * 0.56))
-                        path.closeSubpath()
-                        
-                        // Bun bottom
-                        path.move(to: CGPoint(x: w * 0.15, y: h * 0.62))
-                        path.addLine(to: CGPoint(x: w * 0.85, y: h * 0.62))
-                        path.addLine(to: CGPoint(x: w * 0.85, y: h * 0.82))
-                        path.addLine(to: CGPoint(x: w * 0.15, y: h * 0.82))
-                        path.closeSubpath()
-                    }
-                    .stroke(color, lineWidth: strokeWidth)
+                    Image("MascotCombo")
+                        .resizable()
+                        .scaledToFit()
                     
                 case "headphones":
                     Path { path in
@@ -130,66 +90,30 @@ struct ProductIconView: View {
 
 struct GhostMascotView: View {
     let poseName: String
+
+    private var assetName: String {
+        switch poseName {
+        case "cart": return "MascotCart"
+        case "wallet": return "MascotWallet"
+        case "cooldown": return "MascotCooldown"
+        case "thumbsup": return "MascotThumbsup"
+        case "combo": return "MascotCombo"
+        default: return "MascotWave"
+        }
+    }
     
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 24)
-                .fill(Color.darkGrayColor)
-            
-            GeometryReader { geo in
-                let w = geo.size.width
-                let h = geo.size.height
-                
-                ZStack {
-                    // Mascot Body Outline
-                    Path { path in
-                        path.move(to: CGPoint(x: w * 0.25, y: h * 0.85))
-                        path.addLine(to: CGPoint(x: w * 0.25, y: h * 0.45))
-                        path.addQuadCurve(to: CGPoint(x: w * 0.5, y: h * 0.15), control: CGPoint(x: w * 0.25, y: h * 0.15))
-                        path.addQuadCurve(to: CGPoint(x: w * 0.75, y: h * 0.45), control: CGPoint(x: w * 0.75, y: h * 0.15))
-                        path.addLine(to: CGPoint(x: w * 0.75, y: h * 0.85))
-                        
-                        path.addQuadCurve(to: CGPoint(x: w * 0.5, y: h * 0.85), control: CGPoint(x: w * 0.62, y: h * 0.75))
-                        path.addQuadCurve(to: CGPoint(x: w * 0.25, y: h * 0.85), control: CGPoint(x: w * 0.38, y: h * 0.75))
-                    }
-                    .fill(Color.white)
-                    
-                    // Eyes
-                    Circle()
-                        .fill(Color.black)
-                        .frame(width: w * 0.1, height: w * 0.1)
-                        .position(x: w * 0.42, y: h * 0.38)
-                    
-                    Circle()
-                        .fill(Color.black)
-                        .frame(width: w * 0.1, height: w * 0.1)
-                        .position(x: w * 0.58, y: h * 0.38)
-                    
-                    // Pose additions
-                    if poseName == "thumbsup" {
-                        Circle()
-                            .fill(Color.ghostGreenColor)
-                            .frame(width: w * 0.14, height: w * 0.14)
-                            .position(x: w * 0.82, y: h * 0.6)
-                    } else if poseName == "cooldown" {
-                        Circle()
-                            .fill(Color(red: 0.5, green: 0.85, blue: 1.0))
-                            .frame(width: w * 0.12, height: w * 0.12)
-                            .position(x: w * 0.5, y: h * 0.05)
-                    } else if poseName == "cart" {
-                        Circle()
-                            .fill(Color.gray)
-                            .frame(width: w * 0.08, height: w * 0.08)
-                            .position(x: w * 0.32, y: h * 0.88)
-                        
-                        Circle()
-                            .fill(Color.gray)
-                            .frame(width: w * 0.08, height: w * 0.08)
-                            .position(x: w * 0.68, y: h * 0.88)
-                    }
-                }
-            }
-            .frame(width: 54, height: 54)
-        }
+        Image(assetName)
+            .resizable()
+            .scaledToFit()
+    }
+}
+
+struct GhostCartLogoView: View {
+    var body: some View {
+        Image("GhostCartLogo")
+            .resizable()
+            .scaledToFit()
+            .accessibilityLabel("Ghost Cart")
     }
 }

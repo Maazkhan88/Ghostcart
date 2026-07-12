@@ -1,26 +1,40 @@
 package com.example.ghostcart.ui
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.unit.dp
-import com.example.ghostcart.theme.GhostGreen
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.example.ghostcart.R
 
 @Composable
 fun ProductIcon(name: String, modifier: Modifier = Modifier, color: Color = Color.White) {
+    val approvedAsset = when (name) {
+        "sneaker" -> R.drawable.product_sneaker
+        "perfume" -> R.drawable.product_perfume
+        // The website intentionally uses this approved combo artwork for food cravings.
+        "burger" -> R.drawable.mascot_combo
+        else -> null
+    }
+
+    if (approvedAsset != null) {
+        Image(
+            painter = painterResource(approvedAsset),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = modifier
+        )
+        return
+    }
+
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
@@ -223,49 +237,33 @@ fun ProductIcon(name: String, modifier: Modifier = Modifier, color: Color = Colo
 
 @Composable
 fun GhostMascotPose(poseName: String, modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(24.dp))
-            .background(Color(0xFF1E1E1E)),
-        contentAlignment = Alignment.Center
-    ) {
-        Canvas(modifier = Modifier.size(54.dp)) {
-            val w = size.width
-            val h = size.height
-
-            // Head and Body outline path
-            val path = Path().apply {
-                moveTo(w * 0.25f, h * 0.85f)
-                lineTo(w * 0.25f, h * 0.45f)
-                quadraticTo(w * 0.25f, h * 0.15f, w * 0.5f, h * 0.15f)
-                quadraticTo(w * 0.75f, h * 0.15f, w * 0.75f, h * 0.45f)
-                lineTo(w * 0.75f, h * 0.85f)
-                // Ripples at bottom
-                quadraticTo(w * 0.62f, h * 0.75f, w * 0.5f, h * 0.85f)
-                quadraticTo(w * 0.38f, h * 0.75f, w * 0.25f, h * 0.85f)
-            }
-            drawPath(path, Color.White)
-
-            // Eyes
-            drawCircle(Color.Black, radius = w * 0.05f, center = Offset(w * 0.42f, h * 0.38f))
-            drawCircle(Color.Black, radius = w * 0.05f, center = Offset(w * 0.58f, h * 0.38f))
-
-            // Pose adjustments
-            when (poseName) {
-                "thumbsup" -> {
-                    // Thumbs up drawing
-                    drawCircle(GhostGreen, radius = w * 0.07f, center = Offset(w * 0.82f, h * 0.6f))
-                }
-                "cooldown" -> {
-                    // Ice blue dot above head
-                    drawCircle(Color(0xFF80D8FF), radius = w * 0.06f, center = Offset(w * 0.5f, h * 0.05f))
-                }
-                "cart" -> {
-                    // Draw tiny wheels on the body
-                    drawCircle(Color.Gray, radius = w * 0.04f, center = Offset(w * 0.32f, h * 0.88f))
-                    drawCircle(Color.Gray, radius = w * 0.04f, center = Offset(w * 0.68f, h * 0.88f))
-                }
-            }
-        }
+    val asset = when (poseName) {
+        "cart" -> R.drawable.mascot_cart
+        "wallet" -> R.drawable.mascot_wallet
+        "cooldown" -> R.drawable.mascot_cooldown
+        "thumbsup" -> R.drawable.mascot_thumbsup
+        "trio" -> R.drawable.mascot_trio
+        "phoneList" -> R.drawable.mascot_phone_list
+        "checkoutPhone" -> R.drawable.mascot_checkout_phone
+        "combo" -> R.drawable.mascot_combo
+        "waveAlt" -> R.drawable.mascot_wave_alt
+        else -> R.drawable.mascot_wave
     }
+
+    Image(
+        painter = painterResource(asset),
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        modifier = modifier.fillMaxSize()
+    )
+}
+
+@Composable
+fun GhostCartWordmark(modifier: Modifier = Modifier, contentDescription: String? = "Ghost Cart") {
+    Image(
+        painter = painterResource(R.drawable.ghost_cart_logo_horizontal),
+        contentDescription = contentDescription,
+        contentScale = ContentScale.Fit,
+        modifier = modifier
+    )
 }

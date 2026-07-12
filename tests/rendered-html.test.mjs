@@ -26,10 +26,9 @@ test("protects and renders the Ghost Cart catalog admin", async () => {
   });
   assert.equal(response.status, 200);
   const html = await response.text();
-  assert.match(html, /Simulation catalog control/i);
+  assert.match(html, /Demo catalog control/i);
   assert.match(html, /Manage merchants and demo products/i);
-  assert.match(html, /No real payment/i);
-  assert.match(html, /No real delivery/i);
+  assert.match(html, /Nothing here creates a real order, payment, or delivery/i);
 });
 
 test("server-renders the complete Ghost Cart experience", async () => {
@@ -73,7 +72,7 @@ test("keeps payment and brand safety rules in the production source", async () =
   assert.match(page, /localStorage\.setItem/);
   assert.match(page, /aria-live="polite"/);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
-  assert.match(layout, /simulation-only fake checkout experience/i);
+  assert.match(layout, /fake checkout experience/i);
   assert.doesNotMatch(page, /Visa|Mastercard|Apple Pay|Google Pay/i);
   assert.doesNotMatch(page, /\$\s*\d/);
   assert.doesNotMatch(page, /\bAED\b/);
