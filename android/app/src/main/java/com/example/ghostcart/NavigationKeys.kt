@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 
 // Onboarding
 @Serializable data object Splash : NavKey
+@Serializable data object Auth : NavKey
 @Serializable data object ProfileSelect : NavKey
 @Serializable data object Personalization : NavKey
 

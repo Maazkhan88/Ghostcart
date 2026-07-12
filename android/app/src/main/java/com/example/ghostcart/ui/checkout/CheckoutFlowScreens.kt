@@ -170,6 +170,8 @@ private fun SummaryLine(label: String, value: String, valueColor: Color = Ink, b
 fun GhostCheckoutScreen(
     products: List<MarketplaceProduct>,
     walletBalance: Int,
+    simulationIntervalMinutes: Int,
+    onSelectInterval: (Int) -> Unit,
     onBack: () -> Unit,
     onPlaceOrder: () -> Unit,
     modifier: Modifier = Modifier
@@ -205,6 +207,37 @@ fun GhostCheckoutScreen(
         CheckoutInfoRow(icon = Icons.Filled.Notifications, title = "Ghost Wallet", subtitle = "Balance: ${Marketplace.currency} $walletBalance.00", action = "Change")
         CheckoutInfoRow(icon = Icons.Filled.CheckCircle, title = "NoPay Balance", subtitle = "${Marketplace.currency} 800.00 available", action = "Available")
         CheckoutInfoRow(icon = Icons.Filled.Sell, title = "Promo Code", subtitle = "GHOST10 · 10% off applied", action = "Remove")
+
+        Text(text = "Simulation Speed (per step)", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 18.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(SoftGray)
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            listOf(1, 2, 5, 10).forEach { mins ->
+                val selected = simulationIntervalMinutes == mins
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (selected) Ink else Color.Transparent)
+                        .clickable { onSelectInterval(mins) }
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "$mins min",
+                        color = if (selected) Paper else Ink,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
 
         Column(modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
             Text(text = "Order Summary", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)

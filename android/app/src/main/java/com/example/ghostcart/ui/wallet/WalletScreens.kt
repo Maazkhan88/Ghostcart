@@ -591,11 +591,13 @@ fun WeeklyStatementScreen(onBack: () -> Unit, onDownload: () -> Unit, onShare: (
 @Composable
 fun GhostCardSettingsScreen(
     config: WalletConfig,
+    authEmail: String?,
     onBack: () -> Unit,
     onToggleNotifications: () -> Unit,
     onToggleAutoAllocate: () -> Unit,
     onToggleFreeze: () -> Unit,
     onDeleteWallet: () -> Unit,
+    onSignOut: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
@@ -624,6 +626,11 @@ fun GhostCardSettingsScreen(
             SettingsToggleRow(materialIconFor("target"), "Auto-allocate to goals", "Automatically move savings to your goals", config.autoAllocateToGoals, onToggleAutoAllocate)
             SettingsChevronRow(Icons.Filled.Shield, "Salary Shield preference", "Set how much to protect from salary")
             SettingsToggleRow(Icons.Filled.AcUnit, "Freeze internal card", "Temporarily pause all Ghost Card activity", config.cardFrozen, onToggleFreeze)
+            
+            if (authEmail != null) {
+                SettingsChevronRow(Icons.Filled.Lock, "Sign Out", "Logged in as $authEmail", danger = true, onClick = onSignOut)
+            }
+            
             SettingsChevronRow(Icons.Filled.Delete, "Delete wallet", "Permanently delete this wallet and all data", danger = true, onClick = onDeleteWallet)
         }
 

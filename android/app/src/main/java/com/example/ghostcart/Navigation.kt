@@ -1,5 +1,8 @@
 package com.example.ghostcart
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
@@ -13,8 +16,11 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import kotlinx.coroutines.delay
+import com.example.ghostcart.ui.onboarding.AuthScreen
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -89,12 +95,52 @@ fun MainNavigation() {
 
           // Onboarding
           entry<Splash> {
-            SplashScreen(
-              onStart = { backStack.add(ProfileSelect) },
+            val state by appViewModel.uiState.collectAsState()
+            LaunchedEffect(state.authEmail) {
+              delay(2000) // Show logo for 2 seconds
+              backStack.clear()
+              if (state.authEmail != null) {
+                backStack.add(Home)
+              } else {
+                backStack.add(Auth)
+              }
+            }
+            androidx.compose.foundation.layout.Box(
+              modifier = Modifier.fillMaxSize().background(Paper),
+              contentAlignment = androidx.compose.ui.Alignment.Center
+            ) {
+              androidx.compose.foundation.layout.Column(
+                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+              ) {
+                com.example.ghostcart.ui.GhostMascotPose(poseName = "wave", modifier = Modifier.size(100.dp))
+                androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                  text = "Ghost Cart",
+                  color = Ink,
+                  fontSize = 32.sp,
+                  fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold
+                )
+                Text(
+                  text = "✦ UAE's #1 Simulated Cart ✦",
+                  color = GhostGreen,
+                  fontSize = 12.sp,
+                  fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                  modifier = Modifier.padding(top = 8.dp)
+                )
+              }
+            }
+          }
+          entry<Auth> {
+            AuthScreen(
+              onAuthSuccess = { email ->
+                appViewModel.authenticate(email)
+                backStack.add(ProfileSelect)
+              },
               onGuest = {
                 backStack.clear()
                 backStack.add(Home)
-              }
+              },
+              onBack = { backStack.removeLastOrNull() }
             )
           }
           entry<ProfileSelect> {
@@ -167,9 +213,12 @@ fun MainNavigation() {
             )
           }
           entry<GhostCheckout> {
+            val state by appViewModel.uiState.collectAsState()
             GhostCheckoutScreen(
               products = appViewModel.cartProducts(),
               walletBalance = WalletDemoData.currentBalance,
+              simulationIntervalMinutes = state.simulationIntervalMinutes,
+              onSelectInterval = { appViewModel.setSimulationInterval(it) },
               onBack = { backStack.removeLastOrNull() },
               onPlaceOrder = {
                 appViewModel.placeSimulatedOrder()
@@ -288,11 +337,17 @@ fun MainNavigation() {
             val state by appViewModel.uiState.collectAsState()
             GhostCardSettingsScreen(
               config = state.walletConfig,
+              authEmail = state.authEmail,
               onBack = { backStack.removeLastOrNull() },
               onToggleNotifications = { appViewModel.updateWalletConfig { it.copy(walletNotificationsEnabled = !it.walletNotificationsEnabled) } },
               onToggleAutoAllocate = { appViewModel.updateWalletConfig { it.copy(autoAllocateToGoals = !it.autoAllocateToGoals) } },
               onToggleFreeze = { appViewModel.updateWalletConfig { it.copy(cardFrozen = !it.cardFrozen) } },
-              onDeleteWallet = { backStack.add(WalletHome) }
+              onDeleteWallet = { backStack.add(WalletHome) },
+              onSignOut = {
+                appViewModel.signOut()
+                backStack.clear()
+                backStack.add(Splash)
+              }
             )
           }
         },
