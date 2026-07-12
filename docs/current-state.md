@@ -1,6 +1,13 @@
 # Current State
 
-Last updated: 2026-07-12 (Codex session — unified website artwork across Android/iOS and consolidated repetitive safety disclosures to key moments).
+Last updated: 2026-07-12 (Version 1.1.0 — added timed splash screen, local WorkManager notifications, custom simulation speed selector, and real user authentication screens/API endpoints).
+
+## Timed Splash, Real Auth, Background Notifications (Version 1.1.0, 2026-07-12)
+
+- **Timed Splash Screen:** Shows logo and mascot for 2 seconds. Automatically transitions to the dashboard (if logged in) or the Auth screen.
+- **Real User Authentication:** Added a real `users` table to the database schema. Created `/api/auth/signup` and `/api/auth/signin` Next.js route endpoints using secure PBKDF2 Web Crypto hashing. Designed a native Compose `AuthScreen` that persist sessions to SharedPreferences and provides a Sign Out option.
+- **Local Notifications & Customizable Speed:** Added a simulation speed selector (1, 2, 5, or 10 min per step) to `GhostCheckoutScreen`. Integrated Android's `WorkManager` API via `DeliveryStepWorker` to queue background status notifications at proportional intervals even when the app is minimized or killed. Automatically requests the Android 13+ `POST_NOTIFICATIONS` permission on startup.
+- **Compilation:** Successfully rebuilt the APK `app-debug.apk` using Java 17 and Gradle.
 
 ## Shared web/mobile artwork and disclosure cleanup (Codex, 2026-07-12)
 
