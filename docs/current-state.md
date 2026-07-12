@@ -2,7 +2,7 @@
 
 Last updated: 2026-07-12 (Version 1.2.0 — added digital card application, in-app messaging toast banner, item quantity adjustments, launcher icon fix, and uniform product card heights).
 
-## Digital Card Application, Cart Quantities, In-App Notifications (Version 1.2.0, 2026-07-12)
+## Digital Card Application, Cart Quantities, In-App Notifications (Version 1.2.0, Claude, 2026-07-12)
 
 - **Digital Ghost Card Delivery:** Added an interactive "Apply for Ghost Card" promo card inside the Wallet tab. Clicking it triggers a 1.5s simulated delivery animation with loading indicator before revealing card details.
 - **In-App Toast Banners:** Embedded a floating animated notification box in the root Navigation layout that triggers instant popups for actions like "Added to Cart," "Removed from Cart," and "Ghost Order Placed."
@@ -11,7 +11,7 @@ Last updated: 2026-07-12 (Version 1.2.0 — added digital card application, in-a
 - **Uniform Product Cards:** Configured a fixed height of `200.dp` on `MarketplaceProductCard` to ensure identical heights in marketplace rows/grids.
 - **Compilation:** Rebuilt and verified `app-debug.apk` using Java 17 and Gradle.
 
-## Timed Splash, Real Auth, Background Notifications (Version 1.1.0, 2026-07-12)
+## Timed Splash, Real Auth, Background Notifications (Version 1.1.0, Claude, 2026-07-12)
 
 - **Timed Splash Screen:** Shows logo and mascot for 2 seconds. Automatically transitions to the dashboard (if logged in) or the Auth screen.
 - **Real User Authentication:** Added a real `users` table to the database schema. Created `/api/auth/signup` and `/api/auth/signin` Next.js route endpoints using secure PBKDF2 Web Crypto hashing. Designed a native Compose `AuthScreen` that persist sessions to SharedPreferences and provides a Sign Out option.
