@@ -225,7 +225,7 @@ fun MarketplaceProductCard(
     Column(
         modifier = modifier
             .width(150.dp)
-            .height(224.dp)
+            .height(226.dp)
             .clip(RoundedCornerShape(16.dp))
             .border(1.dp, FaintBorder, RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
@@ -241,18 +241,28 @@ fun MarketplaceProductCard(
         ) {
             ProductIcon(name = iconForProduct(product), modifier = Modifier.size(42.dp), color = Ink)
         }
-        Text(text = product.name, color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 2, modifier = Modifier.padding(top = 8.dp))
-        Text(text = "${Marketplace.currency} ${product.price}", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 2.dp, bottom = 4.dp))
-        
+        // Fixed height (not intrinsic) so a 1-line vs 2-line title never changes how much
+        // room is left for the button below — this is what caused the button to get
+        // clipped for longer titles when the card's overall height is also fixed.
+        Text(
+            text = product.name,
+            color = Ink,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 2,
+            modifier = Modifier.padding(top = 8.dp).height(32.dp)
+        )
+        Text(text = "${Marketplace.currency} ${product.price}", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, modifier = Modifier.padding(top = 2.dp, bottom = 4.dp))
+
         androidx.compose.foundation.layout.Spacer(modifier = Modifier.weight(1f))
-        
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .height(36.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(Ink)
-                .clickable(onClick = onAdd)
-                .padding(vertical = 10.dp),
+                .clickable(onClick = onAdd),
             contentAlignment = Alignment.Center
         ) {
             Text(text = "Add to Ghost Cart", color = Paper, fontSize = 9.sp, fontWeight = FontWeight.Bold)
