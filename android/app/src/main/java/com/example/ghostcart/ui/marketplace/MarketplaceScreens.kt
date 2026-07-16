@@ -74,6 +74,10 @@ import com.example.ghostcart.ui.common.materialIconFor
 
 @Composable
 fun HomeMarketplaceScreen(
+    mostGhostedToday: List<Pair<MarketplaceProduct, Int>>,
+    isMostGhostedLoading: Boolean,
+    isMostGhostedUnavailable: Boolean,
+    onRefreshMostGhosted: () -> Unit,
     onOpenCart: () -> Unit,
     onOpenWallet: () -> Unit,
     onOpenTrends: () -> Unit,
@@ -147,10 +151,35 @@ fun HomeMarketplaceScreen(
                 ForwardChevron()
             }
 
-            MarketplaceSectionHeader(title = "Ghosted Picks", badge = "DEMO", onViewAll = { onOpenCategory("most_ghosted") })
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(vertical = 12.dp)) {
-                items(Marketplace.mostGhostedToday) { product ->
-                    MarketplaceProductCard(product, onClick = { onOpenProduct(product.id) }, onAdd = { onAddToCart(product.id) })
+            MarketplaceSectionHeader(
+                title = "Most Ghosted Today",
+                badge = if (mostGhostedToday.isNotEmpty()) "LIVE" else null,
+                onViewAll = { onOpenCategory("most_ghosted") }
+            )
+            when {
+                isMostGhostedLoading -> LiveActivityMessage(
+                    message = "Loading today's ghost activity…"
+                )
+                isMostGhostedUnavailable -> LiveActivityMessage(
+                    message = "Live activity is temporarily unavailable.",
+                    actionLabel = "Retry",
+                    onAction = onRefreshMostGhosted
+                )
+                mostGhostedToday.isEmpty() -> LiveActivityMessage(
+                    message = "No items have been ghosted yet today. Be the first."
+                )
+                else -> LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(vertical = 12.dp)
+                ) {
+                    items(mostGhostedToday, key = { it.first.id }) { (product, ghostCount) ->
+                        MarketplaceProductCard(
+                            product = product,
+                            activityLabel = "$ghostCount ${if (ghostCount == 1) "ghost" else "ghosts"} today",
+                            onClick = { onOpenProduct(product.id) },
+                            onAdd = { onAddToCart(product.id) }
+                        )
+                    }
                 }
             }
 
@@ -216,6 +245,41 @@ fun HomeMarketplaceScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun LiveActivityMessage(
+    message: String,
+    actionLabel: String? = null,
+    onAction: () -> Unit = {}
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 12.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, FaintBorder, RoundedCornerShape(16.dp))
+            .padding(horizontal = 14.dp, vertical = 16.dp)
+    ) {
+        GhostMascotPose(poseName = "wave", modifier = Modifier.size(30.dp))
+        Text(
+            text = message,
+            color = MutedText,
+            fontSize = 11.sp,
+            lineHeight = 15.sp,
+            modifier = Modifier.weight(1f).padding(horizontal = 10.dp)
+        )
+        if (actionLabel != null) {
+            Text(
+                text = actionLabel,
+                color = GhostGreen,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.ExtraBold,
+                modifier = Modifier.clickable(role = Role.Button, onClick = onAction)
+            )
         }
     }
 }
@@ -297,6 +361,7 @@ fun MarketplaceProductCard(
     product: MarketplaceProduct,
     onClick: () -> Unit,
     onAdd: () -> Unit,
+    activityLabel: String? = null,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -317,6 +382,20 @@ fun MarketplaceProductCard(
             contentAlignment = Alignment.Center
         ) {
             ProductIcon(name = iconForProduct(product), modifier = Modifier.size(42.dp), color = Ink)
+            if (activityLabel != null) {
+                Text(
+                    text = activityLabel,
+                    color = Paper,
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(6.dp)
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(Ink)
+                        .padding(horizontal = 7.dp, vertical = 4.dp)
+                )
+            }
         }
         // Fixed height (not intrinsic) so a 1-line vs 2-line title never changes how much
         // room is left for the button below — this is what caused the button to get
@@ -351,6 +430,7 @@ fun MarketplaceProductCard(
 fun CategoryBrowseScreen(
     categoryId: String,
     products: List<MarketplaceProduct>,
+    activityCounts: Map<String, Int> = emptyMap(),
     cartItemCount: Int,
     cartTotal: Int,
     onBack: () -> Unit,
@@ -397,7 +477,7 @@ fun CategoryBrowseScreen(
             "jewelry" -> "Jewellery" to "Keep considered pieces in a simulated cart."
             "gaming" -> "Gaming" to "Ghost the upgrade before it reaches real checkout."
             "home" -> "Home" to "Collect home ideas without making a real purchase."
-            "most_ghosted" -> "Ghosted Picks (Demo)" to "Sample items only. Live daily activity is not connected yet."
+            "most_ghosted" -> "Most Ghosted Today" to "Real anonymous Ghost Checkout activity from today."
             "flash_deals" -> "Fake Flash Deals" to "Simulated urgency, with no real purchase or payment."
             "all" -> "Almost-Spent Catalog" to "Browse simulation items you can add to Ghost Cart."
             else -> "Shop cravings" to "Simulate the cart and protect your budget."
@@ -460,14 +540,18 @@ fun CategoryBrowseScreen(
             ) {
                 Icon(materialIconFor("bag"), contentDescription = null, tint = MutedText, modifier = Modifier.size(36.dp))
                 Text(
-                    text = "No demo items here yet",
+                    text = if (categoryId == "most_ghosted") "No ghost activity yet today" else "No demo items here yet",
                     color = Ink,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.ExtraBold,
                     modifier = Modifier.padding(top = 14.dp)
                 )
                 Text(
-                    text = "This category is ready. Products will appear when the catalog is added.",
+                    text = if (categoryId == "most_ghosted") {
+                        "Ghost an item to start today's live list."
+                    } else {
+                        "This category is ready. Products will appear when the catalog is added."
+                    },
                     color = MutedText,
                     fontSize = 11.sp,
                     lineHeight = 16.sp,
@@ -486,6 +570,9 @@ fun CategoryBrowseScreen(
                 items(visibleProducts) { product ->
                     MarketplaceProductCard(
                         product = product,
+                        activityLabel = activityCounts[product.id]?.let { count ->
+                            "$count ${if (count == 1) "ghost" else "ghosts"} today"
+                        },
                         onClick = { onOpenProduct(product.id) },
                         onAdd = { onAddToCart(product.id) },
                         modifier = Modifier.fillMaxWidth()

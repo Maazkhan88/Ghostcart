@@ -99,7 +99,7 @@ object Marketplace {
 
     val savingsGoalPresets = listOf(500, 1000, 2500)
 
-    val mostGhostedToday = listOf(
+    val featuredCatalog = listOf(
         MarketplaceProduct("latte", "Spanish Latte", "Food & Coffee", 38, "coffee"),
         MarketplaceProduct("burgerMeal", "Midnight Burger Meal", "Delivery", 75, "burger"),
         MarketplaceProduct("perfumeBlind", "Luxury Perfume Blind Buy", "Beauty", 420, "perfume",
@@ -254,7 +254,9 @@ object Marketplace {
             "jewelry" -> category.contains("jewel") || listOf("ring", "necklace", "bracelet", "earring").any(name::contains)
             "gaming" -> category.contains("gaming") || listOf("gaming", "console", "controller").any(name::contains)
             "home" -> category.contains("home") || category.contains("decor")
-            "most_ghosted" -> mostGhostedToday.any { it.id == product.id }
+            // Live rankings come from the anonymous ghost-events API. Never
+            // infer popularity from static catalog fields or prices.
+            "most_ghosted" -> false
             "flash_deals" -> fakeFlashDeals.any { it.id == product.id }
             "all" -> true
             else -> false

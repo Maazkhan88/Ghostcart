@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 // Catalog data for the Ghost Cart marketplace simulation. Prices are stored
 // as integer minor units (fils, i.e. price / 100 = AED) so the schema stays
@@ -61,4 +61,23 @@ export const users = sqliteTable("users", {
   passwordSalt: text("password_salt").notNull(),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
+
+// Anonymous aggregate input for the public "Most Ghosted Today" ranking.
+// No user, email, device, payment, or price data is stored. The unique event
+// key makes retries idempotent while the date is assigned by D1, not clients.
+export const ghostEvents = sqliteTable(
+  "ghost_events",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    eventKey: text("event_key").notNull(),
+    productKey: text("product_key").notNull(),
+    eventDate: text("event_date").notNull().default(sql`(DATE('now'))`),
+    source: text("source").notNull().default("unknown"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("ghost_events_event_key_unique").on(table.eventKey),
+    index("ghost_events_date_product_idx").on(table.eventDate, table.productKey),
+  ],
+);
 

@@ -386,10 +386,21 @@ export default function Home() {
 
   const fakeCheckout = () => {
     if (!cartIds.length) return;
+    const completedProductIds = Array.from(new Set(cartIds));
+    const checkoutId = crypto.randomUUID();
     setReceiptVisible(false);
     setDeliveryStep(0);
-    setGhostedIds((current) => Array.from(new Set([...current, ...cartIds])));
+    setGhostedIds((current) => Array.from(new Set([...current, ...completedProductIds])));
     setCartIds([]);
+
+    void fetch("/api/ghost-events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ checkoutId, productIds: completedProductIds, source: "web" }),
+    }).catch(() => {
+      // The simulated checkout must always complete even when live activity
+      // reporting is temporarily unavailable.
+    });
   };
 
   const resetProductState = (id: string) => {

@@ -178,7 +178,15 @@ fun MainNavigation() {
 
           // Marketplace
           entry<Home> {
+            val state by appViewModel.uiState.collectAsState()
+            val rankedProducts = state.mostGhostedToday.mapNotNull { ranking ->
+              appViewModel.findProduct(ranking.productId)?.let { it to ranking.ghostCount }
+            }
             HomeMarketplaceScreen(
+              mostGhostedToday = rankedProducts,
+              isMostGhostedLoading = state.isMostGhostedLoading,
+              isMostGhostedUnavailable = state.isMostGhostedUnavailable,
+              onRefreshMostGhosted = appViewModel::refreshMostGhostedToday,
               onOpenCart = { backStack.add(GhostCartList) },
               onOpenWallet = { backStack.add(WalletHome) },
               onOpenTrends = { backStack.add(Trends) },
@@ -189,13 +197,18 @@ fun MainNavigation() {
           }
           entry<CategoryBrowse> { key ->
             val state by appViewModel.uiState.collectAsState()
-            val categoryProducts = Marketplace.productsForCategory(
-              categoryId = key.categoryId,
-              products = appViewModel.allProducts
-            )
+            val categoryProducts = if (key.categoryId == "most_ghosted") {
+              state.mostGhostedToday.mapNotNull { ranking -> appViewModel.findProduct(ranking.productId) }
+            } else {
+              Marketplace.productsForCategory(
+                categoryId = key.categoryId,
+                products = appViewModel.allProducts
+              )
+            }
             CategoryBrowseScreen(
               categoryId = key.categoryId,
               products = categoryProducts,
+              activityCounts = state.mostGhostedToday.associate { it.productId to it.ghostCount },
               cartItemCount = state.cartProductIds.size,
               cartTotal = appViewModel.cartSubtotal(),
               onBack = { backStack.removeLastOrNull() },

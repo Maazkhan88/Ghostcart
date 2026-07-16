@@ -8,14 +8,14 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 object AuthRepository {
-    private const val BASE_URL = "https://nameless-d98e.maaz-n-khan.workers.dev"
-
     suspend fun signUp(email: String, password: String): Result<String> = withContext(Dispatchers.IO) {
         try {
-            val url = URL("$BASE_URL/api/auth/signup")
+            val url = URL("${ApiConfig.BASE_URL}/api/auth/signup")
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "POST"
             conn.setRequestProperty("Content-Type", "application/json")
+            conn.connectTimeout = ApiConfig.CONNECT_TIMEOUT_MS
+            conn.readTimeout = ApiConfig.READ_TIMEOUT_MS
             conn.doOutput = true
 
             val payload = JSONObject().apply {
@@ -42,10 +42,12 @@ object AuthRepository {
 
     suspend fun signIn(email: String, password: String): Result<String> = withContext(Dispatchers.IO) {
         try {
-            val url = URL("$BASE_URL/api/auth/signin")
+            val url = URL("${ApiConfig.BASE_URL}/api/auth/signin")
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "POST"
             conn.setRequestProperty("Content-Type", "application/json")
+            conn.connectTimeout = ApiConfig.CONNECT_TIMEOUT_MS
+            conn.readTimeout = ApiConfig.READ_TIMEOUT_MS
             conn.doOutput = true
 
             val payload = JSONObject().apply {

@@ -11,6 +11,8 @@ import com.example.ghostcart.data.Marketplace
 import com.example.ghostcart.data.MarketplaceProduct
 import com.example.ghostcart.data.WalletConfig
 import com.example.ghostcart.data.DeliveryStepWorker
+import com.example.ghostcart.data.GhostActivityRepository
+import com.example.ghostcart.data.GhostRanking
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
+import java.util.UUID
 import kotlin.random.Random
 
 data class AppUiState(
@@ -36,6 +39,9 @@ data class AppUiState(
     val simulationIntervalMinutes: Int = 5,
     val hasAppliedForCard: Boolean = false,
     val isApplying: Boolean = false,
+    val mostGhostedToday: List<GhostRanking> = emptyList(),
+    val isMostGhostedLoading: Boolean = true,
+    val isMostGhostedUnavailable: Boolean = false,
     val toastMessage: String? = null
 )
 
@@ -50,8 +56,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private var deliveryJob: Job? = null
     private var toastJob: Job? = null
 
+    init {
+        refreshMostGhostedToday()
+    }
+
     val allProducts: List<MarketplaceProduct> =
-        (Marketplace.mostGhostedToday + Marketplace.fakeFlashDeals + Marketplace.foodAndCoffeeCatalog + Marketplace.dummyCatalog)
+        (Marketplace.featuredCatalog + Marketplace.fakeFlashDeals + Marketplace.foodAndCoffeeCatalog + Marketplace.dummyCatalog)
             .distinctBy { it.id }
 
     fun findProduct(id: String): MarketplaceProduct? = allProducts.find { it.id == id }
@@ -138,6 +148,31 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(cartProductIds = emptyList(), cartQuantities = emptyMap()) }
     }
 
+    fun refreshMostGhostedToday() {
+        _uiState.update { it.copy(isMostGhostedLoading = true, isMostGhostedUnavailable = false) }
+        viewModelScope.launch {
+            GhostActivityRepository.mostGhostedToday()
+                .onSuccess { rankings ->
+                    _uiState.update {
+                        it.copy(
+                            mostGhostedToday = rankings,
+                            isMostGhostedLoading = false,
+                            isMostGhostedUnavailable = false
+                        )
+                    }
+                }
+                .onFailure {
+                    _uiState.update {
+                        it.copy(
+                            mostGhostedToday = emptyList(),
+                            isMostGhostedLoading = false,
+                            isMostGhostedUnavailable = true
+                        )
+                    }
+                }
+        }
+    }
+
     fun updateWalletConfig(transform: (WalletConfig) -> WalletConfig) {
         _uiState.update { it.copy(walletConfig = transform(it.walletConfig)) }
     }
@@ -180,6 +215,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun placeSimulatedOrder() {
         val total = cartSubtotal()
         val orderId = "GHOST-${10000 + Random.nextInt(90000)}"
+        val activityCheckoutId = UUID.randomUUID().toString()
+        val ghostedProductIds = _uiState.value.cartProductIds.distinct()
         _uiState.update {
             it.copy(
                 lastOrderId = orderId,
@@ -189,6 +226,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             )
         }
         showToast("Ghost Order Placed Successfully!")
+
+        if (ghostedProductIds.isNotEmpty()) {
+            viewModelScope.launch {
+                GhostActivityRepository.recordCheckout(
+                    checkoutId = activityCheckoutId,
+                    productIds = ghostedProductIds
+                ).onSuccess {
+                    refreshMostGhostedToday()
+                }
+            }
+        }
     }
 
     fun startDeliveryTracking() {
