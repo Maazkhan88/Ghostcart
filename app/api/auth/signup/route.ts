@@ -1,35 +1,8 @@
 import { eq } from "drizzle-orm";
-import { getDb } from "../../../db";
-import { users } from "../../../db/schema";
-import { toRouteErrorMessage } from "../../../lib/api-helpers";
-
-async function hashPassword(password: string): Promise<string> {
-  const enc = new TextEncoder();
-  const passwordBuffer = enc.encode(password);
-  const saltBuffer = enc.encode("ghost_cart_salt_9831");
-  
-  const key = await crypto.subtle.importKey(
-    "raw",
-    passwordBuffer,
-    "PBKDF2",
-    false,
-    ["deriveBits"]
-  );
-  
-  const derivedBits = await crypto.subtle.deriveBits(
-    {
-      name: "PBKDF2",
-      salt: saltBuffer,
-      iterations: 100000,
-      hash: "SHA-256"
-    },
-    key,
-    256
-  );
-  
-  const byteArray = Array.from(new Uint8Array(derivedBits));
-  return byteArray.map(b => b.toString(16).padStart(2, "0")).join("");
-}
+import { getDb } from "../../../../db";
+import { users } from "../../../../db/schema";
+import { toRouteErrorMessage } from "../../../../lib/api-helpers";
+import { generateSalt, hashPassword } from "../../../../lib/password";
 
 export async function POST(request: Request) {
   try {
@@ -62,13 +35,15 @@ export async function POST(request: Request) {
       return Response.json({ error: "User with this email already exists" }, { status: 409 });
     }
 
-    const passwordHash = await hashPassword(password);
+    const passwordSalt = generateSalt();
+    const passwordHash = await hashPassword(password, passwordSalt);
 
     const [user] = await db
       .insert(users)
       .values({
         email,
         passwordHash,
+        passwordSalt,
       })
       .returning();
 

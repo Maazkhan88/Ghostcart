@@ -1,6 +1,54 @@
 # Current State
 
-Last updated: 2026-07-12 (Version 1.2.0 — added digital card application, in-app messaging toast banner, item quantity adjustments, launcher icon fix, and uniform product card heights).
+Last updated: 2026-07-16 (Claude — fixed the web production build, which had been broken for 4 days without anyone noticing).
+
+## Web production build fix + password salt fix (Claude, 2026-07-16)
+
+A routine status check found the web app's production build had been
+**broken since commit `db0906c`** (2026-07-12 22:16) — `npm run build` and
+`npm test` both failed with `[UNRESOLVED_IMPORT]`. `npm run lint` still
+passed (it doesn't do import resolution), which is why this went unnoticed
+through 8 subsequent commits and 4 days.
+
+- **Root cause:** `app/api/auth/signin/route.ts` and
+  `app/api/auth/signup/route.ts` are nested one directory deeper than
+  `app/api/merchants/route.ts` (under `app/api/auth/signin/`, not
+  `app/api/merchants/`), but their imports copied the shallower `../../../db`
+  path instead of the correct `../../../../db`. Fixed in both files.
+- **Live-site consequence, confirmed by curling the deployed URLs:** the
+  live Worker (`nameless-d98e.maaz-n-khan.workers.dev`) was serving a
+  **stale build** — `/admin` and `/api/auth/signin` both 404'd (routes that
+  don't exist in whatever's actually deployed), while `/api/merchants` /
+  `/api/products` existed but reported the D1 binding as unavailable. Best
+  read: the live site had been stuck at/before commit `d528475` this whole
+  time — none of the catalog admin, real auth, or D1 activation work from
+  the last 4 days had actually gone live. Should self-resolve on the next
+  successful deploy off this fix, once pushed.
+- **Also fixed while in there: hardcoded password salt.** Both auth routes
+  hashed passwords with a single hardcoded, shared salt
+  (`"ghost_cart_salt_9831"`) instead of a random per-user one — meaning
+  identical passwords produced identical hashes across every user, and the
+  fixed salt made precomputation attacks against this specific deployment
+  feasible. Added a `passwordSalt` column to `users`
+  (`drizzle/0002_messy_vampiro.sql`), extracted the PBKDF2 logic into
+  `lib/password.ts` (`generateSalt()` + `hashPassword(password, salt)`),
+  and generate a fresh random salt per signup. No API contract change — the
+  Android app (`AuthRepository.kt`) just POSTs plain email/password, so
+  nothing on the client needed to change.
+- **Verified end-to-end, not just compiled:** `npm run build`, `npm test`
+  (3/3 passing), `npm run lint` (0 errors, pre-existing warnings only) all
+  pass. Ran the dev server against local D1 with both new migrations
+  applied and exercised the real flow via curl: signup → signin with
+  correct password → signin with wrong password (401) → duplicate signup
+  (409) → signed up a second user with the *same* password as the first and
+  confirmed via direct DB query that their `password_salt`/`password_hash`
+  are both different (proving the fix actually changes behavior, not just
+  the code shape).
+- Rebuilt the Android debug APK against current source (`./gradlew clean
+  assembleDebug`, JDK 21 via Android Studio's JBR) — unaffected by this
+  bug (Android build failures and web build failures are independent
+  pipelines), rebuilt anyway to hand over a fresh, verified APK alongside
+  the fix.
 
 ## Digital Card Application, Cart Quantities, In-App Notifications (Version 1.2.0, Claude, 2026-07-12)
 

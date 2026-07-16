@@ -15,6 +15,13 @@
       "when": 1783879698747,
       "tag": "0001_confused_dragon_lord",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1784228127629,
+      "tag": "0002_messy_vampiro",
+      "breakpoints": true
     }
   ]
 }
