@@ -243,7 +243,7 @@ fun MarketplaceProductCard(
                 .clip(RoundedCornerShape(10.dp))
                 .background(Ink)
                 .clickable(onClick = onAdd)
-                .padding(vertical = 8.dp),
+                .padding(vertical = 10.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(text = "Add to Ghost Cart", color = Paper, fontSize = 9.sp, fontWeight = FontWeight.Bold)

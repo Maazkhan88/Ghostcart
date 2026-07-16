@@ -51,8 +51,8 @@ object Marketplace {
 
     val fakeFlashDeals = listOf(
         MarketplaceProduct("earbuds", "Wireless Earbuds", "Gadgets & Tech", 399, "headphones"),
-        MarketplaceProduct("smartwatch", "Smartwatch Pro", "Gadgets & Tech", 699, "wallet"),
-        MarketplaceProduct("tablet", "Tablet Mini 6", "Gadgets & Tech", 1199, "wallet"),
+        MarketplaceProduct("smartwatch", "Smartwatch Pro", "Gadgets & Tech", 699, "watch"),
+        MarketplaceProduct("tablet", "Tablet Mini 6", "Gadgets & Tech", 1199, "tablet"),
         MarketplaceProduct("headphonesNc", "Noise Cancelling Headphones", "Gadgets & Tech", 279, "headphones")
     )
 

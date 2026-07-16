@@ -209,27 +209,65 @@ fun ProductIcon(name: String, modifier: Modifier = Modifier, color: Color = Colo
                 drawLine(color, Offset(w * 0.8f, h * 0.8f), Offset(w * 0.8f, h * 0.5f), strokeWidth)
             }
             "coffee" -> {
-                // Cup body
-                drawRoundRect(
-                    color = color,
-                    topLeft = Offset(w * 0.2f, h * 0.35f),
-                    size = Size(w * 0.5f, h * 0.45f),
-                    cornerRadius = CornerRadius(w * 0.04f, w * 0.16f),
-                    style = Stroke(width = strokeWidth)
-                )
-                // Handle
+                // Cup body: trapezoid, narrower at the base
+                val cupPath = Path().apply {
+                    moveTo(w * 0.22f, h * 0.42f)
+                    lineTo(w * 0.68f, h * 0.42f)
+                    lineTo(w * 0.6f, h * 0.82f)
+                    quadraticTo(w * 0.6f, h * 0.88f, w * 0.53f, h * 0.88f)
+                    lineTo(w * 0.37f, h * 0.88f)
+                    quadraticTo(w * 0.3f, h * 0.88f, w * 0.3f, h * 0.82f)
+                    close()
+                }
+                drawPath(cupPath, color, style = Stroke(width = strokeWidth))
+                // Handle: small loop on the right side of the cup
                 drawArc(
                     color = color,
-                    startAngle = -90f,
-                    sweepAngle = 180f,
+                    startAngle = -70f,
+                    sweepAngle = 200f,
                     useCenter = false,
-                    topLeft = Offset(w * 0.68f, h * 0.42f),
-                    size = Size(w * 0.2f, h * 0.28f),
+                    topLeft = Offset(w * 0.66f, h * 0.48f),
+                    size = Size(w * 0.2f, h * 0.22f),
                     style = Stroke(width = strokeWidth * 0.8f)
                 )
-                // Steam
-                drawLine(color, Offset(w * 0.32f, h * 0.28f), Offset(w * 0.38f, h * 0.16f), strokeWidth * 0.7f)
-                drawLine(color, Offset(w * 0.5f, h * 0.28f), Offset(w * 0.56f, h * 0.16f), strokeWidth * 0.7f)
+                // Steam wisps
+                drawLine(color, Offset(w * 0.38f, h * 0.32f), Offset(w * 0.34f, h * 0.18f), strokeWidth * 0.6f)
+                drawLine(color, Offset(w * 0.52f, h * 0.32f), Offset(w * 0.56f, h * 0.18f), strokeWidth * 0.6f)
+            }
+            "watch" -> {
+                // Watch face
+                drawCircle(color, radius = w * 0.28f, center = Offset(w * 0.5f, h * 0.52f), style = Stroke(width = strokeWidth))
+                // Hands
+                drawLine(color, Offset(w * 0.5f, h * 0.52f), Offset(w * 0.5f, h * 0.36f), strokeWidth * 0.7f)
+                drawLine(color, Offset(w * 0.5f, h * 0.52f), Offset(w * 0.6f, h * 0.56f), strokeWidth * 0.7f)
+                // Top and bottom straps
+                drawRoundRect(
+                    color = color,
+                    topLeft = Offset(w * 0.4f, h * 0.08f),
+                    size = Size(w * 0.2f, h * 0.16f),
+                    cornerRadius = CornerRadius(w * 0.04f),
+                    style = Stroke(width = strokeWidth * 0.8f)
+                )
+                drawRoundRect(
+                    color = color,
+                    topLeft = Offset(w * 0.4f, h * 0.76f),
+                    size = Size(w * 0.2f, h * 0.16f),
+                    cornerRadius = CornerRadius(w * 0.04f),
+                    style = Stroke(width = strokeWidth * 0.8f)
+                )
+                // Side button
+                drawLine(color, Offset(w * 0.78f, h * 0.46f), Offset(w * 0.84f, h * 0.46f), strokeWidth * 0.7f)
+            }
+            "tablet" -> {
+                drawRoundRect(
+                    color = color,
+                    topLeft = Offset(w * 0.22f, h * 0.1f),
+                    size = Size(w * 0.56f, h * 0.8f),
+                    cornerRadius = CornerRadius(w * 0.06f),
+                    style = Stroke(width = strokeWidth)
+                )
+                // Home indicator
+                drawLine(color, Offset(w * 0.44f, h * 0.83f), Offset(w * 0.56f, h * 0.83f), strokeWidth)
             }
         }
     }
