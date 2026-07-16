@@ -19,6 +19,12 @@ data class OverspendCategory(
     val iconName: String
 )
 
+data class MarketplaceCategory(
+    val id: String,
+    val label: String,
+    val iconName: String
+)
+
 data class SponsoredBrand(val name: String, val tagline: String)
 
 /**
@@ -65,6 +71,18 @@ fun iconForProduct(product: MarketplaceProduct): String {
 
 object Marketplace {
     const val currency = "AED"
+
+    val browseCategories = listOf(
+        MarketplaceCategory("all", "All", "bag"),
+        MarketplaceCategory("electronics", "Electronics", "devices"),
+        MarketplaceCategory("apparel", "Apparel", "checkroom"),
+        MarketplaceCategory("music", "Music instruments", "headphones"),
+        MarketplaceCategory("jewelry", "Jewellery", "star"),
+        MarketplaceCategory("gaming", "Gaming", "devices"),
+        MarketplaceCategory("beauty", "Beauty", "spa"),
+        MarketplaceCategory("home", "Home", "chair"),
+        MarketplaceCategory("food", "Food & drinks", "coffee")
+    )
 
     val overspendCategories = listOf(
         OverspendCategory("food", "Food & Coffee", "coffee"),
@@ -219,4 +237,27 @@ object Marketplace {
 
     val almostSpentThisWeek = 642
     val savedThisWeekAcaiTotal = 150
+
+    fun productsForCategory(
+        categoryId: String,
+        products: List<MarketplaceProduct>
+    ): List<MarketplaceProduct> = products.filter { product ->
+        val category = product.category.lowercase()
+        val name = product.name.lowercase()
+
+        when (categoryId) {
+            "food" -> listOf("food", "fast", "coffee", "delivery", "healthy").any(category::contains)
+            "beauty" -> category.contains("beauty")
+            "apparel", "fashion" -> category.contains("fashion") || category.contains("apparel")
+            "electronics", "gadgets" -> category.contains("gadget") || category.contains("tech") || category.contains("electronic")
+            "music" -> category.contains("music") || listOf("guitar", "keyboard", "drum", "microphone", "instrument").any(name::contains)
+            "jewelry" -> category.contains("jewel") || listOf("ring", "necklace", "bracelet", "earring").any(name::contains)
+            "gaming" -> category.contains("gaming") || listOf("gaming", "console", "controller").any(name::contains)
+            "home" -> category.contains("home") || category.contains("decor")
+            "most_ghosted" -> mostGhostedToday.any { it.id == product.id }
+            "flash_deals" -> fakeFlashDeals.any { it.id == product.id }
+            "all" -> true
+            else -> false
+        }
+    }
 }

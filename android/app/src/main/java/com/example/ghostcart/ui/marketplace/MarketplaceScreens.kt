@@ -52,6 +52,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ghostcart.data.Marketplace
+import com.example.ghostcart.data.MarketplaceCategory
 import com.example.ghostcart.data.MarketplaceProduct
 import com.example.ghostcart.data.iconForProduct
 import com.example.ghostcart.theme.FaintBorder
@@ -97,6 +98,7 @@ fun HomeMarketplaceScreen(
                     .padding(top = 16.dp)
                     .clip(RoundedCornerShape(16.dp))
                     .background(SoftGray)
+                    .clickable { onOpenCategory("all") }
                     .padding(horizontal = 16.dp, vertical = 14.dp)
             ) {
                 Icon(Icons.Filled.Search, contentDescription = null, tint = MutedText, modifier = Modifier.size(18.dp))
@@ -106,6 +108,25 @@ fun HomeMarketplaceScreen(
                     fontSize = 13.sp,
                     modifier = Modifier.padding(start = 10.dp)
                 )
+            }
+
+            Text(
+                text = "Browse categories",
+                color = Ink,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.ExtraBold,
+                modifier = Modifier.padding(top = 16.dp)
+            )
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(top = 10.dp, bottom = 2.dp)
+            ) {
+                items(Marketplace.browseCategories) { category ->
+                    MarketplaceCategoryCard(
+                        category = category,
+                        onClick = { onOpenCategory(category.id) }
+                    )
+                }
             }
 
             Row(
@@ -120,13 +141,13 @@ fun HomeMarketplaceScreen(
             ) {
                 GhostMascotPose(poseName = "wallet", modifier = Modifier.size(44.dp))
                 Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                    Text(text = "AED 642", color = GhostGreen, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(text = "found in almost-spending this week.", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(text = "Track almost-spending", color = GhostGreen, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(text = "See your Ghost Cart insights.", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
                 ForwardChevron()
             }
 
-            MarketplaceSectionHeader(title = "Most Ghosted Today", onViewAll = { onOpenCategory("most_ghosted") })
+            MarketplaceSectionHeader(title = "Ghosted Picks", badge = "DEMO", onViewAll = { onOpenCategory("most_ghosted") })
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(vertical = 12.dp)) {
                 items(Marketplace.mostGhostedToday) { product ->
                     MarketplaceProductCard(product, onClick = { onOpenProduct(product.id) }, onAdd = { onAddToCart(product.id) })
@@ -200,13 +221,67 @@ fun HomeMarketplaceScreen(
 }
 
 @Composable
-private fun MarketplaceSectionHeader(title: String, onViewAll: () -> Unit) {
+private fun MarketplaceCategoryCard(
+    category: MarketplaceCategory,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .width(88.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(vertical = 4.dp)
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(54.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(SoftGray)
+        ) {
+            Icon(
+                imageVector = materialIconFor(category.iconName),
+                contentDescription = category.label,
+                tint = Ink,
+                modifier = Modifier.size(23.dp)
+            )
+        }
+        Text(
+            text = category.label,
+            color = Ink,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            lineHeight = 12.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(top = 7.dp)
+        )
+    }
+}
+
+@Composable
+private fun MarketplaceSectionHeader(title: String, badge: String? = null, onViewAll: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = title, color = Ink, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(text = title, color = Ink, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+            if (badge != null) {
+                Text(
+                    text = badge,
+                    color = Ink,
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier
+                        .padding(start = 7.dp)
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(GreenTint)
+                        .padding(horizontal = 7.dp, vertical = 3.dp)
+                )
+            }
+        }
         Text(
             text = "View all",
             color = GhostGreen,
@@ -278,15 +353,23 @@ fun CategoryBrowseScreen(
     products: List<MarketplaceProduct>,
     cartItemCount: Int,
     cartTotal: Int,
-    savedTotal: Int,
     onBack: () -> Unit,
     onOpenCart: () -> Unit,
     onOpenProduct: (String) -> Unit,
     onAddToCart: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var selectedFilter by remember { mutableStateOf("All") }
-    val filters = listOf("All", "Fast Food", "Coffee & Drinks", "Healthy")
+    var selectedFilter by remember(categoryId) { mutableStateOf("All") }
+    val filters = if (categoryId == "food") {
+        listOf("All", "Fast Food", "Coffee & Drinks", "Healthy")
+    } else {
+        listOf("All")
+    }
+    val visibleProducts = if (selectedFilter == "All") {
+        products
+    } else {
+        products.filter { it.category.equals(selectedFilter, ignoreCase = true) }
+    }
 
     Column(
         modifier = modifier
@@ -306,43 +389,51 @@ fun CategoryBrowseScreen(
         }
 
         val (title, subtitle) = when (categoryId) {
-            "food" -> "🍔☕ Food & Coffee Cravings" to "It wasn't hunger. It was boredom with sauce."
-            "beauty" -> "✨💄 Beauty & Self-Care" to "Because skincare details felt extremely urgent at 2 AM."
-            "fashion" -> "👟🧥 Fashion Cravings" to "Avoid late-night wardrobe additions you don't need."
-            "gadgets" -> "🔌🎧 Cool Tech & Gadgets" to "A deals banner won't make you use that extra keyboard."
-            "most_ghosted" -> "👻🔥 Most Ghosted Cravings" to "Top trending impulse items our users successfully ghosted today."
-            "flash_deals" -> "⚡💸 Fake Flash Deals" to "Urgency is fake, but the savings are 100% real."
-            "all" -> "📦🛍️ Almost-Spent Catalog" to "Browse through all simulation items you can add to cart."
-            else -> "🛍️ Shop Cravings" to "Simulate and protect your budget."
+            "food" -> "Food & drinks" to "Ghost delivery cravings before they reach checkout."
+            "beauty" -> "Beauty & self-care" to "A calm place for every almost-bought beauty item."
+            "apparel", "fashion" -> "Apparel" to "Cool down late-night wardrobe additions."
+            "electronics", "gadgets" -> "Electronics" to "Put tempting tech somewhere safe before buying."
+            "music" -> "Music instruments" to "Save the gear you want and review it later."
+            "jewelry" -> "Jewellery" to "Keep considered pieces in a simulated cart."
+            "gaming" -> "Gaming" to "Ghost the upgrade before it reaches real checkout."
+            "home" -> "Home" to "Collect home ideas without making a real purchase."
+            "most_ghosted" -> "Ghosted Picks (Demo)" to "Sample items only. Live daily activity is not connected yet."
+            "flash_deals" -> "Fake Flash Deals" to "Simulated urgency, with no real purchase or payment."
+            "all" -> "Almost-Spent Catalog" to "Browse simulation items you can add to Ghost Cart."
+            else -> "Shop cravings" to "Simulate the cart and protect your budget."
         }
 
         Text(text = title, color = Ink, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 12.dp))
         Text(text = subtitle, color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
 
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 14.dp)) {
-            items(filters) { filter ->
-                val selected = filter == selectedFilter
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(if (selected) Ink else Paper)
-                        .border(1.dp, if (selected) Ink else FaintBorder, RoundedCornerShape(999.dp))
-                        .clickable { selectedFilter = filter }
-                        .padding(horizontal = 14.dp, vertical = 10.dp)
-                ) {
-                    Text(text = filter, color = if (selected) Paper else Ink, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        if (filters.size > 1) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 14.dp)) {
+                items(filters) { filter ->
+                    val selected = filter == selectedFilter
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(if (selected) Ink else Paper)
+                            .border(1.dp, if (selected) Ink else FaintBorder, RoundedCornerShape(999.dp))
+                            .clickable { selectedFilter = filter }
+                            .padding(horizontal = 14.dp, vertical = 10.dp)
+                    ) {
+                        Text(text = filter, color = if (selected) Paper else Ink, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                item {
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .border(1.dp, FaintBorder, CircleShape)
+                            .padding(10.dp)
+                    ) {
+                        Icon(Icons.Filled.Tune, contentDescription = "More filters", tint = Ink, modifier = Modifier.size(14.dp))
+                    }
                 }
             }
-            item {
-                Box(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .border(1.dp, FaintBorder, CircleShape)
-                        .padding(10.dp)
-                ) {
-                    Icon(Icons.Filled.Tune, contentDescription = null, tint = Ink, modifier = Modifier.size(14.dp))
-                }
-            }
+        } else {
+            Spacer(modifier = Modifier.height(14.dp))
         }
 
         Row(
@@ -354,7 +445,7 @@ fun CategoryBrowseScreen(
                 .padding(14.dp)
         ) {
             Text(
-                text = "You save ${Marketplace.currency} $savedTotal.40 by ghosting temptations instead of giving in.",
+                text = "Simulation only. No real payment. No real delivery.",
                 color = Ink,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
@@ -362,20 +453,44 @@ fun CategoryBrowseScreen(
             )
         }
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 28.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.weight(1f)
-        ) {
-            items(products) { product ->
-                MarketplaceProductCard(
-                    product = product,
-                    onClick = { onOpenProduct(product.id) },
-                    onAdd = { onAddToCart(product.id) },
-                    modifier = Modifier.fillMaxWidth()
+        if (visibleProducts.isEmpty()) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth().weight(1f).padding(top = 56.dp)
+            ) {
+                Icon(materialIconFor("bag"), contentDescription = null, tint = MutedText, modifier = Modifier.size(36.dp))
+                Text(
+                    text = "No demo items here yet",
+                    color = Ink,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier.padding(top = 14.dp)
                 )
+                Text(
+                    text = "This category is ready. Products will appear when the catalog is added.",
+                    color = MutedText,
+                    fontSize = 11.sp,
+                    lineHeight = 16.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = 8.dp)
+                )
+            }
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                contentPadding = PaddingValues(top = 16.dp, bottom = 28.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                items(visibleProducts) { product ->
+                    MarketplaceProductCard(
+                        product = product,
+                        onClick = { onOpenProduct(product.id) },
+                        onAdd = { onAddToCart(product.id) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         }
     }

@@ -189,24 +189,15 @@ fun MainNavigation() {
           }
           entry<CategoryBrowse> { key ->
             val state by appViewModel.uiState.collectAsState()
-            val categoryProducts = appViewModel.allProducts.filter { prod ->
-              when (key.categoryId) {
-                "food" -> prod.category.contains("Food", true) || prod.category.contains("Fast", true)
-                "beauty" -> prod.category.contains("Beauty", true)
-                "fashion" -> prod.category.contains("Fashion", true)
-                "gadgets" -> prod.category.contains("Gadgets", true) || prod.category.contains("Tech", true)
-                "most_ghosted" -> Marketplace.mostGhostedToday.any { it.id == prod.id } || (prod.id.startsWith("dummy") && prod.price > 200)
-                "flash_deals" -> Marketplace.fakeFlashDeals.any { it.id == prod.id } || (prod.id.startsWith("dummy") && prod.price < 100)
-                "all" -> true
-                else -> true
-              }
-            }
+            val categoryProducts = Marketplace.productsForCategory(
+              categoryId = key.categoryId,
+              products = appViewModel.allProducts
+            )
             CategoryBrowseScreen(
               categoryId = key.categoryId,
               products = categoryProducts,
               cartItemCount = state.cartProductIds.size,
               cartTotal = appViewModel.cartSubtotal(),
-              savedTotal = Marketplace.savedThisWeekAcaiTotal,
               onBack = { backStack.removeLastOrNull() },
               onOpenCart = { backStack.add(GhostCartList) },
               onOpenProduct = { id -> backStack.add(ProductDetail(id)) },
