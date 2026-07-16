@@ -4,6 +4,31 @@ All notable changes to the Ghost Cart project will be documented in this file.
 
 ---
 
+## [1.2.1] - 2026-07-16
+
+### Fixed
+- **Product icon mismatches:** Every product card in a category previously showed
+  one hardcoded icon regardless of the actual item (e.g. all "Gadgets & Tech"
+  dummy products showed headphones, all "Fashion" items showed a sneaker, the
+  "coffee" icon itself rendered more like a TV with antennas than a cup).
+  Added `iconForProduct()` — a keyword resolver that reads the product's title
+  and picks a matching icon, falling back to a category default. Added 9 new
+  icons to support this: donut, lipstick, jar, incense, shirt, bag, sunglasses,
+  speaker, and a generic gadget/chip icon for the long tail of tech accessories.
+  "Smartwatch Pro" and "Tablet Mini 6" also got real watch/tablet icons instead
+  of reusing the wallet icon as a placeholder.
+- **"Add to Ghost Cart" button clipping:** `MarketplaceProductCard` used a
+  fixed card height with `.clip()`, so titles that wrapped to 2 lines (e.g.
+  "Luxury Perfume Blind Buy") pushed the button past the clip boundary,
+  hiding its text. Made every element's height explicit/deterministic (title,
+  price, button) instead of relying on font-metric estimates, so the card
+  height no longer depends on how a title happens to wrap.
+- **Ragged "Salary Protection Picks" captions:** wrapped captions (e.g.
+  "Avoid impulse" / "purchases") weren't center-aligned line-to-line, so the
+  second line sat flush-left under the first. Added `TextAlign.Center`.
+
+---
+
 ## [1.2.0] - 2026-07-12
 
 ### Added
