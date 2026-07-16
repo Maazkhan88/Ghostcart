@@ -46,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ghostcart.data.Marketplace
@@ -142,10 +143,17 @@ fun HomeMarketplaceScreen(
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                listOf("Guard your salary" to "shield", "Avoid impulse\npurchases" to "target", "Save more.\nStress less." to "savings", "Build better\nmoney habits" to "chart").forEach { (label, icon) ->
+                listOf("Guard your\nsalary" to "shield", "Avoid impulse\npurchases" to "target", "Save more.\nStress less." to "savings", "Build better\nmoney habits" to "chart").forEach { (label, icon) ->
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
                         Icon(materialIconFor(icon), contentDescription = null, tint = GhostGreen, modifier = Modifier.size(18.dp))
-                        Text(text = label, color = Ink, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
+                        Text(
+                            text = label,
+                            color = Ink,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                        )
                     }
                 }
             }
@@ -217,7 +225,7 @@ fun MarketplaceProductCard(
     Column(
         modifier = modifier
             .width(150.dp)
-            .height(200.dp)
+            .height(224.dp)
             .clip(RoundedCornerShape(16.dp))
             .border(1.dp, FaintBorder, RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
