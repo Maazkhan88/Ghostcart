@@ -269,6 +269,146 @@ fun ProductIcon(name: String, modifier: Modifier = Modifier, color: Color = Colo
                 // Home indicator
                 drawLine(color, Offset(w * 0.44f, h * 0.83f), Offset(w * 0.56f, h * 0.83f), strokeWidth)
             }
+            "donut" -> {
+                drawCircle(color, radius = w * 0.32f, center = Offset(w * 0.5f, h * 0.5f), style = Stroke(width = strokeWidth * 2.2f))
+                drawCircle(color, radius = w * 0.02f, center = Offset(w * 0.38f, h * 0.26f))
+                drawCircle(color, radius = w * 0.02f, center = Offset(w * 0.6f, h * 0.3f))
+                drawCircle(color, radius = w * 0.02f, center = Offset(w * 0.48f, h * 0.2f))
+            }
+            "lipstick" -> {
+                drawRoundRect(
+                    color = color,
+                    topLeft = Offset(w * 0.38f, h * 0.45f),
+                    size = Size(w * 0.24f, h * 0.4f),
+                    cornerRadius = CornerRadius(w * 0.03f),
+                    style = Stroke(width = strokeWidth)
+                )
+                val tipPath = Path().apply {
+                    moveTo(w * 0.38f, h * 0.45f)
+                    lineTo(w * 0.62f, h * 0.45f)
+                    lineTo(w * 0.56f, h * 0.2f)
+                    lineTo(w * 0.44f, h * 0.2f)
+                    close()
+                }
+                drawPath(tipPath, color, style = Stroke(width = strokeWidth))
+            }
+            "jar" -> {
+                drawRoundRect(
+                    color = color,
+                    topLeft = Offset(w * 0.22f, h * 0.4f),
+                    size = Size(w * 0.56f, h * 0.42f),
+                    cornerRadius = CornerRadius(w * 0.08f),
+                    style = Stroke(width = strokeWidth)
+                )
+                drawRoundRect(
+                    color = color,
+                    topLeft = Offset(w * 0.28f, h * 0.22f),
+                    size = Size(w * 0.44f, h * 0.2f),
+                    cornerRadius = CornerRadius(w * 0.05f),
+                    style = Stroke(width = strokeWidth)
+                )
+            }
+            "incense" -> {
+                drawRoundRect(
+                    color = color,
+                    topLeft = Offset(w * 0.3f, h * 0.78f),
+                    size = Size(w * 0.4f, h * 0.1f),
+                    cornerRadius = CornerRadius(w * 0.02f),
+                    style = Stroke(width = strokeWidth)
+                )
+                drawLine(color, Offset(w * 0.5f, h * 0.78f), Offset(w * 0.5f, h * 0.35f), strokeWidth * 0.6f)
+                drawLine(color, Offset(w * 0.5f, h * 0.35f), Offset(w * 0.42f, h * 0.22f), strokeWidth * 0.5f)
+                drawLine(color, Offset(w * 0.42f, h * 0.22f), Offset(w * 0.54f, h * 0.12f), strokeWidth * 0.5f)
+            }
+            "shirt" -> {
+                val path = Path().apply {
+                    moveTo(w * 0.38f, h * 0.2f)
+                    lineTo(w * 0.22f, h * 0.32f)
+                    lineTo(w * 0.3f, h * 0.42f)
+                    lineTo(w * 0.3f, h * 0.82f)
+                    lineTo(w * 0.7f, h * 0.82f)
+                    lineTo(w * 0.7f, h * 0.42f)
+                    lineTo(w * 0.78f, h * 0.32f)
+                    lineTo(w * 0.62f, h * 0.2f)
+                    quadraticTo(w * 0.5f, h * 0.28f, w * 0.38f, h * 0.2f)
+                    close()
+                }
+                drawPath(path, color, style = Stroke(width = strokeWidth))
+            }
+            "bag" -> {
+                val path = Path().apply {
+                    moveTo(w * 0.22f, h * 0.38f)
+                    lineTo(w * 0.78f, h * 0.38f)
+                    lineTo(w * 0.72f, h * 0.85f)
+                    lineTo(w * 0.28f, h * 0.85f)
+                    close()
+                }
+                drawPath(path, color, style = Stroke(width = strokeWidth))
+                drawArc(
+                    color = color,
+                    startAngle = 180f,
+                    sweepAngle = 180f,
+                    useCenter = false,
+                    topLeft = Offset(w * 0.34f, h * 0.12f),
+                    size = Size(w * 0.14f, h * 0.32f),
+                    style = Stroke(width = strokeWidth * 0.8f)
+                )
+                drawArc(
+                    color = color,
+                    startAngle = 180f,
+                    sweepAngle = 180f,
+                    useCenter = false,
+                    topLeft = Offset(w * 0.52f, h * 0.12f),
+                    size = Size(w * 0.14f, h * 0.32f),
+                    style = Stroke(width = strokeWidth * 0.8f)
+                )
+            }
+            "sunglasses" -> {
+                drawRoundRect(
+                    color = color,
+                    topLeft = Offset(w * 0.14f, h * 0.4f),
+                    size = Size(w * 0.3f, h * 0.24f),
+                    cornerRadius = CornerRadius(w * 0.06f),
+                    style = Stroke(width = strokeWidth)
+                )
+                drawRoundRect(
+                    color = color,
+                    topLeft = Offset(w * 0.56f, h * 0.4f),
+                    size = Size(w * 0.3f, h * 0.24f),
+                    cornerRadius = CornerRadius(w * 0.06f),
+                    style = Stroke(width = strokeWidth)
+                )
+                drawLine(color, Offset(w * 0.44f, h * 0.48f), Offset(w * 0.56f, h * 0.48f), strokeWidth * 0.8f)
+                drawLine(color, Offset(w * 0.14f, h * 0.46f), Offset(w * 0.04f, h * 0.4f), strokeWidth * 0.7f)
+                drawLine(color, Offset(w * 0.86f, h * 0.46f), Offset(w * 0.96f, h * 0.4f), strokeWidth * 0.7f)
+            }
+            "speaker" -> {
+                drawRoundRect(
+                    color = color,
+                    topLeft = Offset(w * 0.28f, h * 0.12f),
+                    size = Size(w * 0.44f, h * 0.76f),
+                    cornerRadius = CornerRadius(w * 0.08f),
+                    style = Stroke(width = strokeWidth)
+                )
+                drawCircle(color, radius = w * 0.14f, center = Offset(w * 0.5f, h * 0.42f), style = Stroke(width = strokeWidth * 0.8f))
+                drawCircle(color, radius = w * 0.05f, center = Offset(w * 0.5f, h * 0.42f), style = Stroke(width = strokeWidth * 0.6f))
+                drawCircle(color, radius = w * 0.04f, center = Offset(w * 0.5f, h * 0.68f))
+            }
+            "gadget" -> {
+                drawRoundRect(
+                    color = color,
+                    topLeft = Offset(w * 0.28f, h * 0.28f),
+                    size = Size(w * 0.44f, h * 0.44f),
+                    cornerRadius = CornerRadius(w * 0.05f),
+                    style = Stroke(width = strokeWidth)
+                )
+                drawLine(color, Offset(w * 0.36f, h * 0.28f), Offset(w * 0.36f, h * 0.18f), strokeWidth * 0.6f)
+                drawLine(color, Offset(w * 0.5f, h * 0.28f), Offset(w * 0.5f, h * 0.18f), strokeWidth * 0.6f)
+                drawLine(color, Offset(w * 0.64f, h * 0.28f), Offset(w * 0.64f, h * 0.18f), strokeWidth * 0.6f)
+                drawLine(color, Offset(w * 0.36f, h * 0.72f), Offset(w * 0.36f, h * 0.82f), strokeWidth * 0.6f)
+                drawLine(color, Offset(w * 0.5f, h * 0.72f), Offset(w * 0.5f, h * 0.82f), strokeWidth * 0.6f)
+                drawLine(color, Offset(w * 0.64f, h * 0.72f), Offset(w * 0.64f, h * 0.82f), strokeWidth * 0.6f)
+            }
         }
     }
 }

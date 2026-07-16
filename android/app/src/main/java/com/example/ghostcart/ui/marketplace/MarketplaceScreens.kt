@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ghostcart.data.Marketplace
 import com.example.ghostcart.data.MarketplaceProduct
+import com.example.ghostcart.data.iconForProduct
 import com.example.ghostcart.theme.FaintBorder
 import com.example.ghostcart.theme.GhostGreen
 import com.example.ghostcart.theme.GreenTint
@@ -230,7 +231,7 @@ fun MarketplaceProductCard(
                 .background(SoftGray),
             contentAlignment = Alignment.Center
         ) {
-            ProductIcon(name = product.iconName, modifier = Modifier.size(42.dp), color = Ink)
+            ProductIcon(name = iconForProduct(product), modifier = Modifier.size(42.dp), color = Ink)
         }
         Text(text = product.name, color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 2, modifier = Modifier.padding(top = 8.dp))
         Text(text = "${Marketplace.currency} ${product.price}", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 2.dp, bottom = 4.dp))
@@ -411,7 +412,7 @@ fun ProductDetailScreen(
                 .background(SoftGray),
             contentAlignment = Alignment.Center
         ) {
-            ProductIcon(name = product.iconName, modifier = Modifier.size(120.dp), color = Ink)
+            ProductIcon(name = iconForProduct(product), modifier = Modifier.size(120.dp), color = Ink)
         }
 
         if (product.scentOrType.isNotBlank()) {

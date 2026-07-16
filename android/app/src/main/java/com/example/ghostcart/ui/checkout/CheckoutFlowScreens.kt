@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import com.example.ghostcart.data.Marketplace
 import com.example.ghostcart.data.MarketplaceProduct
 import com.example.ghostcart.data.WalletDemoData
+import com.example.ghostcart.data.iconForProduct
 import com.example.ghostcart.theme.DangerRed
 import com.example.ghostcart.theme.FaintBorder
 import com.example.ghostcart.theme.GhostGreen
@@ -119,7 +120,7 @@ fun GhostCartListScreen(
                             modifier = Modifier.size(52.dp).clip(RoundedCornerShape(12.dp)).background(SoftGray),
                             contentAlignment = Alignment.Center
                         ) {
-                            ProductIcon(name = product.iconName, modifier = Modifier.size(28.dp), color = Ink)
+                            ProductIcon(name = iconForProduct(product), modifier = Modifier.size(28.dp), color = Ink)
                         }
                         Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
                             Text(text = product.name, color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
@@ -262,7 +263,7 @@ fun GhostCheckoutScreen(
             products.forEach { (product, qty) ->
                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(SoftGray), contentAlignment = Alignment.Center) {
-                        ProductIcon(name = product.iconName, modifier = Modifier.size(24.dp), color = Ink)
+                        ProductIcon(name = iconForProduct(product), modifier = Modifier.size(24.dp), color = Ink)
                     }
                     Text(text = "${product.name} (x$qty)", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).padding(horizontal = 10.dp))
                     Text(text = "${Marketplace.currency} ${product.price * qty}", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -525,7 +526,7 @@ fun PayWithGhostCardScreen(
         Text(text = "Order summary", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 20.dp))
         Row(modifier = Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(SoftGray), contentAlignment = Alignment.Center) {
-                ProductIcon(name = product.iconName, modifier = Modifier.size(22.dp), color = Ink)
+                ProductIcon(name = iconForProduct(product), modifier = Modifier.size(22.dp), color = Ink)
             }
             Column(modifier = Modifier.weight(1f).padding(horizontal = 10.dp)) {
                 Text(text = product.name, color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)

@@ -21,6 +21,48 @@ data class OverspendCategory(
 
 data class SponsoredBrand(val name: String, val tagline: String)
 
+/**
+ * Picks a generic icon that actually matches the product's title, instead of a
+ * single hardcoded icon per category (which previously showed e.g. a headphones
+ * icon on a desk fan, or a sneaker icon on a windbreaker). Falls back to a
+ * category-level default, and finally to whatever was stored on the product.
+ */
+fun iconForProduct(product: MarketplaceProduct): String {
+    val n = product.name.lowercase()
+    return when {
+        n.contains("latte") || n.contains("macchiato") || n.contains("matcha") || n.contains("boba") || n.contains("tea") -> "coffee"
+        n.contains("donut") || n.contains("cupcake") || n.contains("croissant") -> "donut"
+        n.contains("burger") || n.contains("fries") || n.contains("sushi") || n.contains("toast") -> "burger"
+        n.contains("lipstick") || n.contains("lip glow") || n.contains("lip ") -> "lipstick"
+        n.contains("serum") || n.contains("mist") || n.contains("oil") || n.contains("cologne") || n.contains("perfume") -> "perfume"
+        n.contains("mask") || n.contains("blush") || n.contains("palette") -> "jar"
+        n.contains("incense") -> "incense"
+        n.contains("sunglasses") -> "sunglasses"
+        n.contains("speaker") -> "speaker"
+        n.contains("watch") -> "watch"
+        n.contains("tablet") -> "tablet"
+        n.contains("headphone") || n.contains("earbud") -> "headphones"
+        n.contains("sneaker") -> "sneaker"
+        n.contains("jacket") || n.contains(" tee") || n.contains("jeans") || n.contains("hoodie") ||
+            n.contains("beanie") || n.contains("socks") || n.contains("belt") || n.contains("windbreaker") -> "shirt"
+        n.contains("tote") || n.contains("bag") -> "bag"
+        n.contains("mount") || n.contains("mat") || n.contains("hub") || n.contains("fan") ||
+            n.contains("strip") || n.contains("light") || n.contains("pad") || n.contains("sleeve") ||
+            n.contains("adapter") -> "gadget"
+        else -> when {
+            product.category.contains("Food", ignoreCase = true) ||
+                product.category.contains("Fast Food", ignoreCase = true) ||
+                product.category.contains("Healthy", ignoreCase = true) ||
+                product.category.contains("Coffee", ignoreCase = true) -> "burger"
+            product.category.contains("Beauty", ignoreCase = true) -> "perfume"
+            product.category.contains("Fashion", ignoreCase = true) -> "shirt"
+            product.category.contains("Gadgets", ignoreCase = true) || product.category.contains("Tech", ignoreCase = true) -> "gadget"
+            product.category.contains("Delivery", ignoreCase = true) -> "burger"
+            else -> product.iconName
+        }
+    }
+}
+
 object Marketplace {
     const val currency = "AED"
 
