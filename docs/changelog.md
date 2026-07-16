@@ -4,6 +4,19 @@ All notable changes to the Ghost Cart project will be documented in this file.
 
 ---
 
+## [1.2.2] - 2026-07-17
+
+### Fixed
+- **Catalog safe-area spacing:** Reduced the duplicated top inset on category
+  catalog screens and added intentional bottom grid padding so product cards do
+  not crowd the phone navigation area.
+- **Catalog cart action:** Replaced the cramped, non-interactive cart summary
+  pill with a clear 52dp "View cart" control showing item count and subtotal.
+  The entire control is now tappable and opens the Ghost Cart, where the user
+  can continue to Fake Checkout.
+
+---
+
 ## [1.2.1] - 2026-07-16
 
 ### Fixed

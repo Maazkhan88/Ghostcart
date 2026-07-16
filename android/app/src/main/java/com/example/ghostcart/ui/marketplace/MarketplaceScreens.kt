@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -45,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -278,6 +280,7 @@ fun CategoryBrowseScreen(
     cartTotal: Int,
     savedTotal: Int,
     onBack: () -> Unit,
+    onOpenCart: () -> Unit,
     onOpenProduct: (String) -> Unit,
     onAddToCart: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -285,20 +288,21 @@ fun CategoryBrowseScreen(
     var selectedFilter by remember { mutableStateOf("All") }
     val filters = listOf("All", "Fast Food", "Coffee & Drinks", "Healthy")
 
-    Column(modifier = modifier.fillMaxSize().background(Paper).padding(horizontal = 20.dp, vertical = 16.dp)) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Paper)
+            .padding(horizontal = 20.dp)
+            .padding(top = 8.dp)
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             BackButton(onBack = onBack)
             Spacer(modifier = Modifier.weight(1f))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(Ink).padding(horizontal = 12.dp, vertical = 8.dp)
-            ) {
-                GhostMascotPose(poseName = "wave", modifier = Modifier.size(20.dp))
-                Column(modifier = Modifier.padding(start = 8.dp)) {
-                    Text(text = "${Marketplace.currency} $cartTotal", color = Paper, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    Text(text = "$cartItemCount items", color = MutedText, fontSize = 8.sp)
-                }
-            }
+            CartSummaryButton(
+                itemCount = cartItemCount,
+                cartTotal = cartTotal,
+                onClick = onOpenCart
+            )
         }
 
         val (title, subtitle) = when (categoryId) {
@@ -312,7 +316,7 @@ fun CategoryBrowseScreen(
             else -> "🛍️ Shop Cravings" to "Simulate and protect your budget."
         }
 
-        Text(text = title, color = Ink, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 18.dp))
+        Text(text = title, color = Ink, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 12.dp))
         Text(text = subtitle, color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
 
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 14.dp)) {
@@ -360,7 +364,7 @@ fun CategoryBrowseScreen(
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
-            contentPadding = PaddingValues(vertical = 16.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 28.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.weight(1f)
@@ -373,6 +377,46 @@ fun CategoryBrowseScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun CartSummaryButton(
+    itemCount: Int,
+    cartTotal: Int,
+    onClick: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .height(52.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(Ink)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 14.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Filled.ShoppingBag,
+            contentDescription = null,
+            tint = GhostGreen,
+            modifier = Modifier.size(20.dp)
+        )
+        Column(modifier = Modifier.padding(start = 9.dp)) {
+            Text(
+                text = "View cart",
+                color = Paper,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 1
+            )
+            Text(
+                text = "$itemCount ${if (itemCount == 1) "item" else "items"} · ${Marketplace.currency} $cartTotal",
+                color = Paper.copy(alpha = 0.68f),
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1
+            )
         }
     }
 }

@@ -1,27 +1,27 @@
 package com.example.ghostcart.ui.main
 
-import com.example.ghostcart.data.DataRepository
 import junit.framework.TestCase.assertEquals
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
 class MainScreenViewModelTest {
   @Test
-  fun uiState_initiallyLoading() = runTest {
-    val viewModel = MainScreenViewModel(FakeMyModelRepository())
-    assertEquals(viewModel.uiState.first(), MainScreenUiState.Loading)
+  fun uiState_initiallyUsesEmptyGhostCartState() = runTest {
+    val viewModel = MainScreenViewModel()
+
+    assertEquals(GhostCartUiState(), viewModel.uiState.first())
   }
 
   @Test
-  fun uiState_onItemSaved_isDisplayed() = runTest {
-    val viewModel = MainScreenViewModel(FakeMyModelRepository())
-    assertEquals(viewModel.uiState.first(), MainScreenUiState.Loading)
-  }
-}
+  fun addToCart_thenCoolItem_movesItOutOfCart() = runTest {
+    val viewModel = MainScreenViewModel()
 
-private class FakeMyModelRepository : DataRepository {
-  override val data: Flow<List<String>> = flow { emit(listOf("Sample")) }
+    viewModel.addToCart("sample-product")
+    assertEquals(setOf("sample-product"), viewModel.uiState.value.cartIds)
+
+    viewModel.startCooling("sample-product")
+    assertEquals(emptySet<String>(), viewModel.uiState.value.cartIds)
+    assertEquals(setOf("sample-product"), viewModel.uiState.value.cooledIds)
+  }
 }

@@ -208,6 +208,7 @@ fun MainNavigation() {
               cartTotal = appViewModel.cartSubtotal(),
               savedTotal = Marketplace.savedThisWeekAcaiTotal,
               onBack = { backStack.removeLastOrNull() },
+              onOpenCart = { backStack.add(GhostCartList) },
               onOpenProduct = { id -> backStack.add(ProductDetail(id)) },
               onAddToCart = { id -> appViewModel.addToCart(id) }
             )
