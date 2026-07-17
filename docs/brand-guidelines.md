@@ -30,4 +30,6 @@ Ghost Card is a membership/achievement artifact, never a payment instrument. It 
 
 Use official assets from `public/brand/` and their approved mobile equivalents. Do not approximate or redraw the official logo or UAE Dirham symbol.
 
-Product imagery must be curated, licensed, generic, and stored in an approved project-controlled asset source. Do not use runtime web-image search or recognizable brand packaging without permission.
+Product imagery in the curated catalogue must be licensed, generic, and stored in an approved project-controlled asset source. For a user-shared Amazon/Noon link, Ghost Cart may display the retailer page's approved Open Graph or structured-data image as product metadata. It must never imply affiliation, and imported title, image and price remain editable.
+
+Community cards use the label **User Ghosted**. They never expose the user's name, profile or source URL. Community publication requires a visible, explicit consent control.

@@ -6,7 +6,9 @@ Primary line: **Add to cart. Checkout. Keep your money.**
 
 Positioning: **The cooling-off app for everything you almost bought.**
 
-Core loop: temptation -> capture -> Ghost -> cool -> resolve -> learn.
+Core loop: temptation -> discover or share -> capture -> Ghost -> cool -> resolve -> learn.
+
+Product discovery is a visual entry point, not a storefront. Users can browse a curated photo-first catalogue or share an Amazon/Noon product link into Ghost Cart. Retailer metadata is best-effort and always editable.
 
 The simulation is a ritual inside that loop, not the product's source of truth. A Fake Checkout records an almost-buy. It does not prove that money was saved. Only a user-confirmed "I skipped it" resolution contributes to Money Kept.
 

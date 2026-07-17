@@ -29,13 +29,28 @@ Fake Checkout and pretend delivery are optional emotional rituals. They never ch
 
 ## Primary mobile information architecture
 
-1. Home - primary Ghost action, active cooldowns, recent decisions, then community trends.
+1. Home - product search and categories, primary Ghost action, active cooldowns, recent decisions, then anonymous User Ghosted discovery.
 2. Cooldowns - every waiting, snoozed, and ready-to-resolve item.
 3. Ghost + - central add-from-anywhere action.
 4. Progress - Money Kept, outcomes, patterns, and history. Never a bank balance.
 5. Profile - reminders, privacy, accessibility, theme, membership card, and account.
 
-Marketplace browsing is secondary discovery. Sponsored content must not interrupt cooling or resolution.
+Product discovery is a visual entry point and never a real storefront. Curated items offer **Ghost buy** (quick simulated capture) and **Cool it** (choose a pause). Sponsored content must not interrupt cooling or resolution.
+
+## Share from retailer apps
+
+- Android registers as a text-share target so users can choose Ghost Cart from Amazon or Noon.
+- The backend accepts only HTTPS Amazon/Noon hosts, checks every redirect, limits response size and time, and rejects arbitrary hosts.
+- Ghost Cart attempts to read Open Graph or JSON-LD title, image, price and currency.
+- Extraction is best-effort. Every field remains editable and a manual fallback is always available.
+- Imported items enter the same canonical cooling state model as manual or catalogue items.
+
+## User Ghosted community items
+
+- A user-shared retailer item can appear to others only after explicit anonymous-sharing consent.
+- Public cards contain sanitized product metadata and the tag **User Ghosted**; they never expose a person, profile or original source URL.
+- One-way actor hashes, deduplication and rate limits prevent easy activity inflation without storing raw network identifiers.
+- Community activity never contributes to another user's Money Kept and never implies a sale or recommendation.
 
 ## Core journey
 

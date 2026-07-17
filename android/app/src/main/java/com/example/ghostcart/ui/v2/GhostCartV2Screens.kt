@@ -64,6 +64,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -78,6 +80,9 @@ import com.example.ghostcart.data.AlmostBuyDraft
 import com.example.ghostcart.data.AlmostBuyResolution
 import com.example.ghostcart.data.AlmostBuyStatus
 import com.example.ghostcart.data.ProgressSummary
+import com.example.ghostcart.data.CommunityProduct
+import com.example.ghostcart.data.MarketplaceProduct
+import com.example.ghostcart.data.ProductImportState
 import com.example.ghostcart.data.WalletConfig
 import com.example.ghostcart.data.progressSummary
 import com.example.ghostcart.theme.FaintBorder
@@ -110,9 +115,16 @@ private data class CoolingOption(val label: String, val durationMillis: Long)
 @Composable
 fun GhostHomeScreen(
     items: List<AlmostBuy>,
+    catalogProducts: List<MarketplaceProduct>,
+    communityProducts: List<CommunityProduct>,
+    communityProductsLoading: Boolean,
     onGhostSomething: () -> Unit,
     onOpenCooldowns: () -> Unit,
     onOpenProgress: () -> Unit,
+    onGhostCatalog: (String) -> Unit,
+    onCoolCatalog: (String) -> Unit,
+    onGhostCommunity: (String) -> Unit,
+    onCoolCommunity: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val summary = items.progressSummary()
@@ -158,6 +170,18 @@ fun GhostHomeScreen(
                     contentColor = Ink
                 )
             }
+        }
+
+item {
+            ProductDiscoverySection(
+                catalogProducts = catalogProducts,
+                communityProducts = communityProducts,
+                communityProductsLoading = communityProductsLoading,
+                onGhostCatalog = onGhostCatalog,
+                onCoolCatalog = onCoolCatalog,
+                onGhostCommunity = onGhostCommunity,
+                onCoolCommunity = onCoolCommunity
+            )
         }
 
         item { ProgressStrip(summary = summary, onOpenProgress = onOpenProgress) }
@@ -216,20 +240,32 @@ fun GhostHomeScreen(
 
 @Composable
 fun CaptureAlmostBuyScreen(
+    seed: AlmostBuyDraft? = null,
+    importState: ProductImportState = ProductImportState.Idle,
+    onImportSharedUrl: (String) -> Unit,
     onBack: () -> Unit,
     onGhost: (AlmostBuyDraft) -> Unit,
     onComplete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var name by remember { mutableStateOf("") }
-    var amount by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf(categories.first()) }
-    var trigger by remember { mutableStateOf(triggers.first()) }
-    var cooling by remember { mutableStateOf(coolingOptions[1]) }
+    var name by remember(seed?.name) { mutableStateOf(seed?.name.orEmpty()) }
+    var amount by remember(seed?.amountCents) {
+        mutableStateOf(seed?.amountCents?.takeIf { it > 0 }?.let { DecimalFormat("0.00").format(it / 100.0) }.orEmpty())
+    }
+    var sourceUrl by remember(seed?.sourceUrl) { mutableStateOf(seed?.sourceUrl.orEmpty()) }
+    var imageUrl by remember(seed?.imageUrl) { mutableStateOf(seed?.imageUrl) }
+    var sourceKind by remember(seed?.sourceKind) { mutableStateOf(seed?.sourceKind ?: "manual") }
+    var shareWithCommunity by remember(seed?.sourceUrl) { mutableStateOf(false) }
+    var category by remember(seed?.category) { mutableStateOf(seed?.category?.takeIf { it in categories } ?: categories.first()) }
+    var trigger by remember(seed?.trigger) { mutableStateOf(seed?.trigger?.takeIf { it in triggers } ?: triggers.first()) }
+    var cooling by remember(seed?.coolingDurationMillis) {
+        mutableStateOf(coolingOptions.minByOrNull { kotlin.math.abs(it.durationMillis - (seed?.coolingDurationMillis ?: coolingOptions[1].durationMillis)) } ?: coolingOptions[1])
+    }
     var error by remember { mutableStateOf<String?>(null) }
     val requestNotifications = rememberNotificationPermissionRequest()
 
-    LaunchedEffect(category) {
+    LaunchedEffect(category, seed?.coolingDurationMillis) {
+        if (seed?.coolingDurationMillis != null) return@LaunchedEffect
         cooling = when (category) {
             "Food & drinks" -> coolingOptions[0]
             "Electronics" -> coolingOptions[2]
@@ -237,22 +273,77 @@ fun CaptureAlmostBuyScreen(
         }
     }
 
+    LaunchedEffect(seed?.sourceUrl, seed?.imageUrl) {
+        if (seed != null) {
+            name = seed.name
+            amount = seed.amountCents.takeIf { it > 0 }?.let { DecimalFormat("0.00").format(it / 100.0) }.orEmpty()
+            sourceUrl = seed.sourceUrl.orEmpty()
+            imageUrl = seed.imageUrl
+            sourceKind = seed.sourceKind
+            category = seed.category.takeIf { it in categories } ?: "Other"
+            trigger = seed.trigger.takeIf { it in triggers } ?: triggers.first()
+        }
+    }
+
     LazyColumn(
         modifier = modifier.fillMaxSize().background(Paper),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp, 16.dp, 20.dp, 32.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+        verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         item { GhostTopBar(title = stringResource(R.string.ghost_an_almost_buy), onBack = onBack) }
         item {
             Column {
                 Text(stringResource(R.string.capture_headline), color = Ink, fontSize = 30.sp, lineHeight = 33.sp, fontWeight = FontWeight.ExtraBold)
-                Text(stringResource(R.string.capture_body), color = MutedText, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+                Text("Share from Amazon or Noon, or enter the details yourself. Everything stays editable.", color = MutedText, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+            }
+        }
+        item {
+            Card(colors = CardDefaults.cardColors(containerColor = SoftGray), shape = RoundedCornerShape(20.dp)) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Import a product link", color = Ink, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("On Amazon or Noon, tap Share and choose Ghost Cart—or paste the link here.", color = MutedText, fontSize = 11.sp)
+                    OutlinedTextField(
+                        value = sourceUrl,
+                        onValueChange = { sourceUrl = it.take(2048); error = null },
+                        label = { Text("Amazon / Noon link") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ghostTextFieldColors()
+                    )
+                    OutlinedButton(
+                        onClick = { if (sourceUrl.isNotBlank()) onImportSharedUrl(sourceUrl.trim()) else error = "Paste an Amazon or Noon product link." },
+                        enabled = importState !is ProductImportState.Loading,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(if (importState is ProductImportState.Loading) "Reading product…" else "Capture product details")
+                    }
+                    when (importState) {
+                        is ProductImportState.Ready -> {
+                            Text("${importState.product.retailer} details captured. Check the image, title and price before ghosting.", color = GhostGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            importState.product.note?.let { Text(it, color = MutedText, fontSize = 10.sp) }
+                        }
+                        is ProductImportState.Error -> Text(importState.message, color = Color(0xFFB42318), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        else -> Unit
+                    }
+                }
+            }
+        }
+        if (imageUrl != null) {
+            item {
+                Box(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(20.dp)).background(SoftGray), contentAlignment = Alignment.Center) {
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = if (name.isBlank()) "Imported product image" else "$name product image",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize().padding(12.dp)
+                    )
+                }
             }
         }
         item {
             OutlinedTextField(
                 value = name,
-                onValueChange = { name = it; error = null },
+                onValueChange = { name = it.take(160); error = null },
                 label = { Text(stringResource(R.string.item_name)) },
                 placeholder = { Text(stringResource(R.string.item_name_hint)) },
                 singleLine = true,
@@ -290,9 +381,25 @@ fun CaptureAlmostBuyScreen(
                 }
             }
         }
-        if (error != null) {
-            item { Text(error.orEmpty(), color = Color(0xFFB42318), fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+        if (sourceUrl.isNotBlank()) {
+            item {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(GreenTint).padding(14.dp)
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Show this as a User Ghosted item", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Text("Optional and anonymous. Your name, profile and source link are never shown.", color = MutedText, fontSize = 10.sp)
+                    }
+                    Switch(
+                        checked = shareWithCommunity,
+                        onCheckedChange = { shareWithCommunity = it },
+                        colors = SwitchDefaults.colors(checkedTrackColor = GhostGreen, checkedThumbColor = Ink)
+                    )
+                }
+            }
         }
+        if (error != null) item { Text(error.orEmpty(), color = Color(0xFFB42318), fontSize = 12.sp, fontWeight = FontWeight.Bold) }
         item {
             PrimaryButton(
                 text = stringResource(R.string.ghost_this_purchase),
@@ -308,7 +415,11 @@ fun CaptureAlmostBuyScreen(
                                     amountCents = (numericAmount * 100).toLong(),
                                     category = category,
                                     trigger = trigger,
-                                    coolingDurationMillis = cooling.durationMillis
+                                    coolingDurationMillis = cooling.durationMillis,
+                                    sourceUrl = sourceUrl.trim().takeIf { it.isNotBlank() },
+                                    imageUrl = imageUrl,
+                                    sourceKind = if (sourceUrl.isNotBlank()) "share" else sourceKind,
+                                    shareWithCommunity = shareWithCommunity
                                 )
                             )
                             requestNotifications()
@@ -328,7 +439,6 @@ fun CaptureAlmostBuyScreen(
         }
     }
 }
-
 @Composable
 fun CooldownsScreen(
     almostBuys: List<AlmostBuy>,

@@ -11,8 +11,8 @@ android {
         applicationId = "com.ghostcart.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 15
-        versionName = "2.0.0"
+        versionCode = 16
+        versionName = "2.1.0"
     }
 
     buildTypes {
@@ -86,4 +86,6 @@ dependencies {
 
   // WorkManager for background delivery simulation steps & notifications
   implementation("androidx.work:work-runtime-ktx:2.9.0")
+  implementation("io.coil-kt.coil3:coil-compose:3.5.0")
+  implementation("io.coil-kt.coil3:coil-network-okhttp:3.5.0")
 }

@@ -25,6 +25,9 @@ import com.example.ghostcart.data.DeliveryStepWorker
 import com.example.ghostcart.data.GhostActivityRepository
 import com.example.ghostcart.data.GhostRanking
 import com.example.ghostcart.data.GhostCardImageExporter
+import com.example.ghostcart.data.CommunityProduct
+import com.example.ghostcart.data.ProductImportRepository
+import com.example.ghostcart.data.ProductImportState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -62,7 +65,11 @@ data class AppUiState(
     val isMostGhostedLoading: Boolean = true,
     val isMostGhostedUnavailable: Boolean = false,
     val toastMessage: String? = null,
-    val almostBuys: List<AlmostBuy> = emptyList()
+    val almostBuys: List<AlmostBuy> = emptyList(),
+    val productImportState: ProductImportState = ProductImportState.Idle,
+    val communityProducts: List<CommunityProduct> = emptyList(),
+    val communityProductsLoading: Boolean = true,
+    val captureSeed: AlmostBuyDraft? = null
 )
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
@@ -81,6 +88,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         refreshMostGhostedToday()
+        refreshCommunityProducts()
         syncDailyGhostReminder("lunch", 13, _uiState.value.walletConfig.lunchReminderEnabled)
         syncDailyGhostReminder("dinner", 20, _uiState.value.walletConfig.dinnerReminderEnabled)
         viewModelScope.launch {
@@ -91,10 +99,114 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     val allProducts: List<MarketplaceProduct> =
-        (Marketplace.featuredCatalog + Marketplace.fakeFlashDeals + Marketplace.foodAndCoffeeCatalog)
+        (Marketplace.featuredCatalog + Marketplace.discoveryCatalog + Marketplace.fakeFlashDeals + Marketplace.foodAndCoffeeCatalog)
             .distinctBy { it.id }
 
     fun findProduct(id: String): MarketplaceProduct? = allProducts.find { it.id == id }
+
+    fun refreshCommunityProducts() {
+        _uiState.update { it.copy(communityProductsLoading = true) }
+        viewModelScope.launch {
+            ProductImportRepository.communityFeed()
+                .onSuccess { products ->
+                    _uiState.update { it.copy(communityProducts = products, communityProductsLoading = false) }
+                }
+                .onFailure { _uiState.update { it.copy(communityProductsLoading = false) } }
+        }
+    }
+
+    fun importSharedProduct(sourceUrl: String) {
+        _uiState.update { it.copy(productImportState = ProductImportState.Loading) }
+        viewModelScope.launch {
+            ProductImportRepository.preview(sourceUrl)
+                .onSuccess { product ->
+                    _uiState.update {
+                        it.copy(
+                            productImportState = ProductImportState.Ready(product),
+                            captureSeed = AlmostBuyDraft(
+                                name = product.title,
+                                amountCents = if (product.currencyCode == null || product.currencyCode == "AED") product.priceCents ?: 0 else 0,
+                                category = product.category,
+                                trigger = "FOMO",
+                                coolingDurationMillis = recommendedCooling(product.category),
+                                sourceUrl = product.sourceUrl,
+                                imageUrl = product.imageUrl,
+                                sourceKind = "share"
+                            )
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    _uiState.update { it.copy(productImportState = ProductImportState.Error(error.message ?: "Unable to read this product")) }
+                }
+        }
+    }
+
+    fun clearProductImport() {
+        _uiState.update { it.copy(productImportState = ProductImportState.Idle, captureSeed = null) }
+    }
+
+    fun prepareCatalogProduct(productId: String) {
+        val product = findProduct(productId) ?: return
+        _uiState.update {
+            it.copy(captureSeed = AlmostBuyDraft(
+                name = product.name,
+                amountCents = product.price.toLong() * 100,
+                category = normalizeCategory(product.category),
+                trigger = "FOMO",
+                coolingDurationMillis = recommendedCooling(product.category),
+                sourceKind = "catalog"
+            ))
+        }
+    }
+
+    fun prepareCommunityProduct(productId: String) {
+        val product = _uiState.value.communityProducts.find { it.id == productId } ?: return
+        _uiState.update {
+            it.copy(captureSeed = AlmostBuyDraft(
+                name = product.title,
+                amountCents = product.priceCents,
+                category = normalizeCategory(product.category),
+                trigger = "FOMO",
+                coolingDurationMillis = recommendedCooling(product.category),
+                imageUrl = product.imageUrl,
+                sourceKind = "catalog"
+            ))
+        }
+    }
+
+    fun clearCaptureSeed() {
+        _uiState.update { it.copy(captureSeed = null, productImportState = ProductImportState.Idle) }
+    }
+
+    fun quickGhostCatalogProduct(productId: String, onCreated: () -> Unit = {}) {
+        prepareCatalogProduct(productId)
+        val draft = _uiState.value.captureSeed ?: return
+        createAlmostBuy(draft) { clearCaptureSeed(); onCreated() }
+    }
+
+    fun quickGhostCommunityProduct(productId: String, onCreated: () -> Unit = {}) {
+        prepareCommunityProduct(productId)
+        val draft = _uiState.value.captureSeed ?: return
+        createAlmostBuy(draft) { clearCaptureSeed(); onCreated() }
+    }
+
+    private fun normalizeCategory(value: String): String = when {
+        value.contains("food", true) || value.contains("coffee", true) || value.contains("delivery", true) -> "Food & drinks"
+        value.contains("tech", true) || value.contains("gadget", true) -> "Electronics"
+        value.contains("fashion", true) || value.contains("apparel", true) -> "Fashion"
+        value.contains("beauty", true) -> "Beauty"
+        value.contains("gaming", true) -> "Gaming"
+        value.contains("music", true) -> "Music"
+        value.contains("home", true) -> "Home"
+        else -> value.ifBlank { "Other" }
+    }
+
+    private fun recommendedCooling(category: String): Long = when {
+        category.contains("food", true) || category.contains("coffee", true) -> TimeUnit.MINUTES.toMillis(15)
+        category.contains("electronic", true) || category.contains("tech", true) || category.contains("gadget", true) -> TimeUnit.DAYS.toMillis(3)
+        else -> TimeUnit.HOURS.toMillis(24)
+    }
 
     fun cartProducts(): List<MarketplaceProduct> =
         _uiState.value.cartProductIds.mapNotNull { findProduct(it) }
@@ -398,6 +510,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val item = almostBuyRepository.create(draft)
             scheduleCoolingNotification(item)
+            if (draft.shareWithCommunity) {
+                ProductImportRepository.publish(draft)
+                    .onSuccess { refreshCommunityProducts() }
+                    .onFailure { showToast("Item is cooling; anonymous sharing could not be completed") }
+            }
             showToast("${item.name} is cooling")
             onCreated(item)
         }
@@ -463,6 +580,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     productIds = ghostedProductIds
                 ).onSuccess {
                     refreshMostGhostedToday()
+        refreshCommunityProducts()
                 }
             }
         }

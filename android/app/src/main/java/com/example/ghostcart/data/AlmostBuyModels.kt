@@ -24,7 +24,11 @@ data class AlmostBuy(
     val createdAtMillis: Long,
     val coolingUntilMillis: Long,
     val status: AlmostBuyStatus = AlmostBuyStatus.COOLING,
-    val resolvedAtMillis: Long? = null
+    val resolvedAtMillis: Long? = null,
+    val sourceUrl: String? = null,
+    val imageUrl: String? = null,
+    val sourceKind: String = "manual",
+    val sharedAnonymously: Boolean = false
 )
 
 enum class AlmostBuyStatus {
@@ -43,7 +47,11 @@ data class AlmostBuyDraft(
     val amountCents: Long,
     val category: String,
     val trigger: String,
-    val coolingDurationMillis: Long
+    val coolingDurationMillis: Long,
+    val sourceUrl: String? = null,
+    val imageUrl: String? = null,
+    val sourceKind: String = "manual",
+    val shareWithCommunity: Boolean = false
 )
 
 data class ProgressSummary(
@@ -90,7 +98,11 @@ class LocalAlmostBuyRepository(context: Context) : AlmostBuyRepository {
             category = draft.category,
             trigger = draft.trigger,
             createdAtMillis = now,
-            coolingUntilMillis = now + draft.coolingDurationMillis.coerceAtLeast(60_000L)
+coolingUntilMillis = now + draft.coolingDurationMillis.coerceAtLeast(60_000L),
+            sourceUrl = draft.sourceUrl,
+            imageUrl = draft.imageUrl,
+            sourceKind = draft.sourceKind,
+            sharedAnonymously = draft.shareWithCommunity
         )
         update(listOf(item) + state.value)
         return item
@@ -140,7 +152,11 @@ class LocalAlmostBuyRepository(context: Context) : AlmostBuyRepository {
                 put("createdAtMillis", item.createdAtMillis)
                 put("coolingUntilMillis", item.coolingUntilMillis)
                 put("status", item.status.name)
-                item.resolvedAtMillis?.let { put("resolvedAtMillis", it) }
+item.resolvedAtMillis?.let { put("resolvedAtMillis", it) }
+                item.sourceUrl?.let { put("sourceUrl", it) }
+                item.imageUrl?.let { put("imageUrl", it) }
+                put("sourceKind", item.sourceKind)
+                put("sharedAnonymously", item.sharedAnonymously)
             })
         }
         preferences.edit().putString(ITEMS_KEY, array.toString()).apply()
@@ -162,7 +178,11 @@ class LocalAlmostBuyRepository(context: Context) : AlmostBuyRepository {
                         createdAtMillis = value.getLong("createdAtMillis"),
                         coolingUntilMillis = value.getLong("coolingUntilMillis"),
                         status = AlmostBuyStatus.valueOf(value.optString("status", AlmostBuyStatus.COOLING.name)),
-                        resolvedAtMillis = value.optLong("resolvedAtMillis").takeIf { value.has("resolvedAtMillis") }
+resolvedAtMillis = value.optLong("resolvedAtMillis").takeIf { value.has("resolvedAtMillis") },
+                        sourceUrl = value.optString("sourceUrl").takeIf { it.isNotBlank() },
+                        imageUrl = value.optString("imageUrl").takeIf { it.isNotBlank() },
+                        sourceKind = value.optString("sourceKind", "manual"),
+                        sharedAnonymously = value.optBoolean("sharedAnonymously", false)
                     )
                 )
             }

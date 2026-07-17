@@ -48,6 +48,60 @@ export const products = sqliteTable("products", {
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
+// Retailer pages explicitly shared into Ghost Cart can become anonymous
+// community discovery cards. Source URLs are canonicalized server-side and are
+// never returned by the public feed.
+export const communityProducts = sqliteTable(
+  "community_products",
+  {
+    id: text("id").primaryKey(),
+    canonicalKey: text("canonical_key").notNull(),
+    canonicalUrl: text("canonical_url").notNull(),
+    sourceDomain: text("source_domain").notNull(),
+    title: text("title").notNull(),
+    category: text("category").notNull().default("Other"),
+    imageUrl: text("image_url"),
+    priceCents: integer("price_cents").notNull().default(0),
+    currencyCode: text("currency_code").notNull().default("AED"),
+    ghostCount: integer("ghost_count").notNull().default(0),
+    status: text("status").notNull().default("visible"),
+    lastGhostedAt: text("last_ghosted_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("community_products_canonical_key_unique").on(table.canonicalKey),
+    check(
+      "community_products_status_check",
+      sql`${table.status} IN ('visible', 'pending', 'hidden')`,
+    ),
+    check(
+      "community_products_price_non_negative_check",
+      sql`${table.priceCents} >= 0 AND ${table.ghostCount} >= 0`,
+    ),
+    index("community_products_status_last_idx").on(table.status, table.lastGhostedAt),
+  ],
+);
+
+export const communityProductGhosts = sqliteTable(
+  "community_product_ghosts",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    communityProductId: text("community_product_id")
+      .notNull()
+      .references(() => communityProducts.id, { onDelete: "cascade" }),
+    actorHash: text("actor_hash").notNull(),
+    source: text("source").notNull().default("unknown"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("community_product_ghost_actor_unique").on(
+      table.communityProductId,
+      table.actorHash,
+    ),
+    index("community_product_ghost_created_idx").on(table.createdAt),
+  ],
+);
 export const users = sqliteTable("users", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   email: text("email").notNull().unique(),
@@ -235,6 +289,20 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   ghostEvents: many(ghostEvents),
 }));
 
+export const communityProductsRelations = relations(
+  communityProducts,
+  ({ many }) => ({ ghosts: many(communityProductGhosts) }),
+);
+
+export const communityProductGhostsRelations = relations(
+  communityProductGhosts,
+  ({ one }) => ({
+    product: one(communityProducts, {
+      fields: [communityProductGhosts.communityProductId],
+      references: [communityProducts.id],
+    }),
+  }),
+);
 export const usersRelations = relations(users, ({ many, one }) => ({
   sessions: many(userSessions),
   preferences: one(userPreferences),

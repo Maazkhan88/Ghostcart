@@ -65,8 +65,8 @@ import kotlinx.coroutines.delay
 private val bottomDestinations: Set<NavKey> = setOf(Home, Cooldowns, Progress, GhostCardSettings)
 
 @Composable
-fun MainNavigation(initialCooldownId: String? = null) {
-    val initial = if (initialCooldownId != null) Cooldowns else Splash
+fun MainNavigation(initialCooldownId: String? = null, initialSharedUrl: String? = null, sharedRequestKey: Long? = null) {
+    val initial = when { initialSharedUrl != null -> CaptureAlmostBuy; initialCooldownId != null -> Cooldowns; else -> Splash }
     val backStack = rememberNavBackStack(initial)
     val appViewModel: AppViewModel = viewModel()
     val state by appViewModel.uiState.collectAsState()
@@ -76,6 +76,13 @@ fun MainNavigation(initialCooldownId: String? = null) {
     LaunchedEffect(initialCooldownId) {
         if (initialCooldownId != null && backStack.lastOrNull() != Cooldowns) {
             backStack.add(Cooldowns)
+        }
+    }
+
+    LaunchedEffect(sharedRequestKey) {
+        if (initialSharedUrl != null) {
+            appViewModel.importSharedProduct(initialSharedUrl)
+            if (backStack.lastOrNull() != CaptureAlmostBuy) backStack.add(CaptureAlmostBuy)
         }
     }
 
@@ -142,16 +149,43 @@ fun MainNavigation(initialCooldownId: String? = null) {
                     entry<Home> {
                         GhostHomeScreen(
                             items = state.almostBuys,
-                            onGhostSomething = { backStack.add(CaptureAlmostBuy) },
+                            catalogProducts = appViewModel.allProducts,
+                            communityProducts = state.communityProducts,
+                            communityProductsLoading = state.communityProductsLoading,
+                            onGhostSomething = {
+                                appViewModel.clearCaptureSeed()
+                                backStack.add(CaptureAlmostBuy)
+                            },
                             onOpenCooldowns = { backStack.add(Cooldowns) },
-                            onOpenProgress = { backStack.add(Progress) }
+                            onOpenProgress = { backStack.add(Progress) },
+                            onGhostCatalog = { id ->
+                                appViewModel.quickGhostCatalogProduct(id) { backStack.add(Cooldowns) }
+                            },
+                            onCoolCatalog = { id ->
+                                appViewModel.prepareCatalogProduct(id)
+                                backStack.add(CaptureAlmostBuy)
+                            },
+                            onGhostCommunity = { id ->
+                                appViewModel.quickGhostCommunityProduct(id) { backStack.add(Cooldowns) }
+                            },
+                            onCoolCommunity = { id ->
+                                appViewModel.prepareCommunityProduct(id)
+                                backStack.add(CaptureAlmostBuy)
+                            }
                         )
                     }
                     entry<CaptureAlmostBuy> {
                         CaptureAlmostBuyScreen(
-                            onBack = { backStack.removeLastOrNull() },
+                            seed = state.captureSeed,
+                            importState = state.productImportState,
+                            onImportSharedUrl = appViewModel::importSharedProduct,
+                            onBack = {
+                                appViewModel.clearCaptureSeed()
+                                backStack.removeLastOrNull()
+                            },
                             onGhost = { appViewModel.createAlmostBuy(it) },
                             onComplete = {
+                                appViewModel.clearCaptureSeed()
                                 backStack.clear()
                                 backStack.add(Cooldowns)
                             }

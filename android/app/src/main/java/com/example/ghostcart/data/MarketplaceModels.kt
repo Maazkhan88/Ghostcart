@@ -109,6 +109,11 @@ object Marketplace {
         MarketplaceProduct("sneakersWhite", "White Sneakers", "Fashion", 549, "sneaker")
     )
 
+    val discoveryCatalog = listOf(
+        MarketplaceProduct("studioHeadphones", "Studio Headphones", "Music", 899, "headphones"),
+        MarketplaceProduct("minimalSmartwatch", "Minimal Smartwatch", "Jewellery", 749, "watch"),
+        MarketplaceProduct("gamingTablet", "Gaming Tablet Mini", "Gaming", 1299, "tablet")
+    )
     val fakeFlashDeals = listOf(
         MarketplaceProduct("earbuds", "Wireless Earbuds", "Gadgets & Tech", 399, "headphones"),
         MarketplaceProduct("smartwatch", "Smartwatch Pro", "Gadgets & Tech", 699, "watch"),

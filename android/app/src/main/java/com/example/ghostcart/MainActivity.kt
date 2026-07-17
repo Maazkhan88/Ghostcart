@@ -11,18 +11,21 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.ui.Modifier
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.example.ghostcart.data.extractSupportedRetailerUrl
 import com.example.ghostcart.theme.GhostCartTheme
 
 class MainActivity : ComponentActivity() {
   private val notificationCooldownId = mutableStateOf<String?>(null)
+  private val sharedProductRequest = mutableStateOf<Pair<String, Long>?>(null)
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     notificationCooldownId.value = intent.getStringExtra("cooldownId")
+    captureSharedProduct(intent)
 
     enableEdgeToEdge()
 
@@ -33,7 +36,15 @@ class MainActivity : ComponentActivity() {
     }
 
     setContent {
-      GhostCartTheme { Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { MainNavigation(notificationCooldownId.value) } }
+      GhostCartTheme {
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+          MainNavigation(
+            initialCooldownId = notificationCooldownId.value,
+            initialSharedUrl = sharedProductRequest.value?.first,
+            sharedRequestKey = sharedProductRequest.value?.second
+          )
+        }
+      }
     }
   }
 
@@ -41,5 +52,12 @@ class MainActivity : ComponentActivity() {
     super.onNewIntent(intent)
     setIntent(intent)
     notificationCooldownId.value = intent.getStringExtra("cooldownId")
+    captureSharedProduct(intent)
+  }
+
+  private fun captureSharedProduct(intent: Intent) {
+    if (intent.action != Intent.ACTION_SEND || intent.type != "text/plain") return
+    val url = extractSupportedRetailerUrl(intent.getStringExtra(Intent.EXTRA_TEXT)) ?: return
+    sharedProductRequest.value = url to System.nanoTime()
   }
 }
