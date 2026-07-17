@@ -1,0 +1,176 @@
+package com.example.ghostcart.data
+
+import android.content.Context
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import org.json.JSONArray
+import org.json.JSONObject
+import java.util.UUID
+
+/**
+ * The durable product record for Ghost Cart's core loop.
+ *
+ * Amounts are stored in fils (1/100 of a dirham) so UI rounding never changes
+ * a user's progress. An item only contributes to money kept after the user
+ * explicitly resolves it as [AlmostBuyStatus.SKIPPED].
+ */
+data class AlmostBuy(
+    val id: String,
+    val name: String,
+    val amountCents: Long,
+    val category: String,
+    val trigger: String,
+    val createdAtMillis: Long,
+    val coolingUntilMillis: Long,
+    val status: AlmostBuyStatus = AlmostBuyStatus.COOLING,
+    val resolvedAtMillis: Long? = null
+)
+
+enum class AlmostBuyStatus {
+    COOLING,
+    SKIPPED,
+    BOUGHT_INTENTIONALLY
+}
+
+enum class AlmostBuyResolution {
+    SKIPPED,
+    BOUGHT_INTENTIONALLY
+}
+
+data class AlmostBuyDraft(
+    val name: String,
+    val amountCents: Long,
+    val category: String,
+    val trigger: String,
+    val coolingDurationMillis: Long
+)
+
+data class ProgressSummary(
+    val totalAlmostSpentCents: Long,
+    val activeCoolingCents: Long,
+    val confirmedMoneyKeptCents: Long,
+    val activeCount: Int,
+    val resolvedCount: Int
+)
+
+fun List<AlmostBuy>.progressSummary(): ProgressSummary = ProgressSummary(
+    totalAlmostSpentCents = sumOf { it.amountCents },
+    activeCoolingCents = filter { it.status == AlmostBuyStatus.COOLING }.sumOf { it.amountCents },
+    confirmedMoneyKeptCents = filter { it.status == AlmostBuyStatus.SKIPPED }.sumOf { it.amountCents },
+    activeCount = count { it.status == AlmostBuyStatus.COOLING },
+    resolvedCount = count { it.status != AlmostBuyStatus.COOLING }
+)
+
+/**
+ * Repository boundary mirrors the production API contract:
+ * GET/POST /api/almost-buys, PATCH /api/almost-buys/:id and
+ * POST /api/almost-buys/:id/resolve. The local implementation keeps the app
+ * useful offline and can be swapped for an authenticated remote adapter.
+ */
+interface AlmostBuyRepository {
+    val items: Flow<List<AlmostBuy>>
+    suspend fun create(draft: AlmostBuyDraft): AlmostBuy
+    suspend fun resolve(id: String, resolution: AlmostBuyResolution): AlmostBuy?
+    suspend fun extendCooling(id: String, durationMillis: Long): AlmostBuy?
+}
+
+class LocalAlmostBuyRepository(context: Context) : AlmostBuyRepository {
+    private val preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val state = MutableStateFlow(load())
+
+    override val items: Flow<List<AlmostBuy>> = state.asStateFlow()
+
+    override suspend fun create(draft: AlmostBuyDraft): AlmostBuy {
+        val now = System.currentTimeMillis()
+        val item = AlmostBuy(
+            id = UUID.randomUUID().toString(),
+            name = draft.name.trim(),
+            amountCents = draft.amountCents.coerceAtLeast(0),
+            category = draft.category,
+            trigger = draft.trigger,
+            createdAtMillis = now,
+            coolingUntilMillis = now + draft.coolingDurationMillis.coerceAtLeast(60_000L)
+        )
+        update(listOf(item) + state.value)
+        return item
+    }
+
+    override suspend fun resolve(id: String, resolution: AlmostBuyResolution): AlmostBuy? {
+        val now = System.currentTimeMillis()
+        var result: AlmostBuy? = null
+        val next = state.value.map { item ->
+            if (item.id != id || item.status != AlmostBuyStatus.COOLING) item else {
+                item.copy(
+                    status = when (resolution) {
+                        AlmostBuyResolution.SKIPPED -> AlmostBuyStatus.SKIPPED
+                        AlmostBuyResolution.BOUGHT_INTENTIONALLY -> AlmostBuyStatus.BOUGHT_INTENTIONALLY
+                    },
+                    resolvedAtMillis = now
+                ).also { result = it }
+            }
+        }
+        if (result != null) update(next)
+        return result
+    }
+
+    override suspend fun extendCooling(id: String, durationMillis: Long): AlmostBuy? {
+        val base = System.currentTimeMillis()
+        var result: AlmostBuy? = null
+        val next = state.value.map { item ->
+            if (item.id != id || item.status != AlmostBuyStatus.COOLING) item else {
+                item.copy(coolingUntilMillis = base + durationMillis.coerceAtLeast(60_000L))
+                    .also { result = it }
+            }
+        }
+        if (result != null) update(next)
+        return result
+    }
+
+    private fun update(items: List<AlmostBuy>) {
+        state.value = items
+        val array = JSONArray()
+        items.forEach { item ->
+            array.put(JSONObject().apply {
+                put("id", item.id)
+                put("name", item.name)
+                put("amountCents", item.amountCents)
+                put("category", item.category)
+                put("trigger", item.trigger)
+                put("createdAtMillis", item.createdAtMillis)
+                put("coolingUntilMillis", item.coolingUntilMillis)
+                put("status", item.status.name)
+                item.resolvedAtMillis?.let { put("resolvedAtMillis", it) }
+            })
+        }
+        preferences.edit().putString(ITEMS_KEY, array.toString()).apply()
+    }
+
+    private fun load(): List<AlmostBuy> = runCatching {
+        val raw = preferences.getString(ITEMS_KEY, null) ?: return@runCatching emptyList()
+        val array = JSONArray(raw)
+        buildList {
+            for (index in 0 until array.length()) {
+                val value = array.getJSONObject(index)
+                add(
+                    AlmostBuy(
+                        id = value.getString("id"),
+                        name = value.getString("name"),
+                        amountCents = value.getLong("amountCents"),
+                        category = value.getString("category"),
+                        trigger = value.getString("trigger"),
+                        createdAtMillis = value.getLong("createdAtMillis"),
+                        coolingUntilMillis = value.getLong("coolingUntilMillis"),
+                        status = AlmostBuyStatus.valueOf(value.optString("status", AlmostBuyStatus.COOLING.name)),
+                        resolvedAtMillis = value.optLong("resolvedAtMillis").takeIf { value.has("resolvedAtMillis") }
+                    )
+                )
+            }
+        }
+    }.getOrDefault(emptyList())
+
+    private companion object {
+        const val PREFS_NAME = "ghost_cart_almost_buys"
+        const val ITEMS_KEY = "items_v2"
+    }
+}

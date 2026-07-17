@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+
+    <application
+        android:allowBackup="false"
+        android:icon="@drawable/ghost_cart_icon"
+        android:label="@string/app_name"
+        android:roundIcon="@drawable/ghost_cart_icon"
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="false"
+        android:windowSoftInputMode="adjustResize"
+        android:theme="@style/Theme.GhostCart">
+        <activity
+            android:name="com.example.ghostcart.MainActivity"
+            android:launchMode="singleTop"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

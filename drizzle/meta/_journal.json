@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1783873739376,
+      "tag": "0000_tough_mandrill",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1783879698747,
+      "tag": "0001_confused_dragon_lord",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1784228127629,
+      "tag": "0002_messy_vampiro",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1784236974481,
+      "tag": "0003_lame_shiva",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1784289071760,
+      "tag": "0004_sloppy_the_fallen",
+      "breakpoints": true
+    }
+  ]
+}
