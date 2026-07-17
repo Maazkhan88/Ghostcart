@@ -7,7 +7,7 @@ const IMAGE_ROOTS = [
 ] as const;
 const MAX_HTML_BYTES = 1_200_000;
 const MAX_REDIRECTS = 3;
-const FETCH_TIMEOUT_MS = 6_000;
+const FETCH_TIMEOUT_MS = 10_000;
 
 export type RetailerProductPreview = {
   status: "complete" | "partial" | "needs_input";
@@ -95,6 +95,21 @@ function meta(html: string, keys: string[]): string | null {
     if (key && content && wanted.has(key.toLowerCase())) return content;
   }
   return null;
+}
+
+function htmlTitle(html: string): string | null {
+  const match = html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);
+  return match ? decodeHtml(match[1]) : null;
+}
+
+function amazonPagePrice(html: string): string | null {
+  const match = html.match(/class=["'][^"']*\ba-offscreen\b[^"']*["'][^>]*>\s*([^<]+)</i);
+  return match ? decodeHtml(match[1]) : null;
+}
+
+function amazonPageImage(html: string): string | null {
+  const matches = html.match(/https:\/\/m\.media-amazon\.com\/images\/I\/[A-Za-z0-9%_.+|~,-]+?\.(?:jpg|jpeg|png)/gi) ?? [];
+  return matches.find((value) => /_(?:AC_)?SL\d+/i.test(value)) ?? null;
 }
 
 function jsonLdProducts(html: string): Record<string, unknown>[] {
@@ -186,9 +201,13 @@ export function extractRetailerProduct(html: string, finalUrl: URL): RetailerPro
   const product = jsonLdProducts(html)[0] ?? {};
   const offersValue = Array.isArray(product.offers) ? product.offers[0] : product.offers;
   const offers = offersValue && typeof offersValue === "object" ? offersValue as Record<string, unknown> : {};
-  const rawTitle = firstString(product.name) ?? meta(html, ["og:title", "twitter:title"]) ?? fallbackTitle(finalUrl);
-  const title = rawTitle.replace(/\s*[|–-]\s*(Amazon(?:\.ae)?|noon).*$/i, "").trim().slice(0, 160) || "Shared product";
-  const rawImage = firstString(product.image) ?? meta(html, ["og:image", "twitter:image"]);
+  const rawTitle = firstString(product.name) ?? meta(html, ["og:title", "twitter:title"]) ?? htmlTitle(html) ?? fallbackTitle(finalUrl);
+  const title = rawTitle
+    .replace(/\s*:\s*Buy Online.*$/i, "")
+    .replace(/\s*[|–-]\s*(Amazon(?:\.ae)?|noon).*$/i, "")
+    .trim()
+    .slice(0, 160) || "Shared product";
+  const rawImage = firstString(product.image) ?? meta(html, ["og:image", "twitter:image"]) ?? amazonPageImage(html);
   let imageUrl: string | null = null;
   if (rawImage) {
     try {
@@ -197,10 +216,10 @@ export function extractRetailerProduct(html: string, finalUrl: URL): RetailerPro
     } catch { imageUrl = null; }
   }
   const priceCents = parsePrice(
-    offers.price ?? meta(html, ["product:price:amount", "og:price:amount", "price"]),
+    offers.price ?? meta(html, ["product:price:amount", "og:price:amount", "price"]) ?? amazonPagePrice(html),
   );
   const currencyValue = firstString(offers.priceCurrency) ?? meta(html, ["product:price:currency", "og:price:currency", "pricecurrency"]);
-  const currencyCode = currencyValue ? currencyValue.toUpperCase().slice(0, 3) : null;
+  const currencyCode = currencyValue ? currencyValue.toUpperCase().slice(0, 3) : priceCents !== null && hostMatches(finalUrl.hostname, ["amazon.ae"]) ? "AED" : null;
   const retailer = hostMatches(finalUrl.hostname, ["noon.com"]) ? "Noon" : "Amazon";
   const canonicalUrl = canonicalizeRetailerUrl(finalUrl.toString()).toString();
   const status = title !== "Shared product" && imageUrl && priceCents !== null ? "complete" : "partial";
@@ -231,7 +250,8 @@ export async function previewRetailerProduct(value: string): Promise<RetailerPro
         signal: controller.signal,
         headers: {
           Accept: "text/html,application/xhtml+xml;q=0.9",
-          "User-Agent": "GhostCart-LinkPreview/1.0 (+https://ghost-cart-preview.maaz-n-khan.chatgpt.site)",
+          "Accept-Language": "en-AE,en;q=0.9",
+          "User-Agent": "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 Chrome/126.0.0.0 Mobile Safari/537.36",
         },
       });
       if (response.status >= 300 && response.status < 400) {

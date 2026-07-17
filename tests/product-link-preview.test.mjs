@@ -48,3 +48,15 @@ test("unapproved remote product image hosts are discarded", () => {
   assert.equal(result.imageUrl, null);
   assert.equal(result.status, "partial");
 });
+test("Amazon browser HTML falls back to title, UAE price, and high-resolution product image", () => {
+  const html = `
+    <title>Schecter C-7 FR-S Apocalypse - Red Reign: Buy Online at Best Price in UAE - Amazon.ae</title>
+    <span class="a-price"><span class="a-offscreen">AED&nbsp;12,131.29</span></span>
+    <script>window.images=["https://m.media-amazon.com/images/I/71Xud7FK0UL._AC_SL1500_.jpg"];</script>`;
+  const result = extractRetailerProduct(html, new URL("https://www.amazon.ae/dp/B07DL85DLX"));
+  assert.equal(result.title, "Schecter C-7 FR-S Apocalypse - Red Reign");
+  assert.equal(result.priceCents, 1213129);
+  assert.equal(result.currencyCode, "AED");
+  assert.equal(result.imageUrl, "https://m.media-amazon.com/images/I/71Xud7FK0UL._AC_SL1500_.jpg");
+  assert.equal(result.status, "complete");
+});
