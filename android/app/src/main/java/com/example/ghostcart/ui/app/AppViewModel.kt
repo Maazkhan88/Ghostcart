@@ -49,7 +49,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val sharedPrefs = application.getSharedPreferences("ghost_cart_prefs", Context.MODE_PRIVATE)
     
     private val _uiState = MutableStateFlow(AppUiState(
-        authEmail = sharedPrefs.getString("auth_email", null)
+        authEmail = sharedPrefs.getString("auth_email", null),
+        walletConfig = loadWalletConfig()
     ))
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
 
@@ -174,7 +175,39 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateWalletConfig(transform: (WalletConfig) -> WalletConfig) {
-        _uiState.update { it.copy(walletConfig = transform(it.walletConfig)) }
+        val nextConfig = transform(_uiState.value.walletConfig)
+        persistWalletConfig(nextConfig)
+        _uiState.update { it.copy(walletConfig = nextConfig) }
+    }
+
+    private fun loadWalletConfig(): WalletConfig = WalletConfig(
+        monthlySalary = sharedPrefs.getInt("wallet_monthly_salary", 12000),
+        monthlySavingsGoal = sharedPrefs.getInt("wallet_monthly_savings_goal", 2500),
+        temptationBudget = sharedPrefs.getInt("wallet_temptation_budget", 1500),
+        startingBalance = sharedPrefs.getInt("wallet_starting_balance", 0),
+        salaryShieldEnabled = sharedPrefs.getBoolean("wallet_salary_shield_enabled", true),
+        walletNotificationsEnabled = sharedPrefs.getBoolean("wallet_notifications_enabled", true),
+        autoAllocateToGoals = sharedPrefs.getBoolean("wallet_auto_allocate", true),
+        cardFrozen = sharedPrefs.getBoolean("wallet_card_frozen", false),
+        cardTheme = sharedPrefs.getString("wallet_card_theme", "Dark") ?: "Dark",
+        cardName = sharedPrefs.getString("wallet_card_name", "Ghost Card") ?: "Ghost Card",
+        salaryShieldPercent = sharedPrefs.getInt("wallet_salary_shield_percent", 20)
+    )
+
+    private fun persistWalletConfig(config: WalletConfig) {
+        sharedPrefs.edit()
+            .putInt("wallet_monthly_salary", config.monthlySalary)
+            .putInt("wallet_monthly_savings_goal", config.monthlySavingsGoal)
+            .putInt("wallet_temptation_budget", config.temptationBudget)
+            .putInt("wallet_starting_balance", config.startingBalance)
+            .putBoolean("wallet_salary_shield_enabled", config.salaryShieldEnabled)
+            .putBoolean("wallet_notifications_enabled", config.walletNotificationsEnabled)
+            .putBoolean("wallet_auto_allocate", config.autoAllocateToGoals)
+            .putBoolean("wallet_card_frozen", config.cardFrozen)
+            .putString("wallet_card_theme", config.cardTheme)
+            .putString("wallet_card_name", config.cardName)
+            .putInt("wallet_salary_shield_percent", config.salaryShieldPercent)
+            .apply()
     }
 
     fun setSimulationInterval(minutes: Int) {

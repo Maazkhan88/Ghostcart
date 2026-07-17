@@ -375,6 +375,18 @@ fun MainNavigation() {
               onToggleNotifications = { appViewModel.updateWalletConfig { it.copy(walletNotificationsEnabled = !it.walletNotificationsEnabled) } },
               onToggleAutoAllocate = { appViewModel.updateWalletConfig { it.copy(autoAllocateToGoals = !it.autoAllocateToGoals) } },
               onToggleFreeze = { appViewModel.updateWalletConfig { it.copy(cardFrozen = !it.cardFrozen) } },
+              onRenameCard = { name ->
+                appViewModel.updateWalletConfig { it.copy(cardName = name) }
+                appViewModel.showToast("Card renamed")
+              },
+              onSelectTheme = { theme ->
+                appViewModel.updateWalletConfig { it.copy(cardTheme = theme) }
+                appViewModel.showToast("$theme card theme applied")
+              },
+              onSetSalaryShieldPercent = { percent ->
+                appViewModel.updateWalletConfig { it.copy(salaryShieldPercent = percent) }
+                appViewModel.showToast("Salary Shield set to $percent%")
+              },
               onDeleteWallet = { backStack.add(WalletHome) },
               onSignOut = {
                 appViewModel.signOut()

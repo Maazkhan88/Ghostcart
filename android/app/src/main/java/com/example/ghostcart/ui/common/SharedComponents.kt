@@ -153,15 +153,20 @@ fun SimulationBadge(text: String = "Demo", modifier: Modifier = Modifier, dark: 
 
 /** The recurring dark rounded "hero" card (wallet balance, statements, protection banners). */
 @Composable
-fun GhostHeroCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+fun GhostHeroCard(
+    modifier: Modifier = Modifier,
+    containerColor: Color = Ink,
+    decorationColor: Color = Color.White,
+    content: @Composable ColumnScope.() -> Unit
+) {
     Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
-            .background(Ink)
+            .background(containerColor)
     ) {
         Canvas(modifier = Modifier.fillMaxWidth().height(140.dp)) {
-            val waveColor = Color.White.copy(alpha = 0.05f)
+            val waveColor = decorationColor.copy(alpha = 0.08f)
             for (i in 0..3) {
                 val yOffset = size.height * (0.2f + i * 0.22f)
                 val path = Path().apply {

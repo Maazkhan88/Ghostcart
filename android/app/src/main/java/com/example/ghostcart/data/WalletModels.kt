@@ -29,7 +29,9 @@ data class WalletConfig(
     val walletNotificationsEnabled: Boolean = true,
     val autoAllocateToGoals: Boolean = true,
     val cardFrozen: Boolean = false,
-    val cardTheme: String = "Dark"
+    val cardTheme: String = "Dark",
+    val cardName: String = "Ghost Card",
+    val salaryShieldPercent: Int = 20
 )
 
 object WalletDemoData {

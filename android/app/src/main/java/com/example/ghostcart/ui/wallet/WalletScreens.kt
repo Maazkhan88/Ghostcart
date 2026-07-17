@@ -32,11 +32,19 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -654,35 +662,58 @@ fun GhostCardSettingsScreen(
     onToggleNotifications: () -> Unit,
     onToggleAutoAllocate: () -> Unit,
     onToggleFreeze: () -> Unit,
+    onRenameCard: (String) -> Unit,
+    onSelectTheme: (String) -> Unit,
+    onSetSalaryShieldPercent: (Int) -> Unit,
     onDeleteWallet: () -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var activeDialog by remember { mutableStateOf<CardSettingsDialog?>(null) }
+    var renameValue by remember(config.cardName) { mutableStateOf(config.cardName) }
+    val cardContainerColor = when (config.cardTheme) {
+        "Light" -> Color(0xFFF1F1ED)
+        "Ghost Green" -> GhostGreen
+        else -> Ink
+    }
+    val cardForegroundColor = if (config.cardTheme == "Dark") Paper else Ink
+
     Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
         GhostTopBar(title = "Ghost Card Settings", onBack = onBack)
 
-        GhostHeroCard(modifier = Modifier.padding(top = 16.dp)) {
+        GhostHeroCard(
+            modifier = Modifier.padding(top = 16.dp),
+            containerColor = cardContainerColor,
+            decorationColor = cardForegroundColor
+        ) {
             Row(modifier = Modifier.fillMaxWidth()) {
                 GhostMascotPose(poseName = "wave", modifier = Modifier.size(64.dp))
                 Column(modifier = Modifier.weight(1f).padding(start = 14.dp)) {
                     Row(modifier = Modifier.fillMaxWidth()) {
-                        Text(text = "Ghost Card", color = Paper, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                        SimulationBadge(text = "Demo card", dark = true)
+                        Text(text = config.cardName, color = cardForegroundColor, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        SimulationBadge(text = "Demo card", dark = config.cardTheme == "Dark")
                     }
-                    Text(text = WalletDemoData.cardHolderName, color = Paper, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 8.dp))
-                    Text(text = "GC•••• ${WalletDemoData.cardLastFour}", color = Color.White.copy(alpha = 0.6f), fontSize = 10.sp)
-                    Text(text = "Balance", color = Color.White.copy(alpha = 0.6f), fontSize = 9.sp, modifier = Modifier.padding(top = 10.dp))
-                    Text(text = "${Marketplace.currency} ${WalletDemoData.currentBalance}", color = Paper, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(text = WalletDemoData.cardHolderName, color = cardForegroundColor, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 8.dp))
+                    Text(text = "GC•••• ${WalletDemoData.cardLastFour}", color = cardForegroundColor.copy(alpha = 0.62f), fontSize = 10.sp)
+                    Text(text = "Balance", color = cardForegroundColor.copy(alpha = 0.62f), fontSize = 9.sp, modifier = Modifier.padding(top = 10.dp))
+                    Text(text = "${Marketplace.currency} ${WalletDemoData.currentBalance}", color = cardForegroundColor, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
                 }
             }
         }
 
         Column(modifier = Modifier.padding(top = 12.dp)) {
-            SettingsChevronRow(Icons.Filled.Edit, "Rename card", null)
-            SettingsChevronRow(Icons.Filled.Palette, "Theme", config.cardTheme)
+            SettingsChevronRow(Icons.Filled.Edit, "Rename card", config.cardName) {
+                renameValue = config.cardName
+                activeDialog = CardSettingsDialog.Rename
+            }
+            SettingsChevronRow(Icons.Filled.Palette, "Theme", config.cardTheme) {
+                activeDialog = CardSettingsDialog.Theme
+            }
             SettingsToggleRow(Icons.Filled.Notifications, "Wallet notifications", "Get alerts for orders, saves and goal progress", config.walletNotificationsEnabled, onToggleNotifications)
             SettingsToggleRow(materialIconFor("target"), "Auto-allocate to goals", "Automatically move savings to your goals", config.autoAllocateToGoals, onToggleAutoAllocate)
-            SettingsChevronRow(Icons.Filled.Shield, "Salary Shield preference", "Set how much to protect from salary")
+            SettingsChevronRow(Icons.Filled.Shield, "Salary Shield preference", "Protect ${config.salaryShieldPercent}% of salary") {
+                activeDialog = CardSettingsDialog.SalaryShield
+            }
             SettingsToggleRow(Icons.Filled.AcUnit, "Freeze internal card", "Temporarily pause all Ghost Card activity", config.cardFrozen, onToggleFreeze)
             
             if (authEmail != null) {
@@ -708,6 +739,98 @@ fun GhostCardSettingsScreen(
             }
         }
     }
+
+    when (activeDialog) {
+        CardSettingsDialog.Rename -> AlertDialog(
+            onDismissRequest = { activeDialog = null },
+            title = { Text("Rename internal card", fontWeight = FontWeight.Bold) },
+            text = {
+                OutlinedTextField(
+                    value = renameValue,
+                    onValueChange = { value -> if (value.length <= 24) renameValue = value },
+                    label = { Text("Card name") },
+                    supportingText = { Text("${renameValue.length}/24") },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = renameValue.trim().isNotEmpty(),
+                    onClick = {
+                        onRenameCard(renameValue.trim())
+                        activeDialog = null
+                    }
+                ) { Text("Save", color = GhostGreen, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { activeDialog = null }) { Text("Cancel", color = Ink) }
+            }
+        )
+
+        CardSettingsDialog.Theme -> SettingsChoiceDialog(
+            title = "Choose card theme",
+            choices = listOf("Dark", "Light", "Ghost Green"),
+            selected = config.cardTheme,
+            labelFor = { it },
+            onSelect = {
+                onSelectTheme(it)
+                activeDialog = null
+            },
+            onDismiss = { activeDialog = null }
+        )
+
+        CardSettingsDialog.SalaryShield -> SettingsChoiceDialog(
+            title = "Salary Shield preference",
+            choices = listOf(10, 20, 30, 40, 50),
+            selected = config.salaryShieldPercent,
+            labelFor = { "$it% of monthly salary" },
+            onSelect = {
+                onSetSalaryShieldPercent(it)
+                activeDialog = null
+            },
+            onDismiss = { activeDialog = null }
+        )
+
+        null -> Unit
+    }
+}
+
+private enum class CardSettingsDialog { Rename, Theme, SalaryShield }
+
+@Composable
+private fun <T> SettingsChoiceDialog(
+    title: String,
+    choices: List<T>,
+    selected: T,
+    labelFor: (T) -> String,
+    onSelect: (T) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, fontWeight = FontWeight.Bold) },
+        text = {
+            Column {
+                choices.forEach { choice ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onSelect(choice) }
+                            .padding(vertical = 8.dp, horizontal = 4.dp)
+                    ) {
+                        RadioButton(selected = choice == selected, onClick = { onSelect(choice) })
+                        Text(labelFor(choice), color = Ink, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel", color = Ink) }
+        }
+    )
 }
 
 @Composable
