@@ -319,7 +319,17 @@ fun CaptureAlmostBuyScreen(
                     }
                     when (importState) {
                         is ProductImportState.Ready -> {
-                            Text("${importState.product.retailer} details captured. Check the image, title and price before ghosting.", color = GhostGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            val captureMessage = if (importState.product.status == "complete") {
+                                "${importState.product.retailer} image, title and price captured. Check them before ghosting."
+                            } else {
+                                "${importState.product.retailer} shared what it could. Add any missing image or price before ghosting."
+                            }
+                            Text(
+                                captureMessage,
+                                color = if (importState.product.status == "complete") GhostGreen else Ink,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                             importState.product.note?.let { Text(it, color = MutedText, fontSize = 10.sp) }
                         }
                         is ProductImportState.Error -> Text(importState.message, color = Color(0xFFB42318), fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -585,7 +595,7 @@ fun ProfileScreen(
                 }
                 Button(
                     onClick = onDownloadCard,
-                    colors = ButtonDefaults.buttonColors(containerColor = Ink),
+                    colors = ButtonDefaults.buttonColors(containerColor = Ink, contentColor = Paper),
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(Icons.Filled.Download, null)
@@ -753,7 +763,7 @@ private fun CooldownDecisionCard(
             }
             Button(
                 onClick = { onResolve(item.id, AlmostBuyResolution.SKIPPED) },
-                colors = ButtonDefaults.buttonColors(containerColor = Ink),
+                colors = ButtonDefaults.buttonColors(containerColor = Ink, contentColor = Paper),
                 modifier = Modifier.fillMaxWidth()
             ) { Text(stringResource(R.string.i_skipped_it)) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
@@ -894,12 +904,19 @@ private fun BreakdownRow(label: String, value: String) {
 
 @Composable
 private fun ghostTextFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor = GhostGreen,
-    unfocusedBorderColor = FaintBorder,
-    focusedLabelColor = Ink,
-    unfocusedLabelColor = MutedText,
     focusedTextColor = Ink,
-    unfocusedTextColor = Ink
+    unfocusedTextColor = Ink,
+    disabledTextColor = Ink,
+    cursorColor = GhostGreen,
+    focusedLabelColor = Ink,
+    unfocusedLabelColor = Ink,
+    disabledLabelColor = MutedText,
+    focusedPlaceholderColor = MutedText,
+    unfocusedPlaceholderColor = MutedText,
+    disabledPlaceholderColor = MutedText,
+    focusedBorderColor = GhostGreen,
+    unfocusedBorderColor = Color(0xFF777772),
+    disabledBorderColor = Color(0xFF9A9A95)
 )
 
 @Composable

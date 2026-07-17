@@ -10,7 +10,7 @@ val GhostGreen = Color(0xFF64D64A)
 val ShadowGray = Color(0xFFD8D8D8)
 
 // Light-app palette (Ghost Wallet / marketplace screens, matching the mobile-ui references)
-val MutedText = Color(0xFF6B6B66)
+val MutedText = Color(0xFF454541)
 val FaintBorder = Color(0xFFE8E8E3)
 val GreenTint = Color(0xFFE3F6DE)
 val DangerRed = Color(0xFFE0453C)

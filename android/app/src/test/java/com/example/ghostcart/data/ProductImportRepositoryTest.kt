@@ -39,4 +39,18 @@ class ProductImportRepositoryTest {
     fun permitsJsonResponsesToReachTheAndroidParser() {
         assertNull(nonJsonProductApiFallback("  {\"product\":{}}"))
     }
+
+    @Test
+    fun extractsAmazonTitlePriceAndHighResolutionImageFromDeviceHtml() {
+        val html = """
+            <title>Schecter C-7 FR-S Apocalypse - Red Reign: Buy Online at Best Price in UAE - Amazon.ae</title>
+            <span class="a-price"><span class="a-offscreen">AED&nbsp;12,131.29</span></span>
+            <script>window.images=["https://m.media-amazon.com/images/I/71Xud7FK0UL._AC_SL1500_.jpg"];</script>
+        """.trimIndent()
+        val metadata = extractRetailerHtmlMetadata(html)
+        assertEquals("Schecter C-7 FR-S Apocalypse - Red Reign", metadata.title)
+        assertEquals(1_213_129L, metadata.priceCents)
+        assertEquals("AED", metadata.currencyCode)
+        assertEquals("https://m.media-amazon.com/images/I/71Xud7FK0UL._AC_SL1500_.jpg", metadata.imageUrl)
+    }
 }

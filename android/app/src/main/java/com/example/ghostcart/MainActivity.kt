@@ -36,7 +36,7 @@ class MainActivity : ComponentActivity() {
     }
 
     setContent {
-      GhostCartTheme {
+      GhostCartTheme(darkTheme = false) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
           MainNavigation(
             initialCooldownId = notificationCooldownId.value,

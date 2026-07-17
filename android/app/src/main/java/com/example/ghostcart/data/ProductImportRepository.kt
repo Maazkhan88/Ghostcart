@@ -54,6 +54,9 @@ sealed interface ProductImportState {
     data class Error(val message: String) : ProductImportState
 }
 
+private fun JSONObject.nullableString(key: String): String? =
+    if (isNull(key)) null else optString(key).trim().takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
+
 internal fun nonJsonProductApiFallback(text: String): String? =
     if (text.isNotBlank() && !text.trimStart().startsWith("{")) {
         "Ghost Cart could not read product details right now. Try again, or enter the details manually."
@@ -81,23 +84,67 @@ internal fun parseProductApiResponse(code: Int, text: String): JSONObject {
     return json
 }
 
+internal data class RetailerHtmlMetadata(
+    val title: String?,
+    val priceCents: Long?,
+    val currencyCode: String?,
+    val imageUrl: String?
+)
+
+private fun decodeRetailerHtml(value: String): String = value
+    .replace("&nbsp;", " ", ignoreCase = true)
+    .replace("&#160;", " ", ignoreCase = true)
+    .replace("&amp;", "&", ignoreCase = true)
+    .replace("&quot;", "\"", ignoreCase = true)
+    .replace("&#39;", "'", ignoreCase = true)
+    .replace(Regex("\\s+"), " ")
+    .trim()
+
+internal fun extractRetailerHtmlMetadata(html: String): RetailerHtmlMetadata {
+    val rawTitle = Regex("""<title\b[^>]*>([\s\S]*?)</title>""", RegexOption.IGNORE_CASE)
+        .find(html)?.groupValues?.getOrNull(1)?.let(::decodeRetailerHtml)
+    val title = rawTitle
+        ?.replace(Regex("""\s*:\s*Buy Online.*$""", RegexOption.IGNORE_CASE), "")
+        ?.replace(Regex("""\s*[|–-]\s*(Amazon(?:\.ae)?|noon).*$""", RegexOption.IGNORE_CASE), "")
+        ?.trim()?.take(160)?.takeIf { it.isNotBlank() }
+    val rawPrice = Regex(
+        """class=["'][^"']*\ba-offscreen\b[^"']*["'][^>]*>\s*([^<]+)<""",
+        RegexOption.IGNORE_CASE
+    ).find(html)?.groupValues?.getOrNull(1)?.let(::decodeRetailerHtml)
+    val amount = rawPrice?.replace(",", "")?.replace(Regex("[^0-9.]"), "")?.toDoubleOrNull()
+    val priceCents = amount?.takeIf { it > 0.0 && it <= 100_000_000.0 }?.let { kotlin.math.round(it * 100).toLong() }
+    val imageUrl = Regex(
+        """https://m\.media-amazon\.com/images/I/[A-Za-z0-9%_.+|~,-]+?\.(?:jpg|jpeg|png)""",
+        RegexOption.IGNORE_CASE
+    ).findAll(html).map { it.value }.firstOrNull {
+        Regex("""_(?:AC_)?SL\d+""", RegexOption.IGNORE_CASE).containsMatchIn(it)
+    }
+    return RetailerHtmlMetadata(
+        title = title,
+        priceCents = priceCents,
+        currencyCode = if (priceCents != null && rawPrice?.contains("AED", ignoreCase = true) == true) "AED" else null,
+        imageUrl = imageUrl
+    )
+}
+
 object ProductImportRepository {
     suspend fun preview(sourceUrl: String): Result<ImportedProduct> = withContext(Dispatchers.IO) {
         runCatching {
             val response = request("/api/link-preview", "POST", JSONObject().apply { put("url", sourceUrl) })
             val product = response.getJSONObject("product")
-            ImportedProduct(
+            val imported = ImportedProduct(
                 title = product.optString("title", "Shared product"),
                 priceCents = product.optLong("priceCents").takeIf { !product.isNull("priceCents") },
-                currencyCode = product.optString("currencyCode").takeIf { it.isNotBlank() },
+                currencyCode = product.nullableString("currencyCode"),
                 category = product.optString("category", "Other"),
-                imageUrl = product.optString("imageUrl").takeIf { it.isNotBlank() },
+                imageUrl = product.nullableString("imageUrl"),
                 sourceUrl = product.getString("canonicalUrl"),
                 sourceDomain = product.getString("sourceDomain"),
                 retailer = product.getString("retailer"),
                 status = product.getString("status"),
-                note = product.optString("note").takeIf { it.isNotBlank() }
+                note = product.nullableString("note")
             )
+            enrichFromRetailer(imported)
         }
     }
 
@@ -115,7 +162,7 @@ object ProductImportRepository {
                             priceCents = item.optLong("priceCents", 0),
                             currencyCode = item.optString("currencyCode", "AED"),
                             category = item.optString("category", "Other"),
-                            imageUrl = item.optString("imageUrl").takeIf { it.isNotBlank() },
+                            imageUrl = item.nullableString("imageUrl"),
                             sourceDomain = item.optString("sourceDomain"),
                             ghostCount = item.optInt("ghostCount", 1),
                             activityTag = item.optString("activityTag", "User Ghosted")
@@ -151,13 +198,65 @@ object ProductImportRepository {
                     priceCents = item.optLong("priceCents", 0),
                     currencyCode = item.optString("currencyCode", "AED"),
                     category = item.optString("category", "Other"),
-                    imageUrl = item.optString("imageUrl").takeIf { it.isNotBlank() },
+                    imageUrl = item.nullableString("imageUrl"),
                     sourceDomain = item.optString("sourceDomain"),
                     ghostCount = item.optInt("ghostCount", 1),
                     activityTag = item.optString("activityTag", "User Ghosted")
                 )
             }
         }
+    }
+
+    private fun enrichFromRetailer(product: ImportedProduct): ImportedProduct {
+        if (product.priceCents != null && product.imageUrl != null) return product
+        return runCatching {
+            val connection = (URL(product.sourceUrl).openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 10_000
+                readTimeout = 12_000
+                instanceFollowRedirects = true
+                setRequestProperty("Accept", "text/html,application/xhtml+xml;q=0.9")
+                setRequestProperty("Accept-Language", "en-AE,en;q=0.9")
+                setRequestProperty(
+                    "User-Agent",
+                    "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 Chrome/126.0.0.0 Mobile Safari/537.36"
+                )
+            }
+            try {
+                val code = connection.responseCode
+                val finalUrl = connection.url.toString()
+                if (code !in 200..299 || extractSupportedRetailerUrl(finalUrl) == null) return@runCatching product
+                val metadata = extractRetailerHtmlMetadata(readRetailerHtml(connection))
+                val mergedTitle = if (product.title == "Shared product") metadata.title ?: product.title else product.title
+                val mergedPrice = product.priceCents ?: metadata.priceCents
+                val mergedImage = product.imageUrl ?: metadata.imageUrl
+                val mergedCurrency = product.currencyCode ?: metadata.currencyCode
+                val complete = mergedTitle != "Shared product" && mergedPrice != null && mergedImage != null
+                product.copy(
+                    title = mergedTitle,
+                    priceCents = mergedPrice,
+                    currencyCode = mergedCurrency,
+                    imageUrl = mergedImage,
+                    status = if (complete) "complete" else "partial",
+                    note = if (complete) null else "Some details could not be read. Check and edit them before ghosting."
+                )
+            } finally {
+                connection.disconnect()
+            }
+        }.getOrDefault(product)
+    }
+
+    private fun readRetailerHtml(connection: HttpURLConnection): String {
+        val output = StringBuilder()
+        connection.inputStream.bufferedReader(Charsets.UTF_8).use { reader ->
+            val buffer = CharArray(8_192)
+            while (output.length < 1_200_000) {
+                val count = reader.read(buffer, 0, minOf(buffer.size, 1_200_000 - output.length))
+                if (count <= 0) break
+                output.append(buffer, 0, count)
+            }
+        }
+        return output.toString()
     }
 
     private fun request(path: String, method: String, body: JSONObject? = null): JSONObject {
