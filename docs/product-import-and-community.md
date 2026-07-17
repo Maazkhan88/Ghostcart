@@ -1,35 +1,33 @@
 # Product link import and User Ghosted feed
 
-## Product goal
+## Goal
 
-Restore the emotional and visual richness of shopping without turning Ghost Cart into a store. A user can browse product ideas, choose **Ghost buy** or **Cool it**, or share an Amazon/Noon product page into the app.
+Restore the emotional and visual richness of shopping without turning Ghost Cart into a store. A user can browse curated product ideas, choose **Ghost buy** or **Cool it**, or share a public product page from any shopping/browser app into Ghost Cart.
 
-## Share flow
+## Import flow
 
-1. From Amazon or Noon, the user taps the platform Share action and selects Ghost Cart.
-2. Android opens Ghost + and sends only the shared text to Ghost Cart.
-3. Ghost Cart extracts a supported HTTPS retailer URL and asks the backend for a preview.
-4. The backend follows at most three allowed redirects and reads a size-limited HTML response with a deadline.
-5. Open Graph and JSON-LD metadata are used to propose image, title, price, currency and category.
-6. The user reviews and edits the result, selects a cooling period, and starts the normal cooldown.
-7. If the user separately enables **Show this as a User Ghosted item**, sanitized product metadata can appear in the community shelf.
+1. In any shopping app or browser, the user taps **Share** and chooses Ghost Cart, or pastes a public HTTPS link.
+2. Ghost Cart preserves any Android share title or thumbnail supplied by the sending app.
+3. The hosted preview reads standard Open Graph, Twitter Card and Schema.org Product/Offer metadata. Amazon and Noon retain targeted best-effort fallbacks.
+4. If title, image or price remains incomplete, Android opens the link in an isolated, invisible WebView using the device's normal browser identity and reads the same page metadata after it settles.
+5. The preview always shows an image area. Missing or failed images show an explicit placeholder plus an editable image URL field.
+6. Title, image, category and amount remain editable before the user chooses **Ghost buy** or **Cool it**.
 
-## Trust and privacy
+## Safety rules
 
-- Import is limited to Amazon, Noon and their documented short-link/asset hosts used by this implementation.
-- Lookalike domains, IP literals, user-info URLs, custom ports, non-HTTPS links and redirects outside the allowlist are rejected.
-- Public community responses omit canonical/source URLs and all user/account fields.
-- Remote image URLs are limited to approved Amazon/Noon image hosts to avoid exposing viewers to arbitrary tracking pixels.
-- The system stores a one-way actor hash for deduplication and abuse controls; raw IP addresses and email addresses are not part of community records.
-- Community cards say **User Ghosted**, not “popular,” “recommended,” “bought,” or “saved.”
-- Ghost actions do not change Money Kept. Only the owner''s later `resolved_skipped` outcome does.
+- Accept only public HTTPS links without credentials or custom ports; reject localhost, IP literals and private-looking host suffixes.
+- Strip known tracking parameters while preserving product/variant parameters.
+- Limit redirect count, response size and request duration.
+- Never run page scripts on the server. Android's WebView fallback is isolated: no file/content access, no JavaScript bridge, no mixed content and no pop-up windows.
+- Imported content is product metadata, not endorsement, sponsorship, proof of purchase or affiliation.
+- No real payment or delivery occurs.
 
-## Fallback behavior
+## Community flow
 
-Retailers may block automated previews or omit metadata. The app must keep the link, label the preview as incomplete, and let the user fill or correct image, title and AED price. The UI must not claim that capture is guaranteed.
+A user can explicitly and anonymously opt to publish a completed imported item as **User Ghosted**. The source link and profile are not exposed. Community activity and rankings remain subject to the privacy thresholds and duplicate controls in the backend.
 
-## Initial supported surfaces
+Remote community images are an MVP limitation: before a public launch at scale, cache/proxy approved images through a Ghost Cart-controlled image service so other users do not request arbitrary retailer image hosts directly.
 
-- Android: native text share target, pasted link, curated catalogue and User Ghosted feed.
-- Web: pasted link, curated catalogue and User Ghosted feed.
-- iOS: URL capture model remains compatible; a native Share Extension is a separate Xcode-target deliverable before iOS distribution.
+## Reliability
+
+Link preview is best-effort. Sites may block cloud crawlers, return different regional pages, require consent, or render metadata late. The two-layer server + device strategy captures the same standard preview fields used by common link unfurlers when the page exposes them, while the editable fallback prevents a dead end.

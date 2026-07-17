@@ -8,19 +8,31 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.UUID
 
-private val URL_PATTERN = Regex("https://[^\\s]+", RegexOption.IGNORE_CASE)
+private val URL_PATTERN = Regex("""https://[^\s]+""", RegexOption.IGNORE_CASE)
+private val BLOCKED_LINK_SUFFIXES = listOf(".localhost", ".local", ".internal", ".home", ".lan", ".onion")
 
-fun extractSupportedRetailerUrl(sharedText: String?): String? = sharedText
-    ?.let { URL_PATTERN.findAll(it).map { match -> match.value.trimEnd('.', ',', ')', ']') }.firstOrNull { url ->
-        runCatching {
-            val host = URL(url).host.lowercase()
-            host == "amazon.ae" || host.endsWith(".amazon.ae") ||
-                host == "amazon.com" || host.endsWith(".amazon.com") ||
-                host == "amzn.eu" || host.endsWith(".amzn.eu") ||
-                host == "noon.com" || host.endsWith(".noon.com")
-        }.getOrDefault(false)
+private fun isSafePublicHttpsUrl(value: String): Boolean = runCatching {
+    val url = URL(value)
+    val host = url.host.lowercase().trimEnd('.')
+    val ipLiteral = Regex("""[0-9]{1,3}(?:[.][0-9]{1,3}){3}""").matches(host) || host.contains(':')
+    url.protocol.equals("https", ignoreCase = true) &&
+        url.userInfo == null &&
+        (url.port == -1 || url.port == 443) &&
+        host.contains('.') &&
+        host != "localhost" &&
+        !ipLiteral &&
+        BLOCKED_LINK_SUFFIXES.none(host::endsWith)
+}.getOrDefault(false)
+
+fun extractSharedUrl(sharedText: String?): String? = sharedText
+    ?.let {
+        URL_PATTERN.findAll(it)
+            .map { match -> match.value.trimEnd('.', ',', ')', ']', '}', '>', '"') }
+            .firstOrNull(::isSafePublicHttpsUrl)
     }
-}
+
+@Deprecated("Use extractSharedUrl; generic public HTTPS links are supported.")
+fun extractSupportedRetailerUrl(sharedText: String?): String? = extractSharedUrl(sharedText)
 
 data class ImportedProduct(
     val title: String,
@@ -112,6 +124,30 @@ internal fun mergeSharedMetadata(
         note = if (complete) null else product.note
     )
 }
+internal fun mergeDeviceMetadata(
+    product: ImportedProduct,
+    metadata: DeviceLinkMetadata
+): ImportedProduct {
+    val currentTitleIsFallback = product.status == "needs_input" || titleLooksLikeFallback(product.title)
+    val mergedTitle = if (currentTitleIsFallback) metadata.title ?: product.title else product.title
+    val mergedPrice = product.priceCents ?: metadata.priceCents
+    val mergedImage = product.imageUrl ?: metadata.imageUrl
+    val mergedCurrency = product.currencyCode ?: metadata.currencyCode
+    val complete = !titleLooksLikeFallback(mergedTitle) && mergedPrice != null && mergedImage != null
+    return product.copy(
+        title = mergedTitle,
+        priceCents = mergedPrice,
+        currencyCode = mergedCurrency,
+        imageUrl = mergedImage,
+        status = if (complete) "complete" else "partial",
+        note = if (complete) null else "Some details could not be read automatically. Check and edit them before ghosting."
+    )
+}
+
+private fun titleLooksLikeFallback(value: String): Boolean =
+    value == "Shared product" ||
+        value.startsWith("Shared item from ", ignoreCase = true) ||
+        Regex("""^[A-Z0-9_-]{10,}$""", RegexOption.IGNORE_CASE).matches(value)
 private fun decodeRetailerHtml(value: String): String = value
     .replace("&nbsp;", " ", ignoreCase = true)
     .replace("&#160;", " ", ignoreCase = true)
@@ -139,15 +175,9 @@ private fun retailerMeta(html: String, keys: Set<String>): String? {
         }
 }
 
-private fun allowedRetailerImage(value: String?): String? = value?.let { candidate ->
-    runCatching {
-        val url = URL(candidate)
-        val host = url.host.lowercase().trimEnd('.')
-        val allowed = listOf("media-amazon.com", "ssl-images-amazon.com", "nooncdn.com", "nordcdn.com")
-            .any { host == it || host.endsWith(".$it") }
-        candidate.takeIf { url.protocol == "https" && allowed }
-    }.getOrNull()
-}
+private fun allowedRetailerImage(value: String?): String? = value
+    ?.trim()
+    ?.takeIf(::isSafePublicHttpsUrl)
 
 internal fun extractRetailerHtmlMetadata(html: String): RetailerHtmlMetadata {
     val rawTitle = retailerMeta(html, setOf("og:title", "twitter:title"))
@@ -155,7 +185,6 @@ internal fun extractRetailerHtmlMetadata(html: String): RetailerHtmlMetadata {
             .find(html)?.groupValues?.getOrNull(1)?.let(::decodeRetailerHtml)
     val title = rawTitle
         ?.replace(Regex("""\s*:\s*Buy Online.*$""", RegexOption.IGNORE_CASE), "")
-        ?.replace(Regex("""\s*[|–-]\s*(Amazon(?:\.ae)?|noon).*$""", RegexOption.IGNORE_CASE), "")
         ?.trim()?.take(160)?.takeIf { it.isNotBlank() }
     val rawPrice = retailerMeta(
         html,
@@ -288,7 +317,7 @@ object ProductImportRepository {
             try {
                 val code = connection.responseCode
                 val finalUrl = connection.url.toString()
-                if (code !in 200..299 || extractSupportedRetailerUrl(finalUrl) == null) return@runCatching product
+                if (code !in 200..299 || !isSafePublicHttpsUrl(finalUrl)) return@runCatching product
                 val metadata = extractRetailerHtmlMetadata(readRetailerHtml(connection))
                 val mergedTitle = if (product.title == "Shared product") metadata.title ?: product.title else product.title
                 val mergedPrice = product.priceCents ?: metadata.priceCents
@@ -301,7 +330,7 @@ object ProductImportRepository {
                     currencyCode = mergedCurrency,
                     imageUrl = mergedImage,
                     status = if (complete) "complete" else "partial",
-                    note = if (complete) null else "Some details could not be read. Check and edit them before ghosting."
+                    note = if (complete) null else "Some details could not be read automatically. Check and edit them before ghosting."
                 )
             } finally {
                 connection.disconnect()

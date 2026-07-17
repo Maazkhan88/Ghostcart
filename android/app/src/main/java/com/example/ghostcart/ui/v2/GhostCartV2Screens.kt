@@ -254,6 +254,7 @@ fun CaptureAlmostBuyScreen(
     }
     var sourceUrl by remember(seed?.sourceUrl) { mutableStateOf(seed?.sourceUrl.orEmpty()) }
     var imageUrl by remember(seed?.imageUrl) { mutableStateOf(seed?.imageUrl) }
+    var imageLoadFailed by remember(seed?.imageUrl) { mutableStateOf(false) }
     var sourceKind by remember(seed?.sourceKind) { mutableStateOf(seed?.sourceKind ?: "manual") }
     var shareWithCommunity by remember(seed?.sourceUrl) { mutableStateOf(false) }
     var category by remember(seed?.category) { mutableStateOf(seed?.category?.takeIf { it in categories } ?: categories.first()) }
@@ -279,6 +280,7 @@ fun CaptureAlmostBuyScreen(
             amount = seed.amountCents.takeIf { it > 0 }?.let { DecimalFormat("0.00").format(it / 100.0) }.orEmpty()
             sourceUrl = seed.sourceUrl.orEmpty()
             imageUrl = seed.imageUrl
+            imageLoadFailed = false
             sourceKind = seed.sourceKind
             category = seed.category.takeIf { it in categories } ?: "Other"
             trigger = seed.trigger.takeIf { it in triggers } ?: triggers.first()
@@ -294,28 +296,28 @@ fun CaptureAlmostBuyScreen(
         item {
             Column {
                 Text(stringResource(R.string.capture_headline), color = Ink, fontSize = 30.sp, lineHeight = 33.sp, fontWeight = FontWeight.ExtraBold)
-                Text("Share from Amazon or Noon, or enter the details yourself. Everything stays editable.", color = MutedText, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+                Text("Share a product from any shopping app or paste its link. Everything stays editable.", color = MutedText, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
             }
         }
         item {
             Card(colors = CardDefaults.cardColors(containerColor = SoftGray), shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("Import a product link", color = Ink, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("On Amazon or Noon, tap Share and choose Ghost Cart—or paste the link here.", color = MutedText, fontSize = 11.sp)
+                    Text("In any shopping app, tap Share and choose Ghost Cart - or paste the public product link here.", color = MutedText, fontSize = 11.sp)
                     OutlinedTextField(
                         value = sourceUrl,
                         onValueChange = { sourceUrl = it.take(2048); error = null },
-                        label = { Text("Amazon / Noon link") },
+                        label = { Text("Product link") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         colors = ghostTextFieldColors()
                     )
                     OutlinedButton(
-                        onClick = { if (sourceUrl.isNotBlank()) onImportSharedUrl(sourceUrl.trim()) else error = "Paste an Amazon or Noon product link." },
+                        onClick = { if (sourceUrl.isNotBlank()) onImportSharedUrl(sourceUrl.trim()) else error = "Paste a public HTTPS product link." },
                         enabled = importState !is ProductImportState.Loading,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(if (importState is ProductImportState.Loading) "Reading product…" else "Capture product details")
+                        Text(if (importState is ProductImportState.Loading) "Reading product..." else "Capture product details")
                     }
                     when (importState) {
                         is ProductImportState.Ready -> {
@@ -338,16 +340,41 @@ fun CaptureAlmostBuyScreen(
                 }
             }
         }
-        if (imageUrl != null) {
-            item {
-                Box(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(20.dp)).background(SoftGray), contentAlignment = Alignment.Center) {
-                    AsyncImage(
-                        model = imageUrl,
-                        contentDescription = if (name.isBlank()) "Imported product image" else "$name product image",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize().padding(12.dp)
-                    )
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(
+                    Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(20.dp)).background(SoftGray),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (!imageUrl.isNullOrBlank() && !imageLoadFailed) {
+                        AsyncImage(
+                            model = imageUrl,
+                            contentDescription = if (name.isBlank()) "Imported product image" else "$name product image",
+                            contentScale = ContentScale.Fit,
+                            onError = { imageLoadFailed = true },
+                            onSuccess = { imageLoadFailed = false },
+                            modifier = Modifier.fillMaxSize().padding(12.dp)
+                        )
+                    } else {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Icon(Icons.Filled.ShoppingBag, contentDescription = null, tint = MutedText, modifier = Modifier.size(34.dp))
+                            Text("Product image not captured yet", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("Paste an image URL below or continue without one.", color = MutedText, fontSize = 10.sp)
+                        }
+                    }
                 }
+                OutlinedTextField(
+                    value = imageUrl.orEmpty(),
+                    onValueChange = {
+                        imageUrl = it.trim().take(2048).takeIf(String::isNotBlank)
+                        imageLoadFailed = false
+                    },
+                    label = { Text("Product image URL (optional)") },
+                    placeholder = { Text("https://...") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ghostTextFieldColors()
+                )
             }
         }
         item {

@@ -1,17 +1,12 @@
-const RETAILER_ROOTS = ["amazon.ae", "amazon.com", "amzn.eu", "noon.com"] as const;
-const IMAGE_ROOTS = [
-  "media-amazon.com",
-  "ssl-images-amazon.com",
-  "nooncdn.com",
-  "nordcdn.com",
-] as const;
-const MAX_HTML_BYTES = 1_200_000;
-const MAX_REDIRECTS = 3;
-const FETCH_TIMEOUT_MS = 10_000;
+const MAX_DOCUMENT_BYTES = 1_500_000;
+const MAX_REDIRECTS = 5;
+const FETCH_TIMEOUT_MS = 12_000;
+const TRACKING_KEYS = /^(utm_.+|fbclid|gclid|msclkid|shareid|tag|ref|ref_|referrer)$/i;
+const BLOCKED_HOST_SUFFIXES = [".localhost", ".local", ".internal", ".home", ".lan", ".onion"];
 
 export type RetailerProductPreview = {
   status: "complete" | "partial" | "needs_input";
-  retailer: "Amazon" | "Noon";
+  retailer: string;
   sourceDomain: string;
   canonicalUrl: string;
   title: string;
@@ -28,14 +23,30 @@ function hostMatches(hostname: string, roots: readonly string[]): boolean {
   return roots.some((root) => host === root || host.endsWith(`.${root}`));
 }
 
+function isIpLiteral(hostname: string): boolean {
+  const host = hostname.replace(/^\[|\]$/g, "");
+  return /^\d{1,3}(?:\.\d{1,3}){3}$/.test(host) || host.includes(":");
+}
+
+function isPublicHostname(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/\.$/, "");
+  if (!host || host === "localhost" || isIpLiteral(host)) return false;
+  if (BLOCKED_HOST_SUFFIXES.some((suffix) => host.endsWith(suffix))) return false;
+  return host.includes(".");
+}
+
 export function isAllowedRetailerHost(hostname: string): boolean {
-  return hostMatches(hostname, RETAILER_ROOTS);
+  return isPublicHostname(hostname);
 }
 
 export function isAllowedProductImageUrl(value: string): boolean {
   try {
     const url = new URL(value);
-    return url.protocol === "https:" && hostMatches(url.hostname, IMAGE_ROOTS);
+    return url.protocol === "https:" &&
+      !url.username &&
+      !url.password &&
+      (!url.port || url.port === "443") &&
+      isPublicHostname(url.hostname);
   } catch {
     return false;
   }
@@ -44,31 +55,26 @@ export function isAllowedProductImageUrl(value: string): boolean {
 export function canonicalizeRetailerUrl(value: string): URL {
   const url = new URL(value.trim());
   if (url.protocol !== "https:" || url.username || url.password) {
-    throw new Error("Only secure Amazon or Noon product links are supported");
+    throw new Error("Share a secure public HTTPS link");
   }
-  if (url.port && url.port !== "443") {
-    throw new Error("Custom ports are not supported");
-  }
-  if (!isAllowedRetailerHost(url.hostname)) {
-    throw new Error("Share an Amazon or Noon product link");
-  }
+  if (url.port && url.port !== "443") throw new Error("Custom ports are not supported");
+  if (!isPublicHostname(url.hostname)) throw new Error("Share a public website link");
+
   url.hash = "";
   url.hostname = url.hostname.toLowerCase();
   const amazonProduct = url.pathname.match(/\/(?:dp|gp\/product)\/([A-Z0-9]{10})(?:[/?]|$)/i);
   if (amazonProduct) {
     url.pathname = `/dp/${amazonProduct[1].toUpperCase()}`;
     url.search = "";
-  } else if (hostMatches(url.hostname, ["noon.com"])) {
-    const productKey = url.searchParams.get("o");
-    url.search = "";
-    if (productKey && /^[a-z0-9_-]{3,80}$/i.test(productKey)) {
-      url.searchParams.set("o", productKey);
+  } else {
+    for (const key of [...url.searchParams.keys()]) {
+      if (TRACKING_KEYS.test(key)) url.searchParams.delete(key);
     }
-  } else if (!hostMatches(url.hostname, ["amzn.eu"])) {
-    url.search = "";
   }
   return url;
 }
+
+export const canonicalizeSharedUrl = canonicalizeRetailerUrl;
 
 function decodeHtml(value: string): string {
   const named: Record<string, string> = {
@@ -115,22 +121,22 @@ function amazonPageImage(html: string): string | null {
 function jsonLdProducts(html: string): Record<string, unknown>[] {
   const results: Record<string, unknown>[] = [];
   const scripts = html.match(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi) ?? [];
-  for (const script of scripts.slice(0, 12)) {
+  const visit = (value: unknown) => {
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    if (!value || typeof value !== "object") return;
+    const record = value as Record<string, unknown>;
+    const type = record["@type"];
+    if (type === "Product" || (Array.isArray(type) && type.includes("Product"))) results.push(record);
+    if (Array.isArray(record["@graph"])) record["@graph"].forEach(visit);
+    if (record.mainEntity) visit(record.mainEntity);
+  };
+  for (const script of scripts.slice(0, 16)) {
     const raw = script.replace(/^<script\b[^>]*>/i, "").replace(/<\/script>$/i, "").trim();
-    try {
-      const parsed = JSON.parse(raw);
-      const queue = Array.isArray(parsed) ? [...parsed] : [parsed];
-      while (queue.length) {
-        const value = queue.shift();
-        if (!value || typeof value !== "object") continue;
-        const record = value as Record<string, unknown>;
-        if (Array.isArray(record["@graph"])) queue.push(...record["@graph"] as unknown[]);
-        const type = record["@type"];
-        if (type === "Product" || (Array.isArray(type) && type.includes("Product"))) results.push(record);
-      }
-    } catch {
-      // Retailer pages sometimes contain non-standard JSON-LD. Open Graph still
-      // provides a safe editable fallback.
+    try { visit(JSON.parse(raw)); } catch {
+      // Invalid JSON-LD is ignored; Open Graph and document metadata remain available.
     }
   }
   return results;
@@ -138,12 +144,22 @@ function jsonLdProducts(html: string): Record<string, unknown>[] {
 
 function firstString(value: unknown): string | null {
   if (typeof value === "string") return value;
-  if (Array.isArray(value)) return value.find((item): item is string => typeof item === "string") ?? null;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = firstString(item);
+      if (found) return found;
+    }
+  }
   if (value && typeof value === "object") {
-    const candidate = (value as Record<string, unknown>).url;
-    return typeof candidate === "string" ? candidate : null;
+    const record = value as Record<string, unknown>;
+    return firstString(record.url) ?? firstString(record.contentUrl);
   }
   return null;
+}
+
+function firstRecord(value: unknown): Record<string, unknown> {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  return candidate && typeof candidate === "object" ? candidate as Record<string, unknown> : {};
 }
 
 function parsePrice(value: unknown): number | null {
@@ -169,14 +185,29 @@ function inferCategory(title: string): string {
   return "Other";
 }
 
-function fallbackTitle(url: URL): string {
-  const part = url.pathname.split("/").filter(Boolean).find((value) => value.length > 8 && !/^[A-Z0-9]{10}$/i.test(value));
-  return part ? decodeURIComponent(part).replace(/[-_]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()).slice(0, 160) : "Shared product";
+function sourceLabel(url: URL): string {
+  if (hostMatches(url.hostname, ["noon.com"])) return "Noon";
+  if (hostMatches(url.hostname, ["amazon.ae", "amazon.com", "amzn.eu"])) return "Amazon";
+  const host = url.hostname.replace(/^www\./, "");
+  const label = host.split(".").slice(-2, -1)[0] || host.split(".")[0] || "Website";
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
-async function readLimitedHtml(response: Response): Promise<string> {
+function fallbackTitle(url: URL): string {
+  const parts = url.pathname.split("/").filter(Boolean).filter((value) =>
+    value.length > 2 &&
+    !/^(?:p|dp|product|products|en-ae|uae-en|saudi-en|egypt-en)$/i.test(value) &&
+    !/^[A-Z0-9_-]{10,}$/i.test(value)
+  );
+  const part = parts.sort((a, b) => b.length - a.length)[0];
+  return part
+    ? decodeURIComponent(part).replace(/[-_]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()).slice(0, 160)
+    : `Shared item from ${sourceLabel(url)}`;
+}
+
+async function readLimitedText(response: Response): Promise<string> {
   const length = Number(response.headers.get("content-length") ?? 0);
-  if (length > MAX_HTML_BYTES) throw new Error("Product page is too large to preview safely");
+  if (length > MAX_DOCUMENT_BYTES) throw new Error("The shared page is too large to preview safely");
   if (!response.body) return "";
   const reader = response.body.getReader();
   const chunks: Uint8Array[] = [];
@@ -185,9 +216,9 @@ async function readLimitedHtml(response: Response): Promise<string> {
     const { done, value } = await reader.read();
     if (done) break;
     total += value.byteLength;
-    if (total > MAX_HTML_BYTES) {
+    if (total > MAX_DOCUMENT_BYTES) {
       await reader.cancel();
-      throw new Error("Product page is too large to preview safely");
+      throw new Error("The shared page is too large to preview safely");
     }
     chunks.push(value);
   }
@@ -197,17 +228,51 @@ async function readLimitedHtml(response: Response): Promise<string> {
   return new TextDecoder().decode(bytes);
 }
 
-export function extractRetailerProduct(html: string, finalUrl: URL): RetailerProductPreview {
-  const product = jsonLdProducts(html)[0] ?? {};
-  const offersValue = Array.isArray(product.offers) ? product.offers[0] : product.offers;
-  const offers = offersValue && typeof offersValue === "object" ? offersValue as Record<string, unknown> : {};
-  const rawTitle = firstString(product.name) ?? meta(html, ["og:title", "twitter:title"]) ?? htmlTitle(html) ?? fallbackTitle(finalUrl);
-  const title = rawTitle
+function cleanTitle(rawTitle: string, finalUrl: URL): string {
+  let title = rawTitle
     .replace(/\s*:\s*Buy Online.*$/i, "")
     .replace(/\s*[|–-]\s*(Amazon(?:\.ae)?|noon).*$/i, "")
-    .trim()
-    .slice(0, 160) || "Shared product";
-  const rawImage = firstString(product.image) ?? meta(html, ["og:image", "twitter:image"]) ?? amazonPageImage(html);
+    .trim();
+  const hostLabel = sourceLabel(finalUrl);
+  title = title.replace(new RegExp(`\\s*[|–-]\\s*${hostLabel}\\s*$`, "i"), "").trim();
+  return title.slice(0, 160) || fallbackTitle(finalUrl);
+}
+
+function buildPreview(input: {
+  finalUrl: URL;
+  title: string;
+  imageUrl: string | null;
+  priceCents: number | null;
+  currencyCode: string | null;
+}): RetailerProductPreview {
+  const { finalUrl, imageUrl, priceCents, currencyCode } = input;
+  const title = cleanTitle(input.title, finalUrl);
+  const complete = title.length > 0 && imageUrl !== null && priceCents !== null;
+  return {
+    status: complete ? "complete" : "partial",
+    retailer: sourceLabel(finalUrl),
+    sourceDomain: finalUrl.hostname,
+    canonicalUrl: canonicalizeRetailerUrl(finalUrl.toString()).toString(),
+    title,
+    imageUrl,
+    priceCents,
+    currencyCode,
+    category: inferCategory(title),
+    editable: true,
+    note: complete ? undefined : "Some details are still loading or were not exposed. Every field stays editable.",
+  };
+}
+
+export function extractRetailerProduct(html: string, finalUrl: URL): RetailerProductPreview {
+  const product = jsonLdProducts(html)[0] ?? {};
+  const offers = firstRecord(product.offers);
+  const rawTitle = firstString(product.name) ??
+    meta(html, ["og:title", "twitter:title", "title"]) ??
+    htmlTitle(html) ??
+    fallbackTitle(finalUrl);
+  const rawImage = firstString(product.image) ??
+    meta(html, ["og:image:secure_url", "og:image", "twitter:image", "twitter:image:src", "image"]) ??
+    amazonPageImage(html);
   let imageUrl: string | null = null;
   if (rawImage) {
     try {
@@ -216,30 +281,75 @@ export function extractRetailerProduct(html: string, finalUrl: URL): RetailerPro
     } catch { imageUrl = null; }
   }
   const priceCents = parsePrice(
-    offers.price ?? meta(html, ["product:price:amount", "og:price:amount", "price"]) ?? amazonPagePrice(html),
+    offers.price ??
+    offers.lowPrice ??
+    meta(html, ["product:price:amount", "og:price:amount", "price", "sale_price"]) ??
+    amazonPagePrice(html),
   );
-  const currencyValue = firstString(offers.priceCurrency) ?? meta(html, ["product:price:currency", "og:price:currency", "pricecurrency"]);
-  const currencyCode = currencyValue ? currencyValue.toUpperCase().slice(0, 3) : priceCents !== null && hostMatches(finalUrl.hostname, ["amazon.ae"]) ? "AED" : null;
-  const retailer = hostMatches(finalUrl.hostname, ["noon.com"]) ? "Noon" : "Amazon";
-  const canonicalUrl = canonicalizeRetailerUrl(finalUrl.toString()).toString();
-  const status = title !== "Shared product" && imageUrl && priceCents !== null ? "complete" : "partial";
-  return {
-    status,
-    retailer,
-    sourceDomain: finalUrl.hostname,
-    canonicalUrl,
-    title,
-    imageUrl,
-    priceCents,
-    currencyCode,
-    category: inferCategory(title),
-    editable: true,
-    note: status === "partial" ? "Some details could not be read. Check and edit them before ghosting." : undefined,
-  };
+  const currencyValue = firstString(offers.priceCurrency) ??
+    meta(html, ["product:price:currency", "og:price:currency", "pricecurrency"]);
+  const currencyCode = currencyValue
+    ? currencyValue.toUpperCase().slice(0, 3)
+    : priceCents !== null && (hostMatches(finalUrl.hostname, ["amazon.ae", "noon.com"])) ? "AED" : null;
+  return buildPreview({ finalUrl, title: rawTitle, imageUrl, priceCents, currencyCode });
+}
+
+function noonSku(url: URL): string | null {
+  if (!hostMatches(url.hostname, ["noon.com"])) return null;
+  const match = url.pathname.match(/\/([A-Z][A-Z0-9]{8,30})\/p(?:\/|$)/i);
+  return match?.[1]?.toUpperCase() ?? null;
+}
+
+async function previewNoonCatalog(url: URL): Promise<RetailerProductPreview | null> {
+  const sku = noonSku(url);
+  if (!sku) return null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 6_000);
+  try {
+    const response = await fetch(
+      `https://www.noon.com/_vs/nc/mp-customer-catalog-api/api/v1/u/${encodeURIComponent(sku)}/p`,
+      {
+        signal: controller.signal,
+        headers: {
+          Accept: "application/json",
+          "Accept-Language": "en-AE,en;q=0.9",
+          "User-Agent": "GhostCartLinkPreview/2.2",
+        },
+      },
+    );
+    if (!response.ok) return null;
+    const payload = JSON.parse(await readLimitedText(response)) as Record<string, unknown>;
+    const product = firstRecord(payload.product);
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+    const matchingVariant = variants.find((value) =>
+      value && typeof value === "object" &&
+      String((value as Record<string, unknown>).sku ?? "").toUpperCase() === sku
+    ) ?? variants[0];
+    const variant = firstRecord(matchingVariant);
+    const offer = firstRecord(variant.offers);
+    const title = firstString(product.product_title) ?? firstString(product.name);
+    const image = firstString(product.image_urls) ?? firstString(product.image_url);
+    if (!title && !image) return null;
+    const imageUrl = image && isAllowedProductImageUrl(image) ? image : null;
+    return buildPreview({
+      finalUrl: url,
+      title: title ?? fallbackTitle(url),
+      imageUrl,
+      priceCents: parsePrice(offer.sale_price ?? offer.price),
+      currencyCode: "AED",
+    });
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export async function previewRetailerProduct(value: string): Promise<RetailerProductPreview> {
   let current = canonicalizeRetailerUrl(value);
+  const noonPreview = await previewNoonCatalog(current);
+  if (noonPreview?.title && noonPreview.imageUrl) return noonPreview;
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
@@ -251,28 +361,28 @@ export async function previewRetailerProduct(value: string): Promise<RetailerPro
         headers: {
           Accept: "text/html,application/xhtml+xml;q=0.9",
           "Accept-Language": "en-AE,en;q=0.9",
-          "User-Agent": "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 Chrome/126.0.0.0 Mobile Safari/537.36",
+          "User-Agent": "GhostCartLinkPreview/2.2 (+https://ghost-cart-preview.maaz-n-khan.chatgpt.site)",
         },
       });
       if (response.status >= 300 && response.status < 400) {
         const location = response.headers.get("location");
-        if (!location || redirect === MAX_REDIRECTS) throw new Error("Too many retailer redirects");
+        if (!location || redirect === MAX_REDIRECTS) throw new Error("Too many redirects");
         current = canonicalizeRetailerUrl(new URL(location, current).toString());
         continue;
       }
-      if (!response.ok) throw new Error(`Retailer preview returned ${response.status}`);
+      if (!response.ok) throw new Error(`Link preview returned ${response.status}`);
       const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
       if (!contentType.includes("text/html") && !contentType.includes("application/xhtml+xml")) {
-        throw new Error("Shared link is not a product page");
+        throw new Error("The shared link is not an HTML page");
       }
-      return extractRetailerProduct(await readLimitedHtml(response), current);
+      return extractRetailerProduct(await readLimitedText(response), current);
     }
-    throw new Error("Unable to follow retailer link");
+    throw new Error("Unable to follow the shared link");
   } catch (error) {
     const canonical = canonicalizeRetailerUrl(current.toString());
     return {
       status: "needs_input",
-      retailer: hostMatches(canonical.hostname, ["noon.com"]) ? "Noon" : "Amazon",
+      retailer: sourceLabel(canonical),
       sourceDomain: canonical.hostname,
       canonicalUrl: canonical.toString(),
       title: fallbackTitle(canonical),
@@ -282,8 +392,8 @@ export async function previewRetailerProduct(value: string): Promise<RetailerPro
       category: inferCategory(fallbackTitle(canonical)),
       editable: true,
       note: error instanceof Error && error.name === "AbortError"
-        ? "The retailer took too long to respond. Add the missing details manually."
-        : "The retailer did not expose every detail. Add the missing details manually.",
+        ? "This website took too long to answer. Ghost Cart will also try reading it on your device."
+        : "This website did not expose a server preview. Ghost Cart will also try reading it on your device.",
     };
   } finally {
     clearTimeout(timeout);

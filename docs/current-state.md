@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-07-18 (Codex — v2.1.3 Android rich-share title and thumbnail capture).
+Last updated: 2026-07-18 (Codex - v2.2.0 universal product-link preview and device fallback).
 
 ## Canonical handoff for Antigravity and Claude Code (2026-07-18)
 
@@ -9,13 +9,13 @@ This section is the current operational source of truth. Historical session logs
 ### Repository and release state
 
 - Working branch: `agent/ghost-cart-products-sharing`
-- Latest product implementation commit: `43a3e1dc53cfed4bca7ee5899d2ab1a697828774`
+- Latest product implementation: current head of `agent/ghost-cart-products-sharing` (v2.2.0 universal link import).
 - Draft PR: https://github.com/Maazkhan88/Ghostcart/pull/3
 - Base branch: `main`; current `main` already contains the merged v2 rebuild from PR #2 (`f4bb3ab`).
 - Canonical hosted site/API: https://ghost-cart-preview.maaz-n-khan.chatgpt.site
-- Android release: `releases/GhostCart-v2.1.3-debug.apk`
-- Direct APK: https://raw.githubusercontent.com/Maazkhan88/Ghostcart/agent/ghost-cart-products-sharing/releases/GhostCart-v2.1.3-debug.apk
-- APK SHA-256: `CCAAA9C68998DEFB36EA103A43E6FC40AFE71B81923ACA117CDE2638FD11FB5F`
+- Android release: `releases/GhostCart-v2.2.0-debug.apk`
+- Direct APK: https://raw.githubusercontent.com/Maazkhan88/Ghostcart/agent/ghost-cart-products-sharing/releases/GhostCart-v2.2.0-debug.apk
+- APK SHA-256: `1667F472C757E7C7C2E076B65E14B4A59F9400D77141C8185F836477F4456AA6`
 
 ### Current product truth
 
@@ -34,16 +34,16 @@ This section is the current operational source of truth. Historical session logs
 - Passwords use PBKDF2-SHA-256 with per-user random salts; bearer sessions store only token hashes.
 - Canonical v2 lifecycle APIs and accounting rules are documented in `docs/backend-v2.md`.
 - Real Most Ghosted Today supports Dubai-day grouping, rate limits, idempotency, pseudonymous actors, minimum-three-user privacy thresholds, and honest no-activity/privacy-suppressed states.
-- Curated product catalogue, website product discovery demo, Amazon/Noon link preview endpoint, and anonymous `User Ghosted` community feed are implemented.
-- Public community cards omit user identity and original source URLs. Images are restricted to supported retailer hosts.
+- Curated product catalogue, website product discovery demo, universal public-HTTPS link preview endpoint, and anonymous `User Ghosted` community feed are implemented.
+- Public community cards omit user identity and original source URLs. Imported remote images remain editable; production scale requires a Ghost Cart-controlled image proxy/cache before exposing arbitrary remote image hosts to other users.
 - Current hosted API endpoint is the Sites URL above. Do not point new clients back to the older stale Workers/Pages URLs recorded later in this historical document.
 
-#### Android v2.1.3
+#### Android v2.2.0
 
 - Five-tab v2 information architecture: Home, Cooldowns, central Ghost +, Progress, and Profile.
 - Honest local cooldown lifecycle with editable item name/amount/category/trigger, recommended pause presets, resolution as skipped/bought intentionally/more time, recent decisions, and Money Kept only after confirmed skipping.
 - Curated product discovery has product pictures, categories, Ghost buy, and Cool it actions.
-- Android registers as an `ACTION_SEND` text target for Amazon/Noon links and also accepts pasted supported retailer URLs.
+- Android registers as an `ACTION_SEND` text target for public HTTPS links from any shopping/browser app and also accepts pasted links.
 - Imported items can capture title, AED price, high-resolution image, retailer/category metadata, and enter the normal editable cooldown flow.
 - Optional explicit anonymous consent can publish sanitized metadata to the `User Ghosted` shelf; publishing never changes Money Kept.
 - Cooling-complete local notifications deep-link to the decision flow. Optional lunch and dinner reminder preferences are separate and off by default; defaults are 13:00 and 20:00 Dubai-local time.
@@ -51,7 +51,7 @@ This section is the current operational source of truth. Historical session logs
 - Product imagery and cardholder names no longer use one fixed user identity.
 - Ghost Rider tracking artwork/animation and simulated checkout assets exist in the legacy/optional ritual surfaces; none imply real GPS or delivery.
 
-#### Latest v2.1.3 fixes
+#### Latest v2.2.0 fixes
 
 - Android share handling now consumes the rich share title and image URI supplied through `EXTRA_TITLE`, `EXTRA_STREAM`, intent data, or `ClipData`, instead of discarding everything except the URL.
 - Shared image content is copied into private app storage before the sending app can revoke temporary URI access. Old cached share thumbnails are bounded and pruned.
@@ -75,14 +75,14 @@ This section is the current operational source of truth. Historical session logs
 
 - Android: `testDebugUnitTest`, `lintDebug`, and `assembleDebug` pass with JDK from `C:\Program Files\Android\Android Studio\jbr`.
 - Kotlin incremental-cache corruption was cleared with Gradle `clean`; the successful verification build used `'-Pkotlin.incremental=false'`.
-- The v2.1.3 raw GitHub APK URL returns HTTP 200 and the checksum above.
-- Web product-preview tests cover browser-style Amazon markup plus safety/host validation; the Sites build was deployed before the Android v2.1.2-only contrast/fallback changes.
+- The v2.2.0 APK was rebuilt from current source and its checksum is recorded above; the raw GitHub URL should be rechecked after this commit is pushed.
+- Web/backend verification passes 22 tests; the focused product-preview suite passes 8 cases covering generic JSON-LD/Open Graph, Amazon markup, Noon URL identity and safety validation. Android unit tests, lint and APK assembly also pass.
 
 ### Known limitations and do-not-assume items
 
 - Retailer extraction is inherently best-effort. Amazon/Noon can vary HTML or block cloud/device requests. Keep manual title/amount editing and never promise guaranteed capture.
-- The current hosted cloud preview can receive only partial metadata for some Amazon/Noon pages. Android v2.1.3 therefore preserves rich share title/thumbnail metadata and performs a second direct device-side fetch for missing price/image.
-- The Android form currently lets users edit title and amount after import; a dedicated manual image-URL/image-picker correction control is still a follow-up.
+- Cloud preview can still receive partial metadata from sites that block crawlers. Android v2.2.0 therefore preserves share title/thumbnail data and performs a second isolated device-browser metadata pass for missing title, price or image.
+- Android now supports manual image-URL correction. A native screenshot/gallery picker remains a follow-up.
 - Android v2 lifecycle state is primarily local/offline-first. The hosted authenticated `/api/almost-buys` lifecycle exists, but full cross-device sync from the v2 Android UI is not yet complete.
 - iOS has a SwiftUI scaffold/assets and compatible models, but it has not been compiled on Windows. The native iOS Share Extension is not built.
 - No real App Store/Play Store release, signing pipeline, production push provider (FCM/APNs), real payment, order, delivery, or banking capability exists.
@@ -90,8 +90,8 @@ This section is the current operational source of truth. Historical session logs
 
 ### Recommended next work, in order
 
-1. Install v2.1.3 on a physical Android device and retest the exact Amazon/Noon share flows, including sender-supplied thumbnails and image loading on Wi-Fi and mobile data.
-2. Add an image correction flow (paste image URL or choose a local screenshot) when retailer image capture is partial.
+1. Install v2.2.0 on a physical Android device and retest the exact Noon URL plus Amazon and at least two unrelated shopping sites on Wi-Fi and mobile data.
+2. Add a native screenshot/gallery picker and a Ghost Cart-controlled image proxy/cache for community cards.
 3. Add Android integration/UI tests for the share intent, completed/partial capture copy, image loading failure, and cooldown button contrast.
 4. Connect Android v2 lifecycle/preferences to the authenticated backend for optional account sync while retaining offline-first behavior and conflict handling.
 5. Review/apply production D1 migration state and event hash salt before relying on live community activity at scale.

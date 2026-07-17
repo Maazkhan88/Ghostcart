@@ -19,8 +19,10 @@ class ProductImportRepositoryTest {
     }
 
     @Test
-    fun ignoresUnsupportedLinks() {
-        assertNull(extractSupportedRetailerUrl("https://example.com/product/123"))
+    fun acceptsAnySafePublicHttpsProductLink() {
+        assertEquals("https://example.com/product/123", extractSharedUrl("https://example.com/product/123"))
+        assertNull(extractSharedUrl("http://example.com/product/123"))
+        assertNull(extractSharedUrl("https://localhost/product/123"))
     }
 
     @Test
@@ -72,6 +74,34 @@ class ProductImportRepositoryTest {
         )
     }
 
+    @Test
+    fun deviceMetadataReplacesSkuFallbackAndCompletesTheProduct() {
+        val imported = ImportedProduct(
+            title = "ZD6752E98E2B3393AF05BZ",
+            priceCents = null,
+            currencyCode = null,
+            category = "Other",
+            imageUrl = null,
+            sourceUrl = "https://www.noon.com/en-ae/ZD6752E98E2B3393AF05BZ/p/",
+            sourceDomain = "www.noon.com",
+            retailer = "Noon",
+            status = "partial",
+            note = "Missing metadata"
+        )
+        val merged = mergeDeviceMetadata(
+            imported,
+            DeviceLinkMetadata(
+                title = "Schecter 1742 Electric Guitar Synyster Custom-S - Gloss Black With Gold Stripes",
+                imageUrl = "https://f.nooncdn.com/p/pzsku/ZD6752E98E2B3393AF05BZ/45/product.jpg",
+                priceCents = 699_900L,
+                currencyCode = "AED"
+            )
+        )
+        assertEquals("Schecter 1742 Electric Guitar Synyster Custom-S - Gloss Black With Gold Stripes", merged.title)
+        assertEquals(699_900L, merged.priceCents)
+        assertEquals("https://f.nooncdn.com/p/pzsku/ZD6752E98E2B3393AF05BZ/45/product.jpg", merged.imageUrl)
+        assertEquals("complete", merged.status)
+    }
     @Test
     fun keepsThumbnailAndTitleSuppliedByAndroidShareIntent() {
         val imported = ImportedProduct(

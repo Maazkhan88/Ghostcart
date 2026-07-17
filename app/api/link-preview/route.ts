@@ -21,13 +21,13 @@ export async function POST(request: Request) {
     });
     if (!rateLimit.allowed) {
       return json(
-        { error: "Too many product previews. Try again later." },
+        { error: "Too many link previews. Try again later." },
         { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
       );
     }
     const payload = (await request.json()) as { url?: unknown };
     if (typeof payload.url !== "string" || payload.url.length > 2048) {
-      return json({ error: "Share a valid Amazon or Noon product link" }, { status: 400 });
+      return json({ error: "Share a valid public HTTPS link" }, { status: 400 });
     }
     const product = await previewRetailerProduct(payload.url);
     return json({ product });

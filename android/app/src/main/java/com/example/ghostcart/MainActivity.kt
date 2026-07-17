@@ -17,7 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
-import com.example.ghostcart.data.extractSupportedRetailerUrl
+import com.example.ghostcart.data.extractSharedUrl
 import com.example.ghostcart.theme.GhostCartTheme
 import java.io.File
 
@@ -80,7 +80,7 @@ class MainActivity : ComponentActivity() {
         }
       }
     }.joinToString(separator = "\n")
-    val url = extractSupportedRetailerUrl(sharedText) ?: return
+    val url = extractSharedUrl(sharedText) ?: return
     val title = intent.getCharSequenceExtra(Intent.EXTRA_TITLE)
       ?.toString()
       ?.trim()

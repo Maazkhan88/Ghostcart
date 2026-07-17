@@ -26,6 +26,8 @@ import com.example.ghostcart.data.GhostActivityRepository
 import com.example.ghostcart.data.GhostRanking
 import com.example.ghostcart.data.GhostCardImageExporter
 import com.example.ghostcart.data.CommunityProduct
+import com.example.ghostcart.data.DeviceLinkPreview
+import com.example.ghostcart.data.mergeDeviceMetadata
 import com.example.ghostcart.data.ProductImportRepository
 import com.example.ghostcart.data.ProductImportState
 import kotlinx.coroutines.Job
@@ -118,27 +120,33 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun importSharedProduct(sourceUrl: String, sharedTitle: String? = null, sharedImageUrl: String? = null) {
         _uiState.update { it.copy(productImportState = ProductImportState.Loading) }
         viewModelScope.launch {
-            ProductImportRepository.preview(sourceUrl, sharedTitle, sharedImageUrl)
-                .onSuccess { product ->
-                    _uiState.update {
-                        it.copy(
-                            productImportState = ProductImportState.Ready(product),
-                            captureSeed = AlmostBuyDraft(
-                                name = product.title,
-                                amountCents = if (product.currencyCode == null || product.currencyCode == "AED") product.priceCents ?: 0 else 0,
-                                category = product.category,
-                                trigger = "FOMO",
-                                coolingDurationMillis = recommendedCooling(product.category),
-                                sourceUrl = product.sourceUrl,
-                                imageUrl = product.imageUrl,
-                                sourceKind = "share"
-                            )
-                        )
-                    }
-                }
-                .onFailure { error ->
-                    _uiState.update { it.copy(productImportState = ProductImportState.Error(error.message ?: "Unable to read this product")) }
-                }
+            val result = ProductImportRepository.preview(sourceUrl, sharedTitle, sharedImageUrl)
+            val serverProduct = result.getOrElse { error ->
+                _uiState.update { it.copy(productImportState = ProductImportState.Error(error.message ?: "Unable to read this product")) }
+                return@launch
+            }
+            val needsDevicePreview = serverProduct.imageUrl == null || serverProduct.priceCents == null || serverProduct.status != "complete"
+            val deviceMetadata = if (needsDevicePreview) {
+                DeviceLinkPreview.read(getApplication(), serverProduct.sourceUrl)
+            } else {
+                null
+            }
+            val product = deviceMetadata?.let { mergeDeviceMetadata(serverProduct, it) } ?: serverProduct
+            _uiState.update {
+                it.copy(
+                    productImportState = ProductImportState.Ready(product),
+                    captureSeed = AlmostBuyDraft(
+                        name = product.title,
+                        amountCents = if (product.currencyCode == null || product.currencyCode == "AED") product.priceCents ?: 0 else 0,
+                        category = product.category,
+                        trigger = "FOMO",
+                        coolingDurationMillis = recommendedCooling(product.category),
+                        sourceUrl = product.sourceUrl,
+                        imageUrl = product.imageUrl,
+                        sourceKind = "share"
+                    )
+                )
+            }
         }
     }
 

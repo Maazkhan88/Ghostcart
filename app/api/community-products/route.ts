@@ -96,7 +96,7 @@ export async function POST(request: Request) {
     const error = title.error || category.error || price.error || image.error;
     if (error) return json({ error }, { status: 400 });
     if (image.value && !isAllowedProductImageUrl(image.value)) {
-      return json({ error: "Product image must come from an approved Amazon or Noon image host" }, { status: 400 });
+      return json({ error: "Product image must use a safe public HTTPS URL" }, { status: 400 });
     }
     if (payload.currencyCode !== undefined && payload.currencyCode !== "AED") {
       return json({ error: "Community products currently use AED values only" }, { status: 400 });

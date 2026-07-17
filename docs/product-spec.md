@@ -39,8 +39,8 @@ Product discovery is a visual entry point and never a real storefront. Curated i
 
 ## Share from retailer apps
 
-- Android registers as a text-share target so users can choose Ghost Cart from Amazon or Noon.
-- The backend accepts only HTTPS Amazon/Noon hosts, checks every redirect, limits response size and time, and rejects arbitrary hosts.
+- Android registers as a text-share target so users can choose Ghost Cart from any shopping or browser app.
+- The backend accepts safe public HTTPS links, removes known tracking parameters, checks redirects, limits response size and time, and rejects local/private-looking destinations, credentials and custom ports. It reads Open Graph, Twitter Card and Product structured data. Android uses an isolated WebView fallback when the cloud response is incomplete.
 - Ghost Cart attempts to read Open Graph or JSON-LD title, image, price and currency.
 - Extraction is best-effort. Every field remains editable and a manual fallback is always available.
 - Imported items enter the same canonical cooling state model as manual or catalogue items.

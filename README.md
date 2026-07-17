@@ -58,7 +58,7 @@ Requirements:
 
 Verified APK:
 
-releases/GhostCart-v2.1.3-debug.apk
+releases/GhostCart-v2.2.0-debug.apk
 
 The Android app persists almost-buys locally for an offline-first v2 experience. Cooling-complete notifications open the relevant decision flow. Lunch and dinner reminders are independent, optional, and off by default.
 
