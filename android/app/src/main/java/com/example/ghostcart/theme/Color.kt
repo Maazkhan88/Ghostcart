@@ -1,18 +1,26 @@
 package com.example.ghostcart.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
-val Ink = Color(0xFF050505)
-val Paper = Color(0xFFFFFFFF)
-val SoftGray = Color(0xFFF4F4F4)
+/** App-wide semantic palette. Existing screens use these role names directly. */
+object GhostPaletteState {
+    var darkMode by mutableStateOf(false)
+}
+
+val Ink: Color get() = if (GhostPaletteState.darkMode) Color(0xFFF7F7F5) else Color(0xFF050505)
+val Paper: Color get() = if (GhostPaletteState.darkMode) Color(0xFF0C0C0C) else Color(0xFFFFFFFF)
+val SoftGray: Color get() = if (GhostPaletteState.darkMode) Color(0xFF1B1B1B) else Color(0xFFF4F4F4)
 val DarkGray = Color(0xFF161616)
 val GhostGreen = Color(0xFF64D64A)
-val ShadowGray = Color(0xFFD8D8D8)
+val ShadowGray: Color get() = if (GhostPaletteState.darkMode) Color(0xFF30302F) else Color(0xFFD8D8D8)
 
 // Light-app palette (Ghost Wallet / marketplace screens, matching the mobile-ui references)
-val MutedText = Color(0xFF454541)
-val FaintBorder = Color(0xFFE8E8E3)
-val GreenTint = Color(0xFFE3F6DE)
+val MutedText: Color get() = if (GhostPaletteState.darkMode) Color(0xFFB9B9B3) else Color(0xFF454541)
+val FaintBorder: Color get() = if (GhostPaletteState.darkMode) Color(0xFF343432) else Color(0xFFE8E8E3)
+val GreenTint: Color get() = if (GhostPaletteState.darkMode) Color(0xFF18301A) else Color(0xFFE3F6DE)
 val DangerRed = Color(0xFFE0453C)
 
 val Purple80 = Color(0xFFD0BCFF)

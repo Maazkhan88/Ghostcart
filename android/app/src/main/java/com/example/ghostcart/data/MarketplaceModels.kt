@@ -10,7 +10,8 @@ data class MarketplaceProduct(
     val scentOrType: String = "",
     val size: String = "",
     val brand: String = "",
-    val highEmotion: Boolean = false
+    val highEmotion: Boolean = false,
+    val imageUrl: String? = null
 )
 
 data class OverspendCategory(

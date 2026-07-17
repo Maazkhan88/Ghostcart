@@ -8,28 +8,30 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
   primary = GhostGreen,
-  secondary = SoftGray,
-  background = Ink,
-  surface = DarkGray,
-  onPrimary = Ink,
-  onSecondary = Paper,
-  onBackground = Paper,
-  onSurface = Paper
+  secondary = Color(0xFFB9B9B3),
+  background = Color(0xFF0C0C0C),
+  surface = Color(0xFF1B1B1B),
+  onPrimary = Color(0xFF050505),
+  onSecondary = Color(0xFF0C0C0C),
+  onBackground = Color(0xFFF7F7F5),
+  onSurface = Color(0xFFF7F7F5)
 )
 
 private val LightColorScheme = lightColorScheme(
   primary = GhostGreen,
-  secondary = Ink,
-  background = Paper,
-  surface = SoftGray,
-  onPrimary = Ink,
-  onSecondary = Paper,
-  onBackground = Ink,
-  onSurface = Ink
+  secondary = Color(0xFF050505),
+  background = Color(0xFFFFFFFF),
+  surface = Color(0xFFF4F4F4),
+  onPrimary = Color(0xFF050505),
+  onSecondary = Color(0xFFFFFFFF),
+  onBackground = Color(0xFF050505),
+  onSurface = Color(0xFF050505)
 )
 
 @Composable
@@ -39,6 +41,7 @@ fun GhostCartTheme(
   dynamicColor: Boolean = false,
   content: @Composable () -> Unit,
 ) {
+  SideEffect { GhostPaletteState.darkMode = darkTheme }
   val colorScheme =
     when {
       dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {

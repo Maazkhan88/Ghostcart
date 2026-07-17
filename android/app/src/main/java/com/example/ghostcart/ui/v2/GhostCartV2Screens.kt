@@ -96,6 +96,7 @@ import com.example.ghostcart.ui.GhostMascotPose
 import com.example.ghostcart.ui.common.GhostHeroCard
 import com.example.ghostcart.ui.common.GhostTopBar
 import com.example.ghostcart.ui.common.PrimaryButton
+import com.example.ghostcart.ui.common.SecondaryButton
 import com.example.ghostcart.ui.common.SimulationBadge
 import kotlinx.coroutines.delay
 import java.text.DecimalFormat
@@ -136,43 +137,6 @@ fun GhostHomeScreen(
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.home_eyebrow), color = GhostGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Text(stringResource(R.string.home_headline), color = Ink, fontSize = 31.sp, lineHeight = 34.sp, fontWeight = FontWeight.ExtraBold)
-                }
-                GhostMascotPose("wave", Modifier.size(72.dp))
-            }
-        }
-
-        item {
-            GhostHeroCard {
-                SimulationBadge(text = stringResource(R.string.simulation_only), dark = true)
-                Text(
-                    stringResource(R.string.home_hero_title),
-                    color = Paper,
-                    fontSize = 24.sp,
-                    lineHeight = 27.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    modifier = Modifier.padding(top = 18.dp)
-                )
-                Text(
-                    stringResource(R.string.home_hero_body),
-                    color = Paper.copy(alpha = 0.68f),
-                    fontSize = 13.sp,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 18.dp)
-                )
-                PrimaryButton(
-                    text = stringResource(R.string.ghost_something),
-                    onClick = onGhostSomething,
-                    leadingIcon = Icons.Filled.Add,
-                    containerColor = GhostGreen,
-                    contentColor = Ink
-                )
-            }
-        }
-
-item {
             ProductDiscoverySection(
                 catalogProducts = catalogProducts,
                 communityProducts = communityProducts,
@@ -182,6 +146,33 @@ item {
                 onGhostCommunity = onGhostCommunity,
                 onCoolCommunity = onCoolCommunity
             )
+        }
+
+        item {
+            GhostHeroCard(containerColor = Color(0xFF161616)) {
+                SimulationBadge(text = stringResource(R.string.simulation_only), dark = true)
+                Text(
+                    stringResource(R.string.home_hero_title),
+                    color = Color.White,
+                    fontSize = 24.sp,
+                    lineHeight = 27.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier.padding(top = 18.dp)
+                )
+                Text(
+                    stringResource(R.string.home_hero_body),
+                    color = Color.White.copy(alpha = 0.68f),
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 18.dp)
+                )
+                PrimaryButton(
+                    text = stringResource(R.string.ghost_something),
+                    onClick = onGhostSomething,
+                    leadingIcon = Icons.Filled.Add,
+                    containerColor = GhostGreen,
+                    contentColor = Color(0xFF050505)
+                )
+            }
         }
 
         item { ProgressStrip(summary = summary, onOpenProgress = onOpenProgress) }
@@ -244,8 +235,8 @@ fun CaptureAlmostBuyScreen(
     importState: ProductImportState = ProductImportState.Idle,
     onImportSharedUrl: (String) -> Unit,
     onBack: () -> Unit,
-    onGhost: (AlmostBuyDraft) -> Unit,
-    onComplete: () -> Unit,
+    onAddToCart: (AlmostBuyDraft) -> Unit,
+    onCoolIt: (AlmostBuyDraft) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var name by remember(seed?.name) { mutableStateOf(seed?.name.orEmpty()) }
@@ -264,6 +255,25 @@ fun CaptureAlmostBuyScreen(
     }
     var error by remember { mutableStateOf<String?>(null) }
     val requestNotifications = rememberNotificationPermissionRequest()
+
+    fun validatedDraft(): AlmostBuyDraft? {
+        val numericAmount = amount.toDoubleOrNull()
+        return when {
+            name.isBlank() -> null.also { error = "Give this item a name." }
+            numericAmount == null || numericAmount <= 0 -> null.also { error = "Enter an amount greater than zero." }
+            else -> AlmostBuyDraft(
+                name = name.trim(),
+                amountCents = (numericAmount * 100).toLong(),
+                category = category,
+                trigger = trigger,
+                coolingDurationMillis = cooling.durationMillis,
+                sourceUrl = sourceUrl.trim().takeIf { it.isNotBlank() },
+                imageUrl = imageUrl,
+                sourceKind = if (sourceUrl.isNotBlank()) "share" else sourceKind,
+                shareWithCommunity = shareWithCommunity
+            )
+        }
+    }
 
     LaunchedEffect(category, seed?.coolingDurationMillis) {
         if (seed?.coolingDurationMillis != null) return@LaunchedEffect
@@ -439,33 +449,24 @@ fun CaptureAlmostBuyScreen(
         if (error != null) item { Text(error.orEmpty(), color = Color(0xFFB42318), fontSize = 12.sp, fontWeight = FontWeight.Bold) }
         item {
             PrimaryButton(
-                text = stringResource(R.string.ghost_this_purchase),
+                text = "Add to Ghost Cart",
                 onClick = {
-                    val numericAmount = amount.toDoubleOrNull()
-                    when {
-                        name.isBlank() -> error = "Give this almost-buy a name."
-                        numericAmount == null || numericAmount <= 0 -> error = "Enter an amount greater than zero."
-                        else -> {
-                            onGhost(
-                                AlmostBuyDraft(
-                                    name = name.trim(),
-                                    amountCents = (numericAmount * 100).toLong(),
-                                    category = category,
-                                    trigger = trigger,
-                                    coolingDurationMillis = cooling.durationMillis,
-                                    sourceUrl = sourceUrl.trim().takeIf { it.isNotBlank() },
-                                    imageUrl = imageUrl,
-                                    sourceKind = if (sourceUrl.isNotBlank()) "share" else sourceKind,
-                                    shareWithCommunity = shareWithCommunity
-                                )
-                            )
-                            requestNotifications()
-                            onComplete()
-                        }
+                    validatedDraft()?.let(onAddToCart)
+                },
+                leadingIcon = Icons.Filled.ShoppingBag,
+                containerColor = Ink
+            )
+        }
+        item {
+            SecondaryButton(
+                text = "Cool it instead",
+                onClick = {
+                    validatedDraft()?.let {
+                        requestNotifications()
+                        onCoolIt(it)
                     }
                 },
-                leadingIcon = Icons.Filled.Timer,
-                containerColor = Ink
+                leadingIcon = Icons.Filled.Timer
             )
         }
         item {
@@ -592,8 +593,10 @@ fun ProgressScreen(almostBuys: List<AlmostBuy>, modifier: Modifier = Modifier) {
 fun ProfileScreen(
     config: WalletConfig,
     authEmail: String?,
+    appTheme: String,
     onSetCardholderName: (String) -> Unit,
     onSelectTheme: (String) -> Unit,
+    onSelectAppTheme: (String) -> Unit,
     onDownloadCard: () -> Unit,
     onToggleCooling: () -> Unit,
     onToggleLunch: () -> Unit,
@@ -614,6 +617,22 @@ fun ProfileScreen(
             Text(authEmail ?: stringResource(R.string.guest_profile), color = MutedText, fontSize = 12.sp)
         }
         item { MembershipCard(config) }
+        item {
+            Column {
+                Text("App appearance", color = Ink, fontWeight = FontWeight.ExtraBold)
+                Text("Choose light, dark, or follow your phone.", color = MutedText, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                    items(listOf("System", "Light", "Dark")) { theme ->
+                        FilterChip(
+                            selected = appTheme == theme,
+                            onClick = { onSelectAppTheme(theme) },
+                            label = { Text(theme) },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = GreenTint)
+                        )
+                    }
+                }
+            }
+        }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedButton(onClick = { editName = true }, modifier = Modifier.weight(1f)) {

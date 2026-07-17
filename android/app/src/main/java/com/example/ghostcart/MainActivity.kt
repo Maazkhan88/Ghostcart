@@ -9,16 +9,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
 import com.example.ghostcart.data.extractSharedUrl
-import com.example.ghostcart.theme.GhostCartTheme
 import java.io.File
 
 private data class SharedProductRequest(
@@ -46,18 +41,14 @@ class MainActivity : ComponentActivity() {
     }
 
     setContent {
-      GhostCartTheme(darkTheme = false) {
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-          val shared = sharedProductRequest.value
-          MainNavigation(
-            initialCooldownId = notificationCooldownId.value,
-            initialSharedUrl = shared?.url,
-            initialSharedTitle = shared?.title,
-            initialSharedImageUrl = shared?.imageUrl,
-            sharedRequestKey = shared?.requestKey
-          )
-        }
-      }
+      val shared = sharedProductRequest.value
+      MainNavigation(
+        initialCooldownId = notificationCooldownId.value,
+        initialSharedUrl = shared?.url,
+        initialSharedTitle = shared?.title,
+        initialSharedImageUrl = shared?.imageUrl,
+        sharedRequestKey = shared?.requestKey
+      )
     }
   }
 

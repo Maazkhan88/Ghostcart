@@ -72,8 +72,8 @@ fun ProductDiscoverySection(
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Find something worth ghosting", color = Ink, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
-        Text("Browse real-looking product ideas or share an Amazon/Noon link into Ghost Cart.", color = MutedText, fontSize = 12.sp)
+        Text("Products", color = Ink, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+        Text("Search the catalogue or share a product from any shopping app.", color = MutedText, fontSize = 12.sp)
         OutlinedTextField(
             value = query,
             onValueChange = { query = it.take(80) },
@@ -105,7 +105,19 @@ fun ProductDiscoverySection(
                         title = product.name,
                         category = product.category,
                         priceCents = product.price.toLong() * 100,
-                        image = { ProductPhoto(product.name, iconForProduct(product), Modifier.fillMaxSize()) },
+                        image = {
+                            Box(Modifier.fillMaxSize()) {
+                                ProductPhoto(product.name, iconForProduct(product), Modifier.fillMaxSize())
+                                if (product.imageUrl != null) {
+                                    AsyncImage(
+                                        model = product.imageUrl,
+                                        contentDescription = "${product.name} product image",
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier.fillMaxSize().background(Paper)
+                                    )
+                                }
+                            }
+                        },
                         onGhost = { onGhostCatalog(product.id) },
                         onCool = { onCoolCatalog(product.id) }
                     )
@@ -193,7 +205,7 @@ private fun DiscoveryProductCard(
             Box(
                 modifier = Modifier.weight(1f).height(38.dp).clip(RoundedCornerShape(11.dp)).background(Ink).clickable(onClick = onGhost),
                 contentAlignment = Alignment.Center
-            ) { Text("Ghost buy", color = Paper, fontSize = 9.sp, fontWeight = FontWeight.Bold) }
+            ) { Text("Add to cart", color = Paper, fontSize = 9.sp, fontWeight = FontWeight.Bold) }
             Box(
                 modifier = Modifier.weight(1f).height(38.dp).clip(RoundedCornerShape(11.dp)).background(GreenTint).clickable(onClick = onCool),
                 contentAlignment = Alignment.Center

@@ -2,6 +2,7 @@ package com.example.ghostcart
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Icon
@@ -44,14 +46,20 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import com.example.ghostcart.data.AlmostBuyResolution
+import com.example.ghostcart.data.WalletDemoData
 import com.ghostcart.app.R
 import com.example.ghostcart.theme.FaintBorder
 import com.example.ghostcart.theme.GhostGreen
 import com.example.ghostcart.theme.Ink
 import com.example.ghostcart.theme.MutedText
 import com.example.ghostcart.theme.Paper
+import com.example.ghostcart.theme.GhostCartTheme
 import com.example.ghostcart.ui.GhostMascotPose
 import com.example.ghostcart.ui.app.AppViewModel
+import com.example.ghostcart.ui.checkout.FakeDeliveryTrackingScreen
+import com.example.ghostcart.ui.checkout.GhostCartListScreen
+import com.example.ghostcart.ui.checkout.GhostCheckoutScreen
+import com.example.ghostcart.ui.checkout.OrderGhostedSuccessScreen
 import com.example.ghostcart.ui.onboarding.AuthScreen
 import com.example.ghostcart.ui.onboarding.PersonalizationScreen
 import com.example.ghostcart.ui.onboarding.ProfileSelectScreen
@@ -62,7 +70,7 @@ import com.example.ghostcart.ui.v2.ProfileScreen
 import com.example.ghostcart.ui.v2.ProgressScreen
 import kotlinx.coroutines.delay
 
-private val bottomDestinations: Set<NavKey> = setOf(Home, Cooldowns, Progress, GhostCardSettings)
+private val bottomDestinations: Set<NavKey> = setOf(Home, Cooldowns, GhostCartList, Progress, GhostCardSettings)
 
 @Composable
 fun MainNavigation(
@@ -77,7 +85,12 @@ fun MainNavigation(
     val appViewModel: AppViewModel = viewModel()
     val state by appViewModel.uiState.collectAsState()
     val current = backStack.lastOrNull()
-    val showBottomNav = current in bottomDestinations || current == CaptureAlmostBuy
+    val showBottomNav = current in bottomDestinations
+    val darkTheme = when (state.appTheme) {
+        "Dark" -> true
+        "Light" -> false
+        else -> isSystemInDarkTheme()
+    }
 
     LaunchedEffect(initialCooldownId) {
         if (initialCooldownId != null && backStack.lastOrNull() != Cooldowns) {
@@ -92,6 +105,7 @@ fun MainNavigation(
         }
     }
 
+    GhostCartTheme(darkTheme = darkTheme) {
     Box(Modifier.fillMaxSize()) {
         Scaffold(
             containerColor = Paper,
@@ -165,14 +179,14 @@ fun MainNavigation(
                             onOpenCooldowns = { backStack.add(Cooldowns) },
                             onOpenProgress = { backStack.add(Progress) },
                             onGhostCatalog = { id ->
-                                appViewModel.quickGhostCatalogProduct(id) { backStack.add(Cooldowns) }
+                                appViewModel.addToCart(id)
                             },
                             onCoolCatalog = { id ->
                                 appViewModel.prepareCatalogProduct(id)
                                 backStack.add(CaptureAlmostBuy)
                             },
                             onGhostCommunity = { id ->
-                                appViewModel.quickGhostCommunityProduct(id) { backStack.add(Cooldowns) }
+                                appViewModel.addCommunityToCart(id)
                             },
                             onCoolCommunity = { id ->
                                 appViewModel.prepareCommunityProduct(id)
@@ -189,8 +203,14 @@ fun MainNavigation(
                                 appViewModel.clearCaptureSeed()
                                 backStack.removeLastOrNull()
                             },
-                            onGhost = { appViewModel.createAlmostBuy(it) },
-                            onComplete = {
+                            onAddToCart = {
+                                appViewModel.addDraftToCart(it)
+                                appViewModel.clearCaptureSeed()
+                                backStack.clear()
+                                backStack.add(GhostCartList)
+                            },
+                            onCoolIt = {
+                                appViewModel.createAlmostBuy(it)
                                 appViewModel.clearCaptureSeed()
                                 backStack.clear()
                                 backStack.add(Cooldowns)
@@ -206,15 +226,70 @@ fun MainNavigation(
                         )
                     }
                     entry<Progress> { ProgressScreen(almostBuys = state.almostBuys) }
+                    entry<GhostCartList> {
+                        GhostCartListScreen(
+                            products = appViewModel.cartProductsWithQuantities(),
+                            coolingUntilByProductId = state.coolingUntilByProductId,
+                            onBack = { if (backStack.size > 1) backStack.removeLastOrNull() else backStack.add(Home) },
+                            onAdd = appViewModel::addToCart,
+                            onRemove = appViewModel::removeFromCart,
+                            onClearAll = appViewModel::clearCart,
+                            onStartCooling = appViewModel::startCoolingPeriod,
+                            onCheckout = {
+                                if (state.cartQuantities.isEmpty()) appViewModel.showToast("Add an item before checkout")
+                                else backStack.add(GhostCheckout)
+                            }
+                        )
+                    }
+                    entry<GhostCheckout> {
+                        GhostCheckoutScreen(
+                            products = appViewModel.cartProductsWithQuantities(),
+                            walletBalance = WalletDemoData.currentBalance,
+                            simulationIntervalMinutes = state.simulationIntervalMinutes,
+                            onSelectInterval = appViewModel::setSimulationInterval,
+                            onBack = { backStack.removeLastOrNull() },
+                            onPlaceOrder = {
+                                appViewModel.placeSimulatedOrder()
+                                backStack.add(OrderGhostedSuccess)
+                            }
+                        )
+                    }
+                    entry<OrderGhostedSuccess> {
+                        OrderGhostedSuccessScreen(
+                            orderId = state.lastOrderId,
+                            amountAvoided = state.lastOrderTotal,
+                            onTrackDelivery = {
+                                appViewModel.startDeliveryTracking()
+                                backStack.add(FakeDeliveryTracking)
+                            },
+                            onViewSavings = {
+                                backStack.clear()
+                                backStack.add(Progress)
+                            }
+                        )
+                    }
+                    entry<FakeDeliveryTracking> {
+                        FakeDeliveryTrackingScreen(
+                            orderId = state.lastOrderId,
+                            amountSaved = state.lastOrderTotal,
+                            deliveryStep = state.deliveryStep,
+                            onViewReceipt = {
+                                backStack.clear()
+                                backStack.add(Home)
+                            }
+                        )
+                    }
                     entry<GhostCardSettings> {
                         ProfileScreen(
                             config = state.walletConfig,
                             authEmail = state.authEmail,
+                            appTheme = state.appTheme,
                             onSetCardholderName = { name ->
                                 appViewModel.updateWalletConfig { it.copy(cardholderName = name) }
                                 appViewModel.showToast("Name updated")
                             },
                             onSelectTheme = { theme -> appViewModel.updateWalletConfig { it.copy(cardTheme = theme) } },
+                            onSelectAppTheme = appViewModel::setAppTheme,
                             onDownloadCard = appViewModel::downloadGhostCard,
                             onToggleCooling = {
                                 appViewModel.updateWalletConfig { it.copy(coolingNotificationsEnabled = !it.coolingNotificationsEnabled) }
@@ -253,6 +328,7 @@ fun MainNavigation(
             }
         }
     }
+    }
 }
 
 @Composable
@@ -273,7 +349,7 @@ private fun GhostBottomNav(current: NavKey?, onNavigate: (NavKey) -> Unit) {
     val items = listOf(
         Item(stringResource(R.string.nav_home), Home, Icons.Filled.Home),
         Item(stringResource(R.string.nav_cooldowns), Cooldowns, Icons.Filled.Timer),
-        Item(stringResource(R.string.nav_ghost), CaptureAlmostBuy, Icons.Filled.Add, central = true),
+        Item("Ghost Cart", GhostCartList, Icons.Filled.ShoppingCart, central = true),
         Item(stringResource(R.string.nav_progress), Progress, Icons.Filled.Timeline),
         Item(stringResource(R.string.nav_profile), GhostCardSettings, Icons.Filled.Person)
     )

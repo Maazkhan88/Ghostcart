@@ -4,6 +4,22 @@ All notable changes to the Ghost Cart project will be documented in this file.
 
 ---
 
+## [2.3.0] - 2026-07-18
+
+### Restored
+- Restored Ghost Cart as a first-class bottom-navigation destination.
+- Product and community “Add to cart” actions now add to the simulated cart instead of silently creating a cooldown.
+- Shared-link capture now offers two explicit paths: “Add to Ghost Cart” or “Cool it instead.”
+- Reconnected simulated cart, checkout, order confirmation, and fake-delivery routes.
+
+### Changed
+- Home now opens directly on product search and category filters before secondary progress content.
+- Imported/community product images carry into cart and checkout.
+- Added persistent System, Light, and Dark app appearance choices in Profile.
+- Corrected checkout copy so simulated checkout totals are not automatically counted as confirmed Money Kept.
+
+---
+
 ## [1.2.2] - 2026-07-17
 
 ### Fixed

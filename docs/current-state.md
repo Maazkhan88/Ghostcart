@@ -784,3 +784,13 @@ section-alignment instructions (still current). For the asset situation:
    dashboard (Settings → Build configuration for `nameless-d98e`), not a
    code fix. Don't re-investigate this from scratch; see the PR comment at
    https://github.com/Maazkhan88/Ghostcart/pull/1 for the full findings.
+## Android v2.3.0 cart and theme update — 2026-07-18
+
+- The central bottom-navigation action is Ghost Cart again; capture/import is reached from Home.
+- Catalogue and “User Ghosted” items add to the cart. Cooling is an explicit separate action.
+- A shared product link opens an editable capture screen with “Add to Ghost Cart” as the primary action and “Cool it instead” as the secondary action.
+- Home begins with product search, category filters, catalogue cards, and the community feed.
+- Cart, simulated checkout, confirmation, and fake-delivery routes are connected to the current v2 navigation.
+- Imported product images are retained in cart and checkout.
+- Profile contains a persistent app appearance setting: System, Light, or Dark.
+- The app remains simulation-only: real amount charged is always zero and simulated checkout is not automatically counted as confirmed Money Kept.

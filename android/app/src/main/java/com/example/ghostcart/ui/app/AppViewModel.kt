@@ -71,7 +71,8 @@ data class AppUiState(
     val productImportState: ProductImportState = ProductImportState.Idle,
     val communityProducts: List<CommunityProduct> = emptyList(),
     val communityProductsLoading: Boolean = true,
-    val captureSeed: AlmostBuyDraft? = null
+    val captureSeed: AlmostBuyDraft? = null,
+    val appTheme: String = "System"
 )
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
@@ -81,12 +82,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow(AppUiState(
         authEmail = sharedPrefs.getString("auth_email", null),
         walletConfig = loadWalletConfig(),
-        coolingUntilByProductId = loadCoolingPeriods()
+        coolingUntilByProductId = loadCoolingPeriods(),
+        appTheme = sharedPrefs.getString("app_theme", "System") ?: "System"
     ))
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
 
     private var deliveryJob: Job? = null
     private var toastJob: Job? = null
+    private val sharedCartProducts = mutableMapOf<String, MarketplaceProduct>()
 
     init {
         refreshMostGhostedToday()
@@ -104,7 +107,43 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         (Marketplace.featuredCatalog + Marketplace.discoveryCatalog + Marketplace.fakeFlashDeals + Marketplace.foodAndCoffeeCatalog)
             .distinctBy { it.id }
 
-    fun findProduct(id: String): MarketplaceProduct? = allProducts.find { it.id == id }
+    fun findProduct(id: String): MarketplaceProduct? =
+        allProducts.find { it.id == id } ?: sharedCartProducts[id]
+
+    fun setAppTheme(theme: String) {
+        val normalized = theme.takeIf { it in setOf("System", "Light", "Dark") } ?: "System"
+        sharedPrefs.edit().putString("app_theme", normalized).apply()
+        _uiState.update { it.copy(appTheme = normalized) }
+    }
+
+    fun addCommunityToCart(productId: String) {
+        val source = _uiState.value.communityProducts.find { it.id == productId } ?: return
+        val product = MarketplaceProduct(
+            id = "community_${source.id}",
+            name = source.title,
+            category = normalizeCategory(source.category),
+            price = (source.priceCents / 100L).toInt().coerceAtLeast(0),
+            iconName = "gadget",
+            brand = source.sourceDomain,
+            imageUrl = source.imageUrl
+        )
+        sharedCartProducts[product.id] = product
+        addToCart(product.id)
+    }
+
+    fun addDraftToCart(draft: AlmostBuyDraft) {
+        val id = "shared_${UUID.randomUUID()}"
+        val product = MarketplaceProduct(
+            id = id,
+            name = draft.name,
+            category = normalizeCategory(draft.category),
+            price = (draft.amountCents / 100L).toInt().coerceAtLeast(0),
+            iconName = "bag",
+            imageUrl = draft.imageUrl
+        )
+        sharedCartProducts[id] = product
+        addToCart(id)
+    }
 
     fun refreshCommunityProducts() {
         _uiState.update { it.copy(communityProductsLoading = true) }

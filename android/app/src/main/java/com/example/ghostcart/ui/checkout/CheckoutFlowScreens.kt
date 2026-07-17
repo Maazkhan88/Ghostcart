@@ -49,6 +49,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -77,6 +78,7 @@ import com.example.ghostcart.ui.common.GhostTopBar
 import com.example.ghostcart.ui.common.PrimaryButton
 import com.example.ghostcart.ui.common.RoundIconButton
 import com.example.ghostcart.ui.common.SecondaryButton
+import coil3.compose.AsyncImage
 
 private const val SERVICE_FEE_RATE = 0.05f
 private const val VAT_RATE = 0.05f
@@ -111,11 +113,11 @@ fun GhostCartListScreen(
             fontWeight = FontWeight.ExtraBold,
             modifier = Modifier.padding(top = 12.dp)
         )
-        Text(text = "You didn't check out—and that's a win.", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+        Text(text = "Nothing here is charged or delivered.", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
             Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = GhostGreen, modifier = Modifier.size(14.dp))
-            Text(text = "You saved ${Marketplace.currency} $subtotal", color = GhostGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 6.dp))
+            Text(text = "You almost spent ${Marketplace.currency} $subtotal", color = GhostGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 6.dp))
         }
 
         if (products.isEmpty()) {
@@ -138,6 +140,12 @@ fun GhostCartListScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             ProductPhoto(productName = product.name, fallbackIconName = iconForProduct(product), modifier = Modifier.fillMaxSize())
+                            if (product.imageUrl != null) AsyncImage(
+                                model = product.imageUrl,
+                                contentDescription = "${product.name} product image",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize().background(Paper)
+                            )
                         }
                         Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
                             Text(text = product.name, color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
@@ -196,13 +204,13 @@ fun GhostCartListScreen(
         ) {
             SummaryLine("Subtotal", "${Marketplace.currency} $subtotal")
             SummaryLine("Small Win Fee", "${Marketplace.currency} 0")
-            SummaryLine("Saved with Ghost Cart", "-${Marketplace.currency} 0", valueColor = GhostGreen)
+            SummaryLine("Real amount charged", "${Marketplace.currency} 0", valueColor = GhostGreen)
             Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).height(1.dp).background(FaintBorder))
             SummaryLine("Total you almost spent:", "${Marketplace.currency} $subtotal", bold = true)
         }
 
         PrimaryButton(text = "Proceed to Ghost Checkout", onClick = onCheckout, modifier = Modifier.padding(top = 14.dp))
-        SecondaryButton(text = "I Don't Need This — Save Now", onClick = onClearAll, modifier = Modifier.padding(top = 10.dp))
+        SecondaryButton(text = "Clear Ghost Cart", onClick = onClearAll, modifier = Modifier.padding(top = 10.dp))
     }
 }
 
@@ -232,7 +240,7 @@ fun GhostCheckoutScreen(
 
     Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
         GhostTopBar(title = "Ghost Checkout", onBack = onBack)
-        Text(text = "🔒 Simulation Mode", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+        Text(text = "Simulation mode", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
 
         Column(
             modifier = Modifier
@@ -293,6 +301,12 @@ fun GhostCheckoutScreen(
                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(SoftGray), contentAlignment = Alignment.Center) {
                         ProductPhoto(productName = product.name, fallbackIconName = iconForProduct(product), modifier = Modifier.fillMaxSize())
+                        if (product.imageUrl != null) AsyncImage(
+                            model = product.imageUrl,
+                            contentDescription = "${product.name} product image",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.fillMaxSize().background(Paper)
+                        )
                     }
                     Text(text = "${product.name} (x$qty)", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).padding(horizontal = 10.dp))
                     Text(text = "${Marketplace.currency} ${product.price * qty}", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -362,7 +376,7 @@ fun OrderGhostedSuccessScreen(
 
         Text(text = "Order Ghosted\nSuccessfully", color = Ink, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 20.dp))
         Row(modifier = Modifier.padding(top = 8.dp)) {
-            Text(text = "You avoided spending ", color = MutedText, fontSize = 13.sp)
+            Text(text = "Simulated checkout total: ", color = MutedText, fontSize = 13.sp)
             Text(text = "${Marketplace.currency} $amountAvoided.", color = GhostGreen, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
         }
 
@@ -381,13 +395,13 @@ fun OrderGhostedSuccessScreen(
 
         Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             InfoTile(label = "Real amount charged:", value = "${Marketplace.currency} 0", modifier = Modifier.weight(1f))
-            InfoTile(label = "Money saved added to your dashboard", value = "", modifier = Modifier.weight(1f))
+            InfoTile(label = "Not counted as Money Kept until you later choose to skip it", value = "", modifier = Modifier.weight(1f))
         }
 
         Spacer(modifier = Modifier.weight(1f))
 
         PrimaryButton(text = "Track Fake Delivery", onClick = onTrackDelivery, trailingIcon = Icons.Filled.ArrowForward)
-        SecondaryButton(text = "View My Savings", onClick = onViewSavings, modifier = Modifier.padding(top = 10.dp))
+        SecondaryButton(text = "View Progress", onClick = onViewSavings, modifier = Modifier.padding(top = 10.dp))
     }
 }
 
@@ -447,11 +461,11 @@ fun FakeDeliveryTrackingScreen(
         ) {
             Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = GhostGreen, modifier = Modifier.size(20.dp))
             Column(modifier = Modifier.weight(1f).padding(horizontal = 10.dp)) {
-                Text(text = "Your savings are protected", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                Text(text = "You saved ${Marketplace.currency} $amountSaved on this imaginary order.", color = MutedText, fontSize = 10.sp)
+                Text(text = "No real charge was made", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(text = "${Marketplace.currency} $amountSaved remains an almost-spent amount until you decide.", color = MutedText, fontSize = 10.sp)
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text(text = "You saved", color = MutedText, fontSize = 9.sp)
+                Text(text = "Simulated", color = MutedText, fontSize = 9.sp)
                 Text(text = "${Marketplace.currency} $amountSaved", color = GhostGreen, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
             }
         }
@@ -727,6 +741,12 @@ fun PayWithGhostCardScreen(
         Row(modifier = Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(SoftGray), contentAlignment = Alignment.Center) {
                 ProductPhoto(productName = product.name, fallbackIconName = iconForProduct(product), modifier = Modifier.fillMaxSize())
+                if (product.imageUrl != null) AsyncImage(
+                    model = product.imageUrl,
+                    contentDescription = "${product.name} product image",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize().background(Paper)
+                )
             }
             Column(modifier = Modifier.weight(1f).padding(horizontal = 10.dp)) {
                 Text(text = product.name, color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
