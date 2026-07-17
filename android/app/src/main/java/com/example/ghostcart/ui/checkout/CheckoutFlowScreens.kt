@@ -1,16 +1,25 @@
 package com.example.ghostcart.ui.checkout
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -36,7 +45,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -482,19 +496,7 @@ fun FakeDeliveryTrackingScreen(
             }
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(160.dp)
-                .clip(RoundedCornerShape(18.dp))
-                .background(SoftGray)
-        ) {
-            Row(modifier = Modifier.padding(10.dp)) {
-                Box(modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(GreenTint).padding(horizontal = 8.dp, vertical = 4.dp)) {
-                    Text(text = "● Live", color = GhostGreen, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
+        SimulatedGhostRiderRoute(deliveryStep = deliveryStep)
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
             Box(modifier = Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)).background(SoftGray), contentAlignment = Alignment.Center) {
                 GhostMascotPose(poseName = "wave", modifier = Modifier.size(24.dp))
@@ -506,6 +508,188 @@ fun FakeDeliveryTrackingScreen(
         }
 
         PrimaryButton(text = "View Ghost Receipt", onClick = onViewReceipt, modifier = Modifier.padding(top = 18.dp))
+    }
+}
+
+@Composable
+private fun SimulatedGhostRiderRoute(
+    deliveryStep: Int,
+    modifier: Modifier = Modifier
+) {
+    val safeStep = deliveryStep.coerceIn(0, 4)
+    val targetProgress = when (safeStep) {
+        0 -> 0.08f
+        1 -> 0.24f
+        2 -> 0.58f
+        3 -> 0.88f
+        else -> 0.96f
+    }
+    val routeProgress = animateFloatAsState(
+        targetValue = targetProgress,
+        animationSpec = tween(durationMillis = 1_200),
+        label = "ghost rider route progress"
+    ).value
+    val isDriving = safeStep < 4
+    val infiniteTransition = rememberInfiniteTransition(label = "ghost rider driving")
+    val roadMotion = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 650),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "moving road markings"
+    ).value
+    val riderBounce = infiniteTransition.animateFloat(
+        initialValue = -2f,
+        targetValue = 2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 360),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "rider bounce"
+    ).value
+    val status = when (safeStep) {
+        0 -> "Leaving the imaginary kitchen"
+        1 -> "Loading absolutely nothing"
+        2 -> "Ghost Rider is cruising"
+        3 -> "Arriving at your imaginary doorstep"
+        else -> "Fake delivery complete"
+    }
+
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(190.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(SoftGray)
+            .semantics {
+                contentDescription = "Simulated live route. $status. This is not real GPS tracking."
+            }
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(GreenTint)
+                    .padding(horizontal = 9.dp, vertical = 5.dp)
+            ) {
+                Text(text = "● Live simulation", color = GhostGreen, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            }
+            Text(text = "NOT REAL GPS", color = MutedText, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+        }
+
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(start = 18.dp, end = 18.dp, top = 44.dp, bottom = 34.dp)
+        ) {
+            val startX = 20f
+            val endX = size.width - 20f
+            val roadY = size.height * 0.62f
+            val totalDistance = endX - startX
+
+            drawLine(
+                color = FaintBorder,
+                start = Offset(startX, roadY),
+                end = Offset(endX, roadY),
+                strokeWidth = 16f,
+                cap = StrokeCap.Round
+            )
+            drawLine(
+                color = GhostGreen.copy(alpha = 0.38f),
+                start = Offset(startX, roadY),
+                end = Offset(startX + totalDistance * routeProgress, roadY),
+                strokeWidth = 16f,
+                cap = StrokeCap.Round
+            )
+
+            val dashOffset = if (isDriving) roadMotion * 38f else 0f
+            var dashX = startX - 38f + dashOffset
+            while (dashX < endX) {
+                drawLine(
+                    color = Paper.copy(alpha = 0.92f),
+                    start = Offset(dashX.coerceAtLeast(startX), roadY),
+                    end = Offset((dashX + 18f).coerceAtMost(endX), roadY),
+                    strokeWidth = 3f,
+                    cap = StrokeCap.Round
+                )
+                dashX += 38f
+            }
+
+            drawCircle(color = Ink, radius = 7f, center = Offset(startX, roadY))
+            drawCircle(color = GhostGreen, radius = 9f, center = Offset(endX, roadY))
+            drawCircle(color = Paper, radius = 4f, center = Offset(endX, roadY))
+        }
+
+        val riderWidth = 64.dp
+        val travelWidth = (maxWidth - riderWidth - 24.dp).coerceAtLeast(0.dp)
+        val drivingNudge = if (isDriving) (roadMotion * 5f).dp else 0.dp
+        Box(
+            modifier = Modifier
+                .offset(
+                    x = 12.dp + (travelWidth * routeProgress) + drivingNudge,
+                    y = (55f + if (isDriving) riderBounce else 0f).dp
+                )
+                .size(width = riderWidth, height = 52.dp)
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val wheelY = size.height * 0.82f
+                drawCircle(color = Ink, radius = size.width * 0.10f, center = Offset(size.width * 0.27f, wheelY))
+                drawCircle(color = Ink, radius = size.width * 0.10f, center = Offset(size.width * 0.76f, wheelY))
+                drawCircle(color = Paper, radius = size.width * 0.04f, center = Offset(size.width * 0.27f, wheelY))
+                drawCircle(color = Paper, radius = size.width * 0.04f, center = Offset(size.width * 0.76f, wheelY))
+                drawRoundRect(
+                    color = GhostGreen,
+                    topLeft = Offset(size.width * 0.26f, size.height * 0.49f),
+                    size = Size(size.width * 0.43f, size.height * 0.23f),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.width * 0.08f)
+                )
+                drawLine(
+                    color = Ink,
+                    start = Offset(size.width * 0.65f, size.height * 0.52f),
+                    end = Offset(size.width * 0.78f, size.height * 0.31f),
+                    strokeWidth = 4f,
+                    cap = StrokeCap.Round
+                )
+                drawLine(
+                    color = Ink,
+                    start = Offset(size.width * 0.76f, size.height * 0.31f),
+                    end = Offset(size.width * 0.86f, size.height * 0.31f),
+                    strokeWidth = 4f,
+                    cap = StrokeCap.Round
+                )
+            }
+            GhostMascotPose(
+                poseName = "wave",
+                modifier = Modifier.size(31.dp).offset(x = 7.dp, y = 1.dp)
+            )
+        }
+
+        Text(
+            text = "Ghost kitchen",
+            color = MutedText,
+            fontSize = 8.sp,
+            modifier = Modifier.align(Alignment.BottomStart).padding(start = 12.dp, bottom = 8.dp)
+        )
+        Text(
+            text = "Imaginary doorstep",
+            color = MutedText,
+            fontSize = 8.sp,
+            textAlign = TextAlign.End,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 12.dp, bottom = 8.dp)
+        )
+        Text(
+            text = status,
+            color = Ink,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 45.dp)
+        )
     }
 }
 
