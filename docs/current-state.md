@@ -1,6 +1,93 @@
 # Current State
 
-Last updated: 2026-07-16 (Claude — fixed the web production build, which had been broken for 4 days without anyone noticing).
+Last updated: 2026-07-18 (Codex — v2.1.2 retailer capture and accessibility/contrast fixes).
+
+## Canonical handoff for Antigravity and Claude Code (2026-07-18)
+
+This section is the current operational source of truth. Historical session logs remain below for provenance; where they conflict with this section or the product source-of-truth documents, this section and the newer product documents win.
+
+### Repository and release state
+
+- Working branch: `agent/ghost-cart-products-sharing`
+- Latest product implementation commit: `2c41f4200f899f7726f7975a6dc9fe384be9e054`
+- Draft PR: https://github.com/Maazkhan88/Ghostcart/pull/3
+- Base branch: `main`; current `main` already contains the merged v2 rebuild from PR #2 (`f4bb3ab`).
+- Canonical hosted site/API: https://ghost-cart-preview.maaz-n-khan.chatgpt.site
+- Android release: `releases/GhostCart-v2.1.2-debug.apk`
+- Direct APK: https://raw.githubusercontent.com/Maazkhan88/Ghostcart/agent/ghost-cart-products-sharing/releases/GhostCart-v2.1.2-debug.apk
+- APK SHA-256: `913AC1A74F8D83E605C53B6A9276BF1467F2772F1E525B263788262531882B1A`
+
+### Current product truth
+
+- Ghost Cart is a simulation-only cooling-off product, not an ecommerce store, bank, payment card, wallet, or delivery service.
+- Capturing/Ghosting an item does not count as savings. Only a later explicit `resolved_skipped` decision contributes to Money Kept.
+- Almost Spent, active Cooling, intentionally bought, and confirmed Money Kept remain separate values.
+- Ghost Card is a non-financial membership/achievement card with a Ghost ID. Do not add CVV, expiry, payment-network branding, bank-style numbers, or proof-of-purchase behavior.
+- Product discovery is allowed as a visual entry point. It must lead to `Ghost buy` or `Cool it`, never a real purchase.
+
+### What is implemented now
+
+#### Web and backend
+
+- Production-quality dark/light marketing website, interactive cooling demo, FAQ, waitlist, responsive/mobile navigation, accessible alternatives, and simulation disclosures.
+- Cloudflare/Sites backend with D1/Drizzle schema and migrations for catalog, users/sessions, preferences, almost-buy lifecycle/events, privacy-safe Most Ghosted Today, retailer previews, and community products.
+- Passwords use PBKDF2-SHA-256 with per-user random salts; bearer sessions store only token hashes.
+- Canonical v2 lifecycle APIs and accounting rules are documented in `docs/backend-v2.md`.
+- Real Most Ghosted Today supports Dubai-day grouping, rate limits, idempotency, pseudonymous actors, minimum-three-user privacy thresholds, and honest no-activity/privacy-suppressed states.
+- Curated product catalogue, website product discovery demo, Amazon/Noon link preview endpoint, and anonymous `User Ghosted` community feed are implemented.
+- Public community cards omit user identity and original source URLs. Images are restricted to supported retailer hosts.
+- Current hosted API endpoint is the Sites URL above. Do not point new clients back to the older stale Workers/Pages URLs recorded later in this historical document.
+
+#### Android v2.1.2
+
+- Five-tab v2 information architecture: Home, Cooldowns, central Ghost +, Progress, and Profile.
+- Honest local cooldown lifecycle with editable item name/amount/category/trigger, recommended pause presets, resolution as skipped/bought intentionally/more time, recent decisions, and Money Kept only after confirmed skipping.
+- Curated product discovery has product pictures, categories, Ghost buy, and Cool it actions.
+- Android registers as an `ACTION_SEND` text target for Amazon/Noon links and also accepts pasted supported retailer URLs.
+- Imported items can capture title, AED price, high-resolution image, retailer/category metadata, and enter the normal editable cooldown flow.
+- Optional explicit anonymous consent can publish sanitized metadata to the `User Ghosted` shelf; publishing never changes Money Kept.
+- Cooling-complete local notifications deep-link to the decision flow. Optional lunch and dinner reminder preferences are separate and off by default; defaults are 13:00 and 20:00 Dubai-local time.
+- Membership-card name and theme are user-selectable; high-resolution PNG export is implemented. The card remains explicitly non-financial.
+- Product imagery and cardholder names no longer use one fixed user identity.
+- Ghost Rider tracking artwork/animation and simulated checkout assets exist in the legacy/optional ritual surfaces; none imply real GPS or delivery.
+
+#### Latest v2.1.2 fixes
+
+- Fixed Android product API base URL to use the current Sites deployment rather than the retired Worker endpoint.
+- Fixed non-JSON product-preview failures so users receive manual-entry guidance instead of a `JSONObject` crash.
+- Fixed JSON `null` strings being treated as literal image URLs, which caused an empty gray image card and prevented fallback enrichment.
+- Added device-side Amazon/Noon HTML enrichment when hosted preview metadata is incomplete. It merges missing title, AED price, and high-resolution image while keeping all retailer extraction best-effort.
+- Added fixture coverage for the reported Schecter Amazon page, including `AED 12,131.29` and its high-resolution Amazon image URL.
+- Capture status now distinguishes complete capture from partial capture; it no longer falsely says image/title/price were all captured.
+- Forced the intended light Material theme for the current white/paper mobile UI, darkened secondary text, explicitly styled text-field labels/placeholders/borders, and set white content on black buttons.
+- Android version advanced to `2.1.2` (`versionCode 18`).
+
+### Verification completed
+
+- Android: `testDebugUnitTest`, `lintDebug`, and `assembleDebug` pass with JDK from `C:\Program Files\Android\Android Studio\jbr`.
+- Kotlin incremental-cache corruption was cleared with Gradle `clean`; the successful verification build used `'-Pkotlin.incremental=false'`.
+- The v2.1.2 raw GitHub APK URL returns HTTP 200 and the checksum above.
+- Web product-preview tests cover browser-style Amazon markup plus safety/host validation; the Sites build was deployed before the Android v2.1.2-only contrast/fallback changes.
+
+### Known limitations and do-not-assume items
+
+- Retailer extraction is inherently best-effort. Amazon/Noon can vary HTML or block cloud/device requests. Keep manual title/amount editing and never promise guaranteed capture.
+- The current hosted cloud preview can receive only partial metadata for some Amazon pages. Android v2.1.2 therefore performs a second direct device-side fetch for missing price/image.
+- The Android form currently lets users edit title and amount after import; a dedicated manual image-URL/image-picker correction control is still a follow-up.
+- Android v2 lifecycle state is primarily local/offline-first. The hosted authenticated `/api/almost-buys` lifecycle exists, but full cross-device sync from the v2 Android UI is not yet complete.
+- iOS has a SwiftUI scaffold/assets and compatible models, but it has not been compiled on Windows. The native iOS Share Extension is not built.
+- No real App Store/Play Store release, signing pipeline, production push provider (FCM/APNs), real payment, order, delivery, or banking capability exists.
+- Preserve the untracked `.codex-remote-attachments/`, `.openai/*.tar.gz`, and local build-cache files unless the user explicitly asks to remove them.
+
+### Recommended next work, in order
+
+1. Install v2.1.2 on a physical Android device and retest the exact Amazon/Noon share flows, including image loading on Wi-Fi and mobile data.
+2. Add an image correction flow (paste image URL or choose a local screenshot) when retailer image capture is partial.
+3. Add Android integration/UI tests for the share intent, completed/partial capture copy, image loading failure, and cooldown button contrast.
+4. Connect Android v2 lifecycle/preferences to the authenticated backend for optional account sync while retaining offline-first behavior and conflict handling.
+5. Review/apply production D1 migration state and event hash salt before relying on live community activity at scale.
+6. Build and verify the iOS app/Share Extension on macOS/Xcode.
+7. Merge PR #3 only after physical-device acceptance; then update the APK link to the merged release location and tag the release.
 
 ## Web production build fix + password salt fix (Claude, 2026-07-16)
 
