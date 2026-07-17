@@ -2,8 +2,13 @@ package com.example.ghostcart.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -18,6 +23,7 @@ import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import coil3.compose.AsyncImage
 import com.example.ghostcart.R
 import kotlin.math.roundToInt
 
@@ -36,23 +42,6 @@ fun ProductIcon(name: String, modifier: Modifier = Modifier, color: Color = Colo
             contentScale = ContentScale.Fit,
             modifier = modifier
         )
-        return
-    }
-
-    val productPhotoCrop = when (name) {
-        "headphones", "speaker", "watch", "tablet", "gadget", "devices" ->
-            ProductPhotoCrop(x = 300, y = 285, width = 290, height = 290)
-        "lipstick", "jar", "incense" ->
-            ProductPhotoCrop(x = 760, y = 285, width = 255, height = 290)
-        "burger", "coffee", "donut", "leaf" ->
-            ProductPhotoCrop(x = 955, y = 285, width = 350, height = 290)
-        "shirt", "bag", "sunglasses" ->
-            ProductPhotoCrop(x = 35, y = 285, width = 300, height = 290)
-        else -> null
-    }
-
-    if (productPhotoCrop != null) {
-        ProductAtlasPhoto(crop = productPhotoCrop, modifier = modifier)
         return
     }
 
@@ -435,6 +424,7 @@ fun ProductIcon(name: String, modifier: Modifier = Modifier, color: Color = Colo
 }
 
 private data class ProductPhotoCrop(
+    val resourceId: Int,
     val x: Int,
     val y: Int,
     val width: Int,
@@ -442,11 +432,95 @@ private data class ProductPhotoCrop(
 )
 
 @Composable
+fun ProductPhoto(
+    productName: String,
+    fallbackIconName: String,
+    modifier: Modifier = Modifier
+) {
+    val normalizedName = productName
+        .lowercase()
+        .replace(Regex("#\\d+"), "")
+        .trim()
+
+    val directAsset = when {
+        normalizedName.contains("perfume") || normalizedName.contains("cologne") -> R.drawable.product_perfume
+        normalizedName.contains("white sneaker") -> R.drawable.product_sneaker
+        else -> null
+    }
+
+    if (directAsset != null) {
+        Image(
+            painter = painterResource(directAsset),
+            contentDescription = "$productName product photo",
+            contentScale = ContentScale.Fit,
+            modifier = modifier
+        )
+        return
+    }
+
+    val localCrop = when {
+        normalizedName.contains("late combo") -> ProductPhotoCrop(R.drawable.product_reference_food, 90, 595, 228, 255)
+        normalizedName.contains("midnight burger") -> ProductPhotoCrop(R.drawable.product_reference_food, 345, 595, 228, 255)
+        normalizedName.contains("pizza") -> ProductPhotoCrop(R.drawable.product_reference_food, 596, 595, 252, 255)
+        normalizedName.contains("acai") -> ProductPhotoCrop(R.drawable.product_reference_food, 90, 1050, 228, 225)
+        normalizedName.contains("latte") || normalizedName.contains("macchiato") || normalizedName.contains("matcha") || normalizedName.contains("boba") ->
+            ProductPhotoCrop(R.drawable.product_reference_food, 344, 1050, 228, 225)
+        normalizedName.contains("earbud") -> ProductPhotoCrop(R.drawable.product_reference_home, 122, 920, 185, 145)
+        normalizedName.contains("smartwatch") -> ProductPhotoCrop(R.drawable.product_reference_home, 344, 920, 185, 145)
+        normalizedName.contains("tablet") -> ProductPhotoCrop(R.drawable.product_reference_home, 568, 920, 185, 145)
+        normalizedName.contains("headphone") -> ProductPhotoCrop(R.drawable.product_reference_home, 790, 920, 152, 145)
+        normalizedName.contains("lipstick") || normalizedName.contains("lip glow") ->
+            ProductPhotoCrop(R.drawable.product_photo_atlas, 760, 285, 255, 290)
+        else -> null
+    }
+
+    if (localCrop != null) {
+        ProductAtlasPhoto(crop = localCrop, modifier = modifier)
+        return
+    }
+
+    val photoUrl = remember(normalizedName) { productPhotoUrl(normalizedName) }
+    var remoteFailed by remember(photoUrl) { mutableStateOf(false) }
+    if (!remoteFailed) {
+        AsyncImage(
+            model = photoUrl,
+            contentDescription = "$productName product photo",
+            contentScale = ContentScale.Crop,
+            onError = { remoteFailed = true },
+            modifier = modifier.background(Color(0xFFF2F2F2))
+        )
+    } else {
+        ProductAtlasPhoto(crop = fallbackProductPhoto(fallbackIconName), modifier = modifier)
+    }
+}
+
+private fun productPhotoUrl(normalizedName: String): String {
+    val searchTags = normalizedName
+        .replace(Regex("[^a-z0-9]+"), ",")
+        .trim(',')
+        .ifBlank { "product" }
+    val stableLock = normalizedName.hashCode().toUInt().toString()
+    return "https://loremflickr.com/640/640/$searchTags?lock=$stableLock"
+}
+
+private fun fallbackProductPhoto(iconName: String): ProductPhotoCrop = when (iconName) {
+    "headphones", "speaker", "watch", "tablet", "gadget", "devices" ->
+        ProductPhotoCrop(R.drawable.product_reference_home, 790, 920, 152, 145)
+    "lipstick", "jar", "incense", "perfume" ->
+        ProductPhotoCrop(R.drawable.product_photo_atlas, 585, 285, 230, 290)
+    "shirt", "bag", "sunglasses", "sneaker" ->
+        ProductPhotoCrop(R.drawable.product_photo_atlas, 35, 285, 300, 290)
+    "coffee" -> ProductPhotoCrop(R.drawable.product_reference_food, 344, 1050, 228, 225)
+    "leaf" -> ProductPhotoCrop(R.drawable.product_reference_food, 90, 1050, 228, 225)
+    else -> ProductPhotoCrop(R.drawable.product_reference_food, 345, 595, 228, 255)
+}
+
+@Composable
 private fun ProductAtlasPhoto(
     crop: ProductPhotoCrop,
     modifier: Modifier = Modifier
 ) {
-    val atlas = ImageBitmap.imageResource(R.drawable.product_photo_atlas)
+    val atlas = ImageBitmap.imageResource(crop.resourceId)
     Canvas(modifier = modifier) {
         drawImage(
             image = atlas,

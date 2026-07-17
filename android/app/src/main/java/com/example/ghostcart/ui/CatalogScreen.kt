@@ -143,10 +143,10 @@ fun ProductCard(
                     .background(cardBg),
                 contentAlignment = Alignment.Center
             ) {
-                ProductIcon(
-                    name = product.vectorIconName,
-                    modifier = Modifier.size(56.dp),
-                    color = Color.White
+                ProductPhoto(
+                    productName = product.name,
+                    fallbackIconName = product.vectorIconName,
+                    modifier = Modifier.fillMaxSize()
                 )
             }
 

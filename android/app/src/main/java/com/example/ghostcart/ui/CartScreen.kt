@@ -196,7 +196,7 @@ fun CartItemRow(
                 .background(shapeBg),
             contentAlignment = Alignment.Center
         ) {
-            ProductIcon(name = product.vectorIconName, modifier = Modifier.size(24.dp))
+            ProductPhoto(productName = product.name, fallbackIconName = product.vectorIconName, modifier = Modifier.fillMaxSize())
         }
 
         Column(

@@ -65,7 +65,7 @@ import com.example.ghostcart.theme.MutedText
 import com.example.ghostcart.theme.Paper
 import com.example.ghostcart.theme.SoftGray
 import com.example.ghostcart.ui.GhostMascotPose
-import com.example.ghostcart.ui.ProductIcon
+import com.example.ghostcart.ui.ProductPhoto
 import com.example.ghostcart.ui.common.BackButton
 import com.example.ghostcart.ui.common.ForwardChevron
 import com.example.ghostcart.ui.common.GhostHeroCard
@@ -253,7 +253,7 @@ private fun WalletStatCard(icon: androidx.compose.ui.graphics.vector.ImageVector
 private fun TransactionRow(tx: WalletTransaction) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(SoftGray), contentAlignment = Alignment.Center) {
-            ProductIcon(name = tx.iconName, modifier = Modifier.size(22.dp), color = Ink)
+            ProductPhoto(productName = tx.name, fallbackIconName = tx.iconName, modifier = Modifier.fillMaxSize())
         }
         Column(modifier = Modifier.weight(1f).padding(horizontal = 10.dp)) {
             Text(text = tx.name, color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)

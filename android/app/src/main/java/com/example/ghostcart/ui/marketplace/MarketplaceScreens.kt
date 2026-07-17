@@ -66,7 +66,7 @@ import com.example.ghostcart.theme.Paper
 import com.example.ghostcart.theme.SoftGray
 import com.example.ghostcart.ui.GhostMascotPose
 import com.example.ghostcart.ui.GhostCartWordmark
-import com.example.ghostcart.ui.ProductIcon
+import com.example.ghostcart.ui.ProductPhoto
 import com.example.ghostcart.ui.common.BackButton
 import com.example.ghostcart.ui.common.ForwardChevron
 import com.example.ghostcart.ui.common.PrimaryButton
@@ -406,7 +406,7 @@ fun MarketplaceProductCard(
                 .background(SoftGray),
             contentAlignment = Alignment.Center
         ) {
-            ProductIcon(name = iconForProduct(product), modifier = Modifier.size(42.dp), color = Ink)
+            ProductPhoto(productName = product.name, fallbackIconName = iconForProduct(product), modifier = Modifier.fillMaxSize())
             if (activityLabel != null) {
                 Text(
                     text = activityLabel,
@@ -705,7 +705,7 @@ fun ProductDetailScreen(
                 .background(SoftGray),
             contentAlignment = Alignment.Center
         ) {
-            ProductIcon(name = iconForProduct(product), modifier = Modifier.size(120.dp), color = Ink)
+            ProductPhoto(productName = product.name, fallbackIconName = iconForProduct(product), modifier = Modifier.fillMaxSize())
         }
 
         if (product.scentOrType.isNotBlank()) {

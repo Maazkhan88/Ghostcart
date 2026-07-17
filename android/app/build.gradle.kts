@@ -11,8 +11,8 @@ android {
         applicationId = "com.example.ghostcart"
         minSdk = 24
         targetSdk = 36
-        versionCode = 13
-        versionName = "1.3.0"
+        versionCode = 14
+        versionName = "1.3.1"
     }
 
     buildTypes {
@@ -62,6 +62,8 @@ dependencies {
   implementation(libs.androidx.compose.ui.tooling.preview)
   implementation(libs.androidx.compose.material3)
   implementation(libs.androidx.compose.material.icons.extended)
+  implementation("io.coil-kt.coil3:coil-compose:3.5.0")
+  implementation("io.coil-kt.coil3:coil-network-okhttp:3.5.0")
   // Tooling
   debugImplementation(libs.androidx.compose.ui.tooling)
   // Instrumented tests
