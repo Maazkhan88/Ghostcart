@@ -15,7 +15,7 @@ This section is the current operational source of truth. Historical session logs
 - Canonical hosted site/API: https://ghost-cart-preview.maaz-n-khan.chatgpt.site
 - Android release: `releases/GhostCart-v2.2.0-debug.apk`
 - Direct APK: https://raw.githubusercontent.com/Maazkhan88/Ghostcart/agent/ghost-cart-products-sharing/releases/GhostCart-v2.2.0-debug.apk
-- APK SHA-256: `1667F472C757E7C7C2E076B65E14B4A59F9400D77141C8185F836477F4456AA6`
+- APK SHA-256: `245736BD7B7360B638B0D3949EF17530282DC46EAF1D241EA064FCF70853FE93`
 
 ### Current product truth
 

@@ -79,7 +79,7 @@ internal fun parseDeviceLinkMetadata(rawResult: String): DeviceLinkMetadata? = r
 
 object DeviceLinkPreview {
     private const val TIMEOUT_MS = 18_000L
-    private const val PAGE_SETTLE_MS = 1_500L
+    private const val PAGE_SETTLE_MS = 3_000L
 
     private val extractionScript = """
         (function() {
@@ -119,13 +119,14 @@ object DeviceLinkPreview {
           };
           const offersValue = Array.isArray(product.offers) ? product.offers[0] : product.offers;
           const offers = offersValue && typeof offersValue === 'object' ? offersValue : {};
-          const imageRaw = first(product.image) || meta(['og:image:secure_url','og:image','twitter:image','twitter:image:src','image']);
+          const imageNode = document.querySelector('[data-qa*="product-image" i] img,img[itemprop="image"],img[fetchpriority="high"],picture img');
+          const imageRaw = first(product.image) || meta(['og:image:secure_url','og:image','twitter:image','twitter:image:src','image']) || (imageNode && (imageNode.currentSrc || imageNode.src || imageNode.getAttribute('data-src'))) || '';
           let image = '';
           try { image = imageRaw ? new URL(imageRaw, location.href).href : ''; } catch (_) {}
-          const priceNode = document.querySelector('[itemprop="price"],meta[property="product:price:amount"],.a-offscreen,[data-qa="product-price"]');
+          const priceNode = document.querySelector('[itemprop="price"],meta[property="product:price:amount"],.a-offscreen,[data-qa*="price" i],[class*="priceNow"],[class*="salePrice"]');
           const price = String(offers.price || offers.lowPrice || meta(['product:price:amount','og:price:amount','price','sale_price']) || (priceNode && (priceNode.getAttribute('content') || priceNode.textContent)) || '');
           return JSON.stringify({
-            title: first(product.name) || meta(['og:title','twitter:title']) || document.title || '',
+            title: first(product.name) || meta(['og:title','twitter:title']) || ((document.querySelector('[data-qa*="product-title" i],[data-qa*="product-name" i],h1,[itemprop="name"]') || {}).textContent || '') || document.title || '',
             image: image,
             price: price,
             currency: first(offers.priceCurrency) || meta(['product:price:currency','og:price:currency','pricecurrency']) || ''
@@ -162,6 +163,7 @@ object DeviceLinkPreview {
                 setSupportMultipleWindows(false)
                 mediaPlaybackRequiresUserGesture = true
                 mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                userAgentString = userAgentString.replace("; wv", "").replace("Version/4.0 ", "")
             }
             webView.webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
