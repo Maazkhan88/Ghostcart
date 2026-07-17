@@ -15,9 +15,11 @@ import com.example.ghostcart.data.DailyGhostReminderWorker
 import com.example.ghostcart.data.Marketplace
 import com.example.ghostcart.data.MarketplaceProduct
 import com.example.ghostcart.data.WalletConfig
+import com.example.ghostcart.data.WalletDemoData
 import com.example.ghostcart.data.DeliveryStepWorker
 import com.example.ghostcart.data.GhostActivityRepository
 import com.example.ghostcart.data.GhostRanking
+import com.example.ghostcart.data.GhostCardImageExporter
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,9 +27,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
 import java.util.concurrent.TimeUnit
 import java.util.UUID
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import kotlin.random.Random
 
 data class AppUiState(
@@ -193,6 +200,25 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun downloadGhostCard() {
+        val config = _uiState.value.walletConfig
+        showToast("Creating high-resolution Ghost Card…")
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                GhostCardImageExporter.export(
+                    context = getApplication<Application>(),
+                    config = config,
+                    cardholderName = WalletDemoData.cardHolderName
+                )
+            }
+            result.onSuccess {
+                showToast("Ghost Card saved to Pictures/Ghost Cart")
+            }.onFailure {
+                showToast("Couldn't save the Ghost Card")
+            }
+        }
+    }
+
     fun startCoolingPeriod(productId: String) {
         val product = findProduct(productId) ?: return
         val coolingUntil = System.currentTimeMillis() + TimeUnit.HOURS.toMillis(24)
@@ -266,19 +292,34 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         return (next.timeInMillis - now.timeInMillis).coerceAtLeast(0L)
     }
 
-    private fun loadWalletConfig(): WalletConfig = WalletConfig(
-        monthlySalary = sharedPrefs.getInt("wallet_monthly_salary", 12000),
-        monthlySavingsGoal = sharedPrefs.getInt("wallet_monthly_savings_goal", 2500),
-        temptationBudget = sharedPrefs.getInt("wallet_temptation_budget", 1500),
-        startingBalance = sharedPrefs.getInt("wallet_starting_balance", 0),
-        salaryShieldEnabled = sharedPrefs.getBoolean("wallet_salary_shield_enabled", true),
-        walletNotificationsEnabled = sharedPrefs.getBoolean("wallet_notifications_enabled", true),
-        autoAllocateToGoals = sharedPrefs.getBoolean("wallet_auto_allocate", true),
-        cardFrozen = sharedPrefs.getBoolean("wallet_card_frozen", false),
-        cardTheme = sharedPrefs.getString("wallet_card_theme", "Dark") ?: "Dark",
-        cardName = sharedPrefs.getString("wallet_card_name", "Ghost Card") ?: "Ghost Card",
-        salaryShieldPercent = sharedPrefs.getInt("wallet_salary_shield_percent", 20)
-    )
+    private fun loadWalletConfig(): WalletConfig {
+        val ghostId = sharedPrefs.getString("wallet_ghost_id", null)
+            ?: createGhostId().also { sharedPrefs.edit().putString("wallet_ghost_id", it).apply() }
+        val memberSince = sharedPrefs.getString("wallet_member_since", null)
+            ?: SimpleDateFormat("MMM yyyy", Locale.ENGLISH).format(Date()).also {
+                sharedPrefs.edit().putString("wallet_member_since", it).apply()
+            }
+        return WalletConfig(
+            monthlySalary = sharedPrefs.getInt("wallet_monthly_salary", 12000),
+            monthlySavingsGoal = sharedPrefs.getInt("wallet_monthly_savings_goal", 2500),
+            temptationBudget = sharedPrefs.getInt("wallet_temptation_budget", 1500),
+            startingBalance = sharedPrefs.getInt("wallet_starting_balance", 0),
+            salaryShieldEnabled = sharedPrefs.getBoolean("wallet_salary_shield_enabled", true),
+            walletNotificationsEnabled = sharedPrefs.getBoolean("wallet_notifications_enabled", true),
+            autoAllocateToGoals = sharedPrefs.getBoolean("wallet_auto_allocate", true),
+            cardFrozen = sharedPrefs.getBoolean("wallet_card_frozen", false),
+            cardTheme = sharedPrefs.getString("wallet_card_theme", "Dark") ?: "Dark",
+            cardName = sharedPrefs.getString("wallet_card_name", "Ghost Card") ?: "Ghost Card",
+            salaryShieldPercent = sharedPrefs.getInt("wallet_salary_shield_percent", 20),
+            ghostId = ghostId,
+            memberSince = memberSince
+        )
+    }
+
+    private fun createGhostId(): String {
+        val token = UUID.randomUUID().toString().replace("-", "").uppercase(Locale.ENGLISH).take(12)
+        return "GC-${token.chunked(4).joinToString("-")}"
+    }
 
     private fun persistWalletConfig(config: WalletConfig) {
         sharedPrefs.edit()
@@ -293,6 +334,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             .putString("wallet_card_theme", config.cardTheme)
             .putString("wallet_card_name", config.cardName)
             .putInt("wallet_salary_shield_percent", config.salaryShieldPercent)
+            .putString("wallet_ghost_id", config.ghostId)
+            .putString("wallet_member_since", config.memberSince)
             .apply()
     }
 

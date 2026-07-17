@@ -286,9 +286,11 @@ fun MainNavigation() {
             )
           }
           entry<PayWithGhostCard> {
+            val state by appViewModel.uiState.collectAsState()
             val product = appViewModel.allProducts.first { it.id == "perfumeBlind" }
             PayWithGhostCardScreen(
               product = product,
+              config = state.walletConfig,
               walletBalance = WalletDemoData.currentBalance,
               onBack = { backStack.removeLastOrNull() },
               onConfirm = { backStack.add(OrderProtected) },
@@ -317,6 +319,7 @@ fun MainNavigation() {
           entry<WalletHome> {
             val state by appViewModel.uiState.collectAsState()
             WalletHomeScreen(
+              config = state.walletConfig,
               hasAppliedForCard = state.hasAppliedForCard,
               isApplying = state.isApplying,
               onApplyForCard = { appViewModel.applyForGhostCard() },
@@ -392,6 +395,7 @@ fun MainNavigation() {
                 appViewModel.updateWalletConfig { it.copy(salaryShieldPercent = percent) }
                 appViewModel.showToast("Salary Shield set to $percent%")
               },
+              onDownloadCard = { appViewModel.downloadGhostCard() },
               onDeleteWallet = { backStack.add(WalletHome) },
               onSignOut = {
                 appViewModel.signOut()

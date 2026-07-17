@@ -80,6 +80,7 @@ import com.example.ghostcart.ui.common.materialIconFor
 
 @Composable
 fun WalletHomeScreen(
+    config: WalletConfig,
     hasAppliedForCard: Boolean,
     isApplying: Boolean,
     onApplyForCard: () -> Unit,
@@ -103,11 +104,11 @@ fun WalletHomeScreen(
                     GhostMascotPose(poseName = "wave", modifier = Modifier.size(72.dp))
                     Column(modifier = Modifier.weight(1f).padding(start = 14.dp)) {
                         Row(modifier = Modifier.fillMaxWidth()) {
-                            Text(text = "Ghost Card", color = Paper, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                            Text(text = config.cardName, color = Paper, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                             SimulationBadge(text = "Demo wallet", dark = true)
                         }
                         Text(text = WalletDemoData.cardHolderName, color = Paper, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 10.dp))
-                        Text(text = "GC•••• ${WalletDemoData.cardLastFour}", color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
+                        Text(text = "Ghost ID  ${config.ghostId}", color = Color.White.copy(alpha = 0.72f), fontSize = 10.sp)
                         Text(text = "Balance", color = Color.White.copy(alpha = 0.6f), fontSize = 10.sp, modifier = Modifier.padding(top = 12.dp))
                         Text(text = "${Marketplace.currency} ${WalletDemoData.currentBalance}", color = Paper, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
                     }
@@ -665,6 +666,7 @@ fun GhostCardSettingsScreen(
     onRenameCard: (String) -> Unit,
     onSelectTheme: (String) -> Unit,
     onSetSalaryShieldPercent: (Int) -> Unit,
+    onDownloadCard: () -> Unit,
     onDeleteWallet: () -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier
@@ -694,7 +696,7 @@ fun GhostCardSettingsScreen(
                         SimulationBadge(text = "Demo card", dark = config.cardTheme == "Dark")
                     }
                     Text(text = WalletDemoData.cardHolderName, color = cardForegroundColor, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 8.dp))
-                    Text(text = "GC•••• ${WalletDemoData.cardLastFour}", color = cardForegroundColor.copy(alpha = 0.62f), fontSize = 10.sp)
+                    Text(text = "Ghost ID  ${config.ghostId}", color = cardForegroundColor.copy(alpha = 0.72f), fontSize = 9.sp)
                     Text(text = "Balance", color = cardForegroundColor.copy(alpha = 0.62f), fontSize = 9.sp, modifier = Modifier.padding(top = 10.dp))
                     Text(text = "${Marketplace.currency} ${WalletDemoData.currentBalance}", color = cardForegroundColor, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
                 }
@@ -714,6 +716,7 @@ fun GhostCardSettingsScreen(
             SettingsChevronRow(Icons.Filled.Shield, "Salary Shield preference", "Protect ${config.salaryShieldPercent}% of salary") {
                 activeDialog = CardSettingsDialog.SalaryShield
             }
+            SettingsChevronRow(Icons.Filled.Download, "Download Ghost Card", "3000 × 1890 PNG · Simulation only", onClick = onDownloadCard)
             SettingsToggleRow(Icons.Filled.AcUnit, "Freeze internal card", "Temporarily pause all Ghost Card activity", config.cardFrozen, onToggleFreeze)
             
             if (authEmail != null) {

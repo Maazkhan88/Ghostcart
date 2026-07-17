@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import com.example.ghostcart.data.Marketplace
 import com.example.ghostcart.data.MarketplaceProduct
 import com.example.ghostcart.data.WalletDemoData
+import com.example.ghostcart.data.WalletConfig
 import com.example.ghostcart.data.iconForProduct
 import com.example.ghostcart.theme.DangerRed
 import com.example.ghostcart.theme.FaintBorder
@@ -511,6 +512,7 @@ fun FakeDeliveryTrackingScreen(
 @Composable
 fun PayWithGhostCardScreen(
     product: MarketplaceProduct,
+    config: WalletConfig,
     walletBalance: Int,
     onBack: () -> Unit,
     onConfirm: () -> Unit,
@@ -527,10 +529,10 @@ fun PayWithGhostCardScreen(
                 GhostMascotPose(poseName = "wave", modifier = Modifier.size(70.dp))
                 Column(modifier = Modifier.weight(1f).padding(start = 14.dp)) {
                     Row(modifier = Modifier.fillMaxWidth()) {
-                        Text(text = "Ghost Card", color = Paper, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        Text(text = config.cardName, color = Paper, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     }
                     Text(text = WalletDemoData.cardHolderName, color = Paper, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 10.dp))
-                    Text(text = "GC•••• ${WalletDemoData.cardLastFour}", color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
+                    Text(text = "Ghost ID  ${config.ghostId}", color = Color.White.copy(alpha = 0.72f), fontSize = 10.sp)
                     Text(text = "Balance", color = Color.White.copy(alpha = 0.6f), fontSize = 10.sp, modifier = Modifier.padding(top = 12.dp))
                     Text(text = "${Marketplace.currency} $walletBalance", color = Paper, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
                 }
