@@ -387,6 +387,10 @@ fun MainNavigation() {
                 appViewModel.updateWalletConfig { it.copy(cardName = name) }
                 appViewModel.showToast("Card renamed")
               },
+              onSetCardholderName = { name ->
+                appViewModel.updateWalletConfig { it.copy(cardholderName = name) }
+                appViewModel.showToast("Name on card updated")
+              },
               onSelectTheme = { theme ->
                 appViewModel.updateWalletConfig { it.copy(cardTheme = theme) }
                 appViewModel.showToast("$theme card theme applied")

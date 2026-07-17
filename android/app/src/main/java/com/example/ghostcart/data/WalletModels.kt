@@ -31,13 +31,13 @@ data class WalletConfig(
     val cardFrozen: Boolean = false,
     val cardTheme: String = "Dark",
     val cardName: String = "Ghost Card",
+    val cardholderName: String = "Ghost Member",
     val salaryShieldPercent: Int = 20,
     val ghostId: String = "GC-DEMO-SAFE-ID",
     val memberSince: String = "Jul 2026"
 )
 
 object WalletDemoData {
-    const val cardHolderName = "Maaz Khan"
     const val currentBalance = 8420
     const val protectedThisMonth = 1240
     const val ghostedOrdersThisMonth = 24

@@ -9,19 +9,23 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import com.example.ghostcart.R
+import kotlin.math.roundToInt
 
 @Composable
 fun ProductIcon(name: String, modifier: Modifier = Modifier, color: Color = Color.White) {
     val approvedAsset = when (name) {
         "sneaker" -> R.drawable.product_sneaker
         "perfume" -> R.drawable.product_perfume
-        // The website intentionally uses this approved combo artwork for food cravings.
-        "burger" -> R.drawable.mascot_combo
         else -> null
     }
 
@@ -32,6 +36,23 @@ fun ProductIcon(name: String, modifier: Modifier = Modifier, color: Color = Colo
             contentScale = ContentScale.Fit,
             modifier = modifier
         )
+        return
+    }
+
+    val productPhotoCrop = when (name) {
+        "headphones", "speaker", "watch", "tablet", "gadget", "devices" ->
+            ProductPhotoCrop(x = 300, y = 285, width = 290, height = 290)
+        "lipstick", "jar", "incense" ->
+            ProductPhotoCrop(x = 760, y = 285, width = 255, height = 290)
+        "burger", "coffee", "donut", "leaf" ->
+            ProductPhotoCrop(x = 955, y = 285, width = 350, height = 290)
+        "shirt", "bag", "sunglasses" ->
+            ProductPhotoCrop(x = 35, y = 285, width = 300, height = 290)
+        else -> null
+    }
+
+    if (productPhotoCrop != null) {
+        ProductAtlasPhoto(crop = productPhotoCrop, modifier = modifier)
         return
     }
 
@@ -410,6 +431,31 @@ fun ProductIcon(name: String, modifier: Modifier = Modifier, color: Color = Colo
                 drawLine(color, Offset(w * 0.64f, h * 0.72f), Offset(w * 0.64f, h * 0.82f), strokeWidth * 0.6f)
             }
         }
+    }
+}
+
+private data class ProductPhotoCrop(
+    val x: Int,
+    val y: Int,
+    val width: Int,
+    val height: Int
+)
+
+@Composable
+private fun ProductAtlasPhoto(
+    crop: ProductPhotoCrop,
+    modifier: Modifier = Modifier
+) {
+    val atlas = ImageBitmap.imageResource(R.drawable.product_photo_atlas)
+    Canvas(modifier = modifier) {
+        drawImage(
+            image = atlas,
+            srcOffset = IntOffset(crop.x, crop.y),
+            srcSize = IntSize(crop.width, crop.height),
+            dstOffset = IntOffset.Zero,
+            dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
+            filterQuality = FilterQuality.High
+        )
     }
 }
 

@@ -208,7 +208,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 GhostCardImageExporter.export(
                     context = getApplication<Application>(),
                     config = config,
-                    cardholderName = WalletDemoData.cardHolderName
+                    cardholderName = config.cardholderName
                 )
             }
             result.onSuccess {
@@ -310,6 +310,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             cardFrozen = sharedPrefs.getBoolean("wallet_card_frozen", false),
             cardTheme = sharedPrefs.getString("wallet_card_theme", "Dark") ?: "Dark",
             cardName = sharedPrefs.getString("wallet_card_name", "Ghost Card") ?: "Ghost Card",
+            cardholderName = sharedPrefs.getString("wallet_cardholder_name", "Ghost Member") ?: "Ghost Member",
             salaryShieldPercent = sharedPrefs.getInt("wallet_salary_shield_percent", 20),
             ghostId = ghostId,
             memberSince = memberSince
@@ -333,6 +334,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             .putBoolean("wallet_card_frozen", config.cardFrozen)
             .putString("wallet_card_theme", config.cardTheme)
             .putString("wallet_card_name", config.cardName)
+            .putString("wallet_cardholder_name", config.cardholderName)
             .putInt("wallet_salary_shield_percent", config.salaryShieldPercent)
             .putString("wallet_ghost_id", config.ghostId)
             .putString("wallet_member_since", config.memberSince)

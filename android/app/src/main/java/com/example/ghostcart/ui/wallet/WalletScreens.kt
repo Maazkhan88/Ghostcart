@@ -107,7 +107,7 @@ fun WalletHomeScreen(
                             Text(text = config.cardName, color = Paper, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                             SimulationBadge(text = "Demo wallet", dark = true)
                         }
-                        Text(text = WalletDemoData.cardHolderName, color = Paper, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 10.dp))
+                        Text(text = config.cardholderName, color = Paper, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 10.dp))
                         Text(text = "Ghost ID  ${config.ghostId}", color = Color.White.copy(alpha = 0.72f), fontSize = 10.sp)
                         Text(text = "Balance", color = Color.White.copy(alpha = 0.6f), fontSize = 10.sp, modifier = Modifier.padding(top = 12.dp))
                         Text(text = "${Marketplace.currency} ${WalletDemoData.currentBalance}", color = Paper, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
@@ -664,6 +664,7 @@ fun GhostCardSettingsScreen(
     onToggleAutoAllocate: () -> Unit,
     onToggleFreeze: () -> Unit,
     onRenameCard: (String) -> Unit,
+    onSetCardholderName: (String) -> Unit,
     onSelectTheme: (String) -> Unit,
     onSetSalaryShieldPercent: (Int) -> Unit,
     onDownloadCard: () -> Unit,
@@ -673,6 +674,7 @@ fun GhostCardSettingsScreen(
 ) {
     var activeDialog by remember { mutableStateOf<CardSettingsDialog?>(null) }
     var renameValue by remember(config.cardName) { mutableStateOf(config.cardName) }
+    var cardholderValue by remember(config.cardholderName) { mutableStateOf(config.cardholderName) }
     val cardContainerColor = when (config.cardTheme) {
         "Light" -> Color(0xFFF1F1ED)
         "Ghost Green" -> GhostGreen
@@ -695,7 +697,7 @@ fun GhostCardSettingsScreen(
                         Text(text = config.cardName, color = cardForegroundColor, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                         SimulationBadge(text = "Demo card", dark = config.cardTheme == "Dark")
                     }
-                    Text(text = WalletDemoData.cardHolderName, color = cardForegroundColor, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 8.dp))
+                    Text(text = config.cardholderName, color = cardForegroundColor, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 8.dp))
                     Text(text = "Ghost ID  ${config.ghostId}", color = cardForegroundColor.copy(alpha = 0.72f), fontSize = 9.sp)
                     Text(text = "Balance", color = cardForegroundColor.copy(alpha = 0.62f), fontSize = 9.sp, modifier = Modifier.padding(top = 10.dp))
                     Text(text = "${Marketplace.currency} ${WalletDemoData.currentBalance}", color = cardForegroundColor, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
@@ -707,6 +709,10 @@ fun GhostCardSettingsScreen(
             SettingsChevronRow(Icons.Filled.Edit, "Rename card", config.cardName) {
                 renameValue = config.cardName
                 activeDialog = CardSettingsDialog.Rename
+            }
+            SettingsChevronRow(Icons.Filled.Edit, "Name on card", config.cardholderName) {
+                cardholderValue = config.cardholderName
+                activeDialog = CardSettingsDialog.CardholderName
             }
             SettingsChevronRow(Icons.Filled.Palette, "Theme", config.cardTheme) {
                 activeDialog = CardSettingsDialog.Theme
@@ -770,6 +776,36 @@ fun GhostCardSettingsScreen(
             }
         )
 
+        CardSettingsDialog.CardholderName -> AlertDialog(
+            onDismissRequest = { activeDialog = null },
+            title = { Text("Choose the name on your card", fontWeight = FontWeight.Bold) },
+            text = {
+                OutlinedTextField(
+                    value = cardholderValue,
+                    onValueChange = { value ->
+                        if (value.length <= 24 && value.none { it == '\n' || it == '\r' }) {
+                            cardholderValue = value
+                        }
+                    },
+                    label = { Text("Cardholder name") },
+                    supportingText = { Text("${cardholderValue.length}/24 · Use any display name you prefer") },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = cardholderValue.trim().isNotEmpty(),
+                    onClick = {
+                        onSetCardholderName(cardholderValue.trim())
+                        activeDialog = null
+                    }
+                ) { Text("Save", color = GhostGreen, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { activeDialog = null }) { Text("Cancel", color = Ink) }
+            }
+        )
+
         CardSettingsDialog.Theme -> SettingsChoiceDialog(
             title = "Choose card theme",
             choices = listOf("Dark", "Light", "Ghost Green"),
@@ -798,7 +834,7 @@ fun GhostCardSettingsScreen(
     }
 }
 
-private enum class CardSettingsDialog { Rename, Theme, SalaryShield }
+private enum class CardSettingsDialog { Rename, CardholderName, Theme, SalaryShield }
 
 @Composable
 private fun <T> SettingsChoiceDialog(

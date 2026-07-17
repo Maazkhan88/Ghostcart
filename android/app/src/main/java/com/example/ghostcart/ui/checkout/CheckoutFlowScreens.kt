@@ -715,7 +715,7 @@ fun PayWithGhostCardScreen(
                     Row(modifier = Modifier.fillMaxWidth()) {
                         Text(text = config.cardName, color = Paper, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     }
-                    Text(text = WalletDemoData.cardHolderName, color = Paper, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 10.dp))
+                    Text(text = config.cardholderName, color = Paper, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 10.dp))
                     Text(text = "Ghost ID  ${config.ghostId}", color = Color.White.copy(alpha = 0.72f), fontSize = 10.sp)
                     Text(text = "Balance", color = Color.White.copy(alpha = 0.6f), fontSize = 10.sp, modifier = Modifier.padding(top = 12.dp))
                     Text(text = "${Marketplace.currency} $walletBalance", color = Paper, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
