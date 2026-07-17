@@ -54,6 +54,33 @@ sealed interface ProductImportState {
     data class Error(val message: String) : ProductImportState
 }
 
+internal fun nonJsonProductApiFallback(text: String): String? =
+    if (text.isNotBlank() && !text.trimStart().startsWith("{")) {
+        "Ghost Cart could not read product details right now. Try again, or enter the details manually."
+    } else {
+        null
+    }
+
+internal fun parseProductApiResponse(code: Int, text: String): JSONObject {
+    nonJsonProductApiFallback(text)?.let { throw IllegalStateException(it) }
+    val json = if (text.isBlank()) {
+        JSONObject()
+    } else {
+        runCatching { JSONObject(text) }.getOrElse {
+            throw IllegalStateException(
+                "Ghost Cart could not read product details right now. Try again, or enter the details manually."
+            )
+        }
+    }
+    if (code !in 200..299) {
+        throw IllegalStateException(
+            json.optString("error").takeIf { it.isNotBlank() }
+                ?: "Product capture is temporarily unavailable. Enter the details manually or try again."
+        )
+    }
+    return json
+}
+
 object ProductImportRepository {
     suspend fun preview(sourceUrl: String): Result<ImportedProduct> = withContext(Dispatchers.IO) {
         runCatching {
@@ -134,7 +161,7 @@ object ProductImportRepository {
     }
 
     private fun request(path: String, method: String, body: JSONObject? = null): JSONObject {
-        val connection = (URL("${ApiConfig.BASE_URL}$path").openConnection() as HttpURLConnection).apply {
+        val connection = (URL("${ApiConfig.PRODUCT_API_BASE_URL}$path").openConnection() as HttpURLConnection).apply {
             requestMethod = method
             connectTimeout = ApiConfig.CONNECT_TIMEOUT_MS
             readTimeout = ApiConfig.READ_TIMEOUT_MS
@@ -149,9 +176,7 @@ object ProductImportRepository {
             val code = connection.responseCode
             val stream = if (code in 200..299) connection.inputStream else connection.errorStream
             val text = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-            val json = if (text.isBlank()) JSONObject() else JSONObject(text)
-            if (code !in 200..299) throw IllegalStateException(json.optString("error", "Request failed with status $code"))
-            return json
+            return parseProductApiResponse(code, text)
         } finally {
             connection.disconnect()
         }
