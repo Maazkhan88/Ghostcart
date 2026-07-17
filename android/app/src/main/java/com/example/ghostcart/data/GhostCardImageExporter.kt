@@ -14,7 +14,7 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.core.content.ContextCompat
-import com.example.ghostcart.R
+import com.ghostcart.app.R
 import java.io.File
 import java.io.FileOutputStream
 
@@ -82,7 +82,7 @@ object GhostCardImageExporter {
 
         drawPill(canvas, "NOT A PAYMENT CARD", 200f, 1510f, 1020f, 190f, accent, foreground)
         canvas.drawText(
-            "Ghost Card is an internal simulation feature. It cannot be used for purchases.",
+            "Ghost Membership is an internal simulation feature. It cannot be used for purchases.",
             200f,
             1770f,
             textPaint(foreground, 42f, Typeface.NORMAL).apply { alpha = 170 }

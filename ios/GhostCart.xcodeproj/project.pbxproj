@@ -1,9 +1,281 @@
+// !$*UTF8*$!
 {
-  "configurations": {},
-  "object": {
-    "archiveVersion": "1",
-    "classes": {},
-    "objectVersion": "56",
-    "objects": {}
-  }
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000001 /* GhostCartApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000001 /* GhostCartApp.swift */; };
+		A10000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000002 /* ContentView.swift */; };
+		A10000000000000000000003 /* AlmostBuy.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* AlmostBuy.swift */; };
+		A10000000000000000000004 /* GhostCartStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000004 /* GhostCartStore.swift */; };
+		A10000000000000000000005 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000005 /* Theme.swift */; };
+		A10000000000000000000006 /* BrandAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000006 /* BrandAssets.swift */; };
+		A10000000000000000000007 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000007 /* HomeView.swift */; };
+		A10000000000000000000008 /* CooldownsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000008 /* CooldownsView.swift */; };
+		A10000000000000000000009 /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000009 /* CaptureView.swift */; };
+		A1000000000000000000000A /* ProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000A /* ProgressView.swift */; };
+		A1000000000000000000000B /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000B /* ProfileView.swift */; };
+		A1000000000000000000000C /* MembershipCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000C /* MembershipCardView.swift */; };
+		A1000000000000000000000D /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000D /* NotificationService.swift */; };
+		A1000000000000000000000E /* NotificationRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000E /* NotificationRouter.swift */; };
+		A1000000000000000000000F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000F /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		B10000000000000000000000 /* GhostCart.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GhostCart.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B10000000000000000000001 /* GhostCartApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhostCartApp.swift; sourceTree = "<group>"; };
+		B10000000000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		B10000000000000000000003 /* AlmostBuy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlmostBuy.swift; sourceTree = "<group>"; };
+		B10000000000000000000004 /* GhostCartStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhostCartStore.swift; sourceTree = "<group>"; };
+		B10000000000000000000005 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		B10000000000000000000006 /* BrandAssets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandAssets.swift; sourceTree = "<group>"; };
+		B10000000000000000000007 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		B10000000000000000000008 /* CooldownsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CooldownsView.swift; sourceTree = "<group>"; };
+		B10000000000000000000009 /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureView.swift; sourceTree = "<group>"; };
+		B1000000000000000000000A /* ProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressView.swift; sourceTree = "<group>"; };
+		B1000000000000000000000B /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		B1000000000000000000000C /* MembershipCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MembershipCardView.swift; sourceTree = "<group>"; };
+		B1000000000000000000000D /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		B1000000000000000000000E /* NotificationRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationRouter.swift; sourceTree = "<group>"; };
+		B1000000000000000000000F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C10000000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		C10000000000000000000002 = {
+			isa = PBXGroup;
+			children = (
+				C10000000000000000000003 /* GhostCart */,
+				C10000000000000000000004 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		C10000000000000000000003 /* GhostCart */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000001 /* GhostCartApp.swift */,
+				B10000000000000000000002 /* ContentView.swift */,
+				B10000000000000000000003 /* AlmostBuy.swift */,
+				B10000000000000000000004 /* GhostCartStore.swift */,
+				B10000000000000000000005 /* Theme.swift */,
+				B10000000000000000000006 /* BrandAssets.swift */,
+				B10000000000000000000007 /* HomeView.swift */,
+				B10000000000000000000008 /* CooldownsView.swift */,
+				B10000000000000000000009 /* CaptureView.swift */,
+				B1000000000000000000000A /* ProgressView.swift */,
+				B1000000000000000000000B /* ProfileView.swift */,
+				B1000000000000000000000C /* MembershipCardView.swift */,
+				B1000000000000000000000D /* NotificationService.swift */,
+				B1000000000000000000000E /* NotificationRouter.swift */,
+				B1000000000000000000000F /* Assets.xcassets */,
+			);
+			path = GhostCart;
+			sourceTree = "<group>";
+		};
+		C10000000000000000000004 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000000 /* GhostCart.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		D10000000000000000000001 /* GhostCart */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F10000000000000000000001 /* Build configuration list for PBXNativeTarget "GhostCart" */;
+			buildPhases = (
+				D10000000000000000000002 /* Sources */,
+				C10000000000000000000001 /* Frameworks */,
+				D10000000000000000000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = GhostCart;
+			productName = GhostCart;
+			productReference = B10000000000000000000000 /* GhostCart.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D10000000000000000000004 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					D10000000000000000000001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = F10000000000000000000002 /* Build configuration list for PBXProject "GhostCart" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = C10000000000000000000002;
+			productRefGroup = C10000000000000000000004 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D10000000000000000000001 /* GhostCart */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D10000000000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000000000000000000000F /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D10000000000000000000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000001 /* GhostCartApp.swift in Sources */,
+				A10000000000000000000002 /* ContentView.swift in Sources */,
+				A10000000000000000000003 /* AlmostBuy.swift in Sources */,
+				A10000000000000000000004 /* GhostCartStore.swift in Sources */,
+				A10000000000000000000005 /* Theme.swift in Sources */,
+				A10000000000000000000006 /* BrandAssets.swift in Sources */,
+				A10000000000000000000007 /* HomeView.swift in Sources */,
+				A10000000000000000000008 /* CooldownsView.swift in Sources */,
+				A10000000000000000000009 /* CaptureView.swift in Sources */,
+				A1000000000000000000000A /* ProgressView.swift in Sources */,
+				A1000000000000000000000B /* ProfileView.swift in Sources */,
+				A1000000000000000000000C /* MembershipCardView.swift in Sources */,
+				A1000000000000000000000D /* NotificationService.swift in Sources */,
+				A1000000000000000000000E /* NotificationRouter.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		E10000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		E10000000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		E10000000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Ghost Cart";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ghostcart.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E10000000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Ghost Cart";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ghostcart.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		F10000000000000000000001 /* Build configuration list for PBXNativeTarget "GhostCart" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E10000000000000000000003 /* Debug */,
+				E10000000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F10000000000000000000002 /* Build configuration list for PBXProject "GhostCart" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E10000000000000000000001 /* Debug */,
+				E10000000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = D10000000000000000000004 /* Project object */;
 }

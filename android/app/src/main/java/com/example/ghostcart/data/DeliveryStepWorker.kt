@@ -11,7 +11,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.ghostcart.MainActivity
-import com.example.ghostcart.R
+import com.ghostcart.app.R
 
 class DeliveryStepWorker(
     appContext: Context,

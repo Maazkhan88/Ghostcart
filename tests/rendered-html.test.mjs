@@ -31,51 +31,67 @@ test("protects and renders the Ghost Cart catalog admin", async () => {
   assert.match(html, /Nothing here creates a real order, payment, or delivery/i);
 });
 
-test("server-renders the complete Ghost Cart experience", async () => {
+test("server-renders the complete Ghost Cart v2 experience", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /<title>Ghost Cart — Add to cart\. Checkout\. Keep your money\.<\/title>/i);
-  assert.match(html, /The fake checkout app for everything you almost bought/i);
+  assert.match(html, /<title>Ghost Cart .* Before you buy it, Ghost it\.<\/title>/i);
+  assert.match(html, /The cooling-off app for almost-buys/i);
+  assert.match(html, /Before you buy it/i);
   assert.match(html, /Ghost it/i);
-  assert.match(html, /Drag into Ghost Cart/i);
-  assert.match(html, /Browse temptation/i);
-  assert.match(html, /Almost bought/i);
-  assert.match(html, /Complete Fake Checkout/i);
-  assert.match(html, /Ghost Receipt/i);
+  assert.match(html, /One ritual/i);
+  assert.match(html, /Five honest moments/i);
+  assert.match(html, /Put one urge/i);
+  assert.match(html, /through the pause/i);
+  assert.match(html, /Capture temptation/i);
+  assert.match(html, /Ghost this item/i);
+  assert.match(html, /Almost spent/i);
+  assert.match(html, /Cooling now/i);
+  assert.match(html, /Confirmed Money Kept/i);
+  assert.match(html, /A membership card/i);
+  assert.match(html, /Never a payment card/i);
   assert.match(html, /Simulation only/i);
   assert.match(html, /No real payment/i);
   assert.match(html, /No real delivery/i);
-  assert.match(html, /Your questions/i);
-  assert.match(html, /Your weekly mood &amp; mindset/i);
-  assert.match(html, /Cravings by category/i);
-  assert.match(html, /Fake checkout\.<br\/><span>Real control\./i);
+  assert.match(html, /Questions/i);
+  assert.match(html, /without the fog/i);
 });
 
-test("keeps payment and brand safety rules in the production source", async () => {
-  const [page, layout, css, packageJson] = await Promise.all([
+test("keeps decision accounting, accessibility, and brand safety rules in production source", async () => {
+  const [page, demo, waitlist, layout, css, packageJson] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/GhostFlowDemo.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/WaitlistForm.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/site.css", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
 
-  assert.match(page, /const DEMO_PRODUCTS/);
-  assert.match(page, /const DASHBOARD_DEMO_DATA/);
-  assert.ok((page.match(/Sample data · not a user claim/g) ?? []).length >= 3);
-  assert.match(page, /onDoubleClick/);
-  assert.match(page, /onPointerDown/);
-  assert.match(page, /onDragStart/);
-  assert.match(page, /onDrop/);
-  assert.match(page, /localStorage\.setItem/);
-  assert.match(page, /aria-live="polite"/);
+  assert.match(demo, /const DEMO_DATA/);
+  assert.match(demo, /type DemoStage/);
+  assert.match(demo, /type DemoResolution/);
+  assert.match(demo, /resolution === "skipped"/);
+  assert.match(demo, /confirmedKept/);
+  assert.match(demo, /Start cooling/i);
+  assert.match(demo, /I(?:'|&apos;)m ready to decide/i);
+  assert.match(demo, /I skipped it/i);
+  assert.match(demo, /I bought it intentionally/i);
+  assert.match(demo, /I need more time/i);
+  assert.match(demo, /Ghost Receipt/i);
+  assert.match(demo, /A decision record.*not proof of purchase/i);
+  assert.match(page, /Money Kept increases only after you confirm/i);
+  assert.match(demo, /localStorage\.setItem/);
+  assert.match(waitlist, /localStorage\.setItem/);
+  assert.match(demo, /aria-live="polite"/);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
-  assert.match(layout, /fake checkout experience/i);
-  assert.doesNotMatch(page, /Visa|Mastercard|Apple Pay|Google Pay/i);
-  assert.doesNotMatch(page, /\$\s*\d/);
-  assert.doesNotMatch(page, /\bAED\b/);
+  assert.match(layout, /cooling-off app|cool the urge/i);
+
+  const productSource = [page, demo, waitlist, layout].join("\n");
+  assert.doesNotMatch(productSource, /Visa|Mastercard|Apple Pay|Google Pay|CVV/i);
+  assert.doesNotMatch(productSource, /\$\s*\d/);
+  assert.doesNotMatch(productSource, /\bAED\b/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   assert.doesNotMatch(layout, /codex-preview|Starter Project/i);
 });

@@ -30,7 +30,7 @@ export async function hashPassword(password: string, saltHex: string): Promise<s
   const derivedBits = await crypto.subtle.deriveBits(
     {
       name: "PBKDF2",
-      salt: fromHex(saltHex),
+      salt: fromHex(saltHex).buffer as ArrayBuffer,
       iterations: 100000,
       hash: "SHA-256",
     },
@@ -39,4 +39,13 @@ export async function hashPassword(password: string, saltHex: string): Promise<s
   );
 
   return toHex(new Uint8Array(derivedBits));
+}
+
+export function constantTimeHexEqual(left: string, right: string): boolean {
+  if (left.length !== right.length) return false;
+  let difference = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    difference |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  }
+  return difference === 0;
 }

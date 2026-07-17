@@ -12,6 +12,11 @@ import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.example.ghostcart.data.CoolingReminderWorker
 import com.example.ghostcart.data.DailyGhostReminderWorker
+import com.example.ghostcart.data.AlmostBuy
+import com.example.ghostcart.data.AlmostBuyDraft
+import com.example.ghostcart.data.AlmostBuyRepository
+import com.example.ghostcart.data.AlmostBuyResolution
+import com.example.ghostcart.data.LocalAlmostBuyRepository
 import com.example.ghostcart.data.Marketplace
 import com.example.ghostcart.data.MarketplaceProduct
 import com.example.ghostcart.data.WalletConfig
@@ -56,11 +61,13 @@ data class AppUiState(
     val mostGhostedToday: List<GhostRanking> = emptyList(),
     val isMostGhostedLoading: Boolean = true,
     val isMostGhostedUnavailable: Boolean = false,
-    val toastMessage: String? = null
+    val toastMessage: String? = null,
+    val almostBuys: List<AlmostBuy> = emptyList()
 )
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val sharedPrefs = application.getSharedPreferences("ghost_cart_prefs", Context.MODE_PRIVATE)
+    private val almostBuyRepository: AlmostBuyRepository = LocalAlmostBuyRepository(application)
     
     private val _uiState = MutableStateFlow(AppUiState(
         authEmail = sharedPrefs.getString("auth_email", null),
@@ -74,11 +81,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         refreshMostGhostedToday()
-        syncDailyGhostReminders(_uiState.value.walletConfig.walletNotificationsEnabled)
+        syncDailyGhostReminder("lunch", 13, _uiState.value.walletConfig.lunchReminderEnabled)
+        syncDailyGhostReminder("dinner", 20, _uiState.value.walletConfig.dinnerReminderEnabled)
+        viewModelScope.launch {
+            almostBuyRepository.items.collect { items ->
+                _uiState.update { it.copy(almostBuys = items) }
+            }
+        }
     }
 
     val allProducts: List<MarketplaceProduct> =
-        (Marketplace.featuredCatalog + Marketplace.fakeFlashDeals + Marketplace.foodAndCoffeeCatalog + Marketplace.dummyCatalog)
+        (Marketplace.featuredCatalog + Marketplace.fakeFlashDeals + Marketplace.foodAndCoffeeCatalog)
             .distinctBy { it.id }
 
     fun findProduct(id: String): MarketplaceProduct? = allProducts.find { it.id == id }
@@ -191,12 +204,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateWalletConfig(transform: (WalletConfig) -> WalletConfig) {
-        val notificationsWereEnabled = _uiState.value.walletConfig.walletNotificationsEnabled
+        val previousConfig = _uiState.value.walletConfig
         val nextConfig = transform(_uiState.value.walletConfig)
         persistWalletConfig(nextConfig)
         _uiState.update { it.copy(walletConfig = nextConfig) }
-        if (notificationsWereEnabled != nextConfig.walletNotificationsEnabled) {
-            syncDailyGhostReminders(nextConfig.walletNotificationsEnabled)
+        if (previousConfig.lunchReminderEnabled != nextConfig.lunchReminderEnabled) {
+            syncDailyGhostReminder("lunch", 13, nextConfig.lunchReminderEnabled)
+        }
+        if (previousConfig.dinnerReminderEnabled != nextConfig.dinnerReminderEnabled) {
+            syncDailyGhostReminder("dinner", 20, nextConfig.dinnerReminderEnabled)
         }
     }
 
@@ -256,15 +272,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             .apply()
     }
 
-    private fun syncDailyGhostReminders(enabled: Boolean) {
+    private fun syncDailyGhostReminder(meal: String, hourOfDay: Int, enabled: Boolean) {
         val workManager = WorkManager.getInstance(getApplication<Application>())
         if (!enabled) {
-            workManager.cancelUniqueWork("ghost_daily_lunch")
-            workManager.cancelUniqueWork("ghost_daily_dinner")
+            workManager.cancelUniqueWork("ghost_daily_$meal")
             return
         }
-        scheduleDailyGhostReminder(workManager, meal = "lunch", hourOfDay = 13)
-        scheduleDailyGhostReminder(workManager, meal = "dinner", hourOfDay = 20)
+        scheduleDailyGhostReminder(workManager, meal = meal, hourOfDay = hourOfDay)
     }
 
     private fun scheduleDailyGhostReminder(workManager: WorkManager, meal: String, hourOfDay: Int) {
@@ -305,11 +319,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             temptationBudget = sharedPrefs.getInt("wallet_temptation_budget", 1500),
             startingBalance = sharedPrefs.getInt("wallet_starting_balance", 0),
             salaryShieldEnabled = sharedPrefs.getBoolean("wallet_salary_shield_enabled", true),
-            walletNotificationsEnabled = sharedPrefs.getBoolean("wallet_notifications_enabled", true),
+            coolingNotificationsEnabled = sharedPrefs.getBoolean("cooling_notifications_enabled", true),
+            lunchReminderEnabled = sharedPrefs.getBoolean("lunch_reminder_enabled", false),
+            dinnerReminderEnabled = sharedPrefs.getBoolean("dinner_reminder_enabled", false),
             autoAllocateToGoals = sharedPrefs.getBoolean("wallet_auto_allocate", true),
             cardFrozen = sharedPrefs.getBoolean("wallet_card_frozen", false),
             cardTheme = sharedPrefs.getString("wallet_card_theme", "Dark") ?: "Dark",
-            cardName = sharedPrefs.getString("wallet_card_name", "Ghost Card") ?: "Ghost Card",
+            cardName = sharedPrefs.getString("wallet_card_name", "Ghost Membership") ?: "Ghost Membership",
             cardholderName = sharedPrefs.getString("wallet_cardholder_name", "Ghost Member") ?: "Ghost Member",
             salaryShieldPercent = sharedPrefs.getInt("wallet_salary_shield_percent", 20),
             ghostId = ghostId,
@@ -329,7 +345,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             .putInt("wallet_temptation_budget", config.temptationBudget)
             .putInt("wallet_starting_balance", config.startingBalance)
             .putBoolean("wallet_salary_shield_enabled", config.salaryShieldEnabled)
-            .putBoolean("wallet_notifications_enabled", config.walletNotificationsEnabled)
+            .putBoolean("cooling_notifications_enabled", config.coolingNotificationsEnabled)
+            .putBoolean("lunch_reminder_enabled", config.lunchReminderEnabled)
+            .putBoolean("dinner_reminder_enabled", config.dinnerReminderEnabled)
             .putBoolean("wallet_auto_allocate", config.autoAllocateToGoals)
             .putBoolean("wallet_card_frozen", config.cardFrozen)
             .putString("wallet_card_theme", config.cardTheme)
@@ -374,6 +392,53 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             delay(2500)
             _uiState.update { it.copy(toastMessage = null) }
         }
+    }
+
+    fun createAlmostBuy(draft: AlmostBuyDraft, onCreated: (AlmostBuy) -> Unit = {}) {
+        viewModelScope.launch {
+            val item = almostBuyRepository.create(draft)
+            scheduleCoolingNotification(item)
+            showToast("${item.name} is cooling")
+            onCreated(item)
+        }
+    }
+
+    fun resolveAlmostBuy(id: String, resolution: AlmostBuyResolution) {
+        viewModelScope.launch {
+            val item = almostBuyRepository.resolve(id, resolution) ?: return@launch
+            WorkManager.getInstance(getApplication<Application>())
+                .cancelUniqueWork("ghost_cooling_${item.id}")
+            showToast(
+                if (resolution == AlmostBuyResolution.SKIPPED) {
+                    "Confirmed as money kept"
+                } else {
+                    "Decision recorded without counting savings"
+                }
+            )
+        }
+    }
+
+    fun extendAlmostBuy(id: String, durationMillis: Long) {
+        viewModelScope.launch {
+            val item = almostBuyRepository.extendCooling(id, durationMillis) ?: return@launch
+            scheduleCoolingNotification(item)
+            showToast("Cooling extended")
+        }
+    }
+
+    private fun scheduleCoolingNotification(item: AlmostBuy) {
+        if (!_uiState.value.walletConfig.coolingNotificationsEnabled) return
+        val delayMillis = (item.coolingUntilMillis - System.currentTimeMillis()).coerceAtLeast(1_000L)
+        val request = OneTimeWorkRequestBuilder<CoolingReminderWorker>()
+            .setInitialDelay(delayMillis, TimeUnit.MILLISECONDS)
+            .setInputData(workDataOf("productName" to item.name, "productId" to item.id))
+            .addTag("ghost_cooling_reminder")
+            .build()
+        WorkManager.getInstance(getApplication<Application>()).enqueueUniqueWork(
+            "ghost_cooling_${item.id}",
+            ExistingWorkPolicy.REPLACE,
+            request
+        )
     }
 
     fun placeSimulatedOrder() {

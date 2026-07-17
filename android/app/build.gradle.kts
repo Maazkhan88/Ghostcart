@@ -5,19 +5,20 @@ plugins {
 }
 
 android {
-    namespace = "com.example.ghostcart"
+    namespace = "com.ghostcart.app"
     compileSdk = 36
     defaultConfig {
-        applicationId = "com.example.ghostcart"
+        applicationId = "com.ghostcart.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 14
-        versionName = "1.3.1"
+        versionCode = 15
+        versionName = "2.0.0"
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -62,8 +63,6 @@ dependencies {
   implementation(libs.androidx.compose.ui.tooling.preview)
   implementation(libs.androidx.compose.material3)
   implementation(libs.androidx.compose.material.icons.extended)
-  implementation("io.coil-kt.coil3:coil-compose:3.5.0")
-  implementation("io.coil-kt.coil3:coil-network-okhttp:3.5.0")
   // Tooling
   debugImplementation(libs.androidx.compose.ui.tooling)
   // Instrumented tests

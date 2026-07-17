@@ -5,10 +5,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -23,8 +19,7 @@ import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import coil3.compose.AsyncImage
-import com.example.ghostcart.R
+import com.ghostcart.app.R
 import kotlin.math.roundToInt
 
 @Composable
@@ -479,28 +474,9 @@ fun ProductPhoto(
         return
     }
 
-    val photoUrl = remember(normalizedName) { productPhotoUrl(normalizedName) }
-    var remoteFailed by remember(photoUrl) { mutableStateOf(false) }
-    if (!remoteFailed) {
-        AsyncImage(
-            model = photoUrl,
-            contentDescription = "$productName product photo",
-            contentScale = ContentScale.Crop,
-            onError = { remoteFailed = true },
-            modifier = modifier.background(Color(0xFFF2F2F2))
-        )
-    } else {
-        ProductAtlasPhoto(crop = fallbackProductPhoto(fallbackIconName), modifier = modifier)
-    }
-}
-
-private fun productPhotoUrl(normalizedName: String): String {
-    val searchTags = normalizedName
-        .replace(Regex("[^a-z0-9]+"), ",")
-        .trim(',')
-        .ifBlank { "product" }
-    val stableLock = normalizedName.hashCode().toUInt().toString()
-    return "https://loremflickr.com/640/640/$searchTags?lock=$stableLock"
+    // Never fetch uncontrolled search-result imagery. Until a product has an
+    // approved/licensed asset, render a bundled category photograph.
+    ProductAtlasPhoto(crop = fallbackProductPhoto(fallbackIconName), modifier = modifier)
 }
 
 private fun fallbackProductPhoto(iconName: String): ProductPhotoCrop = when (iconName) {

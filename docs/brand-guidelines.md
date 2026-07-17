@@ -16,13 +16,18 @@ Green is a controlled accent for actions, progress, and positive outcomes. Shado
 
 ## Language
 
-Use: Fake Checkout, Ghost Receipt, almost-buy, simulated order, money kept.
+Use: Fake Checkout, Ghost Receipt, almost-buy, captured, cooling, resolved, Money Kept, Ghost ID, simulated order.
 
 Always disclose: Simulation only. No real payment. No real delivery.
 
-Never use: invoice, tax invoice, payment successful, card charged, bank balance, withdrawal, transfer, debit card, or real delivery claims.
+Never use: invoice, tax invoice, payment successful, card charged, bank balance, wallet balance, withdrawal, transfer, debit card, CVV, expiry date, funds, deposit, Ghost Pay, or real delivery claims.
+
+"Ghost Wallet" is retired from primary navigation. Use **Progress** for the product area and **Money Kept** for the confirmed amount. If older material references Ghost Wallet, pair it with an explicit internal-simulation explanation until it is replaced.
+
+Ghost Card is a membership/achievement artifact, never a payment instrument. It may contain the user's chosen display name, theme, member-since date, and a clearly non-financial Ghost ID.
 
 ## Assets
 
-The official logo, mascot, and new UAE Dirham symbol were not transferred into this workspace. Their final files must be added to `public/brand/`; temporary UI must not approximate or redraw them.
+Use official assets from `public/brand/` and their approved mobile equivalents. Do not approximate or redraw the official logo or UAE Dirham symbol.
 
+Product imagery must be curated, licensed, generic, and stored in an approved project-controlled asset source. Do not use runtime web-image search or recognizable brand packaging without permission.

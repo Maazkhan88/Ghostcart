@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./site.css";
 
 export const metadata: Metadata = {
-  title: "Ghost Cart — Add to cart. Checkout. Keep your money.",
+  title: "Ghost Cart — Before you buy it, Ghost it.",
   description:
-    "Ghost Cart is the fake checkout experience for everything you almost bought.",
-  keywords: ["Ghost Cart", "almost bought", "impulse shopping", "fake checkout", "shopping simulation"],
+    "Capture an almost-buy, cool the urge, then decide with a clear head. Ghost Cart is simulation-only: no real payment and no real delivery.",
+  keywords: ["Ghost Cart", "almost bought", "cooling off", "impulse shopping", "shopping simulation"],
   openGraph: {
-    title: "Ghost Cart",
-    description: "The fake checkout experience for everything you almost bought.",
+    title: "Ghost Cart — Before you buy it, Ghost it.",
+    description: "The cooling-off app for everything you almost bought.",
     type: "website",
   },
 };

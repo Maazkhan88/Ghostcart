@@ -26,17 +26,24 @@ data class WalletConfig(
     val temptationBudget: Int = 1500,
     val startingBalance: Int = 0,
     val salaryShieldEnabled: Boolean = true,
-    val walletNotificationsEnabled: Boolean = true,
+    val coolingNotificationsEnabled: Boolean = true,
+    val lunchReminderEnabled: Boolean = false,
+    val dinnerReminderEnabled: Boolean = false,
     val autoAllocateToGoals: Boolean = true,
     val cardFrozen: Boolean = false,
     val cardTheme: String = "Dark",
-    val cardName: String = "Ghost Card",
+    val cardName: String = "Ghost Membership",
     val cardholderName: String = "Ghost Member",
     val salaryShieldPercent: Int = 20,
-    val ghostId: String = "GC-DEMO-SAFE-ID",
+    val ghostId: String = "GC-DEMO-MEMBER-ID",
     val memberSince: String = "Jul 2026"
-)
+) {
+    /** Compatibility for retired prototype settings; new UI exposes each preference separately. */
+    val walletNotificationsEnabled: Boolean
+        get() = coolingNotificationsEnabled || lunchReminderEnabled || dinnerReminderEnabled
+}
 
+/** Legacy reference values retained only for unreachable prototype screens. */
 object WalletDemoData {
     const val currentBalance = 8420
     const val protectedThisMonth = 1240

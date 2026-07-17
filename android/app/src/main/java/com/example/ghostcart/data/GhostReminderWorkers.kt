@@ -11,17 +11,17 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.ghostcart.MainActivity
-import com.example.ghostcart.R
+import com.ghostcart.app.R
 
 private const val PREFS_NAME = "ghost_cart_prefs"
-private const val NOTIFICATIONS_ENABLED_KEY = "wallet_notifications_enabled"
+private const val COOLING_NOTIFICATIONS_KEY = "cooling_notifications_enabled"
 
 class CoolingReminderWorker(
     appContext: Context,
     workerParams: WorkerParameters
 ) : CoroutineWorker(appContext, workerParams) {
     override suspend fun doWork(): Result {
-        if (!notificationsEnabled(applicationContext)) return Result.success()
+        if (!preferenceEnabled(applicationContext, COOLING_NOTIFICATIONS_KEY, true)) return Result.success()
 
         val productName = inputData.getString("productName") ?: "Your item"
         GhostNotificationPublisher.show(
@@ -31,7 +31,8 @@ class CoolingReminderWorker(
             channelDescription = "Updates when a Ghost Cart cooling period is complete",
             notificationId = 2200 + productName.hashCode().and(0x7FFF),
             title = "Cooling complete 👻",
-            text = "$productName has cooled off. Do you still want it?"
+            text = "$productName has cooled off. Do you still want it?",
+            cooldownId = inputData.getString("productId")
         )
         return Result.success()
     }
@@ -42,14 +43,14 @@ class DailyGhostReminderWorker(
     workerParams: WorkerParameters
 ) : CoroutineWorker(appContext, workerParams) {
     override suspend fun doWork(): Result {
-        if (!notificationsEnabled(applicationContext)) return Result.success()
-
         val meal = inputData.getString("meal") ?: "meal"
+        val preferenceKey = if (meal == "lunch") "lunch_reminder_enabled" else "dinner_reminder_enabled"
+        if (!preferenceEnabled(applicationContext, preferenceKey, false)) return Result.success()
         val (title, text) = when (meal) {
             "lunch" -> "Lunch temptation? Ghost it first 👻" to
-                "Build the lunch order, fake-checkout, and keep your money."
+                "Capture the lunch order and give the craving time to cool."
             "dinner" -> "Thinking about dinner delivery? 👻" to
-                "Ghost the dinner order first and give the craving time to cool."
+                "Ghost the dinner order first, then decide intentionally."
             else -> "Feeling tempted? Ghost it first 👻" to
                 "Put the craving in Ghost Cart before you spend."
         }
@@ -67,9 +68,9 @@ class DailyGhostReminderWorker(
     }
 }
 
-private fun notificationsEnabled(context: Context): Boolean =
+private fun preferenceEnabled(context: Context, key: String, default: Boolean): Boolean =
     context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        .getBoolean(NOTIFICATIONS_ENABLED_KEY, true)
+        .getBoolean(key, default)
 
 private object GhostNotificationPublisher {
     fun show(
@@ -79,7 +80,8 @@ private object GhostNotificationPublisher {
         channelDescription: String,
         notificationId: Int,
         title: String,
-        text: String
+        text: String,
+        cooldownId: String? = null
     ) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -92,7 +94,8 @@ private object GhostNotificationPublisher {
         }
 
         val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            cooldownId?.let { putExtra("cooldownId", it) }
         }
         val pendingIntent = PendingIntent.getActivity(
             context,
