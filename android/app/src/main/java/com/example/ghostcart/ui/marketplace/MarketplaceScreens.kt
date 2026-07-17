@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ghostcart.data.Marketplace
@@ -231,18 +232,41 @@ fun HomeMarketplaceScreen(
                 Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Paper, modifier = Modifier.size(16.dp))
             }
 
-            MarketplaceSectionHeader(title = "Sponsored Simulations", onViewAll = { onOpenCategory("all") })
+            MarketplaceSectionHeader(title = "Brand Simulations", badge = "DEMO", onViewAll = { onOpenCategory("all") })
             LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 12.dp, horizontal = 0.dp)) {
                 items(Marketplace.sponsoredBrands) { brand ->
                     Column(
                         modifier = Modifier
-                            .width(120.dp)
+                            .width(144.dp)
+                            .height(142.dp)
                             .clip(RoundedCornerShape(14.dp))
                             .border(1.dp, FaintBorder, RoundedCornerShape(14.dp))
                             .padding(14.dp)
                     ) {
-                        Text(text = brand.name, color = Ink, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
-                        Text(text = brand.tagline, color = MutedText, fontSize = 9.sp, modifier = Modifier.padding(top = 4.dp))
+                        Box(
+                            modifier = Modifier.size(40.dp).clip(CircleShape).background(GreenTint),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = brand.logoMark, color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                        }
+                        Text(
+                            text = brand.name,
+                            color = Ink,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                        Text(
+                            text = brand.tagline,
+                            color = MutedText,
+                            fontSize = 9.sp,
+                            lineHeight = 12.sp,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
                     }
                 }
             }

@@ -25,7 +25,7 @@ data class MarketplaceCategory(
     val iconName: String
 )
 
-data class SponsoredBrand(val name: String, val tagline: String)
+data class SponsoredBrand(val name: String, val tagline: String, val logoMark: String)
 
 /**
  * Picks a generic icon that actually matches the product's title, instead of a
@@ -117,10 +117,10 @@ object Marketplace {
     )
 
     val sponsoredBrands = listOf(
-        SponsoredBrand("SHEIN", "Up to 70% off"),
-        SponsoredBrand("noon", "Deals you don't need"),
-        SponsoredBrand("Namshi", "Trendy, not necessary"),
-        SponsoredBrand("Amazon.ae", "Add, don't buy")
+        SponsoredBrand("GhostBite", "Food cravings, safely simulated", "GB"),
+        SponsoredBrand("LoopWear", "Try the style. Skip the regret.", "LW"),
+        SponsoredBrand("VoltNest", "Cool down the gadget impulse", "VN"),
+        SponsoredBrand("CalmCup", "Ghost the coffee run first", "CC")
     )
 
     val foodAndCoffeeCatalog = listOf(

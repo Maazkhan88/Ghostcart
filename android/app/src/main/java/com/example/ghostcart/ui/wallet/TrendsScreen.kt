@@ -47,7 +47,7 @@ import com.example.ghostcart.ui.common.materialIconFor
 fun TrendsScreen(onGhostAnotherCart: () -> Unit, modifier: Modifier = Modifier) {
     Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            GhostMascotPose(poseName = "wave", modifier = Modifier.padding(end = 0.dp))
+            GhostMascotPose(poseName = "wave", modifier = Modifier.size(36.dp))
             Text(text = "Ghost Cart", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f).padding(start = 10.dp))
             RoundIconButton(icon = Icons.Filled.Notifications)
         }
@@ -101,11 +101,14 @@ fun TrendsScreen(onGhostAnotherCart: () -> Unit, modifier: Modifier = Modifier) 
             columns = GridCells.Fixed(2),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.padding(top = 10.dp).fillMaxWidth().height(180.dp)
+            userScrollEnabled = false,
+            modifier = Modifier.padding(top = 10.dp).fillMaxWidth().height(246.dp)
         ) {
             items(WalletDemoData.mostGhostedCategories) { (label, amount, percent) ->
                 Column(
                     modifier = Modifier
+                        .fillMaxWidth()
+                        .height(118.dp)
                         .clip(RoundedCornerShape(14.dp))
                         .border(1.dp, FaintBorder, RoundedCornerShape(14.dp))
                         .padding(14.dp)
@@ -123,11 +126,14 @@ fun TrendsScreen(onGhostAnotherCart: () -> Unit, modifier: Modifier = Modifier) 
             columns = GridCells.Fixed(2),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.padding(top = 10.dp).fillMaxWidth().height(180.dp)
+            userScrollEnabled = false,
+            modifier = Modifier.padding(top = 10.dp).fillMaxWidth().height(210.dp)
         ) {
             items(WalletDemoData.topTriggers) { (label, iconName, percent) ->
                 Column(
                     modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp)
                         .clip(RoundedCornerShape(14.dp))
                         .background(GreenTint)
                         .padding(14.dp)

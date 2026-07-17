@@ -11,8 +11,8 @@ android {
         applicationId = "com.example.ghostcart"
         minSdk = 24
         targetSdk = 36
-        versionCode = 9
-        versionName = "1.2.6"
+        versionCode = 10
+        versionName = "1.2.7"
     }
 
     buildTypes {
