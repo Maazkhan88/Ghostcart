@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-07-18 (Codex — v2.1.2 retailer capture and accessibility/contrast fixes).
+Last updated: 2026-07-18 (Codex — v2.1.3 Android rich-share title and thumbnail capture).
 
 ## Canonical handoff for Antigravity and Claude Code (2026-07-18)
 
@@ -9,13 +9,13 @@ This section is the current operational source of truth. Historical session logs
 ### Repository and release state
 
 - Working branch: `agent/ghost-cart-products-sharing`
-- Latest product implementation commit: `2c41f4200f899f7726f7975a6dc9fe384be9e054`
+- Latest product implementation commit: `43a3e1dc53cfed4bca7ee5899d2ab1a697828774`
 - Draft PR: https://github.com/Maazkhan88/Ghostcart/pull/3
 - Base branch: `main`; current `main` already contains the merged v2 rebuild from PR #2 (`f4bb3ab`).
 - Canonical hosted site/API: https://ghost-cart-preview.maaz-n-khan.chatgpt.site
-- Android release: `releases/GhostCart-v2.1.2-debug.apk`
-- Direct APK: https://raw.githubusercontent.com/Maazkhan88/Ghostcart/agent/ghost-cart-products-sharing/releases/GhostCart-v2.1.2-debug.apk
-- APK SHA-256: `913AC1A74F8D83E605C53B6A9276BF1467F2772F1E525B263788262531882B1A`
+- Android release: `releases/GhostCart-v2.1.3-debug.apk`
+- Direct APK: https://raw.githubusercontent.com/Maazkhan88/Ghostcart/agent/ghost-cart-products-sharing/releases/GhostCart-v2.1.3-debug.apk
+- APK SHA-256: `CCAAA9C68998DEFB36EA103A43E6FC40AFE71B81923ACA117CDE2638FD11FB5F`
 
 ### Current product truth
 
@@ -38,7 +38,7 @@ This section is the current operational source of truth. Historical session logs
 - Public community cards omit user identity and original source URLs. Images are restricted to supported retailer hosts.
 - Current hosted API endpoint is the Sites URL above. Do not point new clients back to the older stale Workers/Pages URLs recorded later in this historical document.
 
-#### Android v2.1.2
+#### Android v2.1.3
 
 - Five-tab v2 information architecture: Home, Cooldowns, central Ghost +, Progress, and Profile.
 - Honest local cooldown lifecycle with editable item name/amount/category/trigger, recommended pause presets, resolution as skipped/bought intentionally/more time, recent decisions, and Money Kept only after confirmed skipping.
@@ -51,7 +51,16 @@ This section is the current operational source of truth. Historical session logs
 - Product imagery and cardholder names no longer use one fixed user identity.
 - Ghost Rider tracking artwork/animation and simulated checkout assets exist in the legacy/optional ritual surfaces; none imply real GPS or delivery.
 
-#### Latest v2.1.2 fixes
+#### Latest v2.1.3 fixes
+
+- Android share handling now consumes the rich share title and image URI supplied through `EXTRA_TITLE`, `EXTRA_STREAM`, intent data, or `ClipData`, instead of discarding everything except the URL.
+- Shared image content is copied into private app storage before the sending app can revoke temporary URI access. Old cached share thumbnails are bounded and pruned.
+- Hosted preview metadata is merged with rich Android share metadata; a server result still wins when it has a valid image, while the sender-provided thumbnail fills a missing image.
+- Device-side retailer parsing now supports Open Graph/Twitter title and image tags plus structured price and currency metadata used by Amazon/Noon pages.
+- Added regression coverage for Noon Open Graph image/price metadata and preservation of a thumbnail/title supplied by an Android share intent.
+- Android version advanced to `2.1.3` (`versionCode 19`).
+
+#### Previous v2.1.2 fixes
 
 - Fixed Android product API base URL to use the current Sites deployment rather than the retired Worker endpoint.
 - Fixed non-JSON product-preview failures so users receive manual-entry guidance instead of a `JSONObject` crash.
@@ -66,13 +75,13 @@ This section is the current operational source of truth. Historical session logs
 
 - Android: `testDebugUnitTest`, `lintDebug`, and `assembleDebug` pass with JDK from `C:\Program Files\Android\Android Studio\jbr`.
 - Kotlin incremental-cache corruption was cleared with Gradle `clean`; the successful verification build used `'-Pkotlin.incremental=false'`.
-- The v2.1.2 raw GitHub APK URL returns HTTP 200 and the checksum above.
+- The v2.1.3 raw GitHub APK URL returns HTTP 200 and the checksum above.
 - Web product-preview tests cover browser-style Amazon markup plus safety/host validation; the Sites build was deployed before the Android v2.1.2-only contrast/fallback changes.
 
 ### Known limitations and do-not-assume items
 
 - Retailer extraction is inherently best-effort. Amazon/Noon can vary HTML or block cloud/device requests. Keep manual title/amount editing and never promise guaranteed capture.
-- The current hosted cloud preview can receive only partial metadata for some Amazon pages. Android v2.1.2 therefore performs a second direct device-side fetch for missing price/image.
+- The current hosted cloud preview can receive only partial metadata for some Amazon/Noon pages. Android v2.1.3 therefore preserves rich share title/thumbnail metadata and performs a second direct device-side fetch for missing price/image.
 - The Android form currently lets users edit title and amount after import; a dedicated manual image-URL/image-picker correction control is still a follow-up.
 - Android v2 lifecycle state is primarily local/offline-first. The hosted authenticated `/api/almost-buys` lifecycle exists, but full cross-device sync from the v2 Android UI is not yet complete.
 - iOS has a SwiftUI scaffold/assets and compatible models, but it has not been compiled on Windows. The native iOS Share Extension is not built.
@@ -81,7 +90,7 @@ This section is the current operational source of truth. Historical session logs
 
 ### Recommended next work, in order
 
-1. Install v2.1.2 on a physical Android device and retest the exact Amazon/Noon share flows, including image loading on Wi-Fi and mobile data.
+1. Install v2.1.3 on a physical Android device and retest the exact Amazon/Noon share flows, including sender-supplied thumbnails and image loading on Wi-Fi and mobile data.
 2. Add an image correction flow (paste image URL or choose a local screenshot) when retailer image capture is partial.
 3. Add Android integration/UI tests for the share intent, completed/partial capture copy, image loading failure, and cooldown button contrast.
 4. Connect Android v2 lifecycle/preferences to the authenticated backend for optional account sync while retaining offline-first behavior and conflict handling.
