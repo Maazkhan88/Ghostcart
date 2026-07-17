@@ -5,6 +5,7 @@ const MAX_PRODUCTS_PER_CHECKOUT = 40;
 const DEFAULT_RANKING_LIMIT = 12;
 const MAX_RANKING_LIMIT = 30;
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,119}$/;
+const UAE_UTC_OFFSET_HOURS = 4;
 const MISSING_TABLE_HINT =
   "The ghost activity table is unavailable. Generate and deploy the latest D1 migration before using live rankings.";
 
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
       db.prepare(
         `SELECT product_key AS productId, COUNT(*) AS ghostCount
          FROM ghost_events
-         WHERE event_date = DATE('now')
+         WHERE event_date = DATE('now', '+4 hours')
          GROUP BY product_key
          ORDER BY ghostCount DESC, product_key ASC
          LIMIT ?`,
@@ -42,7 +43,7 @@ export async function GET(request: Request) {
       db.prepare(
         `SELECT COUNT(*) AS totalGhosts
          FROM ghost_events
-         WHERE event_date = DATE('now')`,
+         WHERE event_date = DATE('now', '+4 hours')`,
       ),
     ]);
 
@@ -62,7 +63,9 @@ export async function GET(request: Request) {
     return json(
       {
         period: "today",
-        date: new Date().toISOString().slice(0, 10),
+        date: new Date(Date.now() + UAE_UTC_OFFSET_HOURS * 60 * 60 * 1000)
+          .toISOString()
+          .slice(0, 10),
         totalGhosts: Number(totalRow.totalGhosts),
         rankings,
       },
@@ -105,8 +108,8 @@ export async function POST(request: Request) {
     const statements = productIds.map((productId) =>
       db
         .prepare(
-          `INSERT INTO ghost_events (event_key, product_key, source)
-           VALUES (?, ?, ?)
+          `INSERT INTO ghost_events (event_key, product_key, event_date, source)
+           VALUES (?, ?, DATE('now', '+4 hours'), ?)
            ON CONFLICT(event_key) DO NOTHING`,
         )
         .bind(`${checkoutId}:${productId}`, productId, source),
