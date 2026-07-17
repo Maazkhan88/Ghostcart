@@ -115,10 +115,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun importSharedProduct(sourceUrl: String) {
+    fun importSharedProduct(sourceUrl: String, sharedTitle: String? = null, sharedImageUrl: String? = null) {
         _uiState.update { it.copy(productImportState = ProductImportState.Loading) }
         viewModelScope.launch {
-            ProductImportRepository.preview(sourceUrl)
+            ProductImportRepository.preview(sourceUrl, sharedTitle, sharedImageUrl)
                 .onSuccess { product ->
                     _uiState.update {
                         it.copy(

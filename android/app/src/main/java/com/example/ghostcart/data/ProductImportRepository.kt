@@ -91,6 +91,27 @@ internal data class RetailerHtmlMetadata(
     val imageUrl: String?
 )
 
+internal fun mergeSharedMetadata(
+    product: ImportedProduct,
+    sharedTitle: String?,
+    sharedImageUrl: String?
+): ImportedProduct {
+    val cleanTitle = sharedTitle?.trim()?.take(160)?.takeIf { it.isNotBlank() }
+    val cleanImage = sharedImageUrl?.trim()?.takeIf { it.isNotBlank() }
+    val title = if (product.status == "needs_input" || product.title == "Shared product") {
+        cleanTitle ?: product.title
+    } else {
+        product.title
+    }
+    val imageUrl = product.imageUrl ?: cleanImage
+    val complete = title != "Shared product" && product.priceCents != null && imageUrl != null
+    return product.copy(
+        title = title,
+        imageUrl = imageUrl,
+        status = if (complete) "complete" else if (title != "Shared product" || imageUrl != null) "partial" else product.status,
+        note = if (complete) null else product.note
+    )
+}
 private fun decodeRetailerHtml(value: String): String = value
     .replace("&nbsp;", " ", ignoreCase = true)
     .replace("&#160;", " ", ignoreCase = true)
@@ -100,35 +121,77 @@ private fun decodeRetailerHtml(value: String): String = value
     .replace(Regex("\\s+"), " ")
     .trim()
 
+private fun retailerAttribute(tag: String, name: String): String? =
+    Regex("""\b$name\s*=\s*(["'])(.*?)\1""", RegexOption.IGNORE_CASE)
+        .find(tag)?.groupValues?.getOrNull(2)?.let(::decodeRetailerHtml)
+
+private fun retailerMeta(html: String, keys: Set<String>): String? {
+    val wanted = keys.map { it.lowercase() }.toSet()
+    return Regex("""<meta\b[^>]*>""", RegexOption.IGNORE_CASE)
+        .findAll(html)
+        .map { it.value }
+        .firstNotNullOfOrNull { tag ->
+            val key = retailerAttribute(tag, "property")
+                ?: retailerAttribute(tag, "name")
+                ?: retailerAttribute(tag, "itemprop")
+            val content = retailerAttribute(tag, "content")
+            content?.takeIf { key?.lowercase() in wanted }
+        }
+}
+
+private fun allowedRetailerImage(value: String?): String? = value?.let { candidate ->
+    runCatching {
+        val url = URL(candidate)
+        val host = url.host.lowercase().trimEnd('.')
+        val allowed = listOf("media-amazon.com", "ssl-images-amazon.com", "nooncdn.com", "nordcdn.com")
+            .any { host == it || host.endsWith(".$it") }
+        candidate.takeIf { url.protocol == "https" && allowed }
+    }.getOrNull()
+}
+
 internal fun extractRetailerHtmlMetadata(html: String): RetailerHtmlMetadata {
-    val rawTitle = Regex("""<title\b[^>]*>([\s\S]*?)</title>""", RegexOption.IGNORE_CASE)
-        .find(html)?.groupValues?.getOrNull(1)?.let(::decodeRetailerHtml)
+    val rawTitle = retailerMeta(html, setOf("og:title", "twitter:title"))
+        ?: Regex("""<title\b[^>]*>([\s\S]*?)</title>""", RegexOption.IGNORE_CASE)
+            .find(html)?.groupValues?.getOrNull(1)?.let(::decodeRetailerHtml)
     val title = rawTitle
         ?.replace(Regex("""\s*:\s*Buy Online.*$""", RegexOption.IGNORE_CASE), "")
         ?.replace(Regex("""\s*[|–-]\s*(Amazon(?:\.ae)?|noon).*$""", RegexOption.IGNORE_CASE), "")
         ?.trim()?.take(160)?.takeIf { it.isNotBlank() }
-    val rawPrice = Regex(
+    val rawPrice = retailerMeta(
+        html,
+        setOf("product:price:amount", "og:price:amount", "price")
+    ) ?: Regex(
         """class=["'][^"']*\ba-offscreen\b[^"']*["'][^>]*>\s*([^<]+)<""",
         RegexOption.IGNORE_CASE
     ).find(html)?.groupValues?.getOrNull(1)?.let(::decodeRetailerHtml)
     val amount = rawPrice?.replace(",", "")?.replace(Regex("[^0-9.]"), "")?.toDoubleOrNull()
     val priceCents = amount?.takeIf { it > 0.0 && it <= 100_000_000.0 }?.let { kotlin.math.round(it * 100).toLong() }
-    val imageUrl = Regex(
+    val metaImage = retailerMeta(html, setOf("og:image", "twitter:image"))
+    val amazonImage = Regex(
         """https://m\.media-amazon\.com/images/I/[A-Za-z0-9%_.+|~,-]+?\.(?:jpg|jpeg|png)""",
         RegexOption.IGNORE_CASE
     ).findAll(html).map { it.value }.firstOrNull {
         Regex("""_(?:AC_)?SL\d+""", RegexOption.IGNORE_CASE).containsMatchIn(it)
     }
+    val imageUrl = allowedRetailerImage(metaImage) ?: allowedRetailerImage(amazonImage)
+    val currency = retailerMeta(
+        html,
+        setOf("product:price:currency", "og:price:currency", "pricecurrency")
+    )?.uppercase()?.take(3)
     return RetailerHtmlMetadata(
         title = title,
         priceCents = priceCents,
-        currencyCode = if (priceCents != null && rawPrice?.contains("AED", ignoreCase = true) == true) "AED" else null,
+        currencyCode = when {
+            priceCents == null -> null
+            currency == "AED" -> "AED"
+            rawPrice?.contains("AED", ignoreCase = true) == true -> "AED"
+            else -> null
+        },
         imageUrl = imageUrl
     )
 }
-
 object ProductImportRepository {
-    suspend fun preview(sourceUrl: String): Result<ImportedProduct> = withContext(Dispatchers.IO) {
+    suspend fun preview(sourceUrl: String, sharedTitle: String? = null, sharedImageUrl: String? = null): Result<ImportedProduct> = withContext(Dispatchers.IO) {
         runCatching {
             val response = request("/api/link-preview", "POST", JSONObject().apply { put("url", sourceUrl) })
             val product = response.getJSONObject("product")
@@ -144,7 +207,7 @@ object ProductImportRepository {
                 status = product.getString("status"),
                 note = product.nullableString("note")
             )
-            enrichFromRetailer(imported)
+            enrichFromRetailer(mergeSharedMetadata(imported, sharedTitle, sharedImageUrl))
         }
     }
 

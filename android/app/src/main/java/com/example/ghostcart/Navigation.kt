@@ -65,7 +65,13 @@ import kotlinx.coroutines.delay
 private val bottomDestinations: Set<NavKey> = setOf(Home, Cooldowns, Progress, GhostCardSettings)
 
 @Composable
-fun MainNavigation(initialCooldownId: String? = null, initialSharedUrl: String? = null, sharedRequestKey: Long? = null) {
+fun MainNavigation(
+    initialCooldownId: String? = null,
+    initialSharedUrl: String? = null,
+    initialSharedTitle: String? = null,
+    initialSharedImageUrl: String? = null,
+    sharedRequestKey: Long? = null
+) {
     val initial = when { initialSharedUrl != null -> CaptureAlmostBuy; initialCooldownId != null -> Cooldowns; else -> Splash }
     val backStack = rememberNavBackStack(initial)
     val appViewModel: AppViewModel = viewModel()
@@ -81,7 +87,7 @@ fun MainNavigation(initialCooldownId: String? = null, initialSharedUrl: String? 
 
     LaunchedEffect(sharedRequestKey) {
         if (initialSharedUrl != null) {
-            appViewModel.importSharedProduct(initialSharedUrl)
+            appViewModel.importSharedProduct(initialSharedUrl, initialSharedTitle, initialSharedImageUrl)
             if (backStack.lastOrNull() != CaptureAlmostBuy) backStack.add(CaptureAlmostBuy)
         }
     }

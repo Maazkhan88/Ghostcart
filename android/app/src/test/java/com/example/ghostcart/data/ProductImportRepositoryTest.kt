@@ -53,4 +53,49 @@ class ProductImportRepositoryTest {
         assertEquals("AED", metadata.currencyCode)
         assertEquals("https://m.media-amazon.com/images/I/71Xud7FK0UL._AC_SL1500_.jpg", metadata.imageUrl)
     }
+
+    @Test
+    fun extractsNoonOpenGraphImageAndPriceMetadata() {
+        val html = """
+            <meta property="og:title" content="Schecter 1742 Electric Guitar Synyster Custom" />
+            <meta property="og:image" content="https://f.nooncdn.com/p/pnsku/N70000000V/45/_/1720000000/guitar.jpg" />
+            <meta property="product:price:amount" content="5499.00" />
+            <meta property="product:price:currency" content="AED" />
+        """.trimIndent()
+        val metadata = extractRetailerHtmlMetadata(html)
+        assertEquals("Schecter 1742 Electric Guitar Synyster Custom", metadata.title)
+        assertEquals(549_900L, metadata.priceCents)
+        assertEquals("AED", metadata.currencyCode)
+        assertEquals(
+            "https://f.nooncdn.com/p/pnsku/N70000000V/45/_/1720000000/guitar.jpg",
+            metadata.imageUrl
+        )
+    }
+
+    @Test
+    fun keepsThumbnailAndTitleSuppliedByAndroidShareIntent() {
+        val imported = ImportedProduct(
+            title = "B07DL85",
+            priceCents = null,
+            currencyCode = null,
+            category = "Other",
+            imageUrl = null,
+            sourceUrl = "https://www.amazon.ae/dp/B07DL85",
+            sourceDomain = "www.amazon.ae",
+            retailer = "Amazon",
+            status = "needs_input",
+            note = "The retailer did not expose every detail."
+        )
+        val merged = mergeSharedMetadata(
+            product = imported,
+            sharedTitle = "Schecter C-7 FR-S Apocalypse - Red Reign",
+            sharedImageUrl = "file:///data/user/0/com.ghostcart.app/files/shared-product-images/share.jpg"
+        )
+        assertEquals("Schecter C-7 FR-S Apocalypse - Red Reign", merged.title)
+        assertEquals(
+            "file:///data/user/0/com.ghostcart.app/files/shared-product-images/share.jpg",
+            merged.imageUrl
+        )
+        assertEquals("partial", merged.status)
+    }
 }
