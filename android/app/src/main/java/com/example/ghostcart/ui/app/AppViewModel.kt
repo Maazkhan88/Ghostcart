@@ -4,9 +4,14 @@ import android.app.Application
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import com.example.ghostcart.data.CoolingReminderWorker
+import com.example.ghostcart.data.DailyGhostReminderWorker
 import com.example.ghostcart.data.Marketplace
 import com.example.ghostcart.data.MarketplaceProduct
 import com.example.ghostcart.data.WalletConfig
@@ -22,6 +27,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 import java.util.UUID
+import java.util.Calendar
 import kotlin.random.Random
 
 data class AppUiState(
@@ -31,6 +37,7 @@ data class AppUiState(
     val cartProductIds: List<String> = emptyList(),
     val cartQuantities: Map<String, Int> = emptyMap(),
     val walletConfig: WalletConfig = WalletConfig(),
+    val coolingUntilByProductId: Map<String, Long> = emptyMap(),
     val lastOrderId: String = "",
     val lastOrderTotal: Int = 0,
     val deliveryStep: Int = -1,
@@ -50,7 +57,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     
     private val _uiState = MutableStateFlow(AppUiState(
         authEmail = sharedPrefs.getString("auth_email", null),
-        walletConfig = loadWalletConfig()
+        walletConfig = loadWalletConfig(),
+        coolingUntilByProductId = loadCoolingPeriods()
     ))
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
 
@@ -59,6 +67,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         refreshMostGhostedToday()
+        syncDailyGhostReminders(_uiState.value.walletConfig.walletNotificationsEnabled)
     }
 
     val allProducts: List<MarketplaceProduct> =
@@ -175,9 +184,86 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateWalletConfig(transform: (WalletConfig) -> WalletConfig) {
+        val notificationsWereEnabled = _uiState.value.walletConfig.walletNotificationsEnabled
         val nextConfig = transform(_uiState.value.walletConfig)
         persistWalletConfig(nextConfig)
         _uiState.update { it.copy(walletConfig = nextConfig) }
+        if (notificationsWereEnabled != nextConfig.walletNotificationsEnabled) {
+            syncDailyGhostReminders(nextConfig.walletNotificationsEnabled)
+        }
+    }
+
+    fun startCoolingPeriod(productId: String) {
+        val product = findProduct(productId) ?: return
+        val coolingUntil = System.currentTimeMillis() + TimeUnit.HOURS.toMillis(24)
+        val updatedPeriods = _uiState.value.coolingUntilByProductId + (productId to coolingUntil)
+        persistCoolingPeriods(updatedPeriods)
+        _uiState.update { it.copy(coolingUntilByProductId = updatedPeriods) }
+
+        val request = OneTimeWorkRequestBuilder<CoolingReminderWorker>()
+            .setInitialDelay(24, TimeUnit.HOURS)
+            .setInputData(workDataOf("productName" to product.name, "productId" to product.id))
+            .addTag("ghost_cooling_reminder")
+            .build()
+        WorkManager.getInstance(getApplication<Application>()).enqueueUniqueWork(
+            "ghost_cooling_${product.id}",
+            ExistingWorkPolicy.REPLACE,
+            request
+        )
+        showToast("24-hour cooling started for ${product.name}")
+    }
+
+    private fun loadCoolingPeriods(): Map<String, Long> =
+        sharedPrefs.getStringSet("cooling_periods", emptySet())
+            .orEmpty()
+            .mapNotNull { entry ->
+                val separator = entry.lastIndexOf('|')
+                if (separator <= 0) return@mapNotNull null
+                val timestamp = entry.substring(separator + 1).toLongOrNull() ?: return@mapNotNull null
+                entry.substring(0, separator) to timestamp
+            }
+            .toMap()
+
+    private fun persistCoolingPeriods(periods: Map<String, Long>) {
+        sharedPrefs.edit()
+            .putStringSet("cooling_periods", periods.map { (id, until) -> "$id|$until" }.toSet())
+            .apply()
+    }
+
+    private fun syncDailyGhostReminders(enabled: Boolean) {
+        val workManager = WorkManager.getInstance(getApplication<Application>())
+        if (!enabled) {
+            workManager.cancelUniqueWork("ghost_daily_lunch")
+            workManager.cancelUniqueWork("ghost_daily_dinner")
+            return
+        }
+        scheduleDailyGhostReminder(workManager, meal = "lunch", hourOfDay = 13)
+        scheduleDailyGhostReminder(workManager, meal = "dinner", hourOfDay = 20)
+    }
+
+    private fun scheduleDailyGhostReminder(workManager: WorkManager, meal: String, hourOfDay: Int) {
+        val request = PeriodicWorkRequestBuilder<DailyGhostReminderWorker>(24, TimeUnit.HOURS)
+            .setInitialDelay(delayUntilHour(hourOfDay), TimeUnit.MILLISECONDS)
+            .setInputData(workDataOf("meal" to meal))
+            .addTag("ghost_daily_reminder")
+            .build()
+        workManager.enqueueUniquePeriodicWork(
+            "ghost_daily_$meal",
+            ExistingPeriodicWorkPolicy.UPDATE,
+            request
+        )
+    }
+
+    private fun delayUntilHour(hourOfDay: Int): Long {
+        val now = Calendar.getInstance()
+        val next = (now.clone() as Calendar).apply {
+            set(Calendar.HOUR_OF_DAY, hourOfDay)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            if (!after(now)) add(Calendar.DAY_OF_YEAR, 1)
+        }
+        return (next.timeInMillis - now.timeInMillis).coerceAtLeast(0L)
     }
 
     private fun loadWalletConfig(): WalletConfig = WalletConfig(

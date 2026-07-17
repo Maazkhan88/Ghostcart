@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.ShoppingBag
@@ -626,12 +627,16 @@ private fun CartSummaryButton(
 @Composable
 fun ProductDetailScreen(
     product: MarketplaceProduct,
+    coolingUntilMillis: Long?,
     onBack: () -> Unit,
     onAddToCart: () -> Unit,
     onGhostBuyNow: () -> Unit,
+    onStartCooling: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var favorited by remember { mutableStateOf(false) }
+    val coolingComplete = coolingUntilMillis != null && coolingUntilMillis <= System.currentTimeMillis()
+    val coolingActive = coolingUntilMillis != null && !coolingComplete
 
     Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
@@ -711,12 +716,32 @@ fun ProductDetailScreen(
                 .padding(top = 16.dp)
                 .clip(RoundedCornerShape(14.dp))
                 .border(1.dp, FaintBorder, RoundedCornerShape(14.dp))
+                .background(if (coolingUntilMillis != null) GreenTint else Paper)
+                .clickable(role = Role.Button, onClick = onStartCooling)
                 .padding(14.dp)
         ) {
-            Text(text = "⏱", fontSize = 16.sp)
+            Icon(Icons.Filled.Schedule, contentDescription = null, tint = GhostGreen, modifier = Modifier.size(20.dp))
             Column(modifier = Modifier.weight(1f).padding(start = 10.dp)) {
-                Text(text = "24-Hour Cooling Hub", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                Text(text = "Items in your Ghost Cart cool down here.\nMost users don't buy after 24 hours.", color = MutedText, fontSize = 10.sp, modifier = Modifier.padding(top = 2.dp))
+                Text(
+                    text = when {
+                        coolingComplete -> "Cooling complete"
+                        coolingActive -> "24-Hour Cooling active"
+                        else -> "Start 24-Hour Cooling"
+                    },
+                    color = Ink,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = when {
+                        coolingComplete -> "Review the item now. Do you still want it? Tap to cool it again."
+                        coolingActive -> "We'll notify you when this item has cooled off."
+                        else -> "Pause this craving and get a reminder after 24 hours."
+                    },
+                    color = MutedText,
+                    fontSize = 10.sp,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
             }
             ForwardChevron()
         }

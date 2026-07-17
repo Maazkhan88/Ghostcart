@@ -218,26 +218,31 @@ fun MainNavigation() {
             )
           }
           entry<ProductDetail> { key ->
+            val state by appViewModel.uiState.collectAsState()
             val product = appViewModel.findProduct(key.productId) ?: appViewModel.allProducts.first()
             ProductDetailScreen(
               product = product,
+              coolingUntilMillis = state.coolingUntilByProductId[product.id],
               onBack = { backStack.removeLastOrNull() },
               onAddToCart = { appViewModel.addToCart(product.id) },
               onGhostBuyNow = {
                 appViewModel.addToCart(product.id)
                 appViewModel.placeSimulatedOrder()
                 backStack.add(OrderGhostedSuccess)
-              }
+              },
+              onStartCooling = { appViewModel.startCoolingPeriod(product.id) }
             )
           }
           entry<GhostCartList> {
             val state by appViewModel.uiState.collectAsState()
             GhostCartListScreen(
               products = appViewModel.cartProductsWithQuantities(),
+              coolingUntilByProductId = state.coolingUntilByProductId,
               onBack = { backStack.removeLastOrNull() },
               onAdd = { appViewModel.addToCart(it) },
               onRemove = { appViewModel.removeFromCart(it) },
               onClearAll = { appViewModel.clearCart() },
+              onStartCooling = { id -> appViewModel.startCoolingPeriod(id) },
               onCheckout = { backStack.add(GhostCheckout) }
             )
           }

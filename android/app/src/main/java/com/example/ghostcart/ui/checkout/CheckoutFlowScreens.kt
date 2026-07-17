@@ -70,10 +70,12 @@ private const val PROMO_RATE = 0.10f
 @Composable
 fun GhostCartListScreen(
     products: List<Pair<MarketplaceProduct, Int>>,
+    coolingUntilByProductId: Map<String, Long>,
     onBack: () -> Unit,
     onAdd: (String) -> Unit,
     onRemove: (String) -> Unit,
     onClearAll: () -> Unit,
+    onStartCooling: (String) -> Unit,
     onCheckout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -125,6 +127,18 @@ fun GhostCartListScreen(
                         Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
                             Text(text = product.name, color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                             Text(text = "${Marketplace.currency} ${product.price}", color = MutedText, fontSize = 11.sp)
+                            val coolingUntil = coolingUntilByProductId[product.id]
+                            Text(
+                                text = when {
+                                    coolingUntil == null -> "Start 24-hour cooling"
+                                    coolingUntil <= System.currentTimeMillis() -> "Cooled off — review now"
+                                    else -> "Cooling active"
+                                },
+                                color = GhostGreen,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(top = 4.dp).clickable { onStartCooling(product.id) }
+                            )
                         }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,

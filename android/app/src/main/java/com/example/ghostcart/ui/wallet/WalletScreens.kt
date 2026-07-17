@@ -709,7 +709,7 @@ fun GhostCardSettingsScreen(
             SettingsChevronRow(Icons.Filled.Palette, "Theme", config.cardTheme) {
                 activeDialog = CardSettingsDialog.Theme
             }
-            SettingsToggleRow(Icons.Filled.Notifications, "Wallet notifications", "Get alerts for orders, saves and goal progress", config.walletNotificationsEnabled, onToggleNotifications)
+            SettingsToggleRow(Icons.Filled.Notifications, "Wallet notifications", "Cooling updates plus daily lunch and dinner reminders", config.walletNotificationsEnabled, onToggleNotifications)
             SettingsToggleRow(materialIconFor("target"), "Auto-allocate to goals", "Automatically move savings to your goals", config.autoAllocateToGoals, onToggleAutoAllocate)
             SettingsChevronRow(Icons.Filled.Shield, "Salary Shield preference", "Protect ${config.salaryShieldPercent}% of salary") {
                 activeDialog = CardSettingsDialog.SalaryShield
