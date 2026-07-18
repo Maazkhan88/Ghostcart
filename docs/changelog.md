@@ -4,6 +4,15 @@ All notable changes to the Ghost Cart project will be documented in this file.
 
 ---
 
+## [2.7.5] - 2026-07-18
+
+### Changed
+- Removed the redundant **User Ghosted** badge from community product images.
+- Simplified product-card favorites to a background-free black outlined heart
+  that becomes solid black when selected.
+
+---
+
 ## [2.7.4] - 2026-07-18
 
 ### Added

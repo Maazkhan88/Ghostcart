@@ -182,7 +182,6 @@ fun ProductDiscoverySection(
                             title = product.title,
                             category = product.sourceDomain,
                             priceCents = product.priceCents,
-                            tag = product.activityTag,
                             isFavorite = "community_${product.id}" in favoriteProductIds,
                             image = {
                                 Box(Modifier.fillMaxSize().background(Color.White)) {
@@ -332,7 +331,6 @@ private fun DiscoveryProductCard(
     title: String,
     category: String,
     priceCents: Long,
-    tag: String? = null,
     isFavorite: Boolean,
     image: @Composable () -> Unit,
     onOpen: () -> Unit,
@@ -355,29 +353,18 @@ private fun DiscoveryProductCard(
             contentAlignment = Alignment.Center
         ) {
             image()
-            if (tag != null) {
-                Text(
-                    tag,
-                    color = Paper,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    modifier = Modifier.align(Alignment.TopStart).padding(8.dp).clip(RoundedCornerShape(999.dp)).background(Ink).padding(horizontal = 8.dp, vertical = 4.dp)
-                )
-            }
             IconButton(
                 onClick = onToggleFavorite,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(6.dp)
-                    .size(34.dp)
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(Paper.copy(alpha = 0.94f))
+                    .size(40.dp)
             ) {
                 Icon(
                     imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                     contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
-                    tint = if (isFavorite) GhostGreen else Ink,
-                    modifier = Modifier.size(18.dp)
+                    tint = Color.Black,
+                    modifier = Modifier.size(22.dp)
                 )
             }
         }
