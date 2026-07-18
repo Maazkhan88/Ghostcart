@@ -39,9 +39,16 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -215,10 +222,15 @@ fun GhostCartListScreen(
 }
 
 @Composable
-private fun SummaryLine(label: String, value: String, valueColor: Color = Ink, bold: Boolean = false) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+private fun SummaryLine(label: String, value: String, valueColor: Color = Ink, bold: Boolean = false, showDirhamIcon: Boolean = false) {
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(text = label, color = if (bold) Ink else MutedText, fontSize = if (bold) 14.sp else 12.sp, fontWeight = if (bold) FontWeight.ExtraBold else FontWeight.Normal, modifier = Modifier.weight(1f))
-        Text(text = value, color = valueColor, fontSize = if (bold) 16.sp else 12.sp, fontWeight = if (bold) FontWeight.ExtraBold else FontWeight.Bold)
+        if (showDirhamIcon) {
+            com.example.ghostcart.ui.DirhamGlyph(tint = valueColor, modifier = Modifier.size(if (bold) 14.dp else 11.dp))
+            Text(text = value.removePrefix("${Marketplace.currency} "), color = valueColor, fontSize = if (bold) 16.sp else 12.sp, fontWeight = if (bold) FontWeight.ExtraBold else FontWeight.Bold, modifier = Modifier.padding(start = 4.dp))
+        } else {
+            Text(text = value, color = valueColor, fontSize = if (bold) 16.sp else 12.sp, fontWeight = if (bold) FontWeight.ExtraBold else FontWeight.Bold)
+        }
     }
 }
 
@@ -237,6 +249,9 @@ fun GhostCheckoutScreen(
     val serviceFee = ((subtotal - promoDiscount) * SERVICE_FEE_RATE).toInt()
     val vat = ((subtotal - promoDiscount) * VAT_RATE).toInt()
     val total = subtotal - promoDiscount + serviceFee + vat
+
+    var deliveryAddress by remember { mutableStateOf("123 Ghost Street\nAl Wasl, Dubai\nUnited Arab Emirates") }
+    var editingAddress by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
         GhostTopBar(title = "Ghost Checkout", onBack = onBack)
@@ -259,7 +274,7 @@ fun GhostCheckoutScreen(
             }
         }
 
-        CheckoutInfoRow(icon = Icons.Filled.LocationOn, title = "Fake Delivery Address", subtitle = "123 Ghost Street\nAl Wasl, Dubai\nUnited Arab Emirates", action = "Change")
+        CheckoutInfoRow(icon = Icons.Filled.LocationOn, title = "Fake Delivery Address", subtitle = deliveryAddress, action = "Change", onAction = { editingAddress = true })
         CheckoutInfoRow(icon = Icons.Filled.Notifications, title = "Ghost Wallet", subtitle = "Balance: ${Marketplace.currency} $walletBalance.00", action = "Change")
         CheckoutInfoRow(icon = Icons.Filled.CheckCircle, title = "NoPay Balance", subtitle = "${Marketplace.currency} 800.00 available", action = "Available")
         CheckoutInfoRow(icon = Icons.Filled.Sell, title = "Promo Code", subtitle = "GHOST10 · 10% off applied", action = "Remove")
@@ -318,15 +333,39 @@ fun GhostCheckoutScreen(
             SummaryLine("Service Fee", "${Marketplace.currency} $serviceFee")
             SummaryLine("VAT (5%)", "${Marketplace.currency} $vat")
             Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).height(1.dp).background(FaintBorder))
-            SummaryLine("Total", "${Marketplace.currency} $total", bold = true)
+            SummaryLine("Total", "${Marketplace.currency} $total", bold = true, showDirhamIcon = true)
         }
 
         PrimaryButton(text = "Place Fake Order", onClick = onPlaceOrder, trailingIcon = Icons.Filled.ArrowForward, modifier = Modifier.padding(top = 20.dp))
     }
+
+    if (editingAddress) {
+        var draft by remember(deliveryAddress) { mutableStateOf(deliveryAddress) }
+        AlertDialog(
+            onDismissRequest = { editingAddress = false },
+            title = { Text("Fake delivery address") },
+            text = {
+                OutlinedTextField(value = draft, onValueChange = { draft = it.take(120) }, minLines = 3)
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (draft.isNotBlank()) deliveryAddress = draft.trim()
+                    editingAddress = false
+                }) { Text("Save") }
+            },
+            dismissButton = { TextButton(onClick = { editingAddress = false }) { Text("Cancel") } }
+        )
+    }
 }
 
 @Composable
-private fun CheckoutInfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, subtitle: String, action: String) {
+private fun CheckoutInfoRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String,
+    action: String,
+    onAction: (() -> Unit)? = null
+) {
     Row(
         verticalAlignment = Alignment.Top,
         modifier = Modifier
@@ -343,7 +382,13 @@ private fun CheckoutInfoRow(icon: androidx.compose.ui.graphics.vector.ImageVecto
             Text(text = title, color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             Text(text = subtitle, color = MutedText, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
         }
-        Text(text = action, color = GhostGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text(
+            text = action,
+            color = GhostGreen,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = if (onAction != null) Modifier.clickable(onClick = onAction) else Modifier
+        )
     }
 }
 

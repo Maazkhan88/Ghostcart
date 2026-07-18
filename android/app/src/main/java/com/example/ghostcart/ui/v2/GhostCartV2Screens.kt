@@ -618,22 +618,6 @@ fun ProfileScreen(
         }
         item { MembershipCard(config) }
         item {
-            Column {
-                Text("App appearance", color = Ink, fontWeight = FontWeight.ExtraBold)
-                Text("Choose light, dark, or follow your phone.", color = MutedText, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                    items(listOf("System", "Light", "Dark")) { theme ->
-                        FilterChip(
-                            selected = appTheme == theme,
-                            onClick = { onSelectAppTheme(theme) },
-                            label = { Text(theme) },
-                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = GreenTint)
-                        )
-                    }
-                }
-            }
-        }
-        item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedButton(onClick = { editName = true }, modifier = Modifier.weight(1f)) {
                     Icon(Icons.Filled.Edit, null)
@@ -657,6 +641,22 @@ fun ProfileScreen(
                         FilterChip(
                             selected = config.cardTheme == theme,
                             onClick = { onSelectTheme(theme) },
+                            label = { Text(theme) },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = GreenTint)
+                        )
+                    }
+                }
+            }
+        }
+        item {
+            Column {
+                Text("App appearance", color = Ink, fontWeight = FontWeight.ExtraBold)
+                Text("Choose light, dark, or follow your phone.", color = MutedText, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                    items(listOf("System", "Light", "Dark")) { theme ->
+                        FilterChip(
+                            selected = appTheme == theme,
+                            onClick = { onSelectAppTheme(theme) },
                             label = { Text(theme) },
                             colors = FilterChipDefaults.filterChipColors(selectedContainerColor = GreenTint)
                         )

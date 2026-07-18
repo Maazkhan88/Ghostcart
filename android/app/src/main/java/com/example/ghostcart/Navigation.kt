@@ -139,8 +139,7 @@ fun MainNavigation(
                             onGuest = {
                                 backStack.clear()
                                 backStack.add(Home)
-                            },
-                            onBack = { backStack.removeLastOrNull() }
+                            }
                         )
                     }
                     entry<ProfileSelect> {

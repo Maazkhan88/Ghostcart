@@ -51,7 +51,6 @@ import kotlinx.coroutines.launch
 fun AuthScreen(
     onAuthSuccess: (String) -> Unit,
     onGuest: () -> Unit,
-    onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var isSignIn by remember { mutableStateOf(true) }
@@ -70,24 +69,6 @@ fun AuthScreen(
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = "← Back",
-                    color = Ink,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .clickable(onClick = onBack)
-                        .padding(8.dp)
-                )
-                Spacer(modifier = Modifier.weight(1f))
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
             GhostMascotPose(poseName = "wallet", modifier = Modifier.size(80.dp))
 
             Text(

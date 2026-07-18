@@ -4,6 +4,52 @@ All notable changes to the Ghost Cart project will be documented in this file.
 
 ---
 
+## [2.3.1] - 2026-07-18
+
+### Fixed
+- **Sign-in screen back button removed** — there was nowhere meaningful for it
+  to go (Splash is a timed screen); "Continue as Guest" already covers the
+  exit path.
+- **Fake Delivery Address is now actually editable.** The "Change" link on
+  Ghost Checkout was decorative — tapping it did nothing. Wired it to an edit
+  dialog. (Note: "Ghost Wallet: Change" and "Promo Code: Remove" on the same
+  screen are still decorative — not fixed in this pass, flagged for follow-up.)
+- **Profile screen section order.** "App appearance" (a global setting) sat
+  between the membership card and "Membership card theme" (a card-specific
+  setting), reading as two confusing near-duplicates. Regrouped so all
+  card-related settings (card, name/download, card theme) are contiguous,
+  with app-wide appearance moved after them.
+- **Cardholder name placeholder.** Default was literally "Ghost Member",
+  visually near-identical to the card's fixed "Ghost Membership" title,
+  making it look like the title itself was editable. It never was — only the
+  member name field is. Changed the placeholder to "Set your name" to make
+  the distinction obvious. (The title/member-name binding itself had no bug.)
+
+### Changed
+- **Home screen header** replaced the "Products" text heading with the Ghost
+  Cart wordmark.
+- **Promo banner carousel** replaces the static subtitle above the search bar
+  with a rotating banner (auto-advances every 4s).
+
+### Added
+- **Official UAE Dirham symbol.** Added as `drawable-nodpi/currency_dirham.png`
+  (real alpha channel verified) with a reusable `DirhamGlyph` composable.
+  Wired into the two most prominent price displays (product discovery cards,
+  checkout Total) as a first pass. Most other "AED" text labels across the
+  app still use the plain text abbreviation — a full sweep replacing every
+  occurrence is a larger follow-up, not done in this pass.
+
+### Known limitations (not fixed this pass, need follow-up)
+- Product images that appear tightly cropped (e.g. a guitar photo showing
+  only the neck) are not a rendering bug — every image render already uses
+  `ContentScale.Fit`, which never crops. The cause is upstream: the retailer
+  link-preview scraper (`lib/product-link-preview.ts`) sometimes picks a
+  detail/gallery shot rather than the hero product image when a page lacks
+  clean JSON-LD/Open Graph image data. Improving this needs smarter
+  per-retailer image selection, not a rendering fix.
+
+---
+
 ## [2.3.0] - 2026-07-18
 
 ### Restored

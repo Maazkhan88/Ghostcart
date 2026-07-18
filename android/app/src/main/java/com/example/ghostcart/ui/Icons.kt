@@ -542,3 +542,15 @@ fun GhostCartWordmark(modifier: Modifier = Modifier, contentDescription: String?
         modifier = modifier
     )
 }
+
+/** Official UAE Dirham symbol. Use in place of the "AED" text prefix wherever a price is shown. */
+@Composable
+fun DirhamGlyph(modifier: Modifier = Modifier, tint: Color = Color.Unspecified) {
+    Image(
+        painter = painterResource(R.drawable.currency_dirham),
+        contentDescription = "AED",
+        contentScale = ContentScale.Fit,
+        colorFilter = if (tint == Color.Unspecified) null else androidx.compose.ui.graphics.ColorFilter.tint(tint),
+        modifier = modifier
+    )
+}

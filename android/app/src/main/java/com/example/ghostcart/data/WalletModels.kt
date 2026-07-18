@@ -33,7 +33,7 @@ data class WalletConfig(
     val cardFrozen: Boolean = false,
     val cardTheme: String = "Dark",
     val cardName: String = "Ghost Membership",
-    val cardholderName: String = "Ghost Member",
+    val cardholderName: String = "Set your name",
     val salaryShieldPercent: Int = 20,
     val ghostId: String = "GC-DEMO-MEMBER-ID",
     val memberSince: String = "Jul 2026"

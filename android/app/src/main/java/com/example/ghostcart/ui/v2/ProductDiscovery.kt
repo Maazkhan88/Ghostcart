@@ -1,5 +1,9 @@
 package com.example.ghostcart.ui.v2
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,7 +28,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -49,6 +55,7 @@ import com.example.ghostcart.theme.MutedText
 import com.example.ghostcart.theme.Paper
 import com.example.ghostcart.theme.SoftGray
 import com.example.ghostcart.ui.ProductPhoto
+import kotlinx.coroutines.delay
 
 @Composable
 fun ProductDiscoverySection(
@@ -72,8 +79,8 @@ fun ProductDiscoverySection(
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Products", color = Ink, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
-        Text("Search the catalogue or share a product from any shopping app.", color = MutedText, fontSize = 12.sp)
+        com.example.ghostcart.ui.GhostCartWordmark(modifier = Modifier.height(28.dp))
+        PromoBannerCarousel()
         OutlinedTextField(
             value = query,
             onValueChange = { query = it.take(80) },
@@ -163,6 +170,48 @@ fun ProductDiscoverySection(
     }
 }
 
+private val PROMO_BANNER_MESSAGES = listOf(
+    "Ghost it before you regret it. 👻",
+    "New arrivals just dropped in your favorite categories.",
+    "Cool it now, decide later — nothing is charged.",
+    "Share a product link from any app to import it instantly."
+)
+
+@Composable
+private fun PromoBannerCarousel(modifier: Modifier = Modifier) {
+    var index by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(4000)
+            index = (index + 1) % PROMO_BANNER_MESSAGES.size
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(Ink)
+            .padding(horizontal = 16.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        AnimatedContent(
+            targetState = index,
+            transitionSpec = { fadeIn() togetherWith fadeOut() },
+            label = "promoBanner"
+        ) { messageIndex ->
+            Text(
+                text = PROMO_BANNER_MESSAGES[messageIndex],
+                color = Paper,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
 @Composable
 private fun DiscoveryProductCard(
     title: String,
@@ -199,7 +248,14 @@ private fun DiscoveryProductCard(
         }
         Text(category, color = GhostGreen, fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.padding(top = 9.dp))
         Text(title, color = Ink, fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.height(36.dp).padding(top = 2.dp))
-        Text(formatProductPrice(priceCents), color = Ink, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 3.dp))
+        if (priceCents > 0) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 3.dp)) {
+                com.example.ghostcart.ui.DirhamGlyph(tint = Ink, modifier = Modifier.size(12.dp))
+                Text(formatProductPrice(priceCents), color = Ink, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(start = 4.dp))
+            }
+        } else {
+            Text(formatProductPrice(priceCents), color = Ink, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 3.dp))
+        }
         Box(Modifier.weight(1f))
         Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
             Box(
@@ -230,7 +286,7 @@ private fun communityMatchesCategory(product: CommunityProduct, categoryId: Stri
 }
 
 private fun formatProductPrice(priceCents: Long): String = if (priceCents > 0) {
-    "AED ${"%,.2f".format(java.util.Locale.US, priceCents / 100.0)}"
+    "%,.2f".format(java.util.Locale.US, priceCents / 100.0)
 } else {
     "Add price"
 }
