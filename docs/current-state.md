@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-07-18 (Claude — consolidated the split backend onto a single dedicated Cloudflare Worker, `ghostcart-app.maaz-n-khan.workers.dev`; see "Backend consolidated onto a dedicated Cloudflare Worker" below).
+Last updated: 2026-07-18 (Claude — fixed an Amazon-share title bug and an invisible-logo-on-dark-surfaces bug; see v2.7.10 entry below. Also consolidated the split backend onto a single dedicated Cloudflare Worker, `ghostcart-app.maaz-n-khan.workers.dev`; see "Backend consolidated onto a dedicated Cloudflare Worker" below).
 
 ## Canonical handoff for Antigravity and Claude Code (2026-07-18)
 
@@ -9,13 +9,53 @@ This section is the current operational source of truth. Historical session logs
 ### Repository and release state
 
 - Working branch: `agent/ghost-cart-products-sharing`
-- Latest product implementation: current head of `agent/ghost-cart-products-sharing` (v2.7.9 — canonical backend moved to a dedicated Cloudflare Worker; see below).
+- Latest product implementation: current head of `agent/ghost-cart-products-sharing` (v2.7.10 — Amazon share-title bug fixed, white/transparent logo variant added for dark surfaces; see below).
 - Draft PR: https://github.com/Maazkhan88/Ghostcart/pull/3
 - Base branch: `main`; current `main` already contains the merged v2 rebuild from PR #2 (`f4bb3ab`).
 - **Canonical hosted site/API: https://ghostcart-app.maaz-n-khan.workers.dev** (changed this session — see "Backend consolidated onto a dedicated Cloudflare Worker" below; do not use either of the two domains previously recorded here).
-- Android release: `releases/GhostCart-v2.7.9-debug.apk`
-- Direct APK: https://raw.githubusercontent.com/Maazkhan88/Ghostcart/agent/ghost-cart-products-sharing/releases/GhostCart-v2.7.9-debug.apk
-- APK SHA-256: `5EA9C40E170849FE677384603DFA47446A28BB1B9F016A3E5ACB699DE7A070D6`
+- Android release: `releases/GhostCart-v2.7.10-debug.apk`
+- Direct APK: https://raw.githubusercontent.com/Maazkhan88/Ghostcart/agent/ghost-cart-products-sharing/releases/GhostCart-v2.7.10-debug.apk
+- APK SHA-256: `152478F7AF0F976501D2D0678124547BE134EFF94B19C489D1D0925AD5547B0E`
+- **v2.7.10 change (two independent fixes):**
+  1. **Amazon-share title bug.** When a product is shared via Amazon's own
+     native "Share" button (not pasted manually), Amazon populates
+     `Intent.EXTRA_TITLE` with a generic caption ("Check this out at
+     Amazon") instead of the real product name. `titleLooksLikeFallback()`
+     in `ProductImportRepository.kt` only recognized `"Shared product"`,
+     `"Shared item from "`, and all-caps SKU-looking strings as
+     untrustworthy — this generic caption matched none of those, so it
+     permanently won over the correctly-scraped real title (image and
+     price still merged in fine, since those merge unconditionally).
+     Added a regex (`^check (this|it) out\b`) to the fallback check, and
+     applied it consistently across all three places that had duplicated
+     this exact check (`mergeSharedMetadata`, `mergeDeviceMetadata`, and
+     the Amazon-specific device re-fetch path). Added a regression test
+     (`deviceMetadataReplacesAmazonGenericShareCaption`) reproducing the
+     exact reported case (HUAWEI FreeClip earbuds via `amzn.eu/d/0dmb8dwl`).
+  2. **Logo invisible on dark surfaces.** `public/brand/ghost-cart-icon.png`
+     turned out to be an inverted-mask asset: the ghost silhouette is a
+     *transparent cutout*, the square badge is *opaque*, confirmed by
+     extracting and visualizing the raw alpha channel directly (not just
+     eyeballing composites, which was misleading at first). This only ever
+     looked correct by accident on white/light backgrounds, where the
+     transparent ghost-shaped cutout happens to reveal white, indistinguishable
+     from an opaque white ghost. On any dark surface (nav, footer, membership
+     card) the transparent cutout instead reveals the dark page and the
+     ghost disappears, leaving only the opaque black badge — exactly the
+     "black on black, logo is empty" bug reported this session. Rebuilt a
+     proper `public/brand/ghost-cart-icon-white.png` via flood-fill
+     (distinguishing the large connected "badge" opaque region, which
+     becomes fully transparent, from small isolated opaque islands — the
+     eye/wheel-center dots — which are preserved as dark detail sitting on
+     top of a newly-opaque white ghost fill). Wired into `Brand.tsx`: the
+     component's existing `light` prop (already correctly applied at all 4
+     current usages — nav, footer, membership card, ghost-share page) now
+     also swaps the icon file, not just the text color. The one non-`Brand`
+     icon usage (`AdminCatalog.tsx`, on a light/paper background) is
+     correctly left on the original asset. **Not checked:** whether Android
+     has the same issue anywhere (`GhostCardImageExporter.kt` renders a
+     dark membership card too) — not reported as broken, so left alone
+     rather than speculatively changed.
 - **v2.7.8 change:** bumped from v2.7.7 (`versionCode` 36→37) solely to bake a real
   `GHOST_CART_GOOGLE_WEB_CLIENT_ID` into `BuildConfig.GOOGLE_WEB_CLIENT_ID` —
   confirmed present in v2.7.8's dex bytecode and absent from v2.7.7's. The

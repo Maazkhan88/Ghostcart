@@ -6,7 +6,12 @@ type BrandProps = {
 export function Brand({ compact = false, light = false }: BrandProps) {
   return (
     <span className={`gc-brand${compact ? " is-compact" : ""}${light ? " is-light" : ""}`}>
-      <img src="/brand/ghost-cart-icon.png" alt="" width="34" height="34" />
+      <img
+        src={light ? "/brand/ghost-cart-icon-white.png" : "/brand/ghost-cart-icon.png"}
+        alt=""
+        width="34"
+        height="34"
+      />
       <span aria-label="Ghost Cart">
         <strong>Ghost</strong>
         <strong>Cart</strong>

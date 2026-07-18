@@ -122,6 +122,44 @@ class ProductImportRepositoryTest {
         assertEquals("complete", merged.status)
     }
     @Test
+    fun deviceMetadataReplacesAmazonGenericShareCaption() {
+        // Regression test: Amazon's own native "Share" button populates
+        // Intent.EXTRA_TITLE with generic boilerplate like "Check this out
+        // at Amazon" rather than the real product name. titleLooksLikeFallback
+        // must recognize this as untrustworthy so the correctly-scraped
+        // title from the device fetch wins instead of getting stuck on the
+        // generic caption forever.
+        val imported = ImportedProduct(
+            title = "Check this out at Amazon",
+            priceCents = null,
+            currencyCode = null,
+            category = "Other",
+            imageUrl = null,
+            sourceUrl = "https://www.amazon.ae/HUAWEI-Lightweight-Waterproof-dustproof-Head-motion/dp/B0G2CPMKKW",
+            sourceDomain = "www.amazon.ae",
+            retailer = "Amazon",
+            status = "partial",
+            note = "Missing metadata"
+        )
+        val merged = mergeDeviceMetadata(
+            imported,
+            DeviceLinkMetadata(
+                title = "HUAWEI FreeClip 2 Open-Ear Clip-On Earbuds, C-bridge design, Lightweight, 38H Battery, Fast Charge, Dual Driver, IP57 Waterproof & dustproof, Touch & Head-motion control, iOS & Android, Rose Gold",
+                imageUrl = "https://m.media-amazon.com/images/I/71EXAMPLE._AC_SL1500_.jpg",
+                priceCents = 54_998L,
+                currencyCode = "AED"
+            )
+        )
+        assertEquals(
+            "HUAWEI FreeClip 2 Open-Ear Clip-On Earbuds, C-bridge design, Lightweight, 38H Battery, Fast Charge, Dual Driver, IP57 Waterproof & dustproof, Touch & Head-motion control, iOS & Android, Rose Gold",
+            merged.title
+        )
+        assertEquals(54_998L, merged.priceCents)
+        assertEquals("https://m.media-amazon.com/images/I/71EXAMPLE._AC_SL1500_.jpg", merged.imageUrl)
+        assertEquals("complete", merged.status)
+    }
+
+    @Test
     fun keepsThumbnailAndTitleSuppliedByAndroidShareIntent() {
         val imported = ImportedProduct(
             title = "B07DL85",

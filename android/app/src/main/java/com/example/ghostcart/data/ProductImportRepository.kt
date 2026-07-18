@@ -128,17 +128,17 @@ internal fun mergeSharedMetadata(
 ): ImportedProduct {
     val cleanTitle = sharedTitle?.trim()?.take(160)?.takeIf { it.isNotBlank() }
     val cleanImage = sharedImageUrl?.trim()?.takeIf { it.isNotBlank() }
-    val title = if (product.status == "needs_input" || product.title == "Shared product") {
+    val title = if (product.status == "needs_input" || titleLooksLikeFallback(product.title)) {
         cleanTitle ?: product.title
     } else {
         product.title
     }
     val imageUrl = product.imageUrl ?: cleanImage
-    val complete = title != "Shared product" && product.priceCents != null && imageUrl != null
+    val complete = !titleLooksLikeFallback(title) && product.priceCents != null && imageUrl != null
     return product.copy(
         title = title,
         imageUrl = imageUrl,
-        status = if (complete) "complete" else if (title != "Shared product" || imageUrl != null) "partial" else product.status,
+        status = if (complete) "complete" else if (!titleLooksLikeFallback(title) || imageUrl != null) "partial" else product.status,
         note = if (complete) null else product.note
     )
 }
@@ -162,9 +162,12 @@ internal fun mergeDeviceMetadata(
     )
 }
 
+private val GENERIC_SHARE_CAPTION_REGEX = Regex("""^check (this|it) out\b""", RegexOption.IGNORE_CASE)
+
 private fun titleLooksLikeFallback(value: String): Boolean =
     value == "Shared product" ||
         value.startsWith("Shared item from ", ignoreCase = true) ||
+        GENERIC_SHARE_CAPTION_REGEX.containsMatchIn(value.trim()) ||
         Regex("""^[A-Z0-9_-]{10,}$""", RegexOption.IGNORE_CASE).matches(value)
 private fun decodeRetailerHtml(value: String): String = value
     .replace("&nbsp;", " ", ignoreCase = true)
@@ -400,11 +403,11 @@ object ProductImportRepository {
                 val finalUrl = connection.url.toString()
                 if (code !in 200..299 || !isSafePublicHttpsUrl(finalUrl)) return@runCatching product
                 val metadata = extractRetailerHtmlMetadata(readRetailerHtml(connection))
-                val mergedTitle = if (product.title == "Shared product") metadata.title ?: product.title else product.title
+                val mergedTitle = if (titleLooksLikeFallback(product.title)) metadata.title ?: product.title else product.title
                 val mergedPrice = product.priceCents ?: metadata.priceCents
                 val mergedImage = if (amazonSource) metadata.imageUrl ?: product.imageUrl else product.imageUrl ?: metadata.imageUrl
                 val mergedCurrency = product.currencyCode ?: metadata.currencyCode
-                val complete = mergedTitle != "Shared product" && mergedPrice != null && mergedImage != null
+                val complete = !titleLooksLikeFallback(mergedTitle) && mergedPrice != null && mergedImage != null
                 product.copy(
                     title = mergedTitle,
                     priceCents = mergedPrice,
