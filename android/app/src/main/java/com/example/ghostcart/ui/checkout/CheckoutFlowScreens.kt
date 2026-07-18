@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material.icons.filled.Share
@@ -425,12 +426,19 @@ private fun CheckoutInfoRow(
 fun OrderGhostedSuccessScreen(
     orderId: String,
     amountAvoided: Int,
+    sourceProducts: List<MarketplaceProduct>,
     onTrackDelivery: () -> Unit,
     onViewSavings: () -> Unit,
+    onOpenSource: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val redeemableProducts = sourceProducts.filter { !it.sourceUrl.isNullOrBlank() }.distinctBy { it.sourceUrl }
     Column(
-        modifier = modifier.fillMaxSize().background(Paper).padding(horizontal = 24.dp, vertical = 40.dp),
+        modifier = modifier
+            .fillMaxSize()
+            .background(Paper)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -472,10 +480,38 @@ fun OrderGhostedSuccessScreen(
             InfoTile(label = "Not counted as Money Kept until you later choose to skip it", value = "", modifier = Modifier.weight(1f))
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(24.dp))
+
+        if (redeemableProducts.isNotEmpty()) {
+            Text(
+                text = "Product link unlocked",
+                color = GhostGreen,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.ExtraBold,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+            )
+            redeemableProducts.forEach { product ->
+                SecondaryButton(
+                    text = if (redeemableProducts.size == 1) {
+                        "Ghosted — view original product"
+                    } else {
+                        "View ${product.name.take(34)}"
+                    },
+                    onClick = { product.sourceUrl?.let(onOpenSource) },
+                    leadingIcon = Icons.Filled.OpenInNew,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+            Text(
+                text = "Opens the original retailer page. Ghost Cart is not affiliated with the retailer.",
+                color = MutedText,
+                fontSize = 9.sp,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+            )
+        }
 
         PrimaryButton(text = "Track Fake Delivery", onClick = onTrackDelivery, trailingIcon = Icons.Filled.ArrowForward)
-        SecondaryButton(text = "View Progress", onClick = onViewSavings, modifier = Modifier.padding(top = 10.dp))
+        SecondaryButton(text = "View Progress", onClick = onViewSavings, modifier = Modifier.padding(top = 10.dp, bottom = 24.dp))
     }
 }
 

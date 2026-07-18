@@ -4,6 +4,23 @@ All notable changes to the Ghost Cart project will be documented in this file.
 
 ---
 
+## [2.7.1] - 2026-07-18
+
+### Added
+- Imported retailer links are now unlocked after a simulated Ghost checkout,
+  with a clear **Ghosted — view original product** action on the success screen.
+- Multi-item Ghost orders expose a separate unlocked source action for every
+  imported product that retained a safe public retailer URL.
+
+### Fixed
+- Made the complete Order Ghosted success screen vertically scrollable so its
+  delivery, source-link, and progress actions remain reachable above the
+  persistent bottom navigation on short phones.
+- Replaced the pre-checkout retailer shortcut with **Ghost it first to unlock
+  product link**, keeping the source handoff aligned with the Ghost Cart flow.
+
+---
+
 ## [2.7.0] - 2026-07-18
 
 ### Added

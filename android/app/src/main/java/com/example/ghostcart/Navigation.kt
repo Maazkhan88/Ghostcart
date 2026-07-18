@@ -319,9 +319,7 @@ fun MainNavigation(
                                 onBack = { backStack.removeLastOrNull() },
                                 onShare = { shareGhostItem(context, product.toGhostShareItem()) },
                                 onToggleFavorite = { appViewModel.toggleFavorite(product.id) },
-                                onOpenSource = product.sourceUrl?.let { source ->
-                                    { openProductSource(context, source) }
-                                },
+                                hasSourceLink = !product.sourceUrl.isNullOrBlank(),
                                 onAddToCart = { appViewModel.addToCart(product.id) },
                                 onGhostBuyNow = {
                                     appViewModel.addToCart(product.id)
@@ -365,6 +363,7 @@ fun MainNavigation(
                         OrderGhostedSuccessScreen(
                             orderId = state.lastOrderId,
                             amountAvoided = state.lastOrderTotal,
+                            sourceProducts = state.lastOrderProducts,
                             onTrackDelivery = {
                                 appViewModel.startDeliveryTracking()
                                 backStack.add(FakeDeliveryTracking)
@@ -372,7 +371,8 @@ fun MainNavigation(
                             onViewSavings = {
                                 backStack.clear()
                                 backStack.add(Progress)
-                            }
+                            },
+                            onOpenSource = { url -> openProductSource(context, url) }
                         )
                     }
                     entry<FakeDeliveryTracking> {

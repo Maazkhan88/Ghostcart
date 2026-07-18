@@ -60,6 +60,7 @@ data class AppUiState(
     val coolingUntilByProductId: Map<String, Long> = emptyMap(),
     val lastOrderId: String = "",
     val lastOrderTotal: Int = 0,
+    val lastOrderProducts: List<MarketplaceProduct> = emptyList(),
     val lastOrderPlacedAtMillis: Long = 0L,
     val deliveryStep: Int = -1,
     val promoApplied: Boolean = true,
@@ -711,11 +712,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val orderId = "GHOST-${10000 + Random.nextInt(90000)}"
         val placedAt = System.currentTimeMillis()
         val activityCheckoutId = UUID.randomUUID().toString()
-        val ghostedProductIds = _uiState.value.cartProductIds.distinct()
+        val ghostedProducts = cartProductsWithQuantities().map { it.first }.distinctBy { it.id }
+        val ghostedProductIds = ghostedProducts.map { it.id }
         _uiState.update {
             it.copy(
                 lastOrderId = orderId,
                 lastOrderTotal = total,
+                lastOrderProducts = ghostedProducts,
                 lastOrderPlacedAtMillis = placedAt,
                 deliveryStep = 0,
                 cartProductIds = emptyList(),

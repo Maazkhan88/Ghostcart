@@ -28,8 +28,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Schedule
@@ -659,7 +659,7 @@ fun ProductDetailScreen(
     onBack: () -> Unit,
     onShare: () -> Unit,
     onToggleFavorite: () -> Unit,
-    onOpenSource: (() -> Unit)?,
+    hasSourceLink: Boolean,
     onAddToCart: () -> Unit,
     onGhostBuyNow: () -> Unit,
     onStartCooling: () -> Unit,
@@ -750,15 +750,15 @@ fun ProductDetailScreen(
         SecondaryButton(text = "Ghost Buy Now", onClick = onGhostBuyNow, modifier = Modifier.padding(top = 10.dp))
         Text(text = "Instant. No checkout. No payment.", color = GhostGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
 
-        if (onOpenSource != null) {
+        if (hasSourceLink) {
             SecondaryButton(
-                text = "View original product",
-                onClick = onOpenSource,
-                leadingIcon = Icons.Filled.OpenInNew,
+                text = "Ghost it first to unlock product link",
+                onClick = onGhostBuyNow,
+                leadingIcon = Icons.Filled.Lock,
                 modifier = Modifier.padding(top = 12.dp)
             )
             Text(
-                text = "Opens the original retailer page. Ghost Cart is not affiliated with the retailer.",
+                text = "The original retailer link is revealed after the simulated Ghost checkout.",
                 color = MutedText,
                 fontSize = 9.sp,
                 modifier = Modifier.padding(top = 5.dp)
