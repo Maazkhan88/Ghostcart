@@ -441,6 +441,11 @@ fun ProductPhoto(
     val directAsset = when {
         normalizedName.contains("spanish latte") -> R.drawable.product_marketplace_spanish_latte
         normalizedName.contains("midnight burger") -> R.drawable.product_marketplace_midnight_burger
+        normalizedName.contains("coffee & croissant combo") -> R.drawable.product_marketplace_croissant_coffee
+        normalizedName.contains("pizza combo") -> R.drawable.product_marketplace_pizza_combo
+        normalizedName.contains("ghost cappuccino") -> R.drawable.product_marketplace_ghost_cappuccino
+        normalizedName.contains("noise cancelling headphones") -> R.drawable.product_marketplace_noise_cancelling_headphones
+        normalizedName.contains("acai bowl") -> R.drawable.product_marketplace_acai_bowl
         normalizedName.contains("white sneaker") -> R.drawable.product_marketplace_white_sneakers
         normalizedName.contains("gaming tablet") -> R.drawable.product_marketplace_gaming_tablet
         normalizedName.contains("minimal smartwatch") -> R.drawable.product_marketplace_minimal_smartwatch

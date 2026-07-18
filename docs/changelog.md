@@ -4,6 +4,16 @@ All notable changes to the Ghost Cart project will be documented in this file.
 
 ---
 
+## [2.7.6] - 2026-07-18
+
+### Added
+- Added supplied product photos for a coffee-and-croissant combo, pizza combo,
+  Ghost Cappuccino, noise-cancelling headphones, and an acai bowl.
+- Added the coffee-and-croissant combo and Ghost Cappuccino as simulated
+  catalogue entries; the other photos now replace their generic fallbacks.
+
+---
+
 ## [2.7.5] - 2026-07-18
 
 ### Changed
