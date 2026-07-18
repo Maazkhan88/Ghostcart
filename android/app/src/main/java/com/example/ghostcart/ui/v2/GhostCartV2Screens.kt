@@ -34,6 +34,8 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
@@ -48,6 +50,7 @@ import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
@@ -132,8 +135,10 @@ fun GhostHomeScreen(
     onOpenProgress: () -> Unit,
     onGhostCatalog: (String) -> Unit,
     onCoolCatalog: (String) -> Unit,
+    onOpenCatalog: (String) -> Unit,
     onGhostCommunity: (String) -> Unit,
     onCoolCommunity: (String) -> Unit,
+    onOpenCommunity: (String) -> Unit,
     onNotifications: () -> Unit,
     onRefresh: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -158,8 +163,10 @@ fun GhostHomeScreen(
                 communityProductsLoading = communityProductsLoading,
                 onGhostCatalog = onGhostCatalog,
                 onCoolCatalog = onCoolCatalog,
+                onOpenCatalog = onOpenCatalog,
                 onGhostCommunity = onGhostCommunity,
                 onCoolCommunity = onCoolCommunity,
+                onOpenCommunity = onOpenCommunity,
                 onNotifications = onNotifications
             )
         }
@@ -645,6 +652,8 @@ fun CooldownsScreen(
     onGhostSomething: () -> Unit,
     onResolve: (String, AlmostBuyResolution) -> Unit,
     onMoreTime: (String, Long) -> Unit,
+    onShare: (AlmostBuy) -> Unit,
+    onOpenSource: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -682,14 +691,16 @@ fun CooldownsScreen(
             }
         } else {
             items(active, key = { it.id }) { item ->
-                CooldownDecisionCard(item, now, onResolve, onMoreTime)
+                CooldownDecisionCard(item, now, onResolve, onMoreTime, onShare, onOpenSource)
             }
         }
 
         val resolved = almostBuys.filter { it.status != AlmostBuyStatus.COOLING }
         if (resolved.isNotEmpty()) {
             item { SectionHeader(stringResource(R.string.recent_decisions)) }
-            items(resolved.take(8), key = { it.id }) { item -> ResolvedRow(item) }
+            items(resolved.take(8), key = { it.id }) { item ->
+                ResolvedRow(item, onShare, onOpenSource)
+            }
         }
     }
 }
@@ -943,7 +954,9 @@ private fun CooldownDecisionCard(
     item: AlmostBuy,
     now: Long,
     onResolve: (String, AlmostBuyResolution) -> Unit,
-    onMoreTime: (String, Long) -> Unit
+    onMoreTime: (String, Long) -> Unit,
+    onShare: (AlmostBuy) -> Unit,
+    onOpenSource: (String) -> Unit
 ) {
     val hasCooled = now >= item.coolingUntilMillis
     Card(
@@ -957,7 +970,19 @@ private fun CooldownDecisionCard(
                     Text(item.name, color = Ink, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
                     Text("${item.category} · ${item.trigger}", color = MutedText, fontSize = 11.sp)
                 }
-                Text(formatDirhams(item.amountCents), color = Ink, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(formatDirhams(item.amountCents), color = Ink, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+                    Row {
+                        IconButton(onClick = { onShare(item) }, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.Filled.Share, contentDescription = "Share ${item.name}", tint = Ink, modifier = Modifier.size(17.dp))
+                        }
+                        item.sourceUrl?.let { source ->
+                            IconButton(onClick = { onOpenSource(source) }, modifier = Modifier.size(36.dp)) {
+                                Icon(Icons.Filled.OpenInNew, contentDescription = "Open original product", tint = Ink, modifier = Modifier.size(17.dp))
+                            }
+                        }
+                    }
+                }
             }
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 14.dp, bottom = 14.dp)) {
                 Icon(if (hasCooled) Icons.Filled.CheckCircle else Icons.Filled.AccessTime, null, tint = if (hasCooled) GhostGreen else MutedText, modifier = Modifier.size(17.dp))
@@ -988,7 +1013,11 @@ private fun CooldownDecisionCard(
 }
 
 @Composable
-private fun ResolvedRow(item: AlmostBuy) {
+private fun ResolvedRow(
+    item: AlmostBuy,
+    onShare: (AlmostBuy) -> Unit,
+    onOpenSource: (String) -> Unit
+) {
     Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(
             if (item.status == AlmostBuyStatus.SKIPPED) Icons.Filled.CheckCircle else Icons.Filled.ShoppingBag,
@@ -1003,6 +1032,14 @@ private fun ResolvedRow(item: AlmostBuy) {
                 color = MutedText,
                 fontSize = 10.sp
             )
+        }
+        IconButton(onClick = { onShare(item) }, modifier = Modifier.size(36.dp)) {
+            Icon(Icons.Filled.Share, contentDescription = "Share ${item.name}", tint = Ink, modifier = Modifier.size(17.dp))
+        }
+        item.sourceUrl?.let { source ->
+            IconButton(onClick = { onOpenSource(source) }, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Filled.OpenInNew, contentDescription = "Open original product", tint = Ink, modifier = Modifier.size(17.dp))
+            }
         }
         Text(formatDirhams(item.amountCents), color = if (item.status == AlmostBuyStatus.SKIPPED) GhostGreen else Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
     }

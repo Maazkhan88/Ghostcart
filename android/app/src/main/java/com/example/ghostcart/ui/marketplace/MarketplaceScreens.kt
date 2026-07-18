@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Schedule
@@ -47,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -73,6 +75,7 @@ import com.example.ghostcart.ui.common.PrimaryButton
 import com.example.ghostcart.ui.common.RoundIconButton
 import com.example.ghostcart.ui.common.SecondaryButton
 import com.example.ghostcart.ui.common.materialIconFor
+import coil3.compose.AsyncImage
 
 @Composable
 fun HomeMarketplaceScreen(
@@ -653,6 +656,8 @@ fun ProductDetailScreen(
     product: MarketplaceProduct,
     coolingUntilMillis: Long?,
     onBack: () -> Unit,
+    onShare: () -> Unit,
+    onOpenSource: (() -> Unit)?,
     onAddToCart: () -> Unit,
     onGhostBuyNow: () -> Unit,
     onStartCooling: () -> Unit,
@@ -666,7 +671,7 @@ fun ProductDetailScreen(
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             BackButton(onBack = onBack)
             Text(text = "Ghost Cart", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f).padding(start = 10.dp))
-            RoundIconButton(icon = Icons.Filled.Share, onClick = {})
+            RoundIconButton(icon = Icons.Filled.Share, onClick = onShare)
             Spacer(modifier = Modifier.width(8.dp))
             RoundIconButton(icon = if (favorited) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder, onClick = { favorited = !favorited })
         }
@@ -706,6 +711,14 @@ fun ProductDetailScreen(
             contentAlignment = Alignment.Center
         ) {
             ProductPhoto(productName = product.name, fallbackIconName = iconForProduct(product), modifier = Modifier.fillMaxSize())
+            if (product.imageUrl != null) {
+                AsyncImage(
+                    model = product.imageUrl,
+                    contentDescription = "${product.name} product image",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize().background(Paper)
+                )
+            }
         }
 
         if (product.scentOrType.isNotBlank()) {
@@ -732,6 +745,21 @@ fun ProductDetailScreen(
         PrimaryButton(text = "Add to Ghost Cart", onClick = onAddToCart, modifier = Modifier.padding(top = 18.dp))
         SecondaryButton(text = "Ghost Buy Now", onClick = onGhostBuyNow, modifier = Modifier.padding(top = 10.dp))
         Text(text = "Instant. No checkout. No payment.", color = GhostGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
+
+        if (onOpenSource != null) {
+            SecondaryButton(
+                text = "View original product",
+                onClick = onOpenSource,
+                leadingIcon = Icons.Filled.OpenInNew,
+                modifier = Modifier.padding(top = 12.dp)
+            )
+            Text(
+                text = "Opens the original retailer page. Ghost Cart is not affiliated with the retailer.",
+                color = MutedText,
+                fontSize = 9.sp,
+                modifier = Modifier.padding(top = 5.dp)
+            )
+        }
 
         Row(
             verticalAlignment = Alignment.CenterVertically,

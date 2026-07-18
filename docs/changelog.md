@@ -4,6 +4,30 @@ All notable changes to the Ghost Cart project will be documented in this file.
 
 ---
 
+## [2.6.0] - 2026-07-18
+
+### Added
+- Shareable Ghost-item links for catalogue, cart, cooling, and resolved items.
+  Shared links open Ghost Cart when installed and otherwise show a branded web
+  handoff with the latest Android APK.
+- A public `/ghost` landing page with product title, image, category, amount,
+  app-open action, APK fallback, and optional original retailer link.
+- A stable `/download/android` endpoint that always redirects to the latest
+  verified branch APK instead of embedding version-specific download URLs.
+- Android App Link handling for shared Ghost items, including prefilled editable
+  capture details when a friend opens the link.
+- Original-product actions for imported items on details, cooling, and resolved
+  screens.
+
+### Fixed
+- Home catalogue and User Ghosted cards now open the existing Product Details
+  screen instead of behaving like non-interactive display cards.
+- Imported product images now render on Product Details instead of falling back
+  to a generic product illustration.
+- Imported source URLs are preserved when an item is added to Ghost Cart.
+
+---
+
 ## [2.5.1] - 2026-07-18
 
 ### Fixed

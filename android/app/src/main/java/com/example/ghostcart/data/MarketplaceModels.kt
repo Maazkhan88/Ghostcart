@@ -11,7 +11,9 @@ data class MarketplaceProduct(
     val size: String = "",
     val brand: String = "",
     val highEmotion: Boolean = false,
-    val imageUrl: String? = null
+    val imageUrl: String? = null,
+    /** Original retailer page for user-imported items. Curated products leave this null. */
+    val sourceUrl: String? = null
 )
 
 data class OverspendCategory(

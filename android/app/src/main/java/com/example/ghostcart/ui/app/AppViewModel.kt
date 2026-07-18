@@ -138,18 +138,28 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun addCommunityToCart(productId: String) {
         val source = _uiState.value.communityProducts.find { it.id == productId } ?: return
-        val product = MarketplaceProduct(
-            id = "community_${source.id}",
-            name = source.title,
-            category = normalizeCategory(source.category),
-            price = (source.priceCents / 100L).toInt().coerceAtLeast(0),
-            iconName = "gadget",
-            brand = source.sourceDomain,
-            imageUrl = source.imageUrl
-        )
+        val product = communityMarketplaceProduct(source)
         sharedCartProducts[product.id] = product
         addToCart(product.id)
     }
+
+    /** Makes an anonymous community item available to the shared details screen. */
+    fun communityProductDetailId(productId: String): String? {
+        val source = _uiState.value.communityProducts.find { it.id == productId } ?: return null
+        val product = communityMarketplaceProduct(source)
+        sharedCartProducts[product.id] = product
+        return product.id
+    }
+
+    private fun communityMarketplaceProduct(source: CommunityProduct) = MarketplaceProduct(
+        id = "community_${source.id}",
+        name = source.title,
+        category = normalizeCategory(source.category),
+        price = (source.priceCents / 100L).toInt().coerceAtLeast(0),
+        iconName = "gadget",
+        brand = source.sourceDomain,
+        imageUrl = source.imageUrl
+    )
 
     fun addDraftToCart(draft: AlmostBuyDraft) {
         val id = "shared_${UUID.randomUUID()}"
@@ -159,7 +169,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             category = normalizeCategory(draft.category),
             price = (draft.amountCents / 100L).toInt().coerceAtLeast(0),
             iconName = "bag",
-            imageUrl = draft.imageUrl
+            imageUrl = draft.imageUrl,
+            sourceUrl = draft.sourceUrl
         )
         sharedCartProducts[id] = product
         addToCart(id)
@@ -729,6 +740,32 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             scheduleDeliveryWorkers(orderId, amountSaved, intervalMinutes)
         }
         beginDeliveryClock()
+    }
+
+    fun prepareSharedGhostItem(
+        title: String,
+        priceCents: Long,
+        category: String,
+        imageUrl: String?,
+        sourceUrl: String?
+    ) {
+        val safeTitle = title.trim().take(160)
+        if (safeTitle.isBlank()) return
+        _uiState.update {
+            it.copy(
+                productImportState = ProductImportState.Idle,
+                captureSeed = AlmostBuyDraft(
+                    name = safeTitle,
+                    amountCents = priceCents.coerceAtLeast(0),
+                    category = normalizeCategory(category),
+                    trigger = "Shared by a friend",
+                    coolingDurationMillis = recommendedCooling(category),
+                    sourceUrl = sourceUrl,
+                    imageUrl = imageUrl,
+                    sourceKind = "ghost_share"
+                )
+            )
+        }
     }
 
     private fun scheduleDeliveryWorkers(orderId: String, amountSaved: Int, intervalMinutes: Int) {

@@ -56,9 +56,9 @@ Requirements:
     cd android
     .\gradlew.bat testDebugUnitTest lintDebug assembleDebug --no-daemon --console=plain
 
-Verified APK:
+Latest verified APK fallback:
 
-releases/GhostCart-v2.2.0-debug.apk
+https://ghost-cart-preview.maaz-n-khan.chatgpt.site/download/android
 
 The Android app persists almost-buys locally for an offline-first v2 experience. Cooling-complete notifications open the relevant decision flow. Lunch and dinner reminders are independent, optional, and off by default.
 

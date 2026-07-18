@@ -66,8 +66,10 @@ fun ProductDiscoverySection(
     communityProductsLoading: Boolean,
     onGhostCatalog: (String) -> Unit,
     onCoolCatalog: (String) -> Unit,
+    onOpenCatalog: (String) -> Unit,
     onGhostCommunity: (String) -> Unit,
     onCoolCommunity: (String) -> Unit,
+    onOpenCommunity: (String) -> Unit,
     onNotifications: () -> Unit
 ) {
     var query by remember { mutableStateOf("") }
@@ -136,6 +138,7 @@ fun ProductDiscoverySection(
                                 }
                             }
                         },
+                        onOpen = { onOpenCatalog(product.id) },
                         onGhost = { onGhostCatalog(product.id) },
                         onCool = { onCoolCatalog(product.id) }
                     )
@@ -171,6 +174,7 @@ fun ProductDiscoverySection(
                                     }
                                 }
                             },
+                            onOpen = { onOpenCommunity(product.id) },
                             onGhost = { onGhostCommunity(product.id) },
                             onCool = { onCoolCommunity(product.id) }
                         )
@@ -230,6 +234,7 @@ private fun DiscoveryProductCard(
     priceCents: Long,
     tag: String? = null,
     image: @Composable () -> Unit,
+    onOpen: () -> Unit,
     onGhost: () -> Unit,
     onCool: () -> Unit
 ) {
@@ -240,6 +245,7 @@ private fun DiscoveryProductCard(
             .clip(RoundedCornerShape(20.dp))
             .background(Paper)
             .border(1.dp, FaintBorder, RoundedCornerShape(20.dp))
+            .clickable(onClick = onOpen)
             .padding(12.dp)
     ) {
         Box(

@@ -45,6 +45,20 @@ Product discovery is a visual entry point and never a real storefront. Curated i
 - Extraction is best-effort. Every field remains editable and a manual fallback is always available.
 - Imported items enter the same canonical cooling state model as manual or catalogue items.
 
+## Share a Ghost item with a friend
+
+- Every catalogue, cart, cooling, and resolved almost-buy can create a branded
+  `https://ghost-cart-preview.maaz-n-khan.chatgpt.site/ghost` link containing
+  editable product metadata.
+- Android App Links open the shared item directly in Ghost Cart when installed.
+  The app prefills the capture flow; it never creates a purchase or resolution
+  automatically.
+- Without the app, the link opens a public product handoff page with a stable
+  latest-APK download action. The fallback page repeats the simulation-only
+  disclosure.
+- Imported items retain an optional original retailer URL. Opening it is an
+  explicit user action and never implies affiliation with the retailer.
+
 ## User Ghosted community items
 
 - A user-shared retailer item can appear to others only after explicit anonymous-sharing consent.

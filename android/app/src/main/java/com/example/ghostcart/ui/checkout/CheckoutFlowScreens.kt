@@ -37,12 +37,14 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Sell
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -105,6 +107,8 @@ fun GhostCartListScreen(
     onRemove: (String) -> Unit,
     onClearAll: () -> Unit,
     onStartCooling: (String) -> Unit,
+    onOpenProduct: (String) -> Unit,
+    onShareProduct: (MarketplaceProduct) -> Unit,
     onCheckout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -148,7 +152,11 @@ fun GhostCartListScreen(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
                     ) {
                         Box(
-                            modifier = Modifier.size(52.dp).clip(RoundedCornerShape(12.dp)).background(SoftGray),
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(SoftGray)
+                                .clickable { onOpenProduct(product.id) },
                             contentAlignment = Alignment.Center
                         ) {
                             ProductPhoto(productName = product.name, fallbackIconName = iconForProduct(product), modifier = Modifier.fillMaxSize())
@@ -159,7 +167,12 @@ fun GhostCartListScreen(
                                 modifier = Modifier.fillMaxSize().background(Paper)
                             )
                         }
-                        Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { onOpenProduct(product.id) }
+                                .padding(horizontal = 12.dp)
+                        ) {
                             Text(text = product.name, color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                             Text(text = "${Marketplace.currency} ${product.price}", color = MutedText, fontSize = 11.sp)
                             val coolingUntil = coolingUntilByProductId[product.id]
@@ -179,6 +192,17 @@ fun GhostCartListScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
+                            IconButton(
+                                onClick = { onShareProduct(product) },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    Icons.Filled.Share,
+                                    contentDescription = "Share ${product.name}",
+                                    tint = Ink,
+                                    modifier = Modifier.size(17.dp)
+                                )
+                            }
                             Box(
                                 modifier = Modifier
                                     .size(26.dp)

@@ -23,14 +23,24 @@ private data class SharedProductRequest(
   val requestKey: Long
 )
 
+private data class SharedGhostItemRequest(
+  val title: String,
+  val priceCents: Long,
+  val category: String,
+  val imageUrl: String?,
+  val sourceUrl: String?,
+  val requestKey: Long
+)
+
 class MainActivity : ComponentActivity() {
   private val notificationCooldownId = mutableStateOf<String?>(null)
   private val sharedProductRequest = mutableStateOf<SharedProductRequest?>(null)
+  private val sharedGhostItemRequest = mutableStateOf<SharedGhostItemRequest?>(null)
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     notificationCooldownId.value = intent.getStringExtra("cooldownId")
-    captureSharedProduct(intent)
+    captureIncomingIntent(intent)
 
     enableEdgeToEdge()
 
@@ -42,12 +52,19 @@ class MainActivity : ComponentActivity() {
 
     setContent {
       val shared = sharedProductRequest.value
+      val ghostItem = sharedGhostItemRequest.value
       MainNavigation(
         initialCooldownId = notificationCooldownId.value,
         initialSharedUrl = shared?.url,
         initialSharedTitle = shared?.title,
         initialSharedImageUrl = shared?.imageUrl,
-        sharedRequestKey = shared?.requestKey
+        sharedRequestKey = shared?.requestKey,
+        initialGhostTitle = ghostItem?.title,
+        initialGhostPriceCents = ghostItem?.priceCents,
+        initialGhostCategory = ghostItem?.category,
+        initialGhostImageUrl = ghostItem?.imageUrl,
+        initialGhostSourceUrl = ghostItem?.sourceUrl,
+        ghostShareRequestKey = ghostItem?.requestKey
       )
     }
   }
@@ -56,7 +73,36 @@ class MainActivity : ComponentActivity() {
     super.onNewIntent(intent)
     setIntent(intent)
     notificationCooldownId.value = intent.getStringExtra("cooldownId")
+    captureIncomingIntent(intent)
+  }
+
+  private fun captureIncomingIntent(intent: Intent) {
+    if (intent.action == Intent.ACTION_VIEW && captureGhostShareLink(intent.data)) return
     captureSharedProduct(intent)
+  }
+
+  private fun captureGhostShareLink(uri: Uri?): Boolean {
+    if (uri == null || !uri.scheme.equals("https", true)) return false
+    if (!uri.host.equals("ghost-cart-preview.maaz-n-khan.chatgpt.site", true)) return false
+    if (uri.path?.trimEnd('/') != "/ghost") return false
+    val title = uri.getQueryParameter("title")?.trim()?.take(160)?.takeIf { it.isNotBlank() } ?: return false
+    sharedGhostItemRequest.value = SharedGhostItemRequest(
+      title = title,
+      priceCents = uri.getQueryParameter("price")?.toLongOrNull()?.coerceAtLeast(0) ?: 0L,
+      category = uri.getQueryParameter("category")?.trim()?.take(80)?.takeIf { it.isNotBlank() } ?: "Other",
+      imageUrl = safeHttpsQueryValue(uri.getQueryParameter("image")),
+      sourceUrl = safeHttpsQueryValue(uri.getQueryParameter("source")),
+      requestKey = System.nanoTime()
+    )
+    sharedProductRequest.value = null
+    return true
+  }
+
+  private fun safeHttpsQueryValue(value: String?): String? = value?.trim()?.takeIf {
+    runCatching {
+      val parsed = Uri.parse(it)
+      parsed.scheme.equals("https", true) && !parsed.host.isNullOrBlank()
+    }.getOrDefault(false)
   }
 
   private fun captureSharedProduct(intent: Intent) {
@@ -83,6 +129,7 @@ class MainActivity : ComponentActivity() {
       imageUrl = persistSharedThumbnail(intent),
       requestKey = System.nanoTime()
     )
+    sharedGhostItemRequest.value = null
   }
 
   private fun persistSharedThumbnail(intent: Intent): String? {

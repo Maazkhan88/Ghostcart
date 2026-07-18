@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -53,6 +54,9 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import com.example.ghostcart.data.AlmostBuyResolution
 import com.example.ghostcart.data.WalletDemoData
+import com.example.ghostcart.data.openProductSource
+import com.example.ghostcart.data.shareGhostItem
+import com.example.ghostcart.data.toGhostShareItem
 import com.ghostcart.app.R
 import com.example.ghostcart.theme.FaintBorder
 import com.example.ghostcart.theme.GhostGreen
@@ -70,6 +74,7 @@ import com.example.ghostcart.ui.checkout.OrderGhostedSuccessScreen
 import com.example.ghostcart.ui.onboarding.AuthScreen
 import com.example.ghostcart.ui.onboarding.PersonalizationScreen
 import com.example.ghostcart.ui.onboarding.ProfileSelectScreen
+import com.example.ghostcart.ui.marketplace.ProductDetailScreen
 import com.example.ghostcart.ui.v2.CaptureAlmostBuyScreen
 import com.example.ghostcart.ui.v2.CooldownsScreen
 import com.example.ghostcart.ui.v2.GhostHomeScreen
@@ -85,11 +90,22 @@ fun MainNavigation(
     initialSharedUrl: String? = null,
     initialSharedTitle: String? = null,
     initialSharedImageUrl: String? = null,
-    sharedRequestKey: Long? = null
+    sharedRequestKey: Long? = null,
+    initialGhostTitle: String? = null,
+    initialGhostPriceCents: Long? = null,
+    initialGhostCategory: String? = null,
+    initialGhostImageUrl: String? = null,
+    initialGhostSourceUrl: String? = null,
+    ghostShareRequestKey: Long? = null
 ) {
-    val initial = when { initialSharedUrl != null -> CaptureAlmostBuy; initialCooldownId != null -> Cooldowns; else -> Splash }
+    val initial = when {
+        initialSharedUrl != null || initialGhostTitle != null -> CaptureAlmostBuy
+        initialCooldownId != null -> Cooldowns
+        else -> Splash
+    }
     val backStack = rememberNavBackStack(initial)
     val appViewModel: AppViewModel = viewModel()
+    val context = LocalContext.current
     val state by appViewModel.uiState.collectAsState()
     val current = backStack.lastOrNull()
     val showBottomNav = current in bottomDestinations
@@ -113,6 +129,19 @@ fun MainNavigation(
     LaunchedEffect(sharedRequestKey) {
         if (initialSharedUrl != null) {
             appViewModel.importSharedProduct(initialSharedUrl, initialSharedTitle, initialSharedImageUrl)
+            if (backStack.lastOrNull() != CaptureAlmostBuy) backStack.add(CaptureAlmostBuy)
+        }
+    }
+
+    LaunchedEffect(ghostShareRequestKey) {
+        if (initialGhostTitle != null) {
+            appViewModel.prepareSharedGhostItem(
+                title = initialGhostTitle,
+                priceCents = initialGhostPriceCents ?: 0L,
+                category = initialGhostCategory ?: "Other",
+                imageUrl = initialGhostImageUrl,
+                sourceUrl = initialGhostSourceUrl
+            )
             if (backStack.lastOrNull() != CaptureAlmostBuy) backStack.add(CaptureAlmostBuy)
         }
     }
@@ -206,12 +235,18 @@ fun MainNavigation(
                                 appViewModel.prepareCatalogProduct(id)
                                 backStack.add(CaptureAlmostBuy)
                             },
+                            onOpenCatalog = { id -> backStack.add(ProductDetail(id)) },
                             onGhostCommunity = { id ->
                                 appViewModel.addCommunityToCart(id)
                             },
                             onCoolCommunity = { id ->
                                 appViewModel.prepareCommunityProduct(id)
                                 backStack.add(CaptureAlmostBuy)
+                            },
+                            onOpenCommunity = { id ->
+                                appViewModel.communityProductDetailId(id)?.let { detailId ->
+                                    backStack.add(ProductDetail(detailId))
+                                }
                             },
                             onNotifications = { backStack.add(GhostCardSettings) },
                             onRefresh = { appViewModel.refreshCommunityProducts() }
@@ -251,10 +286,34 @@ fun MainNavigation(
                             almostBuys = state.almostBuys,
                             onGhostSomething = { backStack.add(CaptureAlmostBuy) },
                             onResolve = { id, resolution -> appViewModel.resolveAlmostBuy(id, resolution) },
-                            onMoreTime = appViewModel::extendAlmostBuy
+                            onMoreTime = appViewModel::extendAlmostBuy,
+                            onShare = { item -> shareGhostItem(context, item.toGhostShareItem()) },
+                            onOpenSource = { url -> openProductSource(context, url) }
                         )
                     }
                     entry<Progress> { ProgressScreen(almostBuys = state.almostBuys) }
+                    entry<ProductDetail> { key ->
+                        val product = appViewModel.findProduct(key.productId)
+                        if (product == null) {
+                            LaunchedEffect(key.productId) { backStack.removeLastOrNull() }
+                        } else {
+                            ProductDetailScreen(
+                                product = product,
+                                coolingUntilMillis = state.coolingUntilByProductId[product.id],
+                                onBack = { backStack.removeLastOrNull() },
+                                onShare = { shareGhostItem(context, product.toGhostShareItem()) },
+                                onOpenSource = product.sourceUrl?.let { source ->
+                                    { openProductSource(context, source) }
+                                },
+                                onAddToCart = { appViewModel.addToCart(product.id) },
+                                onGhostBuyNow = {
+                                    appViewModel.addToCart(product.id)
+                                    backStack.add(GhostCartList)
+                                },
+                                onStartCooling = { appViewModel.startCoolingPeriod(product.id) }
+                            )
+                        }
+                    }
                     entry<GhostCartList> {
                         GhostCartListScreen(
                             products = appViewModel.cartProductsWithQuantities(),
@@ -264,6 +323,8 @@ fun MainNavigation(
                             onRemove = appViewModel::removeFromCart,
                             onClearAll = appViewModel::clearCart,
                             onStartCooling = appViewModel::startCoolingPeriod,
+                            onOpenProduct = { id -> backStack.add(ProductDetail(id)) },
+                            onShareProduct = { product -> shareGhostItem(context, product.toGhostShareItem()) },
                             onCheckout = {
                                 if (state.cartQuantities.isEmpty()) appViewModel.showToast("Add an item before checkout")
                                 else backStack.add(GhostCheckout)
