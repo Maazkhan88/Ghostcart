@@ -1,6 +1,5 @@
 import { Brand } from "./components/Brand";
 import { GhostFlowDemo } from "./components/GhostFlowDemo";
-import { ProductDiscoveryDemo } from "./components/ProductDiscoveryDemo";
 import { RevealObserver } from "./components/RevealObserver";
 import { SiteNav } from "./components/SiteNav";
 import { WaitlistForm } from "./components/WaitlistForm";
@@ -72,8 +71,6 @@ export default function Home() {
           <aside className="gc-hero-note"><span aria-hidden="true">✓</span><div><strong>Clarity over theatre.</strong><p>Nothing counts until you decide.</p></div></aside>
         </div>
       </section>
-
-      <ProductDiscoveryDemo />
 
       <section id="how-it-works" className="gc-flow-section gc-section-light" aria-labelledby="how-title">
         <header className="gc-section-heading gc-flow-heading-copy" data-gc-reveal>

@@ -140,7 +140,7 @@ fun ProductCard(
                     .fillMaxWidth()
                     .height(110.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(cardBg),
+                    .background(Color.White),
                 contentAlignment = Alignment.Center
             ) {
                 ProductPhoto(

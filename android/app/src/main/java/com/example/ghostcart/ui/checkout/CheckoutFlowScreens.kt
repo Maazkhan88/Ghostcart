@@ -168,7 +168,7 @@ fun GhostCartListScreen(
                             modifier = Modifier
                                 .size(52.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(SoftGray)
+                                .background(Color.White)
                                 .clickable { onOpenProduct(product.id) },
                             contentAlignment = Alignment.Center
                         ) {
@@ -177,7 +177,7 @@ fun GhostCartListScreen(
                                 model = product.imageUrl,
                                 contentDescription = "${product.name} product image",
                                 contentScale = ContentScale.Fit,
-                                modifier = Modifier.fillMaxSize().background(Paper)
+                                modifier = Modifier.fillMaxSize().background(Color.White)
                             )
                         }
                         Column(
@@ -294,7 +294,8 @@ fun GhostCheckoutScreen(
     simulationIntervalMinutes: Int,
     onSelectInterval: (Int) -> Unit,
     onBack: () -> Unit,
-    onPlaceOrder: () -> Unit,
+    onOpenWallet: () -> Unit,
+    onPlaceOrder: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val subtotal = products.sumOf { (product, qty) -> product.price * qty }
@@ -302,6 +303,7 @@ fun GhostCheckoutScreen(
     val serviceFee = ((subtotal - promoDiscount) * SERVICE_FEE_RATE).toInt()
     val vat = ((subtotal - promoDiscount) * VAT_RATE).toInt()
     val total = subtotal - promoDiscount + serviceFee + vat
+    val hasEnoughSimulatedBalance = walletBalance >= total
 
     var deliveryAddress by remember { mutableStateOf("123 Ghost Street\nAl Wasl, Dubai\nUnited Arab Emirates") }
     var editingAddress by remember { mutableStateOf(false) }
@@ -328,8 +330,13 @@ fun GhostCheckoutScreen(
         }
 
         CheckoutInfoRow(icon = Icons.Filled.LocationOn, title = "Fake Delivery Address", subtitle = deliveryAddress, action = "Change", onAction = { editingAddress = true })
-        CheckoutInfoRow(icon = Icons.Filled.Notifications, title = "Ghost Wallet", subtitle = "Balance: ${Marketplace.currency} $walletBalance.00", action = "Change")
-        CheckoutInfoRow(icon = Icons.Filled.CheckCircle, title = "NoPay Balance", subtitle = "${Marketplace.currency} 800.00 available", action = "Available")
+        CheckoutInfoRow(
+            icon = Icons.Filled.Notifications,
+            title = "Ghost Wallet",
+            subtitle = "Simulated balance: ${Marketplace.currency} $walletBalance.00",
+            action = if (hasEnoughSimulatedBalance) "View" else "Add more",
+            onAction = onOpenWallet
+        )
         CheckoutInfoRow(icon = Icons.Filled.Sell, title = "Promo Code", subtitle = "GHOST10 · 10% off applied", action = "Remove")
 
         Text(text = "Simulation Speed (per step)", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 18.dp))
@@ -367,13 +374,13 @@ fun GhostCheckoutScreen(
             Text(text = "Order Summary", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
             products.forEach { (product, qty) ->
                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(SoftGray), contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(Color.White), contentAlignment = Alignment.Center) {
                         ProductPhoto(productName = product.name, fallbackIconName = iconForProduct(product), modifier = Modifier.fillMaxSize())
                         if (product.imageUrl != null) AsyncImage(
                             model = product.imageUrl,
                             contentDescription = "${product.name} product image",
                             contentScale = ContentScale.Fit,
-                            modifier = Modifier.fillMaxSize().background(Paper)
+                            modifier = Modifier.fillMaxSize().background(Color.White)
                         )
                     }
                     Text(text = "${product.name} (x$qty)", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).padding(horizontal = 10.dp))
@@ -389,7 +396,21 @@ fun GhostCheckoutScreen(
             SummaryLine("Total", "${Marketplace.currency} $total", bold = true, showDirhamIcon = true)
         }
 
-        PrimaryButton(text = "Place Fake Order", onClick = onPlaceOrder, trailingIcon = Icons.Filled.ArrowForward, modifier = Modifier.padding(top = 20.dp))
+        if (!hasEnoughSimulatedBalance) {
+            Text(
+                text = "Your simulated balance is too low for this Ghost Checkout.",
+                color = DangerRed,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 14.dp)
+            )
+        }
+        PrimaryButton(
+            text = if (hasEnoughSimulatedBalance) "Place Fake Order" else "Add simulated balance",
+            onClick = { if (hasEnoughSimulatedBalance) onPlaceOrder(total) else onOpenWallet() },
+            trailingIcon = Icons.Filled.ArrowForward,
+            modifier = Modifier.padding(top = 12.dp)
+        )
     }
 
     if (editingAddress) {
@@ -934,13 +955,13 @@ fun PayWithGhostCardScreen(
 
         Text(text = "Order summary", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 20.dp))
         Row(modifier = Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(SoftGray), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(Color.White), contentAlignment = Alignment.Center) {
                 ProductPhoto(productName = product.name, fallbackIconName = iconForProduct(product), modifier = Modifier.fillMaxSize())
                 if (product.imageUrl != null) AsyncImage(
                     model = product.imageUrl,
                     contentDescription = "${product.name} product image",
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize().background(Paper)
+                    modifier = Modifier.fillMaxSize().background(Color.White)
                 )
             }
             Column(modifier = Modifier.weight(1f).padding(horizontal = 10.dp)) {

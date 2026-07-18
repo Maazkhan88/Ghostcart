@@ -98,7 +98,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         walletConfig = loadWalletConfig(),
         coolingUntilByProductId = loadCoolingPeriods(),
         appTheme = sharedPrefs.getString("app_theme", "System") ?: "System",
-        favoriteProductIds = sharedPrefs.getStringSet("favorite_product_ids", emptySet()).orEmpty(),
+        favoriteProductIds = loadFavoriteProductIds(),
         lastOrderId = sharedPrefs.getString("last_order_id", "") ?: "",
         lastOrderTotal = sharedPrefs.getInt("last_order_total", 0),
         lastOrderPlacedAtMillis = sharedPrefs.getLong("last_order_placed_at", 0L),
@@ -133,7 +133,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             .distinctBy { it.id }
 
     fun findProduct(id: String): MarketplaceProduct? =
-        allProducts.find { it.id == id } ?: sharedCartProducts[id]
+        allProducts.find { it.id == id }
+            ?: sharedCartProducts[id]
+            ?: id.removePrefix("community_").takeIf { id.startsWith("community_") }
+                ?.let { communityId ->
+                    _uiState.value.communityProducts.find { it.id == communityId }
+                        ?.let(::communityMarketplaceProduct)
+                        ?.also { sharedCartProducts[it.id] = it }
+                }
 
     fun setAppTheme(theme: String) {
         val normalized = theme.takeIf { it in setOf("System", "Light", "Dark") } ?: "System"
@@ -156,9 +163,23 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             } else {
                 current.favoriteProductIds + productId
             }
-            sharedPrefs.edit().putStringSet("favorite_product_ids", next).apply()
+            sharedPrefs.edit()
+                .putStringSet("favorite_product_ids", HashSet(next))
+                .putString("favorite_product_ids_v2", next.joinToString("\n"))
+                .apply()
             current.copy(favoriteProductIds = next)
         }
+    }
+
+    private fun loadFavoriteProductIds(): Set<String> {
+        val legacy = sharedPrefs.getStringSet("favorite_product_ids", emptySet()).orEmpty().toSet()
+        val stable = sharedPrefs.getString("favorite_product_ids_v2", "")
+            .orEmpty()
+            .lineSequence()
+            .map(String::trim)
+            .filter(String::isNotBlank)
+            .toSet()
+        return legacy + stable
     }
 
     fun toggleCommunityFavorite(productId: String) {
@@ -579,6 +600,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun loadWalletConfig(): WalletConfig {
+        val simulatedBalance = if (!sharedPrefs.getBoolean("wallet_balance_v2_initialized", false)) {
+            10000.also {
+                sharedPrefs.edit()
+                    .putInt("wallet_starting_balance", it)
+                    .putBoolean("wallet_balance_v2_initialized", true)
+                    .apply()
+            }
+        } else {
+            sharedPrefs.getInt("wallet_starting_balance", 10000)
+        }
         val ghostId = sharedPrefs.getString("wallet_ghost_id", null)
             ?: createGhostId().also { sharedPrefs.edit().putString("wallet_ghost_id", it).apply() }
         val memberSince = sharedPrefs.getString("wallet_member_since", null)
@@ -589,7 +620,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             monthlySalary = sharedPrefs.getInt("wallet_monthly_salary", 12000),
             monthlySavingsGoal = sharedPrefs.getInt("wallet_monthly_savings_goal", 2500),
             temptationBudget = sharedPrefs.getInt("wallet_temptation_budget", 1500),
-            startingBalance = sharedPrefs.getInt("wallet_starting_balance", 0),
+            startingBalance = simulatedBalance,
             salaryShieldEnabled = sharedPrefs.getBoolean("wallet_salary_shield_enabled", true),
             coolingNotificationsEnabled = sharedPrefs.getBoolean("cooling_notifications_enabled", true),
             lunchReminderEnabled = sharedPrefs.getBoolean("lunch_reminder_enabled", false),
@@ -720,8 +751,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    fun placeSimulatedOrder() {
-        val total = cartSubtotal()
+    fun placeSimulatedOrder(checkoutTotal: Int = cartSubtotal()): Boolean {
+        val total = checkoutTotal.coerceAtLeast(0)
+        if (_uiState.value.cartQuantities.isEmpty() || total <= 0) {
+            showToast("Add an item before checkout")
+            return false
+        }
+        val simulatedBalance = _uiState.value.walletConfig.startingBalance
+        if (total > simulatedBalance) {
+            showToast("Not enough simulated balance. Add more in Ghost Wallet.")
+            return false
+        }
+        updateWalletConfig { it.copy(startingBalance = simulatedBalance - total) }
         val orderId = "GHOST-${10000 + Random.nextInt(90000)}"
         val placedAt = System.currentTimeMillis()
         val activityCheckoutId = UUID.randomUUID().toString()
@@ -758,6 +799,25 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         }
+        return true
+    }
+
+    fun addSimulatedWalletBalance(amount: Int) {
+        val safeAmount = amount.coerceIn(1, 1_000_000)
+        updateWalletConfig { config ->
+            config.copy(startingBalance = (config.startingBalance + safeAmount).coerceAtMost(1_000_000))
+        }
+        showToast("Added AED $safeAmount in simulated balance")
+    }
+
+    fun deleteAccountAndLocalData() {
+        WorkManager.getInstance(getApplication<Application>()).cancelAllWorkByTag("ghost_cooling_reminder")
+        WorkManager.getInstance(getApplication<Application>()).cancelAllWorkByTag("ghost_daily_reminder")
+        WorkManager.getInstance(getApplication<Application>()).cancelAllWorkByTag("ghost_delivery_simulation")
+        sharedPrefs.edit().clear().commit()
+        sharedCartProducts.clear()
+        _uiState.value = AppUiState(walletConfig = loadWalletConfig())
+        viewModelScope.launch { almostBuyRepository.clearAll() }
     }
 
     fun startDeliveryTracking() {

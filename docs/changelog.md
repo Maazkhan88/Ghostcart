@@ -4,6 +4,32 @@ All notable changes to the Ghost Cart project will be documented in this file.
 
 ---
 
+## [2.7.3] - 2026-07-18
+
+### Added
+- Ghost Wallet now starts with AED 10,000 of clearly labeled simulated credit,
+  deducts the displayed Fake Checkout total, blocks insufficient checkouts, and
+  lets the user add more simulated balance.
+- Moved the Ghost Membership card, cardholder-name control, theme picker, and
+  high-resolution download action into Ghost Wallet alongside progress.
+- Added a confirmed **Delete account** action to Profile that clears the local
+  profile, favorites, cooldowns, wallet state, and activity history.
+- Product-listing cards now include **Cool it** beside **Add to cart**.
+
+### Fixed
+- Removed the marketplace product feed from the public website homepage.
+- Removed the redundant “Favorite” image badge while retaining the heart state.
+- Product-listing cards now prefer captured retailer images instead of generic
+  fallback photos, and all product-image surfaces stay white in dark mode.
+- Moved per-item Ghost activity off the product photo and into a compact ghost
+  icon plus count beside the price.
+- Replaced the splash mascot with the official Ghost Cart wordmark.
+- Hardened favorite persistence across upgrades and enabled Android backup and
+  device transfer for device-local favorites and almost-buy history.
+- Kept simulation-only safety copy on one line on Home and catalogue screens.
+
+---
+
 ## [2.7.2] - 2026-07-18
 
 ### Added

@@ -258,9 +258,10 @@ fun GhostHomeScreen(
             Text(
                 stringResource(R.string.safety_disclosure),
                 color = MutedText,
-                fontSize = 10.sp,
+                fontSize = 8.sp,
+                maxLines = 1,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }
@@ -489,7 +490,7 @@ fun CaptureAlmostBuyScreen(
                         colors = CheckboxDefaults.colors(checkedColor = GhostGreen, checkmarkColor = Ink)
                     )
                     Box(
-                        Modifier.size(52.dp).clip(RoundedCornerShape(12.dp)).background(Paper),
+                        Modifier.size(52.dp).clip(RoundedCornerShape(12.dp)).background(Color.White),
                         contentAlignment = Alignment.Center
                     ) {
                         if (!stub.imageUrl.isNullOrBlank()) {
@@ -535,7 +536,7 @@ fun CaptureAlmostBuyScreen(
         item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(
-                    Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(20.dp)).background(SoftGray),
+                    Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(20.dp)).background(Color.White),
                     contentAlignment = Alignment.Center
                 ) {
                     if (!imageUrl.isNullOrBlank() && !imageLoadFailed) {
@@ -720,7 +721,17 @@ fun CooldownsScreen(
 }
 
 @Composable
-fun ProgressScreen(almostBuys: List<AlmostBuy>, modifier: Modifier = Modifier) {
+fun ProgressScreen(
+    almostBuys: List<AlmostBuy>,
+    config: WalletConfig,
+    onSetCardholderName: (String) -> Unit,
+    onSelectCardTheme: (String) -> Unit,
+    onDownloadCard: () -> Unit,
+    onAddBalance: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var editName by remember { mutableStateOf(false) }
+    var addBalance by remember { mutableStateOf(false) }
     val summary = almostBuys.progressSummary()
     val keptItems = almostBuys.filter { it.status == AlmostBuyStatus.SKIPPED }
     val categoriesByKept = keptItems.groupBy { it.category }
@@ -735,7 +746,54 @@ fun ProgressScreen(almostBuys: List<AlmostBuy>, modifier: Modifier = Modifier) {
     ) {
         item {
             Text("Ghost Wallet", color = Ink, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
-            Text("Your simulated wallet and real decision progress, together.", color = MutedText, fontSize = 12.sp)
+            Text("Your simulated balance, membership card and decision progress, together.", color = MutedText, fontSize = 12.sp)
+        }
+        item {
+            GhostHeroCard {
+                Text("SIMULATED BALANCE", color = Paper.copy(alpha = 0.65f), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text(formatDirhams(config.startingBalance.toLong() * 100), color = GhostGreen, fontSize = 35.sp, fontWeight = FontWeight.ExtraBold)
+                Text("Internal Ghost Cart credit only. No real money is stored.", color = Paper.copy(alpha = 0.65f), fontSize = 10.sp, modifier = Modifier.padding(top = 6.dp, bottom = 12.dp))
+                PrimaryButton(
+                    text = "Add simulated balance",
+                    onClick = { addBalance = true },
+                    leadingIcon = Icons.Filled.Add,
+                    containerColor = GhostGreen,
+                    contentColor = Color(0xFF050505)
+                )
+            }
+        }
+        item { SectionHeader("Ghost Card") }
+        item { MembershipCard(config) }
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = { editName = true }, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Filled.Edit, null)
+                    Text(stringResource(R.string.name_on_card), modifier = Modifier.padding(start = 7.dp))
+                }
+                Button(
+                    onClick = onDownloadCard,
+                    colors = ButtonDefaults.buttonColors(containerColor = Ink, contentColor = Paper),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Filled.Download, null)
+                    Text(stringResource(R.string.download_png), modifier = Modifier.padding(start = 7.dp))
+                }
+            }
+        }
+        item {
+            Column {
+                Text(stringResource(R.string.card_theme), color = Ink, fontWeight = FontWeight.ExtraBold)
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                    items(listOf("Dark", "Light", "Ghost Green")) { theme ->
+                        FilterChip(
+                            selected = config.cardTheme == theme,
+                            onClick = { onSelectCardTheme(theme) },
+                            label = { Text(theme) },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = GreenTint)
+                        )
+                    }
+                }
+            }
         }
         item {
             GhostHeroCard {
@@ -775,6 +833,50 @@ fun ProgressScreen(almostBuys: List<AlmostBuy>, modifier: Modifier = Modifier) {
             )
         }
     }
+
+    if (editName) {
+        var draft by remember(config.cardholderName) { mutableStateOf(config.cardholderName) }
+        AlertDialog(
+            onDismissRequest = { editName = false },
+            title = { Text(stringResource(R.string.name_on_membership_card)) },
+            text = { OutlinedTextField(value = draft, onValueChange = { draft = it.take(28) }, singleLine = true) },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (draft.isNotBlank()) onSetCardholderName(draft.trim())
+                    editName = false
+                }) { Text(stringResource(R.string.save)) }
+            },
+            dismissButton = { TextButton(onClick = { editName = false }) { Text(stringResource(R.string.cancel)) } }
+        )
+    }
+
+    if (addBalance) {
+        var draft by remember { mutableStateOf("10000") }
+        AlertDialog(
+            onDismissRequest = { addBalance = false },
+            title = { Text("Add simulated balance") },
+            text = {
+                Column {
+                    Text("This adds internal Ghost Cart credit. No real money is deposited.", color = MutedText, fontSize = 11.sp)
+                    OutlinedTextField(
+                        value = draft,
+                        onValueChange = { draft = it.filter(Char::isDigit).take(7) },
+                        label = { Text("Amount in dirhams") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.padding(top = 12.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    draft.toIntOrNull()?.takeIf { it > 0 }?.let(onAddBalance)
+                    addBalance = false
+                }) { Text("Add") }
+            },
+            dismissButton = { TextButton(onClick = { addBalance = false }) { Text(stringResource(R.string.cancel)) } }
+        )
+    }
 }
 
 @Composable
@@ -782,17 +884,15 @@ fun ProfileScreen(
     config: WalletConfig,
     authEmail: String?,
     appTheme: String,
-    onSetCardholderName: (String) -> Unit,
-    onSelectTheme: (String) -> Unit,
     onSelectAppTheme: (String) -> Unit,
-    onDownloadCard: () -> Unit,
     onToggleCooling: () -> Unit,
     onToggleLunch: () -> Unit,
     onToggleDinner: () -> Unit,
+    onDeleteAccount: () -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var editName by remember { mutableStateOf(false) }
+    var confirmDelete by remember { mutableStateOf(false) }
     val requestNotifications = rememberNotificationPermissionRequest()
 
     LazyColumn(
@@ -803,38 +903,6 @@ fun ProfileScreen(
         item {
             Text(stringResource(R.string.profile), color = Ink, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
             Text(authEmail ?: stringResource(R.string.guest_profile), color = MutedText, fontSize = 12.sp)
-        }
-        item { MembershipCard(config) }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                OutlinedButton(onClick = { editName = true }, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Filled.Edit, null)
-                    Text(stringResource(R.string.name_on_card), modifier = Modifier.padding(start = 7.dp))
-                }
-                Button(
-                    onClick = onDownloadCard,
-                    colors = ButtonDefaults.buttonColors(containerColor = Ink, contentColor = Paper),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Filled.Download, null)
-                    Text(stringResource(R.string.download_png), modifier = Modifier.padding(start = 7.dp))
-                }
-            }
-        }
-        item {
-            Column {
-                Text(stringResource(R.string.card_theme), color = Ink, fontWeight = FontWeight.ExtraBold)
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                    items(listOf("Dark", "Light", "Ghost Green")) { theme ->
-                        FilterChip(
-                            selected = config.cardTheme == theme,
-                            onClick = { onSelectTheme(theme) },
-                            label = { Text(theme) },
-                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = GreenTint)
-                        )
-                    }
-                }
-            }
         }
         item {
             Column {
@@ -898,23 +966,25 @@ fun ProfileScreen(
         if (authEmail != null) {
             item { OutlinedButton(onClick = onSignOut, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sign_out)) } }
         }
+        item {
+            OutlinedButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth()) {
+                Text("Delete account", color = com.example.ghostcart.theme.DangerRed)
+            }
+        }
     }
 
-    if (editName) {
-        var draft by remember(config.cardholderName) { mutableStateOf(config.cardholderName) }
+    if (confirmDelete) {
         AlertDialog(
-            onDismissRequest = { editName = false },
-            title = { Text(stringResource(R.string.name_on_membership_card)) },
-            text = {
-                OutlinedTextField(value = draft, onValueChange = { draft = it.take(28) }, singleLine = true)
-            },
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("Delete Ghost Cart account?") },
+            text = { Text("This permanently removes this device's profile, favorites, cooldowns, simulated wallet and activity history.") },
             confirmButton = {
                 TextButton(onClick = {
-                    if (draft.isNotBlank()) onSetCardholderName(draft.trim())
-                    editName = false
-                }) { Text(stringResource(R.string.save)) }
+                    confirmDelete = false
+                    onDeleteAccount()
+                }) { Text("Delete", color = com.example.ghostcart.theme.DangerRed) }
             },
-            dismissButton = { TextButton(onClick = { editName = false }) { Text(stringResource(R.string.cancel)) } }
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 }

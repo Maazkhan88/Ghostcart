@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -55,7 +56,6 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import com.example.ghostcart.data.AlmostBuyResolution
 import com.example.ghostcart.data.Marketplace
-import com.example.ghostcart.data.WalletDemoData
 import com.example.ghostcart.data.openProductSource
 import com.example.ghostcart.data.shareGhostItem
 import com.example.ghostcart.data.toGhostShareItem
@@ -68,6 +68,7 @@ import com.example.ghostcart.theme.MutedText
 import com.example.ghostcart.theme.Paper
 import com.example.ghostcart.theme.GhostCartTheme
 import com.example.ghostcart.ui.GhostMascotPose
+import com.example.ghostcart.ui.GhostCartWordmark
 import com.example.ghostcart.ui.app.AppViewModel
 import com.example.ghostcart.ui.checkout.FakeDeliveryTrackingScreen
 import com.example.ghostcart.ui.checkout.GhostCartListScreen
@@ -295,7 +296,11 @@ fun MainNavigation(
                             onBack = { backStack.removeLastOrNull() },
                             onOpenCart = { backStack.add(GhostCartList) },
                             onOpenProduct = { id -> backStack.add(ProductDetail(id)) },
-                            onAddToCart = appViewModel::addToCart
+                            onAddToCart = appViewModel::addToCart,
+                            onCoolProduct = { id ->
+                                appViewModel.prepareCatalogProduct(id)
+                                backStack.add(CaptureAlmostBuy)
+                            }
                         )
                     }
                     entry<CaptureAlmostBuy> {
@@ -337,7 +342,19 @@ fun MainNavigation(
                             onOpenSource = { url -> openProductSource(context, url) }
                         )
                     }
-                    entry<Progress> { ProgressScreen(almostBuys = state.almostBuys) }
+                    entry<Progress> {
+                        ProgressScreen(
+                            almostBuys = state.almostBuys,
+                            config = state.walletConfig,
+                            onSetCardholderName = { name ->
+                                appViewModel.updateWalletConfig { it.copy(cardholderName = name) }
+                                appViewModel.showToast("Name updated")
+                            },
+                            onSelectCardTheme = { theme -> appViewModel.updateWalletConfig { it.copy(cardTheme = theme) } },
+                            onDownloadCard = appViewModel::downloadGhostCard,
+                            onAddBalance = appViewModel::addSimulatedWalletBalance
+                        )
+                    }
                     entry<ProductDetail> { key ->
                         val product = appViewModel.findProduct(key.productId)
                         if (product == null) {
@@ -381,13 +398,15 @@ fun MainNavigation(
                     entry<GhostCheckout> {
                         GhostCheckoutScreen(
                             products = appViewModel.cartProductsWithQuantities(),
-                            walletBalance = WalletDemoData.currentBalance,
+                            walletBalance = state.walletConfig.startingBalance,
                             simulationIntervalMinutes = state.simulationIntervalMinutes,
                             onSelectInterval = appViewModel::setSimulationInterval,
                             onBack = { backStack.removeLastOrNull() },
-                            onPlaceOrder = {
-                                appViewModel.placeSimulatedOrder()
-                                backStack.add(OrderGhostedSuccess)
+                            onOpenWallet = { backStack.add(Progress) },
+                            onPlaceOrder = { total ->
+                                if (appViewModel.placeSimulatedOrder(total)) {
+                                    backStack.add(OrderGhostedSuccess)
+                                }
                             }
                         )
                     }
@@ -429,13 +448,7 @@ fun MainNavigation(
                             config = state.walletConfig,
                             authEmail = state.authEmail,
                             appTheme = state.appTheme,
-                            onSetCardholderName = { name ->
-                                appViewModel.updateWalletConfig { it.copy(cardholderName = name) }
-                                appViewModel.showToast("Name updated")
-                            },
-                            onSelectTheme = { theme -> appViewModel.updateWalletConfig { it.copy(cardTheme = theme) } },
                             onSelectAppTheme = appViewModel::setAppTheme,
-                            onDownloadCard = appViewModel::downloadGhostCard,
                             onToggleCooling = {
                                 appViewModel.updateWalletConfig { it.copy(coolingNotificationsEnabled = !it.coolingNotificationsEnabled) }
                             },
@@ -444,6 +457,11 @@ fun MainNavigation(
                             },
                             onToggleDinner = {
                                 appViewModel.updateWalletConfig { it.copy(dinnerReminderEnabled = !it.dinnerReminderEnabled) }
+                            },
+                            onDeleteAccount = {
+                                appViewModel.deleteAccountAndLocalData()
+                                backStack.clear()
+                                backStack.add(Auth)
                             },
                             onSignOut = {
                                 appViewModel.signOut()
@@ -480,9 +498,8 @@ fun MainNavigation(
 private fun SplashContent() {
     Box(Modifier.fillMaxSize().background(Paper), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            GhostMascotPose("wave", Modifier.size(100.dp))
-            Spacer(Modifier.height(16.dp))
-            Text("Ghost Cart", color = Ink, fontSize = 32.sp, fontWeight = FontWeight.ExtraBold)
+            GhostCartWordmark(modifier = Modifier.width(220.dp).height(72.dp), tint = Ink)
+            Spacer(Modifier.height(12.dp))
             Text("For everything you almost bought.", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
         }
     }

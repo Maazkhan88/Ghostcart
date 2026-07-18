@@ -177,8 +177,6 @@ fun CartItemRow(
     onRemove: () -> Unit
 ) {
     val bgHex = android.graphics.Color.parseColor("#" + product.toneColorHex.substring(2))
-    val shapeBg = Color(bgHex).copy(alpha = 0.15f)
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -193,7 +191,7 @@ fun CartItemRow(
             modifier = Modifier
                 .size(40.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(shapeBg),
+                .background(Color.White),
             contentAlignment = Alignment.Center
         ) {
             ProductPhoto(productName = product.name, fallbackIconName = product.vectorIconName, modifier = Modifier.fillMaxSize())

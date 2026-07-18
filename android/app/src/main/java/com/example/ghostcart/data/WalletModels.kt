@@ -24,7 +24,7 @@ data class WalletConfig(
     val monthlySalary: Int = 12000,
     val monthlySavingsGoal: Int = 2500,
     val temptationBudget: Int = 1500,
-    val startingBalance: Int = 0,
+    val startingBalance: Int = 10000,
     val salaryShieldEnabled: Boolean = true,
     val coolingNotificationsEnabled: Boolean = true,
     val lunchReminderEnabled: Boolean = false,

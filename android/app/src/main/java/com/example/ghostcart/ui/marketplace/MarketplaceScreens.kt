@@ -389,6 +389,7 @@ fun MarketplaceProductCard(
     product: MarketplaceProduct,
     onClick: () -> Unit,
     onAdd: () -> Unit,
+    onCool: (() -> Unit)? = null,
     activityLabel: String? = null,
     modifier: Modifier = Modifier
 ) {
@@ -406,22 +407,16 @@ fun MarketplaceProductCard(
                 .fillMaxWidth()
                 .height(84.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(SoftGray),
+                .background(Color.White),
             contentAlignment = Alignment.Center
         ) {
             ProductPhoto(productName = product.name, fallbackIconName = iconForProduct(product), modifier = Modifier.fillMaxSize())
-            if (activityLabel != null) {
-                Text(
-                    text = activityLabel,
-                    color = Paper,
-                    fontSize = 8.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(6.dp)
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(Ink)
-                        .padding(horizontal = 7.dp, vertical = 4.dp)
+            if (!product.imageUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = product.imageUrl,
+                    contentDescription = "${product.name} product image",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize().background(Color.White)
                 )
             }
         }
@@ -436,20 +431,51 @@ fun MarketplaceProductCard(
             maxLines = 2,
             modifier = Modifier.padding(top = 8.dp).height(32.dp)
         )
-        Text(text = "${Marketplace.currency} ${product.price}", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, modifier = Modifier.padding(top = 2.dp, bottom = 4.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 4.dp)
+        ) {
+            Text(text = "${Marketplace.currency} ${product.price}", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+            Spacer(Modifier.weight(1f))
+            if (activityLabel != null) {
+                GhostMascotPose(poseName = "wave", modifier = Modifier.size(14.dp))
+                Text(
+                    text = activityLabel.filter(Char::isDigit).ifBlank { "0" },
+                    color = MutedText,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier.padding(start = 3.dp)
+                )
+            }
+        }
 
         androidx.compose.foundation.layout.Spacer(modifier = Modifier.weight(1f))
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(36.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(Ink)
-                .clickable(onClick = onAdd),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(text = "Add to Ghost Cart", color = Paper, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(36.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Ink)
+                    .clickable(onClick = onAdd),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = if (onCool == null) "Add to Ghost Cart" else "Add to cart", color = Paper, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+            }
+            if (onCool != null) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(GreenTint)
+                        .clickable(onClick = onCool),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "Cool it", color = Ink, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 }
@@ -465,6 +491,7 @@ fun CategoryBrowseScreen(
     onOpenCart: () -> Unit,
     onOpenProduct: (String) -> Unit,
     onAddToCart: (String) -> Unit,
+    onCoolProduct: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var selectedFilter by remember(categoryId) { mutableStateOf("All") }
@@ -557,8 +584,9 @@ fun CategoryBrowseScreen(
             Text(
                 text = "Simulation only. No real payment. No real delivery.",
                 color = Ink,
-                fontSize = 11.sp,
+                fontSize = 9.sp,
                 fontWeight = FontWeight.Bold,
+                maxLines = 1,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -600,11 +628,10 @@ fun CategoryBrowseScreen(
                 items(visibleProducts) { product ->
                     MarketplaceProductCard(
                         product = product,
-                        activityLabel = (activityCounts[product.id] ?: product.ghostCount.takeIf { it > 0 })?.let { count ->
-                            "Ghosted $count ${if (count == 1) "time" else "times"}"
-                        },
+                        activityLabel = "Ghosted ${activityCounts[product.id] ?: product.ghostCount} times",
                         onClick = { onOpenProduct(product.id) },
                         onAdd = { onAddToCart(product.id) },
+                        onCool = { onCoolProduct(product.id) },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -714,7 +741,7 @@ fun ProductDetailScreen(
                 .height(220.dp)
                 .padding(top = 18.dp)
                 .clip(RoundedCornerShape(20.dp))
-                .background(SoftGray),
+                .background(Color.White),
             contentAlignment = Alignment.Center
         ) {
             ProductPhoto(productName = product.name, fallbackIconName = iconForProduct(product), modifier = Modifier.fillMaxSize())
@@ -723,7 +750,7 @@ fun ProductDetailScreen(
                     model = product.imageUrl,
                     contentDescription = "${product.name} product image",
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize().background(Paper)
+                    modifier = Modifier.fillMaxSize().background(Color.White)
                 )
             }
         }

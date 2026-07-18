@@ -81,6 +81,7 @@ interface AlmostBuyRepository {
     suspend fun create(draft: AlmostBuyDraft): AlmostBuy
     suspend fun resolve(id: String, resolution: AlmostBuyResolution): AlmostBuy?
     suspend fun extendCooling(id: String, durationMillis: Long): AlmostBuy?
+    suspend fun clearAll()
 }
 
 class LocalAlmostBuyRepository(context: Context) : AlmostBuyRepository {
@@ -137,6 +138,10 @@ coolingUntilMillis = now + draft.coolingDurationMillis.coerceAtLeast(60_000L),
         }
         if (result != null) update(next)
         return result
+    }
+
+    override suspend fun clearAll() {
+        update(emptyList())
     }
 
     private fun update(items: List<AlmostBuy>) {

@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -145,14 +146,14 @@ fun ProductDiscoverySection(
                         priceCents = product.price.toLong() * 100,
                         isFavorite = product.id in favoriteProductIds,
                         image = {
-                            Box(Modifier.fillMaxSize()) {
+                            Box(Modifier.fillMaxSize().background(Color.White)) {
                                 ProductPhoto(product.name, iconForProduct(product), Modifier.fillMaxSize())
                                 if (product.imageUrl != null) {
                                     AsyncImage(
                                         model = product.imageUrl,
                                         contentDescription = "${product.name} product image",
                                         contentScale = ContentScale.Fit,
-                                        modifier = Modifier.fillMaxSize().background(Paper)
+                                        modifier = Modifier.fillMaxSize().background(Color.White)
                                     )
                                 }
                             }
@@ -184,14 +185,14 @@ fun ProductDiscoverySection(
                             tag = product.activityTag,
                             isFavorite = "community_${product.id}" in favoriteProductIds,
                             image = {
-                                Box(Modifier.fillMaxSize()) {
+                                Box(Modifier.fillMaxSize().background(Color.White)) {
                                     ProductPhoto(product.title, "gadget", Modifier.fillMaxSize())
                                     if (product.imageUrl != null) {
                                         AsyncImage(
                                             model = product.imageUrl,
                                             contentDescription = "${product.title} product image",
                                             contentScale = ContentScale.Fit,
-                                            modifier = Modifier.fillMaxSize().background(Paper)
+                                            modifier = Modifier.fillMaxSize().background(Color.White)
                                         )
                                     }
                                 }
@@ -232,17 +233,16 @@ fun ProductDiscoverySection(
                         title = product.name,
                         category = product.category,
                         priceCents = product.price.toLong() * 100,
-                        tag = "Favorite",
                         isFavorite = true,
                         image = {
-                            Box(Modifier.fillMaxSize()) {
+                            Box(Modifier.fillMaxSize().background(Color.White)) {
                                 ProductPhoto(product.name, iconForProduct(product), Modifier.fillMaxSize())
                                 if (product.imageUrl != null) {
                                     AsyncImage(
                                         model = product.imageUrl,
                                         contentDescription = "${product.name} product image",
                                         contentScale = ContentScale.Fit,
-                                        modifier = Modifier.fillMaxSize().background(Paper)
+                                        modifier = Modifier.fillMaxSize().background(Color.White)
                                     )
                                 }
                             }
@@ -351,7 +351,7 @@ private fun DiscoveryProductCard(
             .padding(12.dp)
     ) {
         Box(
-            modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(14.dp)).background(SoftGray),
+            modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(14.dp)).background(Color.White),
             contentAlignment = Alignment.Center
         ) {
             image()

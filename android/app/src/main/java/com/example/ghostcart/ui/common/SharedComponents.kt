@@ -146,7 +146,8 @@ fun SimulationBadge(text: String = "Demo", modifier: Modifier = Modifier, dark: 
             text = text,
             color = if (dark) Paper else MutedText,
             fontSize = 9.sp,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
         )
     }
 }
