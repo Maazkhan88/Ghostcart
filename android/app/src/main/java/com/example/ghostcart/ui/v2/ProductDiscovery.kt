@@ -22,9 +22,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -65,7 +67,8 @@ fun ProductDiscoverySection(
     onGhostCatalog: (String) -> Unit,
     onCoolCatalog: (String) -> Unit,
     onGhostCommunity: (String) -> Unit,
-    onCoolCommunity: (String) -> Unit
+    onCoolCommunity: (String) -> Unit,
+    onNotifications: () -> Unit
 ) {
     var query by remember { mutableStateOf("") }
     var categoryId by remember { mutableStateOf("all") }
@@ -79,7 +82,15 @@ fun ProductDiscoverySection(
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        com.example.ghostcart.ui.GhostCartWordmark(modifier = Modifier.height(28.dp))
+        Box(modifier = Modifier.fillMaxWidth().height(40.dp)) {
+            com.example.ghostcart.ui.GhostCartWordmark(
+                modifier = Modifier.align(Alignment.Center).width(132.dp).height(32.dp),
+                tint = Ink
+            )
+            IconButton(onClick = onNotifications, modifier = Modifier.align(Alignment.CenterEnd)) {
+                Icon(Icons.Filled.Notifications, contentDescription = "Notifications", tint = Ink)
+            }
+        }
         PromoBannerCarousel()
         OutlinedTextField(
             value = query,

@@ -4,6 +4,10 @@ plugins {
   alias(libs.plugins.kotlin.serialization)
 }
 
+val googleWebClientId = providers.gradleProperty("GHOST_CART_GOOGLE_WEB_CLIENT_ID")
+    .orElse(providers.environmentVariable("GHOST_CART_GOOGLE_WEB_CLIENT_ID"))
+    .getOrElse("")
+
 android {
     namespace = "com.ghostcart.app"
     compileSdk = 36
@@ -11,8 +15,9 @@ android {
         applicationId = "com.ghostcart.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 25
-        versionName = "2.4.1"
+        versionCode = 26
+        versionName = "2.5.0"
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
     }
 
     buildTypes {
@@ -29,7 +34,7 @@ android {
     buildFeatures {
       compose = true
       aidl = false
-      buildConfig = false
+      buildConfig = true
       shaders = false
     }
 
@@ -86,6 +91,9 @@ dependencies {
 
   // WorkManager for background delivery simulation steps & notifications
   implementation("androidx.work:work-runtime-ktx:2.9.0")
+  implementation("androidx.credentials:credentials:1.6.0")
+  implementation("androidx.credentials:credentials-play-services-auth:1.6.0")
+  implementation("com.google.android.libraries.identity.googleid:googleid:1.2.0")
   implementation("io.coil-kt.coil3:coil-compose:3.5.0")
   implementation("io.coil-kt.coil3:coil-network-okhttp:3.5.0")
 }

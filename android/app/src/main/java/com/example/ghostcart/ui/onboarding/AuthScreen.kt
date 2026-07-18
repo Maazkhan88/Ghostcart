@@ -17,6 +17,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -36,7 +39,14 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
 import com.example.ghostcart.data.AuthRepository
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.ghostcart.app.BuildConfig
 import com.example.ghostcart.theme.DangerRed
 import com.example.ghostcart.theme.FaintBorder
 import com.example.ghostcart.theme.GhostGreen
@@ -59,6 +69,32 @@ fun AuthScreen(
     var loading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val credentialManager = remember(context) { CredentialManager.create(context) }
+
+    fun signInWithGoogle() {
+        if (BuildConfig.GOOGLE_WEB_CLIENT_ID.isBlank()) {
+            errorMessage = "Google Sign-In needs the Ghost Cart OAuth client ID."
+            return
+        }
+        loading = true
+        errorMessage = ""
+        scope.launch {
+            runCatching {
+                val option = GetSignInWithGoogleOption.Builder(BuildConfig.GOOGLE_WEB_CLIENT_ID).build()
+                val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
+                val credential = credentialManager.getCredential(context, request).credential
+                require(credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL)
+                GoogleIdTokenCredential.createFrom(credential.data).id
+            }.onSuccess { googleEmail ->
+                loading = false
+                onAuthSuccess(googleEmail)
+            }.onFailure { error ->
+                loading = false
+                errorMessage = error.message ?: "Google Sign-In was cancelled or unavailable."
+            }
+        }
+    }
 
     Column(
         modifier = modifier
@@ -188,6 +224,29 @@ fun AuthScreen(
                 CircularProgressIndicator(color = GhostGreen, modifier = Modifier.size(36.dp))
                 Spacer(modifier = Modifier.height(16.dp))
             } else {
+                OutlinedButton(
+                    onClick = ::signInWithGoogle,
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Ink)
+                ) {
+                    Text("G", color = GhostGreen, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                    Text("Continue with Google", modifier = Modifier.padding(start = 12.dp), fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedButton(
+                    onClick = { errorMessage = "Apple Sign-In requires an Apple Services ID and verified callback domain." },
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Ink)
+                ) {
+                    Text("Apple", fontWeight = FontWeight.Bold)
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp)) {
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = FaintBorder)
+                    Text("or use email", color = MutedText, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 10.dp))
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = FaintBorder)
+                }
                 PrimaryButton(
                     text = if (isSignIn) "Sign In" else "Sign Up",
                     onClick = {

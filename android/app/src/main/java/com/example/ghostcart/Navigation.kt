@@ -56,6 +56,7 @@ import com.example.ghostcart.data.WalletDemoData
 import com.ghostcart.app.R
 import com.example.ghostcart.theme.FaintBorder
 import com.example.ghostcart.theme.GhostGreen
+import com.example.ghostcart.theme.DarkGray
 import com.example.ghostcart.theme.Ink
 import com.example.ghostcart.theme.MutedText
 import com.example.ghostcart.theme.Paper
@@ -212,6 +213,7 @@ fun MainNavigation(
                                 appViewModel.prepareCommunityProduct(id)
                                 backStack.add(CaptureAlmostBuy)
                             },
+                            onNotifications = { backStack.add(GhostCardSettings) },
                             onRefresh = { appViewModel.refreshCommunityProducts() }
                         )
                     }
@@ -300,6 +302,8 @@ fun MainNavigation(
                             orderId = state.lastOrderId,
                             amountSaved = state.lastOrderTotal,
                             deliveryStep = state.deliveryStep,
+                            orderPlacedAtMillis = state.lastOrderPlacedAtMillis,
+                            simulationIntervalMinutes = state.simulationIntervalMinutes,
                             feedbackSubmitted = state.lastOrderId in state.feedbackSubmittedOrderIds,
                             onSubmitFeedback = { rating, comment ->
                                 appViewModel.submitGhostFeedback(state.lastOrderId, rating, comment)
@@ -388,7 +392,7 @@ private fun DeliveryTrackingBanner(orderId: String, deliveryStep: Int, onClick: 
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .background(Ink)
+            .background(DarkGray)
             .clickable(onClick = onClick)
             .padding(start = 16.dp, end = 4.dp, top = 10.dp, bottom = 10.dp)
     ) {

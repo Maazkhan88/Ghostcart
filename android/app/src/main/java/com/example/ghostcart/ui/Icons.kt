@@ -10,6 +10,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
@@ -533,12 +534,17 @@ fun GhostMascotPose(poseName: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun GhostCartWordmark(modifier: Modifier = Modifier, contentDescription: String? = "Ghost Cart") {
+fun GhostCartWordmark(
+    modifier: Modifier = Modifier,
+    contentDescription: String? = "Ghost Cart",
+    tint: Color = Color.Unspecified
+) {
     Image(
         painter = painterResource(R.drawable.ghost_cart_logo_horizontal),
         contentDescription = contentDescription,
         contentScale = ContentScale.Fit,
-        alignment = androidx.compose.ui.Alignment.CenterStart,
+        alignment = androidx.compose.ui.Alignment.Center,
+        colorFilter = if (tint == Color.Unspecified) null else ColorFilter.tint(tint),
         modifier = modifier
     )
 }

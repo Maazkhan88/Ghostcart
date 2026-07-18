@@ -59,6 +59,7 @@ data class AppUiState(
     val coolingUntilByProductId: Map<String, Long> = emptyMap(),
     val lastOrderId: String = "",
     val lastOrderTotal: Int = 0,
+    val lastOrderPlacedAtMillis: Long = 0L,
     val deliveryStep: Int = -1,
     val promoApplied: Boolean = true,
     val authEmail: String? = null,
@@ -78,6 +79,12 @@ data class AppUiState(
     val feedbackSubmittedOrderIds: Set<String> = emptySet()
 )
 
+internal fun deliveryStepAt(nowMillis: Long, placedAtMillis: Long, intervalMinutes: Int): Int {
+    if (placedAtMillis <= 0L) return -1
+    val stepDuration = intervalMinutes.coerceAtLeast(1) * 60_000L
+    return ((nowMillis - placedAtMillis).coerceAtLeast(0L) / stepDuration).toInt().coerceIn(0, 4)
+}
+
 class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val sharedPrefs = application.getSharedPreferences("ghost_cart_prefs", Context.MODE_PRIVATE)
     private val almostBuyRepository: AlmostBuyRepository = LocalAlmostBuyRepository(application)
@@ -86,7 +93,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         authEmail = sharedPrefs.getString("auth_email", null),
         walletConfig = loadWalletConfig(),
         coolingUntilByProductId = loadCoolingPeriods(),
-        appTheme = sharedPrefs.getString("app_theme", "System") ?: "System"
+        appTheme = sharedPrefs.getString("app_theme", "System") ?: "System",
+        lastOrderId = sharedPrefs.getString("last_order_id", "") ?: "",
+        lastOrderTotal = sharedPrefs.getInt("last_order_total", 0),
+        lastOrderPlacedAtMillis = sharedPrefs.getLong("last_order_placed_at", 0L),
+        simulationIntervalMinutes = sharedPrefs.getInt("simulation_interval_minutes", 5),
+        deliveryStep = deliveryStepAt(
+            System.currentTimeMillis(),
+            sharedPrefs.getLong("last_order_placed_at", 0L),
+            sharedPrefs.getInt("simulation_interval_minutes", 5)
+        )
     ))
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
 
@@ -99,6 +115,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         refreshCommunityProducts()
         syncDailyGhostReminder("lunch", 13, _uiState.value.walletConfig.lunchReminderEnabled)
         syncDailyGhostReminder("dinner", 20, _uiState.value.walletConfig.dinnerReminderEnabled)
+        if (_uiState.value.deliveryStep in 0..3) beginDeliveryClock()
         viewModelScope.launch {
             almostBuyRepository.items.collect { items ->
                 _uiState.update { it.copy(almostBuys = items) }
@@ -146,6 +163,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         )
         sharedCartProducts[id] = product
         addToCart(id)
+        if (draft.shareWithCommunity) publishCommunityDraft(draft)
     }
 
     fun refreshCommunityProducts() {
@@ -156,6 +174,24 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     _uiState.update { it.copy(communityProducts = products, communityProductsLoading = false) }
                 }
                 .onFailure { _uiState.update { it.copy(communityProductsLoading = false) } }
+        }
+    }
+
+    private fun publishCommunityDraft(draft: AlmostBuyDraft) {
+        viewModelScope.launch {
+            ProductImportRepository.publish(draft)
+                .onSuccess { published ->
+                    if (published != null) {
+                        _uiState.update { state ->
+                            state.copy(
+                                communityProducts = listOf(published) + state.communityProducts.filterNot { it.id == published.id },
+                                communityProductsLoading = false
+                            )
+                        }
+                    }
+                    refreshCommunityProducts()
+                }
+                .onFailure { showToast("Added to cart; anonymous community sharing could not be completed") }
         }
     }
 
@@ -555,7 +591,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setSimulationInterval(minutes: Int) {
-        _uiState.update { it.copy(simulationIntervalMinutes = minutes) }
+        val normalized = minutes.coerceAtLeast(1)
+        sharedPrefs.edit().putInt("simulation_interval_minutes", normalized).apply()
+        _uiState.update { it.copy(simulationIntervalMinutes = normalized) }
     }
 
     fun authenticate(email: String) {
@@ -644,16 +682,26 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun placeSimulatedOrder() {
         val total = cartSubtotal()
         val orderId = "GHOST-${10000 + Random.nextInt(90000)}"
+        val placedAt = System.currentTimeMillis()
         val activityCheckoutId = UUID.randomUUID().toString()
         val ghostedProductIds = _uiState.value.cartProductIds.distinct()
         _uiState.update {
             it.copy(
                 lastOrderId = orderId,
                 lastOrderTotal = total,
+                lastOrderPlacedAtMillis = placedAt,
+                deliveryStep = 0,
                 cartProductIds = emptyList(),
                 cartQuantities = emptyMap()
             )
         }
+        sharedPrefs.edit()
+            .putString("last_order_id", orderId)
+            .putInt("last_order_total", total)
+            .putLong("last_order_placed_at", placedAt)
+            .apply()
+        scheduleDeliveryWorkers(orderId, total, _uiState.value.simulationIntervalMinutes)
+        beginDeliveryClock()
         showToast("Ghost Order Placed Successfully!")
 
         if (ghostedProductIds.isNotEmpty()) {
@@ -670,22 +718,24 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun startDeliveryTracking() {
-        deliveryJob?.cancel()
-        _uiState.update { it.copy(deliveryStep = 0) }
-
         val orderId = _uiState.value.lastOrderId.ifBlank { "GHOST-00000" }
         val amountSaved = _uiState.value.lastOrderTotal
         val intervalMinutes = _uiState.value.simulationIntervalMinutes
+        val needsInitialization = _uiState.value.lastOrderPlacedAtMillis <= 0L
+        if (needsInitialization) {
+            val placedAt = System.currentTimeMillis()
+            sharedPrefs.edit().putLong("last_order_placed_at", placedAt).apply()
+            _uiState.update { it.copy(lastOrderPlacedAtMillis = placedAt, deliveryStep = 0) }
+            scheduleDeliveryWorkers(orderId, amountSaved, intervalMinutes)
+        }
+        beginDeliveryClock()
+    }
 
-        // Enqueue background notifications and step progression using WorkManager
+    private fun scheduleDeliveryWorkers(orderId: String, amountSaved: Int, intervalMinutes: Int) {
         val context = getApplication<Application>()
         val workManager = WorkManager.getInstance(context)
-        
-        // Cancel any existing simulation work first
         workManager.cancelAllWorkByTag("ghost_delivery_simulation")
-
-        // Schedule step 1 to 5 with proportional initial delays
-        for (step in 1..5) {
+        for (step in 1..4) {
             val delaySeconds = step * intervalMinutes * 60L
             val workRequest = OneTimeWorkRequestBuilder<DeliveryStepWorker>()
                 .setInputData(workDataOf(
@@ -698,13 +748,21 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 .build()
             workManager.enqueue(workRequest)
         }
+    }
 
-        // We also run a local coroutine in the app for immediate UI updates if the app is open
+    private fun beginDeliveryClock() {
+        deliveryJob?.cancel()
         deliveryJob = viewModelScope.launch {
-            val intervalMs = intervalMinutes * 60L * 1000L
-            for (step in 1..5) {
-                delay(intervalMs)
+            while (true) {
+                val state = _uiState.value
+                val step = deliveryStepAt(
+                    System.currentTimeMillis(),
+                    state.lastOrderPlacedAtMillis,
+                    state.simulationIntervalMinutes
+                )
                 _uiState.update { it.copy(deliveryStep = step) }
+                if (step >= 4 || step < 0) break
+                delay(1_000L)
             }
         }
     }
@@ -713,7 +771,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         deliveryJob?.cancel()
         val context = getApplication<Application>()
         WorkManager.getInstance(context).cancelAllWorkByTag("ghost_delivery_simulation")
-        _uiState.update { it.copy(deliveryStep = -1) }
+        sharedPrefs.edit()
+            .remove("last_order_id")
+            .remove("last_order_total")
+            .remove("last_order_placed_at")
+            .apply()
+        _uiState.update { it.copy(lastOrderId = "", lastOrderTotal = 0, lastOrderPlacedAtMillis = 0L, deliveryStep = -1) }
     }
 
     fun submitGhostFeedback(orderId: String, rating: Int, comment: String) {

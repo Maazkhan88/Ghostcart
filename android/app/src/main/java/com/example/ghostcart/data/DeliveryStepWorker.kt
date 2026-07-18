@@ -24,14 +24,13 @@ class DeliveryStepWorker(
         val stepIndex = inputData.getInt("stepIndex", 1)
 
         val steps = listOf(
-            "Order placed" to "We've received your imaginary order.",
             "Preparing imaginary order" to "Our team is carefully doing nothing.",
             "Ghost Rider is on the way" to "Zooming through the void.",
             "Rider left absolutely nothing at your doorstep" to "Yep, nothing's there.",
             "Fake delivery complete" to "Thanks for choosing smart savings. You avoided spending AED $amountSaved!"
         )
 
-        val (title, text) = if (stepIndex in 1..5) {
+        val (title, text) = if (stepIndex in 1..4) {
             steps[stepIndex - 1]
         } else {
             "Ghost Cart Status" to "Update on order $orderId"

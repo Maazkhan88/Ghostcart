@@ -48,6 +48,8 @@ import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -60,6 +62,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -131,6 +134,7 @@ fun GhostHomeScreen(
     onCoolCatalog: (String) -> Unit,
     onGhostCommunity: (String) -> Unit,
     onCoolCommunity: (String) -> Unit,
+    onNotifications: () -> Unit,
     onRefresh: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -155,7 +159,8 @@ fun GhostHomeScreen(
                 onGhostCatalog = onGhostCatalog,
                 onCoolCatalog = onCoolCatalog,
                 onGhostCommunity = onGhostCommunity,
-                onCoolCommunity = onCoolCommunity
+                onCoolCommunity = onCoolCommunity,
+                onNotifications = onNotifications
             )
         }
 
@@ -260,7 +265,8 @@ fun CaptureAlmostBuyScreen(
     var imageUrl by remember(seed?.imageUrl) { mutableStateOf(seed?.imageUrl) }
     var imageLoadFailed by remember(seed?.imageUrl) { mutableStateOf(false) }
     var sourceKind by remember(seed?.sourceKind) { mutableStateOf(seed?.sourceKind ?: "manual") }
-    var shareWithCommunity by remember(seed?.sourceUrl) { mutableStateOf(false) }
+    var shareWithCommunity by remember(seed?.sourceUrl) { mutableStateOf(seed?.sourceUrl != null) }
+    var readingStage by remember { mutableIntStateOf(0) }
     var category by remember(seed?.category) { mutableStateOf(seed?.category?.takeIf { it in categories } ?: categories.first()) }
     var trigger by remember(seed?.trigger) { mutableStateOf(seed?.trigger?.takeIf { it in triggers } ?: triggers.first()) }
     var cooling by remember(seed?.coolingDurationMillis) {
@@ -314,6 +320,14 @@ fun CaptureAlmostBuyScreen(
         }
     }
 
+    LaunchedEffect(importState) {
+        readingStage = 0
+        while (importState is ProductImportState.Loading) {
+            delay(750)
+            readingStage = (readingStage + 1) % 4
+        }
+    }
+
     LazyColumn(
         modifier = modifier.fillMaxSize().background(Paper),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp, 16.dp, 20.dp, 32.dp),
@@ -344,7 +358,44 @@ fun CaptureAlmostBuyScreen(
                         enabled = importState !is ProductImportState.Loading,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(if (importState is ProductImportState.Loading) "Reading product..." else "Capture product details")
+                        if (importState is ProductImportState.Loading) {
+                            CircularProgressIndicator(
+                                color = GhostGreen,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text("Reading product...", modifier = Modifier.padding(start = 9.dp))
+                        } else {
+                            Text("Capture product details")
+                        }
+                    }
+                    if (importState is ProductImportState.Loading) {
+                        val readingMessages = listOf(
+                            "Opening the product page",
+                            "Finding the title and picture",
+                            "Checking the price",
+                            "Preparing your Ghost Cart preview"
+                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(GreenTint)
+                                .padding(12.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                GhostMascotPose("phoneList", Modifier.size(34.dp))
+                                Column(modifier = Modifier.padding(start = 10.dp)) {
+                                    Text(readingMessages[readingStage], color = Ink, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Text("Hang tight - we're sorting the useful details.", color = MutedText, fontSize = 9.sp)
+                                }
+                            }
+                            LinearProgressIndicator(
+                                color = GhostGreen,
+                                trackColor = FaintBorder,
+                                modifier = Modifier.fillMaxWidth().padding(top = 10.dp).height(4.dp).clip(RoundedCornerShape(999.dp))
+                            )
+                        }
                     }
                     when (importState) {
                         is ProductImportState.Ready -> {

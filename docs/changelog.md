@@ -4,6 +4,33 @@ All notable changes to the Ghost Cart project will be documented in this file.
 
 ---
 
+## [2.5.0] - 2026-07-18
+
+### Added
+- A centered, theme-aware Ghost Cart wordmark on Home with a notification
+  shortcut on the right.
+- Animated product-reading feedback that cycles through title, image, price,
+  and preview stages while a shared link is being captured.
+- Google Credential Manager sign-in wiring. A real Google Web OAuth client ID
+  must be supplied at build time; the app never simulates a successful login.
+- Device-clock delivery timestamps and a delivery timeline that persists
+  across navigation and app recreation.
+
+### Fixed
+- Imported products added to Ghost Cart can now publish immediately to the
+  anonymous User Ghosted feed when the visible sharing option is enabled, and
+  the new card is inserted before the server refresh completes.
+- The delivery simulation starts when checkout completes instead of waiting
+  for the tracking screen to be opened.
+- Delivery progress is calculated from the device clock instead of an
+  in-memory-only timer, preventing orders from remaining on "Order placed."
+- The compact live-tracking banner now keeps a dark surface in dark mode
+  instead of becoming white with white text.
+- Background delivery notifications now match the same four post-order
+  timeline transitions shown in the app.
+
+---
+
 ## [2.4.1] - 2026-07-18
 
 ### Fixed

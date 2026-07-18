@@ -88,6 +88,9 @@ import com.example.ghostcart.ui.common.PrimaryButton
 import com.example.ghostcart.ui.common.RoundIconButton
 import com.example.ghostcart.ui.common.SecondaryButton
 import coil3.compose.AsyncImage
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private const val SERVICE_FEE_RATE = 0.05f
 private const val VAT_RATE = 0.05f
@@ -473,6 +476,8 @@ fun FakeDeliveryTrackingScreen(
     orderId: String,
     amountSaved: Int,
     deliveryStep: Int,
+    orderPlacedAtMillis: Long,
+    simulationIntervalMinutes: Int,
     feedbackSubmitted: Boolean = false,
     onSubmitFeedback: (Int, String) -> Unit = { _, _ -> },
     onViewReceipt: () -> Unit,
@@ -488,13 +493,18 @@ fun FakeDeliveryTrackingScreen(
         )
     }
 
+    val deviceTime = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
+    val baseTime = orderPlacedAtMillis.takeIf { it > 0L } ?: System.currentTimeMillis()
+    val intervalMillis = simulationIntervalMinutes.coerceAtLeast(1) * 60_000L
     val steps = listOf(
-        Triple("Order placed", "We've received your imaginary order.", "9:41 AM"),
-        Triple("Preparing imaginary order", "Our team is carefully doing nothing.", "9:42 AM"),
-        Triple("Ghost Rider is on the way", "Zooming through the void.", "9:46 AM"),
-        Triple("Rider left absolutely nothing at your doorstep", "Yep, nothing's there.", "9:48 AM"),
-        Triple("Fake delivery complete", "Thanks for choosing smart savings.", "9:49 AM")
-    )
+        "Order placed" to "We've received your imaginary order.",
+        "Preparing imaginary order" to "Our team is carefully doing nothing.",
+        "Ghost Rider is on the way" to "Zooming through the void.",
+        "Rider left absolutely nothing at your doorstep" to "Yep, nothing's there.",
+        "Fake delivery complete" to "Thanks for choosing smart savings."
+    ).mapIndexed { index, (title, caption) ->
+        Triple(title, caption, deviceTime.format(Date(baseTime + index * intervalMillis)))
+    }
 
     Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
