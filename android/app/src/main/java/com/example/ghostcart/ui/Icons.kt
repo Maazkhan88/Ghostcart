@@ -441,6 +441,7 @@ fun ProductPhoto(
     val directAsset = when {
         normalizedName.contains("spanish latte") -> R.drawable.product_marketplace_spanish_latte
         normalizedName.contains("midnight burger") -> R.drawable.product_marketplace_midnight_burger
+        normalizedName.contains("blackout burger combo") -> R.drawable.product_marketplace_blackout_burger_combo
         normalizedName.contains("coffee & croissant combo") -> R.drawable.product_marketplace_croissant_coffee
         normalizedName.contains("pizza combo") -> R.drawable.product_marketplace_pizza_combo
         normalizedName.contains("ghost cappuccino") -> R.drawable.product_marketplace_ghost_cappuccino

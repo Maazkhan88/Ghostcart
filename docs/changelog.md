@@ -4,6 +4,14 @@ All notable changes to the Ghost Cart project will be documented in this file.
 
 ---
 
+## [2.7.7] - 2026-07-18
+
+### Added
+- Added the supplied **Blackout Burger Combo** product and dedicated product
+  photo to the simulated fast-food catalogue.
+
+---
+
 ## [2.7.6] - 2026-07-18
 
 ### Added

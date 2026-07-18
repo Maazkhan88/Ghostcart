@@ -161,6 +161,7 @@ object Marketplace {
     val foodAndCoffeeCatalog = listOf(
         MarketplaceProduct("lateCombo", "Late Combo", "Fast Food", 38, "burger"),
         MarketplaceProduct("midnightBurger", "Midnight Burger Meal", "Fast Food", 75, "burger"),
+        MarketplaceProduct("blackoutBurgerCombo", "Blackout Burger Combo", "Fast Food", 75, "burger"),
         MarketplaceProduct("croissantCoffeeCombo", "Coffee & Croissant Combo", "Coffee & Drinks", 36, "coffee"),
         MarketplaceProduct("ghostCappuccino", "Ghost Cappuccino", "Coffee & Drinks", 22, "coffee"),
         MarketplaceProduct("pizzaCombo", "Pizza Combo", "Fast Food", 95, "burger"),
