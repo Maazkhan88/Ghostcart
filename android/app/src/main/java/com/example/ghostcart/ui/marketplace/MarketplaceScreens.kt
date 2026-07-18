@@ -655,15 +655,16 @@ private fun CartSummaryButton(
 fun ProductDetailScreen(
     product: MarketplaceProduct,
     coolingUntilMillis: Long?,
+    isFavorite: Boolean,
     onBack: () -> Unit,
     onShare: () -> Unit,
+    onToggleFavorite: () -> Unit,
     onOpenSource: (() -> Unit)?,
     onAddToCart: () -> Unit,
     onGhostBuyNow: () -> Unit,
     onStartCooling: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var favorited by remember { mutableStateOf(false) }
     val coolingComplete = coolingUntilMillis != null && coolingUntilMillis <= System.currentTimeMillis()
     val coolingActive = coolingUntilMillis != null && !coolingComplete
 
@@ -673,7 +674,10 @@ fun ProductDetailScreen(
             Text(text = "Ghost Cart", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f).padding(start = 10.dp))
             RoundIconButton(icon = Icons.Filled.Share, onClick = onShare)
             Spacer(modifier = Modifier.width(8.dp))
-            RoundIconButton(icon = if (favorited) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder, onClick = { favorited = !favorited })
+            RoundIconButton(
+                icon = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                onClick = onToggleFavorite
+            )
         }
 
         if (product.highEmotion) {

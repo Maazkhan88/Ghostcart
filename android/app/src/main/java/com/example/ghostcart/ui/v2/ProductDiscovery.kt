@@ -62,6 +62,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun ProductDiscoverySection(
     catalogProducts: List<MarketplaceProduct>,
+    favoriteProducts: List<MarketplaceProduct>,
     communityProducts: List<CommunityProduct>,
     communityProductsLoading: Boolean,
     onGhostCatalog: (String) -> Unit,
@@ -114,6 +115,41 @@ fun ProductDiscoverySection(
                         selectedLabelColor = Paper
                     )
                 )
+            }
+        }
+        if (favoriteProducts.isNotEmpty()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                Text("Your favorites", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                Text("saved for a calmer decision", color = MutedText, fontSize = 10.sp, modifier = Modifier.padding(start = 8.dp))
+            }
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(favoriteProducts, key = { "favorite_${it.id}" }) { product ->
+                    DiscoveryProductCard(
+                        title = product.name,
+                        category = product.category,
+                        priceCents = product.price.toLong() * 100,
+                        tag = "Favorite",
+                        image = {
+                            Box(Modifier.fillMaxSize()) {
+                                ProductPhoto(product.name, iconForProduct(product), Modifier.fillMaxSize())
+                                if (product.imageUrl != null) {
+                                    AsyncImage(
+                                        model = product.imageUrl,
+                                        contentDescription = "${product.name} product image",
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier.fillMaxSize().background(Paper)
+                                    )
+                                }
+                            }
+                        },
+                        onOpen = { onOpenCatalog(product.id) },
+                        onGhost = { onGhostCatalog(product.id) },
+                        onCool = { onCoolCatalog(product.id) }
+                    )
+                }
             }
         }
         if (visibleCatalog.isEmpty()) {

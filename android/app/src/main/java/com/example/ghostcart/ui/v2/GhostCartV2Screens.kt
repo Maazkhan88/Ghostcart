@@ -128,6 +128,7 @@ private data class CoolingOption(val label: String, val durationMillis: Long)
 fun GhostHomeScreen(
     items: List<AlmostBuy>,
     catalogProducts: List<MarketplaceProduct>,
+    favoriteProducts: List<MarketplaceProduct>,
     communityProducts: List<CommunityProduct>,
     communityProductsLoading: Boolean,
     onGhostSomething: () -> Unit,
@@ -159,6 +160,7 @@ fun GhostHomeScreen(
         item {
             ProductDiscoverySection(
                 catalogProducts = catalogProducts,
+                favoriteProducts = favoriteProducts,
                 communityProducts = communityProducts,
                 communityProductsLoading = communityProductsLoading,
                 onGhostCatalog = onGhostCatalog,

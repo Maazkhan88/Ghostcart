@@ -24,7 +24,8 @@ private data class SharedProductRequest(
 )
 
 private data class SharedGhostItemRequest(
-  val title: String,
+  val shareId: String?,
+  val title: String?,
   val priceCents: Long,
   val category: String,
   val imageUrl: String?,
@@ -60,6 +61,7 @@ class MainActivity : ComponentActivity() {
         initialSharedImageUrl = shared?.imageUrl,
         sharedRequestKey = shared?.requestKey,
         initialGhostTitle = ghostItem?.title,
+        initialGhostShareId = ghostItem?.shareId,
         initialGhostPriceCents = ghostItem?.priceCents,
         initialGhostCategory = ghostItem?.category,
         initialGhostImageUrl = ghostItem?.imageUrl,
@@ -85,8 +87,13 @@ class MainActivity : ComponentActivity() {
     if (uri == null || !uri.scheme.equals("https", true)) return false
     if (!uri.host.equals("ghost-cart-preview.maaz-n-khan.chatgpt.site", true)) return false
     if (uri.path?.trimEnd('/') != "/ghost") return false
-    val title = uri.getQueryParameter("title")?.trim()?.take(160)?.takeIf { it.isNotBlank() } ?: return false
+    val shareId = uri.getQueryParameter("s")?.trim()?.takeIf {
+      it.matches(Regex("^[23456789A-HJ-NP-Za-km-z]{8}$"))
+    }
+    val title = uri.getQueryParameter("title")?.trim()?.take(160)?.takeIf { it.isNotBlank() }
+    if (shareId == null && title == null) return false
     sharedGhostItemRequest.value = SharedGhostItemRequest(
+      shareId = shareId,
       title = title,
       priceCents = uri.getQueryParameter("price")?.toLongOrNull()?.coerceAtLeast(0) ?: 0L,
       category = uri.getQueryParameter("category")?.trim()?.take(80)?.takeIf { it.isNotBlank() } ?: "Other",

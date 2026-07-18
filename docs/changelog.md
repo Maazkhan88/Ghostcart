@@ -4,6 +4,25 @@ All notable changes to the Ghost Cart project will be documented in this file.
 
 ---
 
+## [2.7.0] - 2026-07-18
+
+### Added
+- Persistent favorites stored on the device, with a dedicated **Your favorites**
+  rail on Home and a working favorite control on Product Details.
+- Compact server-backed Ghost share links that preserve the product title,
+  image, amount, category, and optional original retailer URL.
+
+### Improved
+- Shared-item landing pages now show the product before download and app-open
+  actions, so recipients immediately understand what was shared.
+- The Android bottom navigation now remains available throughout product,
+  capture, checkout, delivery, wallet, and detail flows while onboarding stays
+  distraction-free.
+- Known catalogue products use matching first-party product imagery on shared
+  pages, including the correct Spanish Latte photo.
+
+---
+
 ## [2.6.0] - 2026-07-18
 
 ### Added

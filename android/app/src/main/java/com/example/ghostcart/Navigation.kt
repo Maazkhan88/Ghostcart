@@ -82,7 +82,17 @@ import com.example.ghostcart.ui.v2.ProfileScreen
 import com.example.ghostcart.ui.v2.ProgressScreen
 import kotlinx.coroutines.delay
 
-private val bottomDestinations: Set<NavKey> = setOf(Home, Cooldowns, GhostCartList, Progress, GhostCardSettings)
+private val onboardingDestinations: Set<NavKey> = setOf(Splash, Auth, ProfileSelect, Personalization)
+
+private fun selectedBottomDestination(current: NavKey?): NavKey = when (current) {
+    Cooldowns -> Cooldowns
+    Progress -> Progress
+    GhostCardSettings, WalletHome, WalletSetup, SalaryShield, Goals,
+    WalletActivity, WeeklyStatement, Trends -> GhostCardSettings
+    GhostCartList, CaptureAlmostBuy, GhostCheckout, OrderGhostedSuccess,
+    FakeDeliveryTracking, PayWithGhostCard, OrderProtected -> GhostCartList
+    else -> Home
+}
 
 @Composable
 fun MainNavigation(
@@ -92,6 +102,7 @@ fun MainNavigation(
     initialSharedImageUrl: String? = null,
     sharedRequestKey: Long? = null,
     initialGhostTitle: String? = null,
+    initialGhostShareId: String? = null,
     initialGhostPriceCents: Long? = null,
     initialGhostCategory: String? = null,
     initialGhostImageUrl: String? = null,
@@ -99,7 +110,7 @@ fun MainNavigation(
     ghostShareRequestKey: Long? = null
 ) {
     val initial = when {
-        initialSharedUrl != null || initialGhostTitle != null -> CaptureAlmostBuy
+        initialSharedUrl != null || initialGhostTitle != null || initialGhostShareId != null -> CaptureAlmostBuy
         initialCooldownId != null -> Cooldowns
         else -> Splash
     }
@@ -108,7 +119,7 @@ fun MainNavigation(
     val context = LocalContext.current
     val state by appViewModel.uiState.collectAsState()
     val current = backStack.lastOrNull()
-    val showBottomNav = current in bottomDestinations
+    val showBottomNav = current != null && current !in onboardingDestinations
     var dismissedOrderId by remember { mutableStateOf<String?>(null) }
     val showDeliveryBanner = current != FakeDeliveryTracking &&
         state.deliveryStep in 0..3 &&
@@ -134,7 +145,10 @@ fun MainNavigation(
     }
 
     LaunchedEffect(ghostShareRequestKey) {
-        if (initialGhostTitle != null) {
+        if (initialGhostShareId != null) {
+            appViewModel.importGhostShare(initialGhostShareId)
+            if (backStack.lastOrNull() != CaptureAlmostBuy) backStack.add(CaptureAlmostBuy)
+        } else if (initialGhostTitle != null) {
             appViewModel.prepareSharedGhostItem(
                 title = initialGhostTitle,
                 priceCents = initialGhostPriceCents ?: 0L,
@@ -161,7 +175,7 @@ fun MainNavigation(
                                 onClose = { dismissedOrderId = state.lastOrderId }
                             )
                         }
-                        GhostBottomNav(current) { destination ->
+                        GhostBottomNav(selectedBottomDestination(current)) { destination ->
                             if (backStack.lastOrNull() != destination) backStack.add(destination)
                         }
                     }
@@ -220,6 +234,7 @@ fun MainNavigation(
                         GhostHomeScreen(
                             items = state.almostBuys,
                             catalogProducts = appViewModel.allProducts,
+                            favoriteProducts = state.favoriteProductIds.mapNotNull(appViewModel::findProduct),
                             communityProducts = state.communityProducts,
                             communityProductsLoading = state.communityProductsLoading,
                             onGhostSomething = {
@@ -300,8 +315,10 @@ fun MainNavigation(
                             ProductDetailScreen(
                                 product = product,
                                 coolingUntilMillis = state.coolingUntilByProductId[product.id],
+                                isFavorite = product.id in state.favoriteProductIds,
                                 onBack = { backStack.removeLastOrNull() },
                                 onShare = { shareGhostItem(context, product.toGhostShareItem()) },
+                                onToggleFavorite = { appViewModel.toggleFavorite(product.id) },
                                 onOpenSource = product.sourceUrl?.let { source ->
                                     { openProductSource(context, source) }
                                 },

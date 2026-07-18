@@ -32,6 +32,7 @@ import com.example.ghostcart.data.LinkImportResult
 import com.example.ghostcart.data.ListingProductStub
 import com.example.ghostcart.data.ProductImportRepository
 import com.example.ghostcart.data.ProductImportState
+import com.example.ghostcart.data.fetchSharedGhostItem
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -76,6 +77,7 @@ data class AppUiState(
     val communityProductsLoading: Boolean = true,
     val captureSeed: AlmostBuyDraft? = null,
     val appTheme: String = "System",
+    val favoriteProductIds: Set<String> = emptySet(),
     val feedbackSubmittedOrderIds: Set<String> = emptySet()
 )
 
@@ -94,6 +96,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         walletConfig = loadWalletConfig(),
         coolingUntilByProductId = loadCoolingPeriods(),
         appTheme = sharedPrefs.getString("app_theme", "System") ?: "System",
+        favoriteProductIds = sharedPrefs.getStringSet("favorite_product_ids", emptySet()).orEmpty(),
         lastOrderId = sharedPrefs.getString("last_order_id", "") ?: "",
         lastOrderTotal = sharedPrefs.getInt("last_order_total", 0),
         lastOrderPlacedAtMillis = sharedPrefs.getLong("last_order_placed_at", 0L),
@@ -141,6 +144,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val product = communityMarketplaceProduct(source)
         sharedCartProducts[product.id] = product
         addToCart(product.id)
+    }
+
+    fun toggleFavorite(productId: String) {
+        if (findProduct(productId) == null) return
+        _uiState.update { current ->
+            val next = if (productId in current.favoriteProductIds) {
+                current.favoriteProductIds - productId
+            } else {
+                current.favoriteProductIds + productId
+            }
+            sharedPrefs.edit().putStringSet("favorite_product_ids", next).apply()
+            current.copy(favoriteProductIds = next)
+        }
     }
 
     /** Makes an anonymous community item available to the shared details screen. */
@@ -765,6 +781,27 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     sourceKind = "ghost_share"
                 )
             )
+        }
+    }
+
+    fun importGhostShare(shareId: String) {
+        _uiState.update { it.copy(productImportState = ProductImportState.Loading) }
+        viewModelScope.launch {
+            fetchSharedGhostItem(shareId)
+                .onSuccess { item ->
+                    prepareSharedGhostItem(
+                        title = item.title,
+                        priceCents = item.priceCents,
+                        category = item.category,
+                        imageUrl = item.imageUrl,
+                        sourceUrl = item.sourceUrl
+                    )
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(productImportState = ProductImportState.Error(error.message ?: "Shared item is unavailable"))
+                    }
+                }
         }
     }
 

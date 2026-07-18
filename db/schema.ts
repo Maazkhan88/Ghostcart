@@ -238,6 +238,26 @@ export const almostBuyEvents = sqliteTable(
   ],
 );
 
+// Compact, public handoff records behind /ghost?s=<id>. These rows contain
+// product-display metadata only and expire automatically after six months.
+export const sharedGhostItems = sqliteTable(
+  "shared_ghost_items",
+  {
+    id: text("id").primaryKey(),
+    title: text("title").notNull(),
+    category: text("category").notNull().default("Almost-buy"),
+    priceCents: integer("price_cents").notNull().default(0),
+    imageUrl: text("image_url"),
+    sourceUrl: text("source_url"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    expiresAt: text("expires_at").notNull(),
+  },
+  (table) => [
+    check("shared_ghost_items_price_non_negative", sql`${table.priceCents} >= 0`),
+    index("shared_ghost_items_expires_idx").on(table.expiresAt),
+  ],
+);
+
 // Public trend input. Every new event must resolve to an active catalog
 // product. actor_hash is a one-way, server-side pseudonym used solely for
 // privacy thresholds and abuse controls; no email, price, or raw IP is stored.

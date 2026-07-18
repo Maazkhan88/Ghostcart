@@ -47,9 +47,10 @@ Product discovery is a visual entry point and never a real storefront. Curated i
 
 ## Share a Ghost item with a friend
 
-- Every catalogue, cart, cooling, and resolved almost-buy can create a branded
-  `https://ghost-cart-preview.maaz-n-khan.chatgpt.site/ghost` link containing
-  editable product metadata.
+- Every catalogue, cart, cooling, and resolved almost-buy can create a compact,
+  branded `/ghost?s=...` link backed by expiring display-only metadata. The
+  short link preserves the product title, image, amount, category, and optional
+  original retailer URL without exposing a long query string in WhatsApp.
 - Android App Links open the shared item directly in Ghost Cart when installed.
   The app prefills the capture flow; it never creates a purchase or resolution
   automatically.
@@ -58,6 +59,16 @@ Product discovery is a visual entry point and never a real storefront. Curated i
   disclosure.
 - Imported items retain an optional original retailer URL. Opening it is an
   explicit user action and never implies affiliation with the retailer.
+- The public handoff shows the shared product before app-open and APK actions,
+  so the recipient immediately knows what a friend shared.
+
+## Favorites and persistent navigation
+
+- The Product Details heart saves or removes a device-local favorite.
+- Favorites appear in a dedicated Home rail and remain after restarting the app.
+- The five-item bottom navigation remains visible throughout the signed-in app,
+  including product details, capture, cart, checkout, delivery, and profile
+  subflows. It stays hidden during onboarding and authentication.
 
 ## User Ghosted community items
 
