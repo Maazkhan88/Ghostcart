@@ -171,11 +171,11 @@ export function ProductDiscoveryDemo() {
 
 function ProductCard({ product, onGhost, onCool, editable = false, onChange }: { product: Product; onGhost: () => void; onCool: () => void; editable?: boolean; onChange?: (product: Product) => void }) {
   return <article className="gc-product-card">
-    <div className="gc-product-image">{product.imageUrl ? <img src={product.imageUrl} alt={`${product.title} product`} /> : <span>IMAGE<br />UNAVAILABLE</span>}{product.activityTag && <b>{product.activityTag}</b>}</div>
+    <div className="gc-product-image">{product.imageUrl ? <img src={product.imageUrl} alt={`${product.title} product`} loading="lazy" decoding="async" /> : <span>IMAGE<br />UNAVAILABLE</span>}{product.activityTag && <b>{product.activityTag}</b>}</div>
     {editable ? <>
       <input aria-label="Product title" value={product.title} onChange={(event) => onChange?.({ ...product, title: event.target.value })} />
       <input aria-label="Price in AED" type="number" min="0" value={product.priceCents ? product.priceCents / 100 : ""} onChange={(event) => onChange?.({ ...product, priceCents: Math.round(Number(event.target.value) * 100) })} />
-    </> : <><small>{product.category}</small><h3>{product.title}</h3><strong>{money(product.priceCents)}</strong></>}
+    </> : <><small>{product.category}</small><h3 title={product.title}>{product.title}</h3><strong>{money(product.priceCents)}</strong></>}
     <div><button type="button" onClick={onGhost}>Ghost buy</button><button type="button" onClick={onCool}>Cool it</button></div>
   </article>;
 }
