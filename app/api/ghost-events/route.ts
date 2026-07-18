@@ -35,7 +35,7 @@ export async function GET(request: Request) {
       ? Math.min(Math.max(requestedLimit, 1), MAX_RANKING_LIMIT)
       : DEFAULT_RANKING_LIMIT;
     const db = getD1();
-    const [rankingResult, activityResult] = await db.batch([
+    const [rankingResult, activityResult, itemCountResult] = await db.batch([
       db
         .prepare(
           `SELECT
@@ -67,6 +67,14 @@ export async function GET(request: Request) {
            AND actor_hash IS NOT NULL
            AND product_id IS NOT NULL`,
       ),
+      db.prepare(
+        `SELECT product_key AS productId, COUNT(*) AS ghostCount
+         FROM ghost_events
+         WHERE actor_hash IS NOT NULL
+         GROUP BY product_key
+         ORDER BY ghostCount DESC, product_key ASC
+         LIMIT 500`,
+      ),
     ]);
     const activity = (activityResult.results?.[0] ?? {}) as {
       rawGhostCount?: number;
@@ -90,6 +98,10 @@ export async function GET(request: Request) {
       ghostCount: number;
       uniqueGhosters: number;
       lastActivityAt: string;
+    }>;
+    const itemCountRows = (itemCountResult.results ?? []) as Array<{
+      productId: string;
+      ghostCount: number;
     }>;
 
     return json(
@@ -127,6 +139,10 @@ export async function GET(request: Request) {
               lastActivityAt: row.lastActivityAt,
             }))
           : [],
+        itemCounts: itemCountRows.map((row) => ({
+          productId: row.productId,
+          ghostCount: Number(row.ghostCount),
+        })),
       },
       {
         headers: {
@@ -218,27 +234,14 @@ export async function POST(request: Request) {
       byInput.set(String(product.idText), product);
       byInput.set(product.slug, product);
     }
-    const invalidProductIds = productIds.filter((id) => !byInput.has(id));
-    if (invalidProductIds.length) {
-      return json(
-        {
-          error: "Every trend event must reference an active Ghost Cart catalog product",
-          invalidProductIds,
-        },
-        {
-          status: 400,
-          headers: {
-            "Cache-Control": "no-store",
-            "X-RateLimit-Remaining": String(rateLimit.remaining),
-          },
-        },
-      );
-    }
     const canonicalProducts = Array.from(
       new Map(
         productIds.map((input) => {
-          const product = byInput.get(input) as CatalogIdentifier;
-          return [product.id, product] as const;
+          const catalogProduct = byInput.get(input);
+          const product = catalogProduct
+            ? { productKey: catalogProduct.slug, productId: catalogProduct.id }
+            : { productKey: input, productId: null };
+          return [product.productKey, product] as const;
         }),
       ).values(),
     );
@@ -251,9 +254,9 @@ export async function POST(request: Request) {
            ON CONFLICT DO NOTHING`,
         )
         .bind(
-          `${checkoutId}:${product.id}`,
-          product.slug,
-          product.id,
+          `${checkoutId}:${product.productKey}`,
+          product.productKey,
+          product.productId,
           actorHash,
           source,
         ),

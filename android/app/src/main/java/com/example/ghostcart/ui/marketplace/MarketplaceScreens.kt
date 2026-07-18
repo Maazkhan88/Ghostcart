@@ -507,6 +507,8 @@ fun CategoryBrowseScreen(
             "home" -> "Home" to "Collect home ideas without making a real purchase."
             "most_ghosted" -> "Most Ghosted Today" to "Real anonymous Ghost Checkout activity from today."
             "flash_deals" -> "Fake Flash Deals" to "Simulated urgency, with no real purchase or payment."
+            "community" -> "Community Products" to "Anonymous products other Ghost Cart users chose to ghost."
+            "favorites" -> "Your Favorites" to "Everything you saved for a calmer decision."
             "all" -> "Almost-Spent Catalog" to "Browse simulation items you can add to Ghost Cart."
             else -> "Shop cravings" to "Simulate the cart and protect your budget."
         }
@@ -598,8 +600,8 @@ fun CategoryBrowseScreen(
                 items(visibleProducts) { product ->
                     MarketplaceProductCard(
                         product = product,
-                        activityLabel = activityCounts[product.id]?.let { count ->
-                            "$count ${if (count == 1) "ghost" else "ghosts"} today"
+                        activityLabel = (activityCounts[product.id] ?: product.ghostCount.takeIf { it > 0 })?.let { count ->
+                            "Ghosted $count ${if (count == 1) "time" else "times"}"
                         },
                         onClick = { onOpenProduct(product.id) },
                         onAdd = { onAddToCart(product.id) },
@@ -656,6 +658,7 @@ fun ProductDetailScreen(
     product: MarketplaceProduct,
     coolingUntilMillis: Long?,
     isFavorite: Boolean,
+    ghostCount: Int,
     onBack: () -> Unit,
     onShare: () -> Unit,
     onToggleFavorite: () -> Unit,
@@ -724,6 +727,16 @@ fun ProductDetailScreen(
                 )
             }
         }
+        Text(
+            text = when (ghostCount) {
+                1 -> "Ghosted 1 time"
+                else -> "Ghosted $ghostCount times"
+            },
+            color = MutedText,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 6.dp)
+        )
 
         if (product.scentOrType.isNotBlank()) {
             DetailRow(label = "Type", value = "Eau de Parfum")
@@ -752,7 +765,7 @@ fun ProductDetailScreen(
 
         if (hasSourceLink) {
             SecondaryButton(
-                text = "Ghost it first to unlock product link",
+                text = "Ghost it first to reveal product link",
                 onClick = onGhostBuyNow,
                 leadingIcon = Icons.Filled.Lock,
                 modifier = Modifier.padding(top = 12.dp)

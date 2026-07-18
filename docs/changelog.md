@@ -4,6 +4,35 @@ All notable changes to the Ghost Cart project will be documented in this file.
 
 ---
 
+## [2.7.2] - 2026-07-18
+
+### Added
+- Product Details now shows the real completed Ghost Checkout count for every
+  item, including ordinary catalogue products with zero activity.
+- Restored complete product-listing pages with **View all** actions for
+  marketplace products, community products, and favorites.
+- Replaced the bottom Progress destination with a dedicated **Ghost Wallet**
+  destination that includes the user's real decision progress.
+- Added an immediate favorite heart to the top-right of every marketplace and
+  community product card on Home.
+- Anonymous community products now retain their safe public retailer URL so
+  the **Ghost it first to reveal product link** action appears before checkout
+  and the source can be revealed afterward.
+
+### Fixed
+- Rebuilt Ghost Cart as one full-page scroll, removing the cramped nested item
+  viewport that hid product rows on shorter phones.
+- Pinned **Proceed to Ghost Checkout** above the persistent bottom navigation,
+  while keeping product rows, totals, and Clear Ghost Cart naturally scrollable.
+- Activity recording now accepts validated app-local and imported product IDs,
+  allowing real per-item Ghost counts beyond the server catalogue.
+- Reordered Home so marketplace products lead, community products follow, and
+  personal favorites sit at the bottom instead of interrupting discovery.
+- Replaced the generic center shopping-cart glyph with the official Ghost Cart
+  mascot carrying its cart.
+
+---
+
 ## [2.7.1] - 2026-07-18
 
 ### Added

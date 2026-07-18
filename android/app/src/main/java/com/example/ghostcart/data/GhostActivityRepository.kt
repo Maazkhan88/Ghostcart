@@ -13,8 +13,13 @@ data class GhostRanking(
     val ghostCount: Int
 )
 
+data class GhostActivitySnapshot(
+    val rankings: List<GhostRanking>,
+    val itemCounts: Map<String, Int>
+)
+
 object GhostActivityRepository {
-    suspend fun mostGhostedToday(): Result<List<GhostRanking>> = withContext(Dispatchers.IO) {
+    suspend fun activitySnapshot(): Result<GhostActivitySnapshot> = withContext(Dispatchers.IO) {
         runCatching {
             val connection = openConnection("/api/ghost-events?limit=12", "GET")
             try {
@@ -25,7 +30,7 @@ object GhostActivityRepository {
 
                 val response = connection.inputStream.bufferedReader().use { it.readText() }
                 val rankings = JSONObject(response).optJSONArray("rankings") ?: JSONArray()
-                buildList {
+                val rankingItems = buildList {
                     for (index in 0 until rankings.length()) {
                         val item = rankings.getJSONObject(index)
                         val productId = item.optString("productId").trim()
@@ -35,6 +40,16 @@ object GhostActivityRepository {
                         }
                     }
                 }
+                val countItems = JSONObject(response).optJSONArray("itemCounts") ?: JSONArray()
+                val counts = buildMap {
+                    for (index in 0 until countItems.length()) {
+                        val item = countItems.getJSONObject(index)
+                        val productId = item.optString("productId").trim()
+                        val ghostCount = item.optInt("ghostCount", 0)
+                        if (productId.isNotEmpty() && ghostCount >= 0) put(productId, ghostCount)
+                    }
+                }
+                GhostActivitySnapshot(rankings = rankingItems, itemCounts = counts)
             } finally {
                 connection.disconnect()
             }

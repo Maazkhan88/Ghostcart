@@ -23,6 +23,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -63,6 +65,7 @@ import kotlinx.coroutines.delay
 fun ProductDiscoverySection(
     catalogProducts: List<MarketplaceProduct>,
     favoriteProducts: List<MarketplaceProduct>,
+    favoriteProductIds: Set<String>,
     communityProducts: List<CommunityProduct>,
     communityProductsLoading: Boolean,
     onGhostCatalog: (String) -> Unit,
@@ -71,7 +74,12 @@ fun ProductDiscoverySection(
     onGhostCommunity: (String) -> Unit,
     onCoolCommunity: (String) -> Unit,
     onOpenCommunity: (String) -> Unit,
-    onNotifications: () -> Unit
+    onToggleFavoriteCatalog: (String) -> Unit,
+    onToggleFavoriteCommunity: (String) -> Unit,
+    onNotifications: () -> Unit,
+    onViewAllCatalog: (String) -> Unit,
+    onViewAllCommunity: () -> Unit,
+    onViewAllFavorites: () -> Unit
 ) {
     var query by remember { mutableStateOf("") }
     var categoryId by remember { mutableStateOf("all") }
@@ -82,6 +90,10 @@ fun ProductDiscoverySection(
     val visibleCommunity = communityProducts.filter {
         (categoryId == "all" || communityMatchesCategory(it, categoryId)) &&
             (query.isBlank() || it.title.contains(query, ignoreCase = true) || it.category.contains(query, ignoreCase = true))
+    }
+    val visibleFavorites = favoriteProducts.filter {
+        (categoryId == "all" || Marketplace.productsForCategory(categoryId, listOf(it)).isNotEmpty()) &&
+            (query.isBlank() || it.name.contains(query, ignoreCase = true) || it.category.contains(query, ignoreCase = true))
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -117,41 +129,11 @@ fun ProductDiscoverySection(
                 )
             }
         }
-        if (favoriteProducts.isNotEmpty()) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(top = 8.dp)
-            ) {
-                Text("Your favorites", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
-                Text("saved for a calmer decision", color = MutedText, fontSize = 10.sp, modifier = Modifier.padding(start = 8.dp))
-            }
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(favoriteProducts, key = { "favorite_${it.id}" }) { product ->
-                    DiscoveryProductCard(
-                        title = product.name,
-                        category = product.category,
-                        priceCents = product.price.toLong() * 100,
-                        tag = "Favorite",
-                        image = {
-                            Box(Modifier.fillMaxSize()) {
-                                ProductPhoto(product.name, iconForProduct(product), Modifier.fillMaxSize())
-                                if (product.imageUrl != null) {
-                                    AsyncImage(
-                                        model = product.imageUrl,
-                                        contentDescription = "${product.name} product image",
-                                        contentScale = ContentScale.Fit,
-                                        modifier = Modifier.fillMaxSize().background(Paper)
-                                    )
-                                }
-                            }
-                        },
-                        onOpen = { onOpenCatalog(product.id) },
-                        onGhost = { onGhostCatalog(product.id) },
-                        onCool = { onCoolCatalog(product.id) }
-                    )
-                }
-            }
-        }
+        DiscoverySectionHeader(
+            title = "Marketplace products",
+            subtitle = "browse every temptation",
+            onViewAll = { onViewAllCatalog(categoryId) }
+        )
         if (visibleCatalog.isEmpty()) {
             Text("No catalogue matches. Paste the product link in Ghost + instead.", color = MutedText, fontSize = 12.sp)
         } else {
@@ -161,6 +143,7 @@ fun ProductDiscoverySection(
                         title = product.name,
                         category = product.category,
                         priceCents = product.price.toLong() * 100,
+                        isFavorite = product.id in favoriteProductIds,
                         image = {
                             Box(Modifier.fillMaxSize()) {
                                 ProductPhoto(product.name, iconForProduct(product), Modifier.fillMaxSize())
@@ -175,6 +158,7 @@ fun ProductDiscoverySection(
                             }
                         },
                         onOpen = { onOpenCatalog(product.id) },
+                        onToggleFavorite = { onToggleFavoriteCatalog(product.id) },
                         onGhost = { onGhostCatalog(product.id) },
                         onCool = { onCoolCatalog(product.id) }
                     )
@@ -182,14 +166,15 @@ fun ProductDiscoverySection(
             }
         }
 
-        if (communityProductsLoading || visibleCommunity.isNotEmpty()) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
-                Text("User Ghosted", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
-                Text("anonymous community finds", color = MutedText, fontSize = 10.sp, modifier = Modifier.padding(start = 8.dp))
-            }
+        run {
+            DiscoverySectionHeader(
+                title = "Community products",
+                subtitle = "anonymous user-ghosted finds",
+                onViewAll = onViewAllCommunity
+            )
             if (communityProductsLoading) {
                 Box(Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(18.dp)).background(SoftGray))
-            } else {
+            } else if (visibleCommunity.isNotEmpty()) {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(visibleCommunity, key = { it.id }) { product ->
                         DiscoveryProductCard(
@@ -197,6 +182,7 @@ fun ProductDiscoverySection(
                             category = product.sourceDomain,
                             priceCents = product.priceCents,
                             tag = product.activityTag,
+                            isFavorite = "community_${product.id}" in favoriteProductIds,
                             image = {
                                 Box(Modifier.fillMaxSize()) {
                                     ProductPhoto(product.title, "gadget", Modifier.fillMaxSize())
@@ -211,13 +197,91 @@ fun ProductDiscoverySection(
                                 }
                             },
                             onOpen = { onOpenCommunity(product.id) },
+                            onToggleFavorite = { onToggleFavoriteCommunity(product.id) },
                             onGhost = { onGhostCommunity(product.id) },
                             onCool = { onCoolCommunity(product.id) }
                         )
                     }
                 }
+            } else {
+                Text(
+                    text = "Community products will appear after people ghost shared finds.",
+                    color = MutedText,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
             }
         }
+
+        DiscoverySectionHeader(
+            title = "Your favorites",
+            subtitle = "saved for a calmer decision",
+            onViewAll = onViewAllFavorites
+        )
+        if (visibleFavorites.isEmpty()) {
+            Text(
+                text = "Favorite an item to keep it close without buying it.",
+                color = MutedText,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
+        } else {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(visibleFavorites, key = { "favorite_${it.id}" }) { product ->
+                    DiscoveryProductCard(
+                        title = product.name,
+                        category = product.category,
+                        priceCents = product.price.toLong() * 100,
+                        tag = "Favorite",
+                        isFavorite = true,
+                        image = {
+                            Box(Modifier.fillMaxSize()) {
+                                ProductPhoto(product.name, iconForProduct(product), Modifier.fillMaxSize())
+                                if (product.imageUrl != null) {
+                                    AsyncImage(
+                                        model = product.imageUrl,
+                                        contentDescription = "${product.name} product image",
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier.fillMaxSize().background(Paper)
+                                    )
+                                }
+                            }
+                        },
+                        onOpen = { onOpenCatalog(product.id) },
+                        onToggleFavorite = { onToggleFavoriteCatalog(product.id) },
+                        onGhost = { onGhostCatalog(product.id) },
+                        onCool = { onCoolCatalog(product.id) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DiscoverySectionHeader(
+    title: String,
+    subtitle: String,
+    onViewAll: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, color = Ink, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+            Text(subtitle, color = MutedText, fontSize = 10.sp)
+        }
+        Text(
+            text = "View all",
+            color = GhostGreen,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.ExtraBold,
+            modifier = Modifier
+                .clip(RoundedCornerShape(999.dp))
+                .clickable(onClick = onViewAll)
+                .padding(horizontal = 10.dp, vertical = 8.dp)
+        )
     }
 }
 
@@ -269,8 +333,10 @@ private fun DiscoveryProductCard(
     category: String,
     priceCents: Long,
     tag: String? = null,
+    isFavorite: Boolean,
     image: @Composable () -> Unit,
     onOpen: () -> Unit,
+    onToggleFavorite: () -> Unit,
     onGhost: () -> Unit,
     onCool: () -> Unit
 ) {
@@ -296,6 +362,22 @@ private fun DiscoveryProductCard(
                     fontSize = 9.sp,
                     fontWeight = FontWeight.ExtraBold,
                     modifier = Modifier.align(Alignment.TopStart).padding(8.dp).clip(RoundedCornerShape(999.dp)).background(Ink).padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+            IconButton(
+                onClick = onToggleFavorite,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(6.dp)
+                    .size(34.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(Paper.copy(alpha = 0.94f))
+            ) {
+                Icon(
+                    imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                    contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
+                    tint = if (isFavorite) GhostGreen else Ink,
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }

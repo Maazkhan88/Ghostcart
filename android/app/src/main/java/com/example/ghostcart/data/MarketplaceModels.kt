@@ -13,7 +13,9 @@ data class MarketplaceProduct(
     val highEmotion: Boolean = false,
     val imageUrl: String? = null,
     /** Original retailer page for user-imported items. Curated products leave this null. */
-    val sourceUrl: String? = null
+    val sourceUrl: String? = null,
+    /** Real completed Ghost Checkouts reported by the activity service. */
+    val ghostCount: Int = 0
 )
 
 data class OverspendCategory(

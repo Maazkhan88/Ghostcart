@@ -11,6 +11,7 @@ const MAX_FEED_SIZE = 30;
 type CommunityRow = {
   id: string;
   sourceDomain: string;
+  canonicalUrl: string;
   title: string;
   category: string;
   imageUrl: string | null;
@@ -36,6 +37,7 @@ function serialize(row: CommunityRow) {
   return {
     id: row.id,
     sourceDomain: row.sourceDomain,
+    sourceUrl: row.canonicalUrl,
     title: row.title,
     category: row.category,
     imageUrl: row.imageUrl,
@@ -54,7 +56,7 @@ export async function GET(request: Request) {
     const limit = Number.isInteger(rawLimit) ? Math.min(Math.max(rawLimit, 1), MAX_FEED_SIZE) : 12;
     const result = await getD1()
       .prepare(
-        `SELECT id, source_domain AS sourceDomain, title, category,
+        `SELECT id, source_domain AS sourceDomain, canonical_url AS canonicalUrl, title, category,
                 image_url AS imageUrl, price_cents AS priceCents,
                 currency_code AS currencyCode, ghost_count AS ghostCount,
                 last_ghosted_at AS lastGhostedAt
@@ -70,8 +72,8 @@ export async function GET(request: Request) {
         products: (result.results ?? []).map(serialize),
         privacy: {
           anonymous: true,
-          sourceLinksExposed: false,
-          note: "Products appear only after someone explicitly shares them anonymously.",
+          sourceLinksExposed: true,
+          note: "Only the public retailer link is exposed; the person who shared it remains anonymous.",
         },
       },
       { headers: { "Cache-Control": "public, max-age=30, s-maxage=60" } },
@@ -174,7 +176,7 @@ export async function POST(request: Request) {
     }
     const row = await db
       .prepare(
-        `SELECT id, source_domain AS sourceDomain, title, category,
+        `SELECT id, source_domain AS sourceDomain, canonical_url AS canonicalUrl, title, category,
                 image_url AS imageUrl, price_cents AS priceCents,
                 currency_code AS currencyCode, ghost_count AS ghostCount,
                 last_ghosted_at AS lastGhostedAt

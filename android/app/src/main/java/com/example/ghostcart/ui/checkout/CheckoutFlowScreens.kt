@@ -115,38 +115,50 @@ fun GhostCartListScreen(
 ) {
     val subtotal = products.sumOf { (product, qty) -> product.price * qty }
 
-    Column(modifier = modifier.fillMaxSize().background(Paper).padding(horizontal = 20.dp, vertical = 16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            BackButton(onBack = onBack)
-            Text(text = "Ghost Cart", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f).padding(start = 10.dp))
-            RoundIconButton(icon = Icons.Filled.Delete, onClick = onClearAll)
-        }
-
-        GhostMascotPose(poseName = "wave", modifier = Modifier.size(56.dp).padding(top = 16.dp))
-        Text(
-            text = "The craving disappeared.\nThe money stayed.",
-            color = Ink,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.ExtraBold,
-            modifier = Modifier.padding(top = 12.dp)
-        )
-        Text(text = "Nothing here is charged or delivered.", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
-
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
-            Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = GhostGreen, modifier = Modifier.size(14.dp))
-            Text(text = "You almost spent ${Marketplace.currency} $subtotal", color = GhostGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 6.dp))
-        }
-
-        if (products.isEmpty()) {
-            Text(
-                text = "Your Ghost Cart is empty. Add something you almost bought.",
-                color = MutedText,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(top = 32.dp),
-                textAlign = TextAlign.Center
+    Box(modifier = modifier.fillMaxSize().background(Paper)) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                start = 20.dp,
+                top = 16.dp,
+                end = 20.dp,
+                bottom = 112.dp
             )
-        } else {
-            LazyColumn(modifier = Modifier.weight(1f).padding(top = 16.dp)) {
+        ) {
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    BackButton(onBack = onBack)
+                    Text(text = "Ghost Cart", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f).padding(start = 10.dp))
+                    RoundIconButton(icon = Icons.Filled.Delete, onClick = onClearAll)
+                }
+
+                GhostMascotPose(poseName = "wave", modifier = Modifier.size(56.dp).padding(top = 16.dp))
+                Text(
+                    text = "The craving disappeared.\nThe money stayed.",
+                    color = Ink,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier.padding(top = 12.dp)
+                )
+                Text(text = "Nothing here is charged or delivered.", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)) {
+                    Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = GhostGreen, modifier = Modifier.size(14.dp))
+                    Text(text = "You almost spent ${Marketplace.currency} $subtotal", color = GhostGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 6.dp))
+                }
+            }
+
+            if (products.isEmpty()) {
+                item {
+                    Text(
+                        text = "Your Ghost Cart is empty. Add something you almost bought.",
+                        color = MutedText,
+                        fontSize = 12.sp,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
                 items(products, key = { it.first.id }) { (product, qty) ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -229,25 +241,36 @@ fun GhostCartListScreen(
                     }
                 }
             }
+
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .border(1.dp, FaintBorder, RoundedCornerShape(16.dp))
+                        .padding(16.dp)
+                ) {
+                    SummaryLine("Subtotal", "${Marketplace.currency} $subtotal")
+                    SummaryLine("Small Win Fee", "${Marketplace.currency} 0")
+                    SummaryLine("Real amount charged", "${Marketplace.currency} 0", valueColor = GhostGreen)
+                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).height(1.dp).background(FaintBorder))
+                    SummaryLine("Total you almost spent:", "${Marketplace.currency} $subtotal", bold = true)
+                }
+                SecondaryButton(text = "Clear Ghost Cart", onClick = onClearAll, modifier = Modifier.padding(top = 12.dp, bottom = 8.dp))
+            }
         }
 
-        Column(
+        Box(
             modifier = Modifier
+                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .padding(top = 12.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .border(1.dp, FaintBorder, RoundedCornerShape(16.dp))
-                .padding(16.dp)
+                .background(Paper)
+                .border(width = 1.dp, color = FaintBorder)
+                .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
-            SummaryLine("Subtotal", "${Marketplace.currency} $subtotal")
-            SummaryLine("Small Win Fee", "${Marketplace.currency} 0")
-            SummaryLine("Real amount charged", "${Marketplace.currency} 0", valueColor = GhostGreen)
-            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).height(1.dp).background(FaintBorder))
-            SummaryLine("Total you almost spent:", "${Marketplace.currency} $subtotal", bold = true)
+            PrimaryButton(text = "Proceed to Ghost Checkout", onClick = onCheckout)
         }
-
-        PrimaryButton(text = "Proceed to Ghost Checkout", onClick = onCheckout, modifier = Modifier.padding(top = 14.dp))
-        SecondaryButton(text = "Clear Ghost Cart", onClick = onClearAll, modifier = Modifier.padding(top = 10.dp))
     }
 }
 

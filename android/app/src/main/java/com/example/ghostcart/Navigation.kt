@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
@@ -53,6 +54,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import com.example.ghostcart.data.AlmostBuyResolution
+import com.example.ghostcart.data.Marketplace
 import com.example.ghostcart.data.WalletDemoData
 import com.example.ghostcart.data.openProductSource
 import com.example.ghostcart.data.shareGhostItem
@@ -75,6 +77,7 @@ import com.example.ghostcart.ui.onboarding.AuthScreen
 import com.example.ghostcart.ui.onboarding.PersonalizationScreen
 import com.example.ghostcart.ui.onboarding.ProfileSelectScreen
 import com.example.ghostcart.ui.marketplace.ProductDetailScreen
+import com.example.ghostcart.ui.marketplace.CategoryBrowseScreen
 import com.example.ghostcart.ui.v2.CaptureAlmostBuyScreen
 import com.example.ghostcart.ui.v2.CooldownsScreen
 import com.example.ghostcart.ui.v2.GhostHomeScreen
@@ -235,6 +238,7 @@ fun MainNavigation(
                             items = state.almostBuys,
                             catalogProducts = appViewModel.allProducts,
                             favoriteProducts = state.favoriteProductIds.mapNotNull(appViewModel::findProduct),
+                            favoriteProductIds = state.favoriteProductIds,
                             communityProducts = state.communityProducts,
                             communityProductsLoading = state.communityProductsLoading,
                             onGhostSomething = {
@@ -263,8 +267,35 @@ fun MainNavigation(
                                     backStack.add(ProductDetail(detailId))
                                 }
                             },
+                            onToggleFavoriteCatalog = appViewModel::toggleFavorite,
+                            onToggleFavoriteCommunity = appViewModel::toggleCommunityFavorite,
                             onNotifications = { backStack.add(GhostCardSettings) },
+                            onViewAllCatalog = { categoryId -> backStack.add(CategoryBrowse(categoryId)) },
+                            onViewAllCommunity = { backStack.add(CategoryBrowse("community")) },
+                            onViewAllFavorites = { backStack.add(CategoryBrowse("favorites")) },
                             onRefresh = { appViewModel.refreshCommunityProducts() }
+                        )
+                    }
+                    entry<CategoryBrowse> { key ->
+                        val products = when (key.categoryId) {
+                            "community" -> appViewModel.communityMarketplaceProducts()
+                            "favorites" -> state.favoriteProductIds.mapNotNull(appViewModel::findProduct)
+                            "most_ghosted" -> state.mostGhostedToday.mapNotNull { ranking ->
+                                appViewModel.findProduct(ranking.productId)
+                            }
+                            else -> Marketplace.productsForCategory(key.categoryId, appViewModel.allProducts)
+                        }
+                        CategoryBrowseScreen(
+                            categoryId = key.categoryId,
+                            products = products,
+                            activityCounts = state.ghostCountsByProductId +
+                                state.mostGhostedToday.associate { it.productId to it.ghostCount },
+                            cartItemCount = state.cartQuantities.values.sum(),
+                            cartTotal = appViewModel.cartSubtotal(),
+                            onBack = { backStack.removeLastOrNull() },
+                            onOpenCart = { backStack.add(GhostCartList) },
+                            onOpenProduct = { id -> backStack.add(ProductDetail(id)) },
+                            onAddToCart = appViewModel::addToCart
                         )
                     }
                     entry<CaptureAlmostBuy> {
@@ -316,6 +347,7 @@ fun MainNavigation(
                                 product = product,
                                 coolingUntilMillis = state.coolingUntilByProductId[product.id],
                                 isFavorite = product.id in state.favoriteProductIds,
+                                ghostCount = product.ghostCount + (state.ghostCountsByProductId[product.id] ?: 0),
                                 onBack = { backStack.removeLastOrNull() },
                                 onShare = { shareGhostItem(context, product.toGhostShareItem()) },
                                 onToggleFavorite = { appViewModel.toggleFavorite(product.id) },
@@ -497,7 +529,7 @@ private fun GhostBottomNav(current: NavKey?, onNavigate: (NavKey) -> Unit) {
         Item(stringResource(R.string.nav_home), Home, Icons.Filled.Home),
         Item(stringResource(R.string.nav_cooldowns), Cooldowns, Icons.Filled.Timer),
         Item("Ghost Cart", GhostCartList, Icons.Filled.ShoppingCart, central = true),
-        Item(stringResource(R.string.nav_progress), Progress, Icons.Filled.Timeline),
+        Item("Wallet", Progress, Icons.Filled.AccountBalanceWallet),
         Item(stringResource(R.string.nav_profile), GhostCardSettings, Icons.Filled.Person)
     )
 
@@ -515,12 +547,19 @@ private fun GhostBottomNav(current: NavKey?, onNavigate: (NavKey) -> Unit) {
                             .background(if (item.central) GhostGreen else Color.Transparent),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            item.icon,
-                            contentDescription = item.label,
-                            tint = if (item.central) Ink else if (selected) GhostGreen else MutedText,
-                            modifier = Modifier.size(if (item.central) 23.dp else 20.dp)
-                        )
+                        if (item.central) {
+                            GhostMascotPose(
+                                poseName = "cart",
+                                modifier = Modifier.size(34.dp)
+                            )
+                        } else {
+                            Icon(
+                                item.icon,
+                                contentDescription = item.label,
+                                tint = if (selected) GhostGreen else MutedText,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 },
                 label = { Text(item.label, color = if (selected) Ink else MutedText, fontSize = 9.sp) },

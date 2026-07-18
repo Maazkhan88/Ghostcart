@@ -129,6 +129,7 @@ fun GhostHomeScreen(
     items: List<AlmostBuy>,
     catalogProducts: List<MarketplaceProduct>,
     favoriteProducts: List<MarketplaceProduct>,
+    favoriteProductIds: Set<String>,
     communityProducts: List<CommunityProduct>,
     communityProductsLoading: Boolean,
     onGhostSomething: () -> Unit,
@@ -140,7 +141,12 @@ fun GhostHomeScreen(
     onGhostCommunity: (String) -> Unit,
     onCoolCommunity: (String) -> Unit,
     onOpenCommunity: (String) -> Unit,
+    onToggleFavoriteCatalog: (String) -> Unit,
+    onToggleFavoriteCommunity: (String) -> Unit,
     onNotifications: () -> Unit,
+    onViewAllCatalog: (String) -> Unit,
+    onViewAllCommunity: () -> Unit,
+    onViewAllFavorites: () -> Unit,
     onRefresh: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -161,6 +167,7 @@ fun GhostHomeScreen(
             ProductDiscoverySection(
                 catalogProducts = catalogProducts,
                 favoriteProducts = favoriteProducts,
+                favoriteProductIds = favoriteProductIds,
                 communityProducts = communityProducts,
                 communityProductsLoading = communityProductsLoading,
                 onGhostCatalog = onGhostCatalog,
@@ -169,7 +176,12 @@ fun GhostHomeScreen(
                 onGhostCommunity = onGhostCommunity,
                 onCoolCommunity = onCoolCommunity,
                 onOpenCommunity = onOpenCommunity,
-                onNotifications = onNotifications
+                onToggleFavoriteCatalog = onToggleFavoriteCatalog,
+                onToggleFavoriteCommunity = onToggleFavoriteCommunity,
+                onNotifications = onNotifications,
+                onViewAllCatalog = onViewAllCatalog,
+                onViewAllCommunity = onViewAllCommunity,
+                onViewAllFavorites = onViewAllFavorites
             )
         }
 
@@ -722,8 +734,8 @@ fun ProgressScreen(almostBuys: List<AlmostBuy>, modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         item {
-            Text(stringResource(R.string.progress), color = Ink, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
-            Text(stringResource(R.string.progress_body), color = MutedText, fontSize = 12.sp)
+            Text("Ghost Wallet", color = Ink, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
+            Text("Your simulated wallet and real decision progress, together.", color = MutedText, fontSize = 12.sp)
         }
         item {
             GhostHeroCard {
@@ -732,6 +744,7 @@ fun ProgressScreen(almostBuys: List<AlmostBuy>, modifier: Modifier = Modifier) {
                 Text(stringResource(R.string.only_skipped_counts), color = Paper.copy(alpha = 0.65f), fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp))
             }
         }
+        item { SectionHeader("Your progress") }
         item { ProgressStrip(summary) }
 
         if (almostBuys.isEmpty()) {

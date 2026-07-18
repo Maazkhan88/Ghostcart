@@ -14,7 +14,7 @@ class Statement {
   }
 }
 
-const scenario = { rankingRows: [], activity: {}, statements: [] };
+const scenario = { rankingRows: [], activity: {}, itemCounts: [], statements: [] };
 const db = {
   prepare(sql) {
     const statement = new Statement(sql);
@@ -22,10 +22,11 @@ const db = {
     return statement;
   },
   async batch(statements) {
-    assert.equal(statements.length, 2);
+    assert.equal(statements.length, 3);
     return [
       { results: scenario.rankingRows },
       { results: [scenario.activity] },
+      { results: scenario.itemCounts },
     ];
   },
 };
@@ -36,6 +37,7 @@ const { GET, POST } = await import("../app/api/ghost-events/route.ts");
 function reset(next = {}) {
   scenario.rankingRows = next.rankingRows ?? [];
   scenario.activity = next.activity ?? {};
+  scenario.itemCounts = next.itemCounts ?? [];
   scenario.statements = [];
 }
 
@@ -50,6 +52,7 @@ test("reports no public activity without fabricating rankings", async () => {
   assert.equal(body.dataState, "no_activity");
   assert.equal(body.totalGhosts, null);
   assert.deepEqual(body.rankings, []);
+  assert.deepEqual(body.itemCounts, []);
   assert.deepEqual(body.privacy, {
     minimumUniqueGhosters: 3,
     suppressed: false,
@@ -100,6 +103,10 @@ test("publishes active-catalog rankings only after the privacy threshold", async
         lastActivityAt,
       },
     ],
+    itemCounts: [
+      { productId: "wireless-headphones", ghostCount: 5 },
+      { productId: "shared_item_1", ghostCount: 1 },
+    ],
   });
   const response = await GET(
     new Request("https://ghostcart.test/api/ghost-events?limit=999"),
@@ -120,6 +127,10 @@ test("publishes active-catalog rankings only after the privacy threshold", async
     lastActivityAt,
   });
   assert.ok(body.freshnessSeconds >= 0);
+  assert.deepEqual(body.itemCounts, [
+    { productId: "wireless-headphones", ghostCount: 5 },
+    { productId: "shared_item_1", ghostCount: 1 },
+  ]);
 
   const rankingStatement = scenario.statements[0];
   assert.match(
@@ -175,7 +186,8 @@ test("schema and route retain privacy and duplicate controls", async () => {
   assert.match(schema, /ghost_events_daily_actor_product_unique/);
   assert.match(schema, /table\.eventDate,\s*table\.actorHash,\s*table\.productId/);
   assert.doesNotMatch(schema, /ghost_events[\s\S]{0,1200}(raw_ip|email|price_cents)/i);
-  assert.match(route, /Every trend event must reference an active Ghost Cart catalog product/);
+  assert.match(route, /productId: null/);
+  assert.match(route, /GROUP BY product_key/);
   assert.match(route, /MAX_EVENTS_PER_ACTOR_PER_HOUR = 60/);
   assert.match(route, /ON CONFLICT DO NOTHING/);
   assert.doesNotMatch(route, /CF-Connecting-IP[\s\S]{0,100}(INSERT|SELECT)/i);

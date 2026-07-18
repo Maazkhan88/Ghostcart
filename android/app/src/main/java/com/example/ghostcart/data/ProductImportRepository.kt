@@ -71,6 +71,7 @@ data class CommunityProduct(
     val category: String,
     val imageUrl: String?,
     val sourceDomain: String,
+    val sourceUrl: String?,
     val ghostCount: Int,
     val activityTag: String = "User Ghosted"
 )
@@ -325,6 +326,7 @@ object ProductImportRepository {
                             category = item.optString("category", "Other"),
                             imageUrl = item.nullableString("imageUrl"),
                             sourceDomain = item.optString("sourceDomain"),
+                            sourceUrl = item.nullableString("sourceUrl"),
                             ghostCount = item.optInt("ghostCount", 1),
                             activityTag = item.optString("activityTag", "User Ghosted")
                         )
@@ -361,6 +363,7 @@ object ProductImportRepository {
                     category = item.optString("category", "Other"),
                     imageUrl = item.nullableString("imageUrl"),
                     sourceDomain = item.optString("sourceDomain"),
+                    sourceUrl = item.nullableString("sourceUrl"),
                     ghostCount = item.optInt("ghostCount", 1),
                     activityTag = item.optString("activityTag", "User Ghosted")
                 )

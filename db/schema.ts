@@ -258,8 +258,9 @@ export const sharedGhostItems = sqliteTable(
   ],
 );
 
-// Public trend input. Every new event must resolve to an active catalog
-// product. actor_hash is a one-way, server-side pseudonym used solely for
+// Anonymous Ghost Checkout activity. Catalog products retain their foreign key;
+// imported and app-local items use only their validated product key.
+// actor_hash is a one-way, server-side pseudonym used solely for
 // privacy thresholds and abuse controls; no email, price, or raw IP is stored.
 export const ghostEvents = sqliteTable(
   "ghost_events",

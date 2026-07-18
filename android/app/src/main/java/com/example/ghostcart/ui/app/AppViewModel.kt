@@ -69,6 +69,7 @@ data class AppUiState(
     val hasAppliedForCard: Boolean = false,
     val isApplying: Boolean = false,
     val mostGhostedToday: List<GhostRanking> = emptyList(),
+    val ghostCountsByProductId: Map<String, Int> = emptyMap(),
     val isMostGhostedLoading: Boolean = true,
     val isMostGhostedUnavailable: Boolean = false,
     val toastMessage: String? = null,
@@ -160,6 +161,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun toggleCommunityFavorite(productId: String) {
+        communityProductDetailId(productId)?.let(::toggleFavorite)
+    }
+
     /** Makes an anonymous community item available to the shared details screen. */
     fun communityProductDetailId(productId: String): String? {
         val source = _uiState.value.communityProducts.find { it.id == productId } ?: return null
@@ -175,8 +180,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         price = (source.priceCents / 100L).toInt().coerceAtLeast(0),
         iconName = "gadget",
         brand = source.sourceDomain,
-        imageUrl = source.imageUrl
+        imageUrl = source.imageUrl,
+        sourceUrl = source.sourceUrl,
+        ghostCount = source.ghostCount
     )
+
+    fun communityMarketplaceProducts(): List<MarketplaceProduct> =
+        _uiState.value.communityProducts.map { source ->
+            communityMarketplaceProduct(source).also { sharedCartProducts[it.id] = it }
+        }
 
     fun addDraftToCart(draft: AlmostBuyDraft) {
         val id = "shared_${UUID.randomUUID()}"
@@ -440,11 +452,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun refreshMostGhostedToday() {
         _uiState.update { it.copy(isMostGhostedLoading = true, isMostGhostedUnavailable = false) }
         viewModelScope.launch {
-            GhostActivityRepository.mostGhostedToday()
-                .onSuccess { rankings ->
+            GhostActivityRepository.activitySnapshot()
+                .onSuccess { snapshot ->
                     _uiState.update {
                         it.copy(
-                            mostGhostedToday = rankings,
+                            mostGhostedToday = snapshot.rankings,
+                            ghostCountsByProductId = snapshot.itemCounts,
                             isMostGhostedLoading = false,
                             isMostGhostedUnavailable = false
                         )
