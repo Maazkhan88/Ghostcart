@@ -72,7 +72,8 @@ data class AppUiState(
     val communityProducts: List<CommunityProduct> = emptyList(),
     val communityProductsLoading: Boolean = true,
     val captureSeed: AlmostBuyDraft? = null,
-    val appTheme: String = "System"
+    val appTheme: String = "System",
+    val feedbackSubmittedOrderIds: Set<String> = emptySet()
 )
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
@@ -678,5 +679,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val context = getApplication<Application>()
         WorkManager.getInstance(context).cancelAllWorkByTag("ghost_delivery_simulation")
         _uiState.update { it.copy(deliveryStep = -1) }
+    }
+
+    fun submitGhostFeedback(orderId: String, rating: Int, comment: String) {
+        _uiState.update { it.copy(feedbackSubmittedOrderIds = it.feedbackSubmittedOrderIds + orderId) }
+        showToast("Thanks for your feedback!")
     }
 }

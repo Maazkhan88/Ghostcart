@@ -49,6 +49,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -126,13 +127,19 @@ fun GhostHomeScreen(
     onCoolCatalog: (String) -> Unit,
     onGhostCommunity: (String) -> Unit,
     onCoolCommunity: (String) -> Unit,
+    onRefresh: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val summary = items.progressSummary()
     val active = items.filter { it.status == AlmostBuyStatus.COOLING }.sortedBy { it.coolingUntilMillis }
 
+    PullToRefreshBox(
+        isRefreshing = communityProductsLoading,
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize()
+    ) {
     LazyColumn(
-        modifier = modifier.fillMaxSize().background(Paper),
+        modifier = Modifier.fillMaxSize().background(Paper),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp, 20.dp, 20.dp, 28.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
@@ -226,6 +233,7 @@ fun GhostHomeScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
             )
         }
+    }
     }
 }
 

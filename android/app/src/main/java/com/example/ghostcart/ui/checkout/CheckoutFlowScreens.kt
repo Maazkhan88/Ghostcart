@@ -37,6 +37,8 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Sell
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.AlertDialog
@@ -471,9 +473,21 @@ fun FakeDeliveryTrackingScreen(
     orderId: String,
     amountSaved: Int,
     deliveryStep: Int,
+    feedbackSubmitted: Boolean = false,
+    onSubmitFeedback: (Int, String) -> Unit = { _, _ -> },
     onViewReceipt: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var dismissedFeedback by remember(orderId) { mutableStateOf(false) }
+    val showFeedbackPrompt = deliveryStep >= 4 && !feedbackSubmitted && !dismissedFeedback
+
+    if (showFeedbackPrompt) {
+        GhostFeedbackDialog(
+            onSubmit = { rating, comment -> onSubmitFeedback(rating, comment) },
+            onDismiss = { dismissedFeedback = true }
+        )
+    }
+
     val steps = listOf(
         Triple("Order placed", "We've received your imaginary order.", "9:41 AM"),
         Triple("Preparing imaginary order", "Our team is carefully doing nothing.", "9:42 AM"),
@@ -568,6 +582,49 @@ fun FakeDeliveryTrackingScreen(
 
         PrimaryButton(text = "View Ghost Receipt", onClick = onViewReceipt, modifier = Modifier.padding(top = 18.dp))
     }
+}
+
+@Composable
+private fun GhostFeedbackDialog(onSubmit: (Int, String) -> Unit, onDismiss: () -> Unit) {
+    var rating by remember { mutableStateOf(0) }
+    var comment by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = "How was this ghosting?", color = Ink, fontWeight = FontWeight.ExtraBold) },
+        text = {
+            Column {
+                Text(text = "Quick feedback helps us improve Ghost Cart.", color = MutedText, fontSize = 12.sp)
+                Row(modifier = Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.Center) {
+                    for (star in 1..5) {
+                        Icon(
+                            imageVector = if (star <= rating) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                            contentDescription = "Rate $star stars",
+                            tint = if (star <= rating) GhostGreen else MutedText,
+                            modifier = Modifier
+                                .size(34.dp)
+                                .padding(horizontal = 3.dp)
+                                .clickable { rating = star }
+                        )
+                    }
+                }
+                OutlinedTextField(
+                    value = comment,
+                    onValueChange = { comment = it },
+                    placeholder = { Text("Anything you'd like to add? (optional)", fontSize = 12.sp) },
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSubmit(rating, comment) }, enabled = rating > 0) {
+                Text("Submit")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Not now") }
+        }
+    )
 }
 
 @Composable

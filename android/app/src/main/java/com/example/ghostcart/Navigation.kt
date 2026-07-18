@@ -2,6 +2,7 @@ package com.example.ghostcart
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,12 +18,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -32,6 +35,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -86,6 +92,11 @@ fun MainNavigation(
     val state by appViewModel.uiState.collectAsState()
     val current = backStack.lastOrNull()
     val showBottomNav = current in bottomDestinations
+    var dismissedOrderId by remember { mutableStateOf<String?>(null) }
+    val showDeliveryBanner = current != FakeDeliveryTracking &&
+        state.deliveryStep in 0..3 &&
+        state.lastOrderId.isNotBlank() &&
+        dismissedOrderId != state.lastOrderId
     val darkTheme = when (state.appTheme) {
         "Dark" -> true
         "Light" -> false
@@ -111,8 +122,18 @@ fun MainNavigation(
             containerColor = Paper,
             bottomBar = {
                 if (showBottomNav) {
-                    GhostBottomNav(current) { destination ->
-                        if (backStack.lastOrNull() != destination) backStack.add(destination)
+                    Column {
+                        if (showDeliveryBanner) {
+                            DeliveryTrackingBanner(
+                                orderId = state.lastOrderId,
+                                deliveryStep = state.deliveryStep,
+                                onClick = { backStack.add(FakeDeliveryTracking) },
+                                onClose = { dismissedOrderId = state.lastOrderId }
+                            )
+                        }
+                        GhostBottomNav(current) { destination ->
+                            if (backStack.lastOrNull() != destination) backStack.add(destination)
+                        }
                     }
                 }
             }
@@ -190,7 +211,8 @@ fun MainNavigation(
                             onCoolCommunity = { id ->
                                 appViewModel.prepareCommunityProduct(id)
                                 backStack.add(CaptureAlmostBuy)
-                            }
+                            },
+                            onRefresh = { appViewModel.refreshCommunityProducts() }
                         )
                     }
                     entry<CaptureAlmostBuy> {
@@ -272,6 +294,10 @@ fun MainNavigation(
                             orderId = state.lastOrderId,
                             amountSaved = state.lastOrderTotal,
                             deliveryStep = state.deliveryStep,
+                            feedbackSubmitted = state.lastOrderId in state.feedbackSubmittedOrderIds,
+                            onSubmitFeedback = { rating, comment ->
+                                appViewModel.submitGhostFeedback(state.lastOrderId, rating, comment)
+                            },
                             onViewReceipt = {
                                 backStack.clear()
                                 backStack.add(Home)
@@ -338,6 +364,40 @@ private fun SplashContent() {
             Spacer(Modifier.height(16.dp))
             Text("Ghost Cart", color = Ink, fontSize = 32.sp, fontWeight = FontWeight.ExtraBold)
             Text("For everything you almost bought.", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+        }
+    }
+}
+
+private val deliveryStepLabels = listOf(
+    "Order placed",
+    "Preparing imaginary order",
+    "Ghost Rider is on the way",
+    "Rider left absolutely nothing at your doorstep"
+)
+
+@Composable
+private fun DeliveryTrackingBanner(orderId: String, deliveryStep: Int, onClick: () -> Unit, onClose: () -> Unit) {
+    val safeStep = deliveryStep.coerceIn(0, deliveryStepLabels.lastIndex)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Ink)
+            .clickable(onClick = onClick)
+            .padding(start = 16.dp, end = 4.dp, top = 10.dp, bottom = 10.dp)
+    ) {
+        Box(
+            modifier = Modifier.size(30.dp).clip(CircleShape).background(GhostGreen),
+            contentAlignment = Alignment.Center
+        ) {
+            GhostMascotPose(poseName = "wave", modifier = Modifier.size(20.dp))
+        }
+        Column(modifier = Modifier.weight(1f).padding(start = 10.dp)) {
+            Text(text = "Tracking $orderId", color = Color.White.copy(alpha = 0.68f), fontSize = 9.sp)
+            Text(text = deliveryStepLabels[safeStep], color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        }
+        IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
+            Icon(Icons.Filled.Close, contentDescription = "Dismiss", tint = Color.White.copy(alpha = 0.68f), modifier = Modifier.size(16.dp))
         }
     }
 }

@@ -4,6 +4,28 @@ All notable changes to the Ghost Cart project will be documented in this file.
 
 ---
 
+## [2.3.2] - 2026-07-18
+
+### Added
+- **Pull-to-refresh on Home.** Swiping down on the home feed now re-fetches
+  community products via `PullToRefreshBox`, wired to
+  `AppViewModel.refreshCommunityProducts()`.
+- **Persistent live delivery tracking banner.** While a fake order is between
+  "Order placed" and "Rider left absolutely nothing at your doorstep," a
+  banner now shows above the bottom navigation bar on every main tab (Home,
+  Cooldowns, Ghost Cart, Progress, Profile), with the current step, a tap
+  target that jumps to the full tracking screen, and a close (×) button.
+  Closing hides it until the next order starts tracking; it also
+  auto-hides once the order is marked delivered.
+- **Post-ghosting feedback prompt.** Once fake delivery reaches its final
+  step, a lightweight star-rating (1-5) + optional comment dialog appears on
+  the tracking screen, asking "How was this ghosting?" Submission is stored
+  locally per order (no backend/email integration yet — that's still an
+  open question) and won't re-prompt for the same order once submitted or
+  dismissed.
+
+---
+
 ## [2.3.1] - 2026-07-18
 
 ### Fixed
