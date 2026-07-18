@@ -85,7 +85,7 @@ class MainActivity : ComponentActivity() {
 
   private fun captureGhostShareLink(uri: Uri?): Boolean {
     if (uri == null || !uri.scheme.equals("https", true)) return false
-    if (!uri.host.equals("ghost-cart-preview.maaz-n-khan.chatgpt.site", true)) return false
+    if (!uri.host.equals("ghostcart-app.maaz-n-khan.workers.dev", true)) return false
     if (uri.path?.trimEnd('/') != "/ghost") return false
     val shareId = uri.getQueryParameter("s")?.trim()?.takeIf {
       it.matches(Regex("^[23456789A-HJ-NP-Za-km-z]{8}$"))

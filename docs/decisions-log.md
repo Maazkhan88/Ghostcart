@@ -404,3 +404,42 @@ Append-only. Do not rewrite or delete earlier entries — only add new ones.
   Sign-In wired in; the review's own top recommendation (verify/fix admin
   auth) needs a deliberate follow-up pass, not a rushed fix bundled into an
   unrelated APK build.
+
+## 2026-07-18 — Claude (backend consolidation onto a dedicated Cloudflare Worker)
+
+- **Stood up a brand-new Cloudflare Worker + D1 database instead of trying
+  to repair either existing deployment.** `nameless-d98e.maaz-n-khan.workers.dev`
+  turned out to be stale (Git integration no longer tracking any branch with
+  the v2 work) and `ghost-cart-preview.maaz-n-khan.chatgpt.site` (ChatGPT
+  Sites) is a platform this project doesn't have direct dashboard/API
+  control over. **Why:** given the explicit choice between fixing
+  `nameless-d98e`'s dashboard settings, migrating fully onto Sites, or a
+  fresh independent Worker, the user picked the fresh Worker — it gives full
+  `wrangler` CLI control (deploy, D1 migrations, logs) without depending on
+  either the Sites control plane or rediscovering whatever misconfigured
+  `nameless-d98e`'s Git integration in the first place.
+- **Named the new committed deploy config `wrangler.ghostcart-app.jsonc`
+  rather than the conventional `wrangler.toml`/`wrangler.jsonc`.** **Why:**
+  this repo's `vite.config.ts` + `.openai/hosting.json` already auto-generate
+  their own `dist/server/wrangler.json` for the Sites-oriented build path: a
+  conventionally-named root config could get silently picked up by, or
+  confused with, that mechanism. An unambiguous, distinctly-named file avoids
+  the collision while still being a normal, discoverable `wrangler deploy
+  --config` target.
+- **Proved the two old deployments were genuinely separate databases before
+  touching any code**, rather than assuming from URLs alone: signed up a
+  test account on `nameless-d98e`, then attempted signin with the identical
+  credentials on `ghost-cart-preview` and got "Invalid email or password."
+  **Why:** two different hostnames could plausibly have fronted the same
+  Worker/database (Cloudflare custom domains often do); confirming they
+  didn't — rather than guessing — is what made clear this was a real bug
+  (a signed-in user's account not existing where their shares/imports were
+  actually stored), not just an untidy URL choice.
+- **Did not set up auto-deploy-on-push for the new Worker.** Cloudflare's
+  Workers Builds (Git integration) is a dashboard-only configuration step;
+  this session did a one-time manual `wrangler deploy` and documented the
+  exact two-line command for future manual or CI-triggered deploys instead.
+  **Why:** same reasoning as the original "Build command: None" Cloudflare
+  issue from an earlier session — dashboard configuration isn't reachable
+  from this environment, and guessing at dashboard automation via the API
+  risks a worse outcome than a documented manual step.

@@ -13,8 +13,8 @@ import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
 
-const val GHOST_SHARE_BASE_URL = "https://ghost-cart-preview.maaz-n-khan.chatgpt.site/ghost"
-private const val GHOST_SHARE_API_URL = "https://ghost-cart-preview.maaz-n-khan.chatgpt.site/api/share-items"
+const val GHOST_SHARE_BASE_URL = "${ApiConfig.BASE_URL}/ghost"
+private const val GHOST_SHARE_API_URL = "${ApiConfig.BASE_URL}/api/share-items"
 
 data class GhostShareItem(
     val title: String,

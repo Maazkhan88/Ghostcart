@@ -441,7 +441,7 @@ export async function previewRetailerLink(value: string): Promise<RetailerLinkRe
         headers: {
           Accept: "text/html,application/xhtml+xml;q=0.9",
           "Accept-Language": "en-AE,en;q=0.9",
-          "User-Agent": "GhostCartLinkPreview/2.2 (+https://ghost-cart-preview.maaz-n-khan.chatgpt.site)",
+          "User-Agent": "GhostCartLinkPreview/2.2 (+https://ghostcart-app.maaz-n-khan.workers.dev)",
         },
       });
       if (response.status >= 300 && response.status < 400) {
@@ -555,7 +555,7 @@ export async function previewRetailerProduct(value: string): Promise<RetailerPro
         headers: {
           Accept: "text/html,application/xhtml+xml;q=0.9",
           "Accept-Language": "en-AE,en;q=0.9",
-          "User-Agent": "GhostCartLinkPreview/2.2 (+https://ghost-cart-preview.maaz-n-khan.chatgpt.site)",
+          "User-Agent": "GhostCartLinkPreview/2.2 (+https://ghostcart-app.maaz-n-khan.workers.dev)",
         },
       });
       if (response.status >= 300 && response.status < 400) {

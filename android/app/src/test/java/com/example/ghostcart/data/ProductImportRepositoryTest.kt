@@ -27,7 +27,7 @@ class ProductImportRepositoryTest {
 
     @Test
     fun productApiUsesTheDeployedJsonEndpoint() {
-        assertEquals("https://ghost-cart-preview.maaz-n-khan.chatgpt.site", ApiConfig.PRODUCT_API_BASE_URL)
+        assertEquals("https://ghostcart-app.maaz-n-khan.workers.dev", ApiConfig.PRODUCT_API_BASE_URL)
     }
 
     @Test

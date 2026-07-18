@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-07-18 (Codex - v2.2.0 universal product-link preview and device fallback).
+Last updated: 2026-07-18 (Claude — consolidated the split backend onto a single dedicated Cloudflare Worker, `ghostcart-app.maaz-n-khan.workers.dev`; see "Backend consolidated onto a dedicated Cloudflare Worker" below).
 
 ## Canonical handoff for Antigravity and Claude Code (2026-07-18)
 
@@ -9,13 +9,13 @@ This section is the current operational source of truth. Historical session logs
 ### Repository and release state
 
 - Working branch: `agent/ghost-cart-products-sharing`
-- Latest product implementation: current head of `agent/ghost-cart-products-sharing` (v2.7.8 — Google Sign-In Web Client ID wired into the build; this line was stale at v2.2.0 before this update even though `releases/` already held through v2.7.7 — keep this pointer and the APK filename in sync when adding a new release).
+- Latest product implementation: current head of `agent/ghost-cart-products-sharing` (v2.7.9 — canonical backend moved to a dedicated Cloudflare Worker; see below).
 - Draft PR: https://github.com/Maazkhan88/Ghostcart/pull/3
 - Base branch: `main`; current `main` already contains the merged v2 rebuild from PR #2 (`f4bb3ab`).
-- Canonical hosted site/API: https://ghost-cart-preview.maaz-n-khan.chatgpt.site
-- Android release: `releases/GhostCart-v2.7.8-debug.apk`
-- Direct APK: https://raw.githubusercontent.com/Maazkhan88/Ghostcart/agent/ghost-cart-products-sharing/releases/GhostCart-v2.7.8-debug.apk
-- APK SHA-256: `C9BEACD5EFC09BDDF13F5C86B1FAB5D1877DD109DE0FFDEA1ED3F2C24F72C183`
+- **Canonical hosted site/API: https://ghostcart-app.maaz-n-khan.workers.dev** (changed this session — see "Backend consolidated onto a dedicated Cloudflare Worker" below; do not use either of the two domains previously recorded here).
+- Android release: `releases/GhostCart-v2.7.9-debug.apk`
+- Direct APK: https://raw.githubusercontent.com/Maazkhan88/Ghostcart/agent/ghost-cart-products-sharing/releases/GhostCart-v2.7.9-debug.apk
+- APK SHA-256: `5EA9C40E170849FE677384603DFA47446A28BB1B9F016A3E5ACB699DE7A070D6`
 - **v2.7.8 change:** bumped from v2.7.7 (`versionCode` 36→37) solely to bake a real
   `GHOST_CART_GOOGLE_WEB_CLIENT_ID` into `BuildConfig.GOOGLE_WEB_CLIENT_ID` —
   confirmed present in v2.7.8's dex bytecode and absent from v2.7.7's. The
@@ -24,6 +24,91 @@ This section is the current operational source of truth. Historical session logs
   registered in Google Cloud Console this session. Release signing will need
   its own SHA-1 registered separately before Google Sign-In works on a
   release build.
+- **v2.7.9 change:** repointed every hardcoded client reference (Android
+  `ApiConfig.BASE_URL`/`PRODUCT_API_BASE_URL`, `GhostItemSharing.kt`,
+  `MainActivity.kt`'s deep-link host check, `AndroidManifest.xml`'s App Link
+  `android:host`, web `app/ghost/page.tsx`'s `SITE_ORIGIN`,
+  `lib/product-link-preview.ts`'s User-Agent strings) at the new
+  `ghostcart-app.maaz-n-khan.workers.dev` deployment. No server-side route
+  code changed — `app/api/share-items/route.ts` already derives its origin
+  from the request URL, so it needed no edit.
+
+### Backend consolidated onto a dedicated Cloudflare Worker (Claude, this session)
+
+**The app's backend had silently split across two non-synced deployments,
+and this session fixed it by standing up a fresh, dedicated Cloudflare
+Worker rather than repairing either old one.**
+
+Found while investigating a user-reported question ("are share URLs
+generated on ChatGPT Sites or Cloudflare?"): Android's auth/activity calls
+went to `nameless-d98e.maaz-n-khan.workers.dev` (a plain Cloudflare Workers
+project, Git-integrated to the now-retired `agent/ghost-cart-web-v1`
+branch), while product-import/sharing calls went to
+`ghost-cart-preview.maaz-n-khan.chatgpt.site` (the ChatGPT Sites hosting
+layer). **Confirmed empirically that these were two entirely separate
+databases**, not just two URLs for the same backend: signed up a test
+account on `nameless-d98e`, then tried signing in with the identical
+credentials on `ghost-cart-preview` — it failed with "Invalid email or
+password," because that account simply didn't exist on that database. Also
+confirmed `nameless-d98e` was stale, not just separate: it 404'd entirely on
+`/api/almost-buys`, `/api/share-items`, and `/api/community-products` (its
+Git integration had stopped tracking any branch with the v2 work on it),
+while its own `/api/auth/signup` response was missing the `accessToken`
+field the current backend contract requires — i.e. it was still running
+pre-v2 auth code.
+
+Rather than repointing everything at `ghost-cart-preview` (a
+platform this project doesn't have direct dashboard/API control over) or
+trying to fix `nameless-d98e`'s stale Git integration (a Cloudflare
+dashboard setting, same class of manual fix as the old "Build command:
+None" issue from an earlier session), the user chose to stand up an
+independent, dedicated Cloudflare Worker instead:
+
+- Authenticated via `wrangler login` (interactive OAuth, user completed it
+  in-browser) to account `maaz.n.khan@gmail.com's Account`
+  (`58606a2f7fcfeb6700f486a40bf44f99` — same account `nameless-d98e` lives
+  in, just a fresh, separate Worker within it).
+- Created a new D1 database: `wrangler d1 create ghostcart-v2-db` →
+  `database_id: 325c0966-2b01-4a60-97a9-1a6d974d8039`.
+- Applied all 7 current migrations (`drizzle/0000_tough_mandrill.sql`
+  through `drizzle/0006_real_grim_reaper.sql`) to it with
+  `wrangler d1 execute ghostcart-v2-db --remote --file=...` — confirmed 12
+  tables created.
+- Added `wrangler.ghostcart-app.jsonc` at the repo root (a **new, permanent,
+  committed config** — deliberately distinct from the auto-generated
+  `dist/server/wrangler.json` that `vinext build` derives from
+  `.openai/hosting.json` for the Sites/`nameless-d98e` path, so this
+  doesn't get silently overwritten or confused with that mechanism). Deploy
+  with:
+  ```
+  npm run build
+  npx wrangler deploy --config wrangler.ghostcart-app.jsonc
+  ```
+- Deployed once manually this session. Verified live: homepage 200,
+  `/admin` 307 (exists), `/api/almost-buys` 401 (exists, needs auth),
+  `/api/share-items` GET 405 (exists, wrong method), `/api/community-products`
+  200, and `/api/auth/signup` now correctly returns `accessToken`/`tokenType`/
+  `expiresAt` per the v2 contract.
+
+**Not yet done — no auto-deploy-on-push is configured for
+`ghostcart-app`.** This was a one-time manual `wrangler deploy`. To get the
+same auto-deploy-on-push behavior `nameless-d98e` used to have, go to the
+Cloudflare dashboard → Workers & Pages → Workers Builds → connect this
+GitHub repo → target the **existing** `ghostcart-app` Worker (don't let it
+create a second one) → build command `npm install && npm run build` →
+deploy command `npx wrangler deploy --config wrangler.ghostcart-app.jsonc`.
+Until that's done, anyone merging changes that touch the backend needs to
+run that same two-line deploy manually, from a machine with `wrangler`
+authenticated to this account.
+
+**For Codex and any other agent continuing this work: `ghostcart-app` is
+now the one and only backend to target.** Do not add new client code
+pointing at `nameless-d98e.maaz-n-khan.workers.dev` or
+`ghost-cart-preview.maaz-n-khan.chatgpt.site` — both are deprecated as of
+this session. If you need to deploy backend changes, use
+`wrangler.ghostcart-app.jsonc` as above (requires `wrangler login` on
+whatever machine runs it). This was also left as a comment on PR #3 so it's
+visible from GitHub directly, not just here.
 
 ### Current product truth
 
