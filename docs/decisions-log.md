@@ -370,3 +370,37 @@ Append-only. Do not rewrite or delete earlier entries — only add new ones.
   `drawable-nodpi`; iOS uses named `.imageset` entries. This avoids runtime web
   fetching, preserves offline rendering, and keeps the app aligned with the
   approved transparent PNG files.
+
+## 2026-07-18 — Claude (senior outside review, via Fable model)
+
+- **Ran a deliberately adversarial outside-reviewer pass instead of another
+  incremental session.** Asked for a senior UI/UX-consultant-and-developer
+  critique of the whole project — plan, design, and implementation — rather
+  than continuing feature work, because the project had just absorbed a
+  317-file pivot (PR #2) and was about to take on another large draft (PR #3)
+  without anyone having stepped back to look at the whole. **Why:** the
+  process critique this produced (PR sizing, no CI, a stale coordination doc)
+  matched patterns already visible in this log — worth surfacing explicitly
+  rather than only fixing bugs as they're tripped over.
+- **Flagged, but did not fix, the admin-auth header-trust issue.** Chose to
+  document `lib/admin-auth.ts` trusting a client-supplied
+  `oai-authenticated-user-email` header as the top priority rather than
+  silently patching it, since the correct fix (bearer-session-based admin
+  authorization vs. confirming the Sites proxy actually strips/injects that
+  header) depends on infrastructure details only the Sites hosting owner can
+  confirm. **Why:** guessing at a security-relevant fix without confirming
+  the actual deployment topology risks either leaving the hole open under a
+  different mechanism or breaking legitimate admin access.
+- **Recommended splitting PR #3 rather than reviewing it as one unit.**
+  Universal link-import, product-discovery restoration, and scope-creep
+  items (social login groundwork, merch, device handoff) have different risk
+  profiles against the v2 product truth — bundling them makes the
+  higher-risk catalog-restoration work harder to scrutinize on its own
+  merits. **Why:** matches this log's own prior practice of keeping each
+  entry to one justified decision rather than one large unreviewable change.
+- **Did not act on any code-level recommendation from the review in this
+  session** beyond recording it here and in `current-state.md`. **Why:** the
+  user's immediate ask was to record the review and get a build with Google
+  Sign-In wired in; the review's own top recommendation (verify/fix admin
+  auth) needs a deliberate follow-up pass, not a rushed fix bundled into an
+  unrelated APK build.

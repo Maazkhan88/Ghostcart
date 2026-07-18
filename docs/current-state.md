@@ -98,6 +98,80 @@ This section is the current operational source of truth. Historical session logs
 6. Build and verify the iOS app/Share Extension on macOS/Xcode.
 7. Merge PR #3 only after physical-device acceptance; then update the APK link to the merged release location and tag the release.
 
+## Senior UI/UX + engineering review (Claude, via Fable model, 2026-07-18)
+
+Ran a full outside-reviewer pass across `main` (post-v2 merge) and this draft
+PR #3 branch — plan/product, design, technical, and process. Full memo lives
+in this session's transcript; summarizing here so it isn't lost, and calling
+out what's genuinely new versus what this doc already tracks.
+
+**Overall verdict:** the v2 pivot ("only a resolved-skipped decision counts
+as Money Kept") is the right call and the product docs (`v2-information-architecture.md`,
+`v2-acceptance-criteria.md`, `design-system-v2.md`, `backend-v2.md`) are
+strong. The real risk has moved to execution integrity, not product
+direction.
+
+**New findings not yet tracked elsewhere in this doc:**
+
+- **Admin auth is likely exploitable on the actual deployment (highest
+  priority).** `lib/admin-auth.ts` → `app/chatgpt-auth.ts` authorizes catalog
+  writes by trusting a client-supplied `oai-authenticated-user-email` header.
+  That header is only meaningful if something in front of the app strips/injects
+  it — worth confirming the Sites hosting layer actually does this before
+  trusting it further. If it doesn't, anyone can send that header with a
+  guessable admin email and get full `POST/PATCH/DELETE` catalog access. Verify
+  this before anything else in this list, and consider moving admin
+  authorization onto the existing bearer-session system regardless.
+- **No CI exists** (no `.github/workflows`). The 4-day silent production
+  break documented below (`db0906c`) was fixed culturally (remember to run
+  `npm test`), not mechanically — the same failure mode is still possible
+  today. Recommend: GitHub Actions running `npm test`, Android
+  `assembleDebug`/`lintDebug`, and (once feasible) a macOS `xcodebuild` job,
+  gating merges to `main`.
+- **Auth endpoints have no rate limiting** despite a `consumeRateLimit` helper
+  already existing in `lib/` and being used elsewhere (ghost-events,
+  share-items). Add it to `/api/auth/signin` and `/api/auth/signup`.
+- **Two data-access idioms coexist**: v1-era routes use Drizzle ORM; v2
+  routes (`almost-buys`, `ghost-events`, community/share endpoints) use raw
+  D1 `prepare/bind`. One of the raw-SQL paths (`lib/shared-ghost-items.ts`)
+  runs `CREATE TABLE IF NOT EXISTS` at request time, bypassing the Drizzle
+  migration journal that `backend-v2.md` calls mandatory. Worth reconciling
+  before more raw-SQL surfaces accumulate.
+- **~4,500 lines of unreachable v1 Kotlin** (`WalletScreens.kt`,
+  `CheckoutFlowScreens.kt`, `MarketplaceScreens.kt`, `CartScreen`,
+  `CheckoutScreen`, `ReceiptScreen`, `DashboardScreen`, `MainScreen` +
+  `MainScreenViewModel`) still compile into every APK, unreachable from the
+  v2 nav graph. Recommend a deliberate delete-or-revive decision rather than
+  continued silent accretion — this branch already edits some of these files
+  (see `WalletScreens.kt`'s wallet/card work), which is exactly how zombie
+  code re-enters a product.
+- **Onboarding still runs v1's flow**: gender/profile picker (selection
+  drives nothing downstream) → salary/savings-goal personalization feeding a
+  `WalletConfig` that v2 screens don't read. First run is running two
+  product generations at once; worth cutting to value prop → optional auth →
+  first capture.
+- **Design tokens have drifted into four independent sets** claiming to
+  implement one system: `docs/design-system-v2.md`'s stated colors/radii
+  don't exactly match `app/site.css`, `app/globals.css` (still loaded
+  globally though ~90% is dead v1 CSS kept alive only for `/admin`), or
+  Android's `theme/Color.kt`. Not urgent, but will keep compounding without
+  a one-time reconciliation pass.
+- **PR #3 itself is bundling at least three separable efforts** (universal
+  link-import — the strongest v2-aligned feature in the branch; product
+  discovery/catalog restoration — higher-risk, worth extra scrutiny against
+  the "discovery never outranks the four core questions" IA rule; and scope
+  creep like social-login groundwork, a merch line, device handoff). Consider
+  landing link-import first and keeping the rest iterating in smaller
+  reviewable slices.
+
+**Already tracked here and independently confirmed by the review** (no new
+action needed beyond what's already listed above in "Recommended next
+work"): Android/backend integration gap (item 4), iOS never compiled (item
+6), repo bloat from versioned APKs in `releases/` (accepted tradeoff, but
+worth revisiting if it keeps growing), and the historically always-red
+Cloudflare Workers Builds check (superseded — the Sites URL is now
+canonical per this doc's own instruction not to use the old Workers URL).
+
 ## Web production build fix + password salt fix (Claude, 2026-07-16)
 
 A routine status check found the web app's production build had been
