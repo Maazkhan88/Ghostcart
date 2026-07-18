@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Brand } from "../components/Brand";
+import { DeviceHandoffActions } from "./DeviceHandoffActions";
 
 type GhostPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -92,10 +93,7 @@ export default async function SharedGhostItemPage({ searchParams }: GhostPagePro
             Someone shared an almost-buy with you. Open it in Ghost Cart, choose
             a cooling period, and decide when the craving is quieter.
           </p>
-          <div className="gc-shared-item-actions">
-            <a className="gc-button gc-button-green" href={openInApp}>Open in Ghost Cart</a>
-            <a className="gc-button gc-shared-download" href="/download/android">Download latest Android APK</a>
-          </div>
+          <DeviceHandoffActions openInAppUrl={openInApp} />
           <div className="gc-safety-line" aria-label="Safety information">
             <span>Simulation only</span><span>No real payment</span><span>No real delivery</span>
           </div>

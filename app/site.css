@@ -530,6 +530,10 @@ body { background: var(--gc-ink); }
 .gc-shared-item-copy > p:not(.gc-kicker) { max-width: 610px; margin: 32px 0 0; color: rgba(255,255,255,.64); font-size: 17px; line-height: 1.7; }
 .gc-shared-item-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
 .gc-shared-download { color: #fff; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18); }
+.gc-apple-availability { display: grid; grid-template-columns: 44px 1fr; gap: 15px; max-width: 590px; margin-top: 34px; padding: 18px; color: #fff; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.15); border-radius: 22px; }
+.gc-apple-availability > span { display: grid; place-items: center; width: 44px; height: 44px; color: var(--gc-ink); background: #fff; border-radius: 14px; font-size: 25px; }
+.gc-apple-availability strong { display: block; font-size: 14px; }
+.gc-apple-availability p { margin: 4px 0 0; color: rgba(255,255,255,.62); font-size: 12px; line-height: 1.55; }
 .gc-shared-product-card { padding: 20px; color: var(--gc-ink); background: #fff; border: 1px solid rgba(255,255,255,.55); border-radius: 34px; box-shadow: 0 38px 100px rgba(0,0,0,.42); transform: rotate(2deg); }
 .gc-shared-product-art { position: relative; display: grid; place-items: center; height: 310px; overflow: hidden; background: var(--gc-soft); border-radius: 23px; }
 .gc-shared-product-art img { width: 100%; height: 100%; padding: 24px; object-fit: contain; }
