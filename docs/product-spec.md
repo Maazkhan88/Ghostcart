@@ -61,6 +61,13 @@ Product discovery is a visual entry point and never a real storefront. Curated i
   explicit user action and never implies affiliation with the retailer.
 - The public handoff shows the shared product before app-open and APK actions,
   so the recipient immediately knows what a friend shared.
+- A recipient-created item retains the opaque originating share ID. If the
+  recipient later completes a simulated Ghost Checkout, the backend can
+  attribute that anonymous Ghost action to the original share without exposing
+  either person's identity.
+- Senders can see how many unique people and how many total completed Ghost
+  Checkouts came from each of their shared items. Link opens are reported
+  separately and never counted as Ghosts.
 
 ## Favorites and persistent navigation
 
@@ -99,6 +106,9 @@ Recommended presets:
 - Progress uses "Money Kept", never balance, funds, deposit, withdrawal, transfer, or payment language.
 - Ghost Card is a membership/achievement card with a Ghost ID. It is not a payment card and never displays CVV, expiry, payment network, or bank-style account details.
 - Most Ghosted Today measures completed Ghost actions, not confirmed savings.
+- Item-level **Ghosted X times** counts use idempotent completed Ghost Checkout
+  events. Public totals require the privacy threshold; private share owners may
+  see their own share attribution without recipient identities.
 - Live trends require validated catalog items, abuse controls, a privacy threshold, and freshness disclosure.
 - Sample figures are visibly labeled demo data and cannot appear as a user's own history.
 - Product imagery must be curated and licensed. Runtime image search services are prohibited in production.
@@ -106,6 +116,9 @@ Recommended presets:
 ## Notification model
 
 - Cooling-complete reminders are transactional and deep-link to the relevant resolution.
+- Shared-item activity notifications are opt-in and say that someone ghosted a
+  shared item without identifying the recipient. Rapid events are batched and
+  subject to quiet hours and frequency caps.
 - Lunch, dinner, late-night, and salary-day nudges are independent opt-in preferences.
 - No marketing reminder is enabled merely because order-status notifications are enabled.
 - Users can control time, days, quiet hours, and pause duration.
