@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -66,6 +67,8 @@ import com.example.ghostcart.theme.Ink
 import com.example.ghostcart.theme.MutedText
 import com.example.ghostcart.theme.Paper
 import com.example.ghostcart.theme.SoftGray
+import com.example.ghostcart.ui.DirhamAmount
+import com.example.ghostcart.ui.DirhamGlyph
 import com.example.ghostcart.ui.GhostMascotPose
 import com.example.ghostcart.ui.GhostCartWordmark
 import com.example.ghostcart.ui.ProductPhoto
@@ -182,7 +185,8 @@ fun HomeMarketplaceScreen(
                             product = product,
                             activityLabel = "$ghostCount ${if (ghostCount == 1) "ghost" else "ghosts"} today",
                             onClick = { onOpenProduct(product.id) },
-                            onAdd = { onAddToCart(product.id) }
+                            onAdd = { onAddToCart(product.id) },
+                            modifier = Modifier.width(170.dp)
                         )
                     }
                 }
@@ -191,7 +195,7 @@ fun HomeMarketplaceScreen(
             MarketplaceSectionHeader(title = "Fake Flash Deals", onViewAll = { onOpenCategory("flash_deals") })
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(vertical = 12.dp)) {
                 items(Marketplace.fakeFlashDeals) { product ->
-                    MarketplaceProductCard(product, onClick = { onOpenProduct(product.id) }, onAdd = { onAddToCart(product.id) })
+                    MarketplaceProductCard(product, onClick = { onOpenProduct(product.id) }, onAdd = { onAddToCart(product.id) }, modifier = Modifier.width(170.dp))
                 }
             }
 
@@ -391,22 +395,27 @@ fun MarketplaceProductCard(
     onAdd: () -> Unit,
     onCool: (() -> Unit)? = null,
     activityLabel: String? = null,
+    isFavorite: Boolean = false,
+    onToggleFavorite: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    // Mirrors the home DiscoveryProductCard so listing/community cards match the
+    // home screen: white image tile with a top-right favorite, green category
+    // label, title, Dirham-glyph price, and Add to cart / Cool it actions.
     Column(
         modifier = modifier
-            .width(150.dp)
-            .height(226.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, FaintBorder, RoundedCornerShape(16.dp))
+            .height(252.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(Paper)
+            .border(1.dp, FaintBorder, RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
             .padding(12.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(84.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .height(112.dp)
+                .clip(RoundedCornerShape(14.dp))
                 .background(Color.White),
             contentAlignment = Alignment.Center
         ) {
@@ -419,61 +428,72 @@ fun MarketplaceProductCard(
                     modifier = Modifier.fillMaxSize().background(Color.White)
                 )
             }
+            if (onToggleFavorite != null) {
+                IconButton(
+                    onClick = onToggleFavorite,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(2.dp).size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
+                        tint = Color.Black,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
         }
-        // Fixed height (not intrinsic) so a 1-line vs 2-line title never changes how much
-        // room is left for the button below — this is what caused the button to get
-        // clipped for longer titles when the card's overall height is also fixed.
+        Text(
+            text = product.category,
+            color = GhostGreen,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 9.dp)
+        )
         Text(
             text = product.name,
             color = Ink,
-            fontSize = 12.sp,
+            fontSize = 13.sp,
+            lineHeight = 16.sp,
             fontWeight = FontWeight.Bold,
             maxLines = 2,
-            modifier = Modifier.padding(top = 8.dp).height(32.dp)
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.height(36.dp).padding(top = 2.dp)
         )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 4.dp)
-        ) {
-            Text(text = "${Marketplace.currency} ${product.price}", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
-            Spacer(Modifier.weight(1f))
-            if (activityLabel != null) {
-                GhostMascotPose(poseName = "wave", modifier = Modifier.size(14.dp))
-                Text(
-                    text = activityLabel.filter(Char::isDigit).ifBlank { "0" },
-                    color = MutedText,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    modifier = Modifier.padding(start = 3.dp)
-                )
-            }
-        }
+        DirhamAmount(
+            amount = "%,.2f".format(java.util.Locale.US, product.price.toDouble()),
+            tint = Ink,
+            fontSize = 13.sp,
+            glyphSize = 12.dp,
+            modifier = Modifier.padding(top = 3.dp)
+        )
 
-        androidx.compose.foundation.layout.Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.weight(1f))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+        Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .height(36.dp)
-                    .clip(RoundedCornerShape(10.dp))
+                    .height(38.dp)
+                    .clip(RoundedCornerShape(11.dp))
                     .background(Ink)
                     .clickable(onClick = onAdd),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = if (onCool == null) "Add to Ghost Cart" else "Add to cart", color = Paper, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                Text(text = if (onCool == null) "Add to Ghost Cart" else "Add to cart", color = Paper, fontSize = 9.sp, fontWeight = FontWeight.Bold)
             }
             if (onCool != null) {
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .height(36.dp)
-                        .clip(RoundedCornerShape(10.dp))
+                        .height(38.dp)
+                        .clip(RoundedCornerShape(11.dp))
                         .background(GreenTint)
                         .clickable(onClick = onCool),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = "Cool it", color = Ink, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    Text(text = "Cool it", color = Ink, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -487,6 +507,8 @@ fun CategoryBrowseScreen(
     activityCounts: Map<String, Int> = emptyMap(),
     cartItemCount: Int,
     cartTotal: Int,
+    favoriteProductIds: Set<String> = emptySet(),
+    onToggleFavorite: (String) -> Unit = {},
     onBack: () -> Unit,
     onOpenCart: () -> Unit,
     onOpenProduct: (String) -> Unit,
@@ -628,7 +650,8 @@ fun CategoryBrowseScreen(
                 items(visibleProducts) { product ->
                     MarketplaceProductCard(
                         product = product,
-                        activityLabel = "Ghosted ${activityCounts[product.id] ?: product.ghostCount} times",
+                        isFavorite = product.id in favoriteProductIds,
+                        onToggleFavorite = { onToggleFavorite(product.id) },
                         onClick = { onOpenProduct(product.id) },
                         onAdd = { onAddToCart(product.id) },
                         onCool = { onCoolProduct(product.id) },
@@ -649,8 +672,8 @@ private fun CartSummaryButton(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .height(52.dp)
-            .clip(RoundedCornerShape(18.dp))
+            .height(44.dp)
+            .clip(RoundedCornerShape(16.dp))
             .background(Ink)
             .clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = 14.dp)
@@ -659,7 +682,7 @@ private fun CartSummaryButton(
             imageVector = Icons.Filled.ShoppingBag,
             contentDescription = null,
             tint = GhostGreen,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(18.dp)
         )
         Column(modifier = Modifier.padding(start = 9.dp)) {
             Text(
@@ -669,13 +692,23 @@ private fun CartSummaryButton(
                 fontWeight = FontWeight.ExtraBold,
                 maxLines = 1
             )
-            Text(
-                text = "$itemCount ${if (itemCount == 1) "item" else "items"} · ${Marketplace.currency} $cartTotal",
-                color = Paper.copy(alpha = 0.68f),
-                fontSize = 8.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "$itemCount ${if (itemCount == 1) "item" else "items"} · ",
+                    color = Paper.copy(alpha = 0.68f),
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1
+                )
+                DirhamGlyph(tint = Paper.copy(alpha = 0.68f), modifier = Modifier.size(8.dp))
+                Text(
+                    text = " $cartTotal",
+                    color = Paper.copy(alpha = 0.68f),
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1
+                )
+            }
         }
     }
 }
@@ -729,7 +762,13 @@ fun ProductDetailScreen(
             Text(text = product.description, color = MutedText, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
         }
 
-        Text(text = "${Marketplace.currency} ${product.price}", color = Ink, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 12.dp))
+        DirhamAmount(
+            amount = "%,.2f".format(java.util.Locale.US, product.price.toDouble()),
+            tint = Ink,
+            fontSize = 24.sp,
+            glyphSize = 20.dp,
+            modifier = Modifier.padding(top = 12.dp)
+        )
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
             Icon(Icons.Filled.Shield, contentDescription = null, tint = GhostGreen, modifier = Modifier.size(14.dp))
             Text(text = "Safe to Ghost", color = GhostGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 6.dp))

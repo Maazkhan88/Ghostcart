@@ -352,7 +352,6 @@ fun PersonalizationScreen(
             ) {
                 (Marketplace.savingsGoalPresets + 0).forEachIndexed { index, amount ->
                     val isCustom = index == Marketplace.savingsGoalPresets.size
-                    val label = if (isCustom) "Custom" else "AED $amount"
                     val selected = !isCustom && selectedSavingsGoal == amount
                     Box(
                         modifier = Modifier
@@ -364,12 +363,22 @@ fun PersonalizationScreen(
                             .padding(vertical = 14.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = label,
-                            color = if (selected) Paper else Ink,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        if (isCustom) {
+                            Text(
+                                text = "Custom",
+                                color = if (selected) Paper else Ink,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        } else {
+                            com.example.ghostcart.ui.DirhamAmount(
+                                amount = "$amount",
+                                tint = if (selected) Paper else Ink,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                glyphSize = 9.dp
+                            )
+                        }
                     }
                 }
             }

@@ -179,7 +179,10 @@ fun MainNavigation(
                                 onClose = { dismissedOrderId = state.lastOrderId }
                             )
                         }
-                        GhostBottomNav(selectedBottomDestination(current)) { destination ->
+                        GhostBottomNav(
+                            selectedBottomDestination(current),
+                            cartCount = state.cartQuantities.values.sum()
+                        ) { destination ->
                             if (backStack.lastOrNull() != destination) backStack.add(destination)
                         }
                     }
@@ -293,6 +296,8 @@ fun MainNavigation(
                                 state.mostGhostedToday.associate { it.productId to it.ghostCount },
                             cartItemCount = state.cartQuantities.values.sum(),
                             cartTotal = appViewModel.cartSubtotal(),
+                            favoriteProductIds = state.favoriteProductIds,
+                            onToggleFavorite = appViewModel::toggleFavorite,
                             onBack = { backStack.removeLastOrNull() },
                             onOpenCart = { backStack.add(GhostCartList) },
                             onOpenProduct = { id -> backStack.add(ProductDetail(id)) },
@@ -540,7 +545,7 @@ private fun DeliveryTrackingBanner(orderId: String, deliveryStep: Int, onClick: 
 }
 
 @Composable
-private fun GhostBottomNav(current: NavKey?, onNavigate: (NavKey) -> Unit) {
+private fun GhostBottomNav(current: NavKey?, cartCount: Int = 0, onNavigate: (NavKey) -> Unit) {
     data class Item(val label: String, val destination: NavKey, val icon: androidx.compose.ui.graphics.vector.ImageVector, val central: Boolean = false)
     val items = listOf(
         Item(stringResource(R.string.nav_home), Home, Icons.Filled.Home),
@@ -557,25 +562,44 @@ private fun GhostBottomNav(current: NavKey?, onNavigate: (NavKey) -> Unit) {
                 selected = selected,
                 onClick = { onNavigate(item.destination) },
                 icon = {
-                    Box(
-                        modifier = Modifier
-                            .size(if (item.central) 42.dp else 30.dp)
-                            .clip(CircleShape)
-                            .background(if (item.central) GhostGreen else Color.Transparent),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (item.central) {
-                            GhostMascotPose(
-                                poseName = "cart",
-                                modifier = Modifier.size(34.dp)
-                            )
-                        } else {
-                            Icon(
-                                item.icon,
-                                contentDescription = item.label,
-                                tint = if (selected) GhostGreen else MutedText,
-                                modifier = Modifier.size(20.dp)
-                            )
+                    Box(contentAlignment = Alignment.TopEnd) {
+                        Box(
+                            modifier = Modifier
+                                .size(if (item.central) 42.dp else 30.dp)
+                                .clip(CircleShape)
+                                .background(if (item.central) GhostGreen else Color.Transparent),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (item.central) {
+                                GhostMascotPose(
+                                    poseName = "cart",
+                                    modifier = Modifier.size(34.dp)
+                                )
+                            } else {
+                                Icon(
+                                    item.icon,
+                                    contentDescription = item.label,
+                                    tint = if (selected) GhostGreen else MutedText,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                        if (item.central && cartCount > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clip(CircleShape)
+                                    .background(Ink)
+                                    .border(2.dp, Paper, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (cartCount > 9) "9+" else "$cartCount",
+                                    color = Paper,
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                            }
                         }
                     }
                 },

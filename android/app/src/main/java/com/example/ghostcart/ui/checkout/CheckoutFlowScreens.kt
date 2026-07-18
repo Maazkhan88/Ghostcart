@@ -144,7 +144,9 @@ fun GhostCartListScreen(
 
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)) {
                     Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = GhostGreen, modifier = Modifier.size(14.dp))
-                    Text(text = "You almost spent ${Marketplace.currency} $subtotal", color = GhostGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 6.dp))
+                    Text(text = "You almost spent ", color = GhostGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 6.dp))
+                    com.example.ghostcart.ui.DirhamGlyph(tint = GhostGreen, modifier = Modifier.size(11.dp))
+                    Text(text = " $subtotal", color = GhostGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -187,7 +189,7 @@ fun GhostCartListScreen(
                                 .padding(horizontal = 12.dp)
                         ) {
                             Text(text = product.name, color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                            Text(text = "${Marketplace.currency} ${product.price}", color = MutedText, fontSize = 11.sp)
+                            com.example.ghostcart.ui.DirhamAmount("${product.price}", tint = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Normal, glyphSize = 9.dp)
                             val coolingUntil = coolingUntilByProductId[product.id]
                             Text(
                                 text = when {
@@ -275,12 +277,12 @@ fun GhostCartListScreen(
 }
 
 @Composable
-private fun SummaryLine(label: String, value: String, valueColor: Color = Ink, bold: Boolean = false, showDirhamIcon: Boolean = false) {
+private fun SummaryLine(label: String, value: String, valueColor: Color = Ink, bold: Boolean = false, showDirhamIcon: Boolean = true) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(text = label, color = if (bold) Ink else MutedText, fontSize = if (bold) 14.sp else 12.sp, fontWeight = if (bold) FontWeight.ExtraBold else FontWeight.Normal, modifier = Modifier.weight(1f))
         if (showDirhamIcon) {
             com.example.ghostcart.ui.DirhamGlyph(tint = valueColor, modifier = Modifier.size(if (bold) 14.dp else 11.dp))
-            Text(text = value.removePrefix("${Marketplace.currency} "), color = valueColor, fontSize = if (bold) 16.sp else 12.sp, fontWeight = if (bold) FontWeight.ExtraBold else FontWeight.Bold, modifier = Modifier.padding(start = 4.dp))
+            Text(text = value.replace("${Marketplace.currency} ", ""), color = valueColor, fontSize = if (bold) 16.sp else 12.sp, fontWeight = if (bold) FontWeight.ExtraBold else FontWeight.Bold, modifier = Modifier.padding(start = 4.dp))
         } else {
             Text(text = value, color = valueColor, fontSize = if (bold) 16.sp else 12.sp, fontWeight = if (bold) FontWeight.ExtraBold else FontWeight.Bold)
         }
@@ -333,7 +335,7 @@ fun GhostCheckoutScreen(
         CheckoutInfoRow(
             icon = Icons.Filled.Notifications,
             title = "Ghost Wallet",
-            subtitle = "Simulated balance: ${Marketplace.currency} $walletBalance.00",
+            subtitle = "Simulated Ghost Cart credit",
             action = if (hasEnoughSimulatedBalance) "View" else "Add more",
             onAction = onOpenWallet
         )
@@ -384,7 +386,7 @@ fun GhostCheckoutScreen(
                         )
                     }
                     Text(text = "${product.name} (x$qty)", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).padding(horizontal = 10.dp))
-                    Text(text = "${Marketplace.currency} ${product.price * qty}", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    com.example.ghostcart.ui.DirhamAmount("${product.price * qty}", tint = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold, glyphSize = 10.dp)
                 }
             }
             Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).height(1.dp).background(FaintBorder))
@@ -503,7 +505,7 @@ fun OrderGhostedSuccessScreen(
         Text(text = "Order Ghosted\nSuccessfully", color = Ink, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 20.dp))
         Row(modifier = Modifier.padding(top = 8.dp)) {
             Text(text = "Simulated checkout total: ", color = MutedText, fontSize = 13.sp)
-            Text(text = "${Marketplace.currency} $amountAvoided.", color = GhostGreen, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+            com.example.ghostcart.ui.DirhamAmount("$amountAvoided", tint = GhostGreen, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, glyphSize = 11.dp)
         }
 
         Row(
@@ -520,7 +522,7 @@ fun OrderGhostedSuccessScreen(
         }
 
         Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            InfoTile(label = "Real amount charged:", value = "${Marketplace.currency} 0", modifier = Modifier.weight(1f))
+            InfoTile(label = "Real amount charged:", value = "0", modifier = Modifier.weight(1f))
             InfoTile(label = "Not counted as Money Kept until you later choose to skip it", value = "", modifier = Modifier.weight(1f))
         }
 
@@ -635,11 +637,11 @@ fun FakeDeliveryTrackingScreen(
             Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = GhostGreen, modifier = Modifier.size(20.dp))
             Column(modifier = Modifier.weight(1f).padding(horizontal = 10.dp)) {
                 Text(text = "No real charge was made", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                Text(text = "${Marketplace.currency} $amountSaved remains an almost-spent amount until you decide.", color = MutedText, fontSize = 10.sp)
+                Text(text = "This stays an almost-spent amount until you decide.", color = MutedText, fontSize = 10.sp)
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(text = "Simulated", color = MutedText, fontSize = 9.sp)
-                Text(text = "${Marketplace.currency} $amountSaved", color = GhostGreen, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+                com.example.ghostcart.ui.DirhamAmount("$amountSaved", tint = GhostGreen, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, glyphSize = 12.dp)
             }
         }
 
@@ -948,7 +950,7 @@ fun PayWithGhostCardScreen(
                     Text(text = config.cardholderName, color = Paper, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 10.dp))
                     Text(text = "Ghost ID  ${config.ghostId}", color = Color.White.copy(alpha = 0.72f), fontSize = 10.sp)
                     Text(text = "Balance", color = Color.White.copy(alpha = 0.6f), fontSize = 10.sp, modifier = Modifier.padding(top = 12.dp))
-                    Text(text = "${Marketplace.currency} $walletBalance", color = Paper, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+                    com.example.ghostcart.ui.DirhamAmount("$walletBalance", tint = Paper, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, glyphSize = 18.dp)
                 }
             }
         }
@@ -968,7 +970,7 @@ fun PayWithGhostCardScreen(
                 Text(text = product.name, color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Text(text = "Blind Buy • ${product.category}", color = MutedText, fontSize = 10.sp)
             }
-            Text(text = "${Marketplace.currency} ${product.price}", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            com.example.ghostcart.ui.DirhamAmount("${product.price}", tint = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold, glyphSize = 10.dp)
         }
         Box(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp).height(1.dp).background(FaintBorder))
         SummaryLine("Item amount", "${Marketplace.currency} ${product.price}")
@@ -986,7 +988,9 @@ fun PayWithGhostCardScreen(
                 .padding(12.dp)
         ) {
             Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = GhostGreen, modifier = Modifier.size(14.dp))
-            Text(text = "Real amount charged: ${Marketplace.currency} 0", color = Ink, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
+            Text(text = "Real amount charged: ", color = Ink, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
+            com.example.ghostcart.ui.DirhamGlyph(tint = Ink, modifier = Modifier.size(10.dp))
+            Text(text = " 0", color = Ink, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         }
 
         PrimaryButton(text = "Confirm Ghost Pay", onClick = onConfirm, leadingIcon = null, trailingIcon = Icons.Filled.ArrowForward, modifier = Modifier.padding(top = 16.dp))
@@ -1018,7 +1022,7 @@ fun OrderProtectedScreen(
             }
             Text(text = "Order Protected", color = Ink, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 16.dp))
             Text(text = "Your Ghost Card protected", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
-            Text(text = "${Marketplace.currency} $amountSaved", color = Ink, fontSize = 34.sp, fontWeight = FontWeight.ExtraBold)
+            com.example.ghostcart.ui.DirhamAmount("$amountSaved", tint = Ink, fontSize = 34.sp, fontWeight = FontWeight.ExtraBold, glyphSize = 26.dp)
         }
 
         Column(

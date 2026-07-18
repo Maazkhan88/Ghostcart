@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-07-18 (Claude — brought iOS to product-sharing/community/Share-Extension parity with Android; see "iOS product-sharing, community, and Share Extension parity pass" below. Earlier the same day: fixed an Amazon-share title bug and an invisible-logo-on-dark-surfaces bug; see v2.7.10 entry below. Also consolidated the split backend onto a single dedicated Cloudflare Worker, `ghostcart-app.maaz-n-khan.workers.dev`; see "Backend consolidated onto a dedicated Cloudflare Worker" below).
+Last updated: 2026-07-18 (Claude — Android marketplace/card UI polish: unified the browse/community listing card with the home card, smaller top-right favorite, cart-count badge on the Ghost Cart nav icon, shorter View cart button, and swept remaining "AED"/"dirhams" text to the official Dirham glyph; see "Android marketplace card + Dirham-glyph UI polish" below. Also brought iOS to product-sharing/community/Share-Extension parity with Android; see "iOS product-sharing, community, and Share Extension parity pass" below. Earlier the same day: fixed an Amazon-share title bug and an invisible-logo-on-dark-surfaces bug; see v2.7.10 entry below. Also consolidated the split backend onto a single dedicated Cloudflare Worker, `ghostcart-app.maaz-n-khan.workers.dev`; see "Backend consolidated onto a dedicated Cloudflare Worker" below).
 
 ## Canonical handoff for Antigravity and Claude Code (2026-07-18)
 
@@ -149,6 +149,40 @@ this session. If you need to deploy backend changes, use
 `wrangler.ghostcart-app.jsonc` as above (requires `wrangler login` on
 whatever machine runs it). This was also left as a comment on PR #3 so it's
 visible from GitHub directly, not just here.
+
+### Android marketplace card + Dirham-glyph UI polish (Claude, 2026-07-18)
+
+Five UI requests against the v2 Android marketplace surfaces (verified with
+`assembleDebug` on this machine; JDK from `C:\Program Files\Android\Android
+Studio\jbr`):
+
+- **Listing card now matches the home card.** Rewrote `MarketplaceProductCard`
+  (`ui/marketplace/MarketplaceScreens.kt`) to mirror the home
+  `DiscoveryProductCard` (`ui/v2/ProductDiscovery.kt`): white image tile, green
+  category label, title, Dirham-glyph price, top-right favorite, and
+  Add to cart / Cool it. This is the card used by `CategoryBrowseScreen`,
+  including the "Community Products" View-all screen. Favorites were wired into
+  `CategoryBrowseScreen` from `Navigation.kt` (`favoriteProductIds` +
+  `toggleFavorite`); community items reuse the existing `community_` favorite
+  key so hearts stay in sync with the home rail.
+- **Favorite heart** shrunk and moved tighter to the top-right on both cards
+  (icon 22->18dp, button 40->32dp, padding 6->2dp).
+- **Cart-count badge** on the central Ghost Cart bottom-nav icon in
+  `Navigation.kt` (`GhostBottomNav` gained a `cartCount` param fed by
+  `cartQuantities` total; shows "9+" past 9, hidden at 0).
+- **View cart button** (`CartSummaryButton`) height 52->44dp.
+- **"AED"/"dirhams" text -> official Dirham glyph.** The existing
+  `res/drawable-nodpi/currency_dirham.png` was confirmed byte-identical
+  (sha256) to the user-supplied official logo, and `DirhamGlyph` already
+  renders it, so this was text-only. Added a shared `DirhamAmount` composable
+  (`ui/MoneyText.kt`) and replaced literal currency text across product cards,
+  community listing, product detail, Progress/cooldown money, the cart/checkout
+  flow (`SummaryLine` glyph support made default-on), and onboarding
+  savings-goal chips. `formatDirhams` no longer appends " dirhams".
+  Intentionally left as words: the two "Amount in dirhams" text-field labels
+  (input guidance) and `DirhamGlyph`'s "AED" screen-reader label (a11y);
+  data-layer currency codes are not user-visible. Legacy/unreachable v1 screens
+  (WalletScreens, TrendsScreen, CartScreen, MainScreen, etc.) were left alone.
 
 ### iOS product-sharing, community, and Share Extension parity pass (Claude, 2026-07-18)
 

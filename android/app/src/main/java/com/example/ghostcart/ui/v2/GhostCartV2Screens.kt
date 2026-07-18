@@ -102,6 +102,7 @@ import com.example.ghostcart.theme.Ink
 import com.example.ghostcart.theme.MutedText
 import com.example.ghostcart.theme.Paper
 import com.example.ghostcart.theme.SoftGray
+import com.example.ghostcart.ui.DirhamAmount
 import com.example.ghostcart.ui.DirhamGlyph
 import com.example.ghostcart.ui.GhostMascotPose
 import com.example.ghostcart.ui.common.GhostHeroCard
@@ -751,7 +752,7 @@ fun ProgressScreen(
         item {
             GhostHeroCard {
                 Text("SIMULATED BALANCE", color = Paper.copy(alpha = 0.65f), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                Text(formatDirhams(config.startingBalance.toLong() * 100), color = GhostGreen, fontSize = 35.sp, fontWeight = FontWeight.ExtraBold)
+                DirhamAmount(formatDirhams(config.startingBalance.toLong() * 100), tint = GhostGreen, fontSize = 35.sp, glyphSize = 26.dp)
                 Text("Internal Ghost Cart credit only. No real money is stored.", color = Paper.copy(alpha = 0.65f), fontSize = 10.sp, modifier = Modifier.padding(top = 6.dp, bottom = 12.dp))
                 PrimaryButton(
                     text = "Add simulated balance",
@@ -798,7 +799,7 @@ fun ProgressScreen(
         item {
             GhostHeroCard {
                 Text(stringResource(R.string.confirmed_money_kept), color = Paper.copy(alpha = 0.65f), fontSize = 12.sp)
-                Text(formatDirhams(summary.confirmedMoneyKeptCents), color = GhostGreen, fontSize = 35.sp, fontWeight = FontWeight.ExtraBold)
+                DirhamAmount(formatDirhams(summary.confirmedMoneyKeptCents), tint = GhostGreen, fontSize = 35.sp, glyphSize = 26.dp)
                 Text(stringResource(R.string.only_skipped_counts), color = Paper.copy(alpha = 0.65f), fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp))
             }
         }
@@ -817,7 +818,7 @@ fun ProgressScreen(
             if (categoriesByKept.isEmpty()) {
                 item { Text(stringResource(R.string.resolve_to_build_insights), color = MutedText, fontSize = 12.sp) }
             } else {
-                items(categoriesByKept) { (category, amount) -> BreakdownRow(category, formatDirhams(amount)) }
+                items(categoriesByKept) { (category, amount) -> BreakdownRow(category, formatDirhams(amount), money = true) }
             }
 
             item { SectionHeader(stringResource(R.string.your_common_triggers)) }
@@ -1009,7 +1010,7 @@ private fun ProgressStrip(summary: ProgressSummary, onOpenProgress: (() -> Unit)
 private fun MetricColumn(label: String, value: String, modifier: Modifier = Modifier, valueColor: Color = Ink) {
     Column(modifier) {
         Text(label, color = MutedText, fontSize = 9.sp)
-        Text(value, color = valueColor, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+        DirhamAmount(value, tint = valueColor, fontSize = 14.sp, glyphSize = 11.dp)
     }
 }
 
@@ -1029,7 +1030,7 @@ private fun CooldownSummaryCard(item: AlmostBuy, onClick: () -> Unit) {
                 Text(item.name, color = Ink, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
                 Text("${item.category} · ${item.trigger}", color = MutedText, fontSize = 10.sp)
             }
-            Text(formatDirhams(item.amountCents), color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            DirhamAmount(formatDirhams(item.amountCents), tint = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold, glyphSize = 10.dp)
         }
     }
 }
@@ -1056,7 +1057,7 @@ private fun CooldownDecisionCard(
                     Text("${item.category} · ${item.trigger}", color = MutedText, fontSize = 11.sp)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(formatDirhams(item.amountCents), color = Ink, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+                    DirhamAmount(formatDirhams(item.amountCents), tint = Ink, fontSize = 15.sp, glyphSize = 12.dp)
                     Row {
                         IconButton(onClick = { onShare(item) }, modifier = Modifier.size(36.dp)) {
                             Icon(Icons.Filled.Share, contentDescription = "Share ${item.name}", tint = Ink, modifier = Modifier.size(17.dp))
@@ -1126,7 +1127,7 @@ private fun ResolvedRow(
                 Icon(Icons.Filled.OpenInNew, contentDescription = "Open original product", tint = Ink, modifier = Modifier.size(17.dp))
             }
         }
-        Text(formatDirhams(item.amountCents), color = if (item.status == AlmostBuyStatus.SKIPPED) GhostGreen else Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        DirhamAmount(formatDirhams(item.amountCents), tint = if (item.status == AlmostBuyStatus.SKIPPED) GhostGreen else Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold, glyphSize = 10.dp)
     }
 }
 
@@ -1225,10 +1226,14 @@ private fun EmptyPanel(title: String, body: String, action: String? = null, onAc
 }
 
 @Composable
-private fun BreakdownRow(label: String, value: String) {
+private fun BreakdownRow(label: String, value: String, money: Boolean = false) {
     Row(Modifier.fillMaxWidth().border(1.dp, FaintBorder, RoundedCornerShape(16.dp)).padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-        Text(value, color = GhostGreen, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+        if (money) {
+            DirhamAmount(value, tint = GhostGreen, fontSize = 13.sp, glyphSize = 11.dp)
+        } else {
+            Text(value, color = GhostGreen, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+        }
     }
 }
 
@@ -1276,7 +1281,5 @@ private fun remainingLabel(remainingMillis: Long): String {
     }
 }
 
-private fun formatDirhams(amountCents: Long): String {
-    val value = amountCents / 100.0
-    return "${DecimalFormat("#,##0.00").format(value)} dirhams"
-}
+private fun formatDirhams(amountCents: Long): String =
+    DecimalFormat("#,##0.00").format(amountCents / 100.0)
