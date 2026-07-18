@@ -369,7 +369,16 @@ object ProductImportRepository {
     }
 
     private fun enrichFromRetailer(product: ImportedProduct): ImportedProduct {
-        if (product.priceCents != null && product.imageUrl != null) return product
+        val amazonSource = runCatching {
+            URL(product.sourceUrl).host.lowercase().let { host ->
+                host == "amazon.ae" || host.endsWith(".amazon.ae") ||
+                    host == "amazon.com" || host.endsWith(".amazon.com")
+            }
+        }.getOrDefault(false)
+        // Amazon can return a complete-looking response whose image belongs to
+        // an embedded warranty/insurance add-on. Re-read Amazon pages on the
+        // device so the scored landing image can replace that artwork.
+        if (!amazonSource && product.priceCents != null && product.imageUrl != null) return product
         return runCatching {
             val connection = (URL(product.sourceUrl).openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
@@ -390,7 +399,7 @@ object ProductImportRepository {
                 val metadata = extractRetailerHtmlMetadata(readRetailerHtml(connection))
                 val mergedTitle = if (product.title == "Shared product") metadata.title ?: product.title else product.title
                 val mergedPrice = product.priceCents ?: metadata.priceCents
-                val mergedImage = product.imageUrl ?: metadata.imageUrl
+                val mergedImage = if (amazonSource) metadata.imageUrl ?: product.imageUrl else product.imageUrl ?: metadata.imageUrl
                 val mergedCurrency = product.currencyCode ?: metadata.currencyCode
                 val complete = mergedTitle != "Shared product" && mergedPrice != null && mergedImage != null
                 product.copy(
