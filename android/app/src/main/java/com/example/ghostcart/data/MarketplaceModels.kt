@@ -126,6 +126,31 @@ object Marketplace {
         MarketplaceProduct("headphonesNc", "Noise Cancelling Headphones", "Gadgets & Tech", 279, "headphones")
     )
 
+    // DEMO_DATA: simulated catalogue amounts only. These are not real products,
+    // retail offers, or purchasable Ghost Cart merchandise.
+    val merchCatalog = listOf(
+        MarketplaceProduct("ghostPhoneCase", "Ghost Cart Phone Case", "Electronics", 89, "gadget"),
+        MarketplaceProduct("ghostLaptopSleeve", "Ghost Cart Laptop Sleeve", "Electronics", 149, "gadget"),
+        MarketplaceProduct("ghostTravelTumbler", "Ghost Cart Travel Tumbler", "Home", 95, "coffee"),
+        MarketplaceProduct("ghostClassicCap", "Ghost Cart Classic Cap", "Apparel", 79, "shirt"),
+        MarketplaceProduct("ghostToteBag", "Ghost Cart Tote Bag", "Apparel", 69, "bag"),
+        MarketplaceProduct("ghostSteelBottle", "Ghost Cart Steel Bottle", "Home", 109, "gadget"),
+        MarketplaceProduct("ghostNotebook", "Ghost Cart Notebook", "Home", 49, "gadget"),
+        MarketplaceProduct("ghostPen", "Ghost Cart Pen", "Home", 29, "gadget"),
+        MarketplaceProduct("ghostCeramicMug", "Ghost Cart Ceramic Mug", "Home", 59, "coffee"),
+        MarketplaceProduct("ghostLunchBox", "Ghost Cart Lunch Box", "Home", 119, "bag"),
+        MarketplaceProduct("ghostRunningSneakers", "Ghost Cart Running Sneakers", "Apparel", 249, "sneaker"),
+        MarketplaceProduct("ghostLogoTshirt", "Ghost Cart Logo T-Shirt", "Apparel", 99, "shirt"),
+        MarketplaceProduct("ghostProteinShaker", "Ghost Cart Protein Shaker", "Home", 79, "gadget"),
+        MarketplaceProduct("ghostBackpack", "Ghost Cart Backpack", "Apparel", 189, "bag"),
+        MarketplaceProduct("ghostBucketHat", "Ghost Cart Bucket Hat", "Apparel", 89, "shirt"),
+        MarketplaceProduct("ghostMinimalWatch", "Ghost Cart Minimal Watch", "Electronics", 299, "watch"),
+        MarketplaceProduct("ghostGymDuffel", "Ghost Cart Gym Duffel", "Apparel", 229, "bag"),
+        MarketplaceProduct("ghostSupplementJar", "Ghost Cart Supplement Jar", "Home", 149, "jar"),
+        MarketplaceProduct("ghostLogoHoodie", "Ghost Cart Logo Hoodie", "Apparel", 189, "shirt"),
+        MarketplaceProduct("ghostBeanie", "Ghost Cart Beanie", "Apparel", 69, "shirt")
+    )
+
     val sponsoredBrands = listOf(
         SponsoredBrand("GhostBite", "Food cravings, safely simulated", "GB"),
         SponsoredBrand("LoopWear", "Try the style. Skip the regret.", "LW"),

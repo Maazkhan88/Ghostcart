@@ -129,7 +129,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     val allProducts: List<MarketplaceProduct> =
-        (Marketplace.featuredCatalog + Marketplace.discoveryCatalog + Marketplace.fakeFlashDeals + Marketplace.foodAndCoffeeCatalog)
+        (Marketplace.featuredCatalog + Marketplace.discoveryCatalog + Marketplace.fakeFlashDeals + Marketplace.foodAndCoffeeCatalog + Marketplace.merchCatalog)
             .distinctBy { it.id }
 
     fun findProduct(id: String): MarketplaceProduct? =

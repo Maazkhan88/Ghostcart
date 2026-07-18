@@ -442,6 +442,31 @@ fun ProductPhoto(
         normalizedName.contains("spanish latte") -> R.drawable.product_marketplace_spanish_latte
         normalizedName.contains("midnight burger") -> R.drawable.product_marketplace_midnight_burger
         normalizedName.contains("white sneaker") -> R.drawable.product_marketplace_white_sneakers
+        normalizedName.contains("gaming tablet") -> R.drawable.product_marketplace_gaming_tablet
+        normalizedName.contains("minimal smartwatch") -> R.drawable.product_marketplace_minimal_smartwatch
+        normalizedName.contains("wireless earbuds") -> R.drawable.product_marketplace_wireless_earbuds
+        normalizedName.contains("luxury perfume") -> R.drawable.product_marketplace_luxury_perfume
+        normalizedName.contains("smartwatch pro") -> R.drawable.product_marketplace_smartwatch_pro
+        normalizedName.contains("ghost cart phone case") -> R.drawable.product_merch_phone_case
+        normalizedName.contains("ghost cart laptop sleeve") -> R.drawable.product_merch_laptop_sleeve
+        normalizedName.contains("ghost cart travel tumbler") -> R.drawable.product_merch_travel_tumbler
+        normalizedName.contains("ghost cart classic cap") -> R.drawable.product_merch_classic_cap
+        normalizedName.contains("ghost cart tote bag") -> R.drawable.product_merch_tote_bag
+        normalizedName.contains("ghost cart steel bottle") -> R.drawable.product_merch_steel_bottle
+        normalizedName.contains("ghost cart notebook") -> R.drawable.product_merch_notebook
+        normalizedName.contains("ghost cart pen") -> R.drawable.product_merch_pen
+        normalizedName.contains("ghost cart ceramic mug") -> R.drawable.product_merch_ceramic_mug
+        normalizedName.contains("ghost cart lunch box") -> R.drawable.product_merch_lunch_box
+        normalizedName.contains("ghost cart running sneakers") -> R.drawable.product_merch_running_sneakers
+        normalizedName.contains("ghost cart logo t-shirt") -> R.drawable.product_merch_logo_tshirt
+        normalizedName.contains("ghost cart protein shaker") -> R.drawable.product_merch_protein_shaker
+        normalizedName.contains("ghost cart backpack") -> R.drawable.product_merch_backpack
+        normalizedName.contains("ghost cart bucket hat") -> R.drawable.product_merch_bucket_hat
+        normalizedName.contains("ghost cart minimal watch") -> R.drawable.product_merch_minimal_watch
+        normalizedName.contains("ghost cart gym duffel") -> R.drawable.product_merch_gym_duffel
+        normalizedName.contains("ghost cart supplement jar") -> R.drawable.product_merch_supplement_jar
+        normalizedName.contains("ghost cart logo hoodie") -> R.drawable.product_merch_logo_hoodie
+        normalizedName.contains("ghost cart beanie") -> R.drawable.product_merch_beanie
         normalizedName.contains("headphone") -> R.drawable.product_marketplace_headphones
         normalizedName.contains("tablet") -> R.drawable.product_marketplace_tablet
         normalizedName.contains("perfume") || normalizedName.contains("cologne") -> R.drawable.product_perfume

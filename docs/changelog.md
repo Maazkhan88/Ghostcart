@@ -4,6 +4,20 @@ All notable changes to the Ghost Cart project will be documented in this file.
 
 ---
 
+## [2.7.4] - 2026-07-18
+
+### Added
+- Added ten supplied marketplace product photos for food, fashion, electronics,
+  beauty, and gaming catalogue items.
+- Extracted twenty individual Ghost Cart merchandise product shots from the
+  supplied collage sheets and added them to the simulated catalogue.
+
+### Fixed
+- Kept every extracted product isolated on a clean square white background so
+  neighboring collage items do not appear inside product cards.
+
+---
+
 ## [2.7.3] - 2026-07-18
 
 ### Added
