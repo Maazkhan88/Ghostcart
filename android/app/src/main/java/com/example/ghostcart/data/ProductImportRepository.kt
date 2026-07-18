@@ -47,6 +47,22 @@ data class ImportedProduct(
     val note: String?
 )
 
+data class ListingProductStub(
+    val title: String,
+    val priceCents: Long?,
+    val currencyCode: String?,
+    val category: String,
+    val imageUrl: String?,
+    val sourceUrl: String,
+    val sourceDomain: String,
+    val retailer: String
+)
+
+sealed interface LinkImportResult {
+    data class Product(val product: ImportedProduct) : LinkImportResult
+    data class Listing(val sourceDomain: String, val retailer: String, val items: List<ListingProductStub>) : LinkImportResult
+}
+
 data class CommunityProduct(
     val id: String,
     val title: String,
@@ -63,6 +79,7 @@ sealed interface ProductImportState {
     data object Idle : ProductImportState
     data object Loading : ProductImportState
     data class Ready(val product: ImportedProduct) : ProductImportState
+    data class ListingDetected(val sourceDomain: String, val retailer: String, val items: List<ListingProductStub>) : ProductImportState
     data class Error(val message: String) : ProductImportState
 }
 
@@ -220,23 +237,50 @@ internal fun extractRetailerHtmlMetadata(html: String): RetailerHtmlMetadata {
     )
 }
 object ProductImportRepository {
-    suspend fun preview(sourceUrl: String, sharedTitle: String? = null, sharedImageUrl: String? = null): Result<ImportedProduct> = withContext(Dispatchers.IO) {
+    suspend fun previewLink(sourceUrl: String, sharedTitle: String? = null, sharedImageUrl: String? = null): Result<LinkImportResult> = withContext(Dispatchers.IO) {
         runCatching {
             val response = request("/api/link-preview", "POST", JSONObject().apply { put("url", sourceUrl) })
-            val product = response.getJSONObject("product")
-            val imported = ImportedProduct(
-                title = product.optString("title", "Shared product"),
-                priceCents = product.optLong("priceCents").takeIf { !product.isNull("priceCents") },
-                currencyCode = product.nullableString("currencyCode"),
-                category = product.optString("category", "Other"),
-                imageUrl = product.nullableString("imageUrl"),
-                sourceUrl = product.getString("canonicalUrl"),
-                sourceDomain = product.getString("sourceDomain"),
-                retailer = product.getString("retailer"),
-                status = product.getString("status"),
-                note = product.nullableString("note")
-            )
-            enrichFromRetailer(mergeSharedMetadata(imported, sharedTitle, sharedImageUrl))
+            val listing = response.optJSONObject("listing")
+            if (listing != null) {
+                val items = listing.optJSONArray("items")
+                val stubs = buildList {
+                    if (items != null) for (index in 0 until items.length()) {
+                        val item = items.getJSONObject(index)
+                        add(
+                            ListingProductStub(
+                                title = item.optString("title", "Shared product"),
+                                priceCents = item.optLong("priceCents").takeIf { !item.isNull("priceCents") },
+                                currencyCode = item.nullableString("currencyCode"),
+                                category = item.optString("category", "Other"),
+                                imageUrl = item.nullableString("imageUrl"),
+                                sourceUrl = item.getString("canonicalUrl"),
+                                sourceDomain = item.getString("sourceDomain"),
+                                retailer = item.getString("retailer")
+                            )
+                        )
+                    }
+                }
+                LinkImportResult.Listing(
+                    sourceDomain = listing.getString("sourceDomain"),
+                    retailer = listing.getString("retailer"),
+                    items = stubs
+                )
+            } else {
+                val product = response.getJSONObject("product")
+                val imported = ImportedProduct(
+                    title = product.optString("title", "Shared product"),
+                    priceCents = product.optLong("priceCents").takeIf { !product.isNull("priceCents") },
+                    currencyCode = product.nullableString("currencyCode"),
+                    category = product.optString("category", "Other"),
+                    imageUrl = product.nullableString("imageUrl"),
+                    sourceUrl = product.getString("canonicalUrl"),
+                    sourceDomain = product.getString("sourceDomain"),
+                    retailer = product.getString("retailer"),
+                    status = product.getString("status"),
+                    note = product.nullableString("note")
+                )
+                LinkImportResult.Product(enrichFromRetailer(mergeSharedMetadata(imported, sharedTitle, sharedImageUrl)))
+            }
         }
     }
 

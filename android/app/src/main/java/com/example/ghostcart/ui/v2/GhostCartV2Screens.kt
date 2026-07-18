@@ -43,6 +43,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -82,6 +84,7 @@ import com.example.ghostcart.data.AlmostBuyResolution
 import com.example.ghostcart.data.AlmostBuyStatus
 import com.example.ghostcart.data.ProgressSummary
 import com.example.ghostcart.data.CommunityProduct
+import com.example.ghostcart.data.ListingProductStub
 import com.example.ghostcart.data.MarketplaceProduct
 import com.example.ghostcart.data.ProductImportState
 import com.example.ghostcart.data.WalletConfig
@@ -93,6 +96,7 @@ import com.example.ghostcart.theme.Ink
 import com.example.ghostcart.theme.MutedText
 import com.example.ghostcart.theme.Paper
 import com.example.ghostcart.theme.SoftGray
+import com.example.ghostcart.ui.DirhamGlyph
 import com.example.ghostcart.ui.GhostMascotPose
 import com.example.ghostcart.ui.common.GhostHeroCard
 import com.example.ghostcart.ui.common.GhostTopBar
@@ -245,6 +249,7 @@ fun CaptureAlmostBuyScreen(
     onBack: () -> Unit,
     onAddToCart: (AlmostBuyDraft) -> Unit,
     onCoolIt: (AlmostBuyDraft) -> Unit,
+    onAddListingToCart: (List<ListingProductStub>) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var name by remember(seed?.name) { mutableStateOf(seed?.name.orEmpty()) }
@@ -263,6 +268,10 @@ fun CaptureAlmostBuyScreen(
     }
     var error by remember { mutableStateOf<String?>(null) }
     val requestNotifications = rememberNotificationPermissionRequest()
+    var selectedListingIndices by remember(importState) {
+        val initial = (importState as? ProductImportState.ListingDetected)?.items?.indices?.toSet() ?: emptySet()
+        mutableStateOf(initial)
+    }
 
     fun validatedDraft(): AlmostBuyDraft? {
         val numericAmount = amount.toDoubleOrNull()
@@ -352,12 +361,105 @@ fun CaptureAlmostBuyScreen(
                             )
                             importState.product.note?.let { Text(it, color = MutedText, fontSize = 10.sp) }
                         }
+                        is ProductImportState.ListingDetected -> Text(
+                            "This looks like a ${importState.retailer} listing page. Found ${importState.items.size} products - review and add the ones you want below.",
+                            color = GhostGreen,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                         is ProductImportState.Error -> Text(importState.message, color = Color(0xFFB42318), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         else -> Unit
                     }
                 }
             }
         }
+        val listingState = importState as? ProductImportState.ListingDetected
+        if (listingState != null) {
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        "${listingState.items.size} products found",
+                        color = Ink,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = {
+                        selectedListingIndices = if (selectedListingIndices.size == listingState.items.size) {
+                            emptySet()
+                        } else {
+                            listingState.items.indices.toSet()
+                        }
+                    }) {
+                        Text(if (selectedListingIndices.size == listingState.items.size) "Deselect all" else "Select all")
+                    }
+                }
+            }
+            items(listingState.items.size) { index ->
+                val stub = listingState.items[index]
+                val checked = index in selectedListingIndices
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(SoftGray)
+                        .clickable {
+                            selectedListingIndices = if (checked) selectedListingIndices - index else selectedListingIndices + index
+                        }
+                        .padding(10.dp)
+                ) {
+                    Checkbox(
+                        checked = checked,
+                        onCheckedChange = {
+                            selectedListingIndices = if (it) selectedListingIndices + index else selectedListingIndices - index
+                        },
+                        colors = CheckboxDefaults.colors(checkedColor = GhostGreen, checkmarkColor = Ink)
+                    )
+                    Box(
+                        Modifier.size(52.dp).clip(RoundedCornerShape(12.dp)).background(Paper),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (!stub.imageUrl.isNullOrBlank()) {
+                            AsyncImage(
+                                model = stub.imageUrl,
+                                contentDescription = stub.title,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize().padding(4.dp)
+                            )
+                        } else {
+                            Icon(Icons.Filled.ShoppingBag, contentDescription = null, tint = MutedText, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                    Column(modifier = Modifier.weight(1f).padding(start = 10.dp)) {
+                        Text(stub.title, color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 2)
+                        if (stub.priceCents != null) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 3.dp)) {
+                                DirhamGlyph(tint = MutedText, modifier = Modifier.size(11.dp))
+                                Text(
+                                    "%,.2f".format(java.util.Locale.US, stub.priceCents / 100.0),
+                                    color = MutedText,
+                                    fontSize = 11.sp,
+                                    modifier = Modifier.padding(start = 3.dp)
+                                )
+                            }
+                        } else {
+                            Text("Price not captured", color = MutedText, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp))
+                        }
+                    }
+                }
+            }
+            item {
+                PrimaryButton(
+                    text = if (selectedListingIndices.isEmpty()) "Select products to add" else "Add ${selectedListingIndices.size} to Ghost Cart",
+                    onClick = {
+                        onAddListingToCart(selectedListingIndices.sorted().map { listingState.items[it] })
+                    },
+                    leadingIcon = Icons.Filled.ShoppingBag,
+                    containerColor = Ink
+                )
+            }
+        } else {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(
@@ -476,6 +578,7 @@ fun CaptureAlmostBuyScreen(
                 },
                 leadingIcon = Icons.Filled.Timer
             )
+        }
         }
         item {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {

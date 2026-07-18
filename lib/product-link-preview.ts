@@ -132,6 +132,11 @@ function jsonLdProducts(html: string): Record<string, unknown>[] {
     if (type === "Product" || (Array.isArray(type) && type.includes("Product"))) results.push(record);
     if (Array.isArray(record["@graph"])) record["@graph"].forEach(visit);
     if (record.mainEntity) visit(record.mainEntity);
+    if (Array.isArray(record.itemListElement)) {
+      record.itemListElement.forEach((entry) => {
+        if (entry && typeof entry === "object") visit((entry as Record<string, unknown>).item ?? entry);
+      });
+    }
   };
   for (const script of scripts.slice(0, 16)) {
     const raw = script.replace(/^<script\b[^>]*>/i, "").replace(/<\/script>$/i, "").trim();
@@ -292,6 +297,172 @@ export function extractRetailerProduct(html: string, finalUrl: URL): RetailerPro
     ? currencyValue.toUpperCase().slice(0, 3)
     : priceCents !== null && (hostMatches(finalUrl.hostname, ["amazon.ae", "noon.com"])) ? "AED" : null;
   return buildPreview({ finalUrl, title: rawTitle, imageUrl, priceCents, currencyCode });
+}
+
+export type RetailerListingItem = {
+  title: string;
+  imageUrl: string | null;
+  priceCents: number | null;
+  currencyCode: string | null;
+  category: string;
+  canonicalUrl: string;
+  sourceDomain: string;
+  retailer: string;
+};
+
+function listingItemFromJsonLdProduct(product: Record<string, unknown>, finalUrl: URL): RetailerListingItem | null {
+  const rawTitle = firstString(product.name);
+  if (!rawTitle) return null;
+  const title = cleanTitle(rawTitle, finalUrl);
+  const offers = firstRecord(product.offers);
+  const rawImage = firstString(product.image);
+  let imageUrl: string | null = null;
+  if (rawImage) {
+    try {
+      const candidate = new URL(rawImage, finalUrl).toString();
+      imageUrl = isAllowedProductImageUrl(candidate) ? candidate : null;
+    } catch { imageUrl = null; }
+  }
+  const priceCents = parsePrice(offers.price ?? offers.lowPrice);
+  const currencyValue = firstString(offers.priceCurrency);
+  const currencyCode = currencyValue
+    ? currencyValue.toUpperCase().slice(0, 3)
+    : priceCents !== null && hostMatches(finalUrl.hostname, ["amazon.ae", "noon.com"]) ? "AED" : null;
+  let canonicalUrl = finalUrl.toString();
+  const productUrl = firstString(product.url);
+  if (productUrl) {
+    try { canonicalUrl = canonicalizeRetailerUrl(new URL(productUrl, finalUrl).toString()).toString(); } catch {
+      // Keep the listing page URL if the per-item link cannot be resolved.
+    }
+  }
+  return {
+    title,
+    imageUrl,
+    priceCents,
+    currencyCode,
+    category: inferCategory(title),
+    canonicalUrl,
+    sourceDomain: finalUrl.hostname,
+    retailer: sourceLabel(finalUrl),
+  };
+}
+
+function amazonSearchResultItems(html: string, finalUrl: URL): RetailerListingItem[] {
+  if (!hostMatches(finalUrl.hostname, ["amazon.ae", "amazon.com"])) return [];
+  const items: RetailerListingItem[] = [];
+  const seenAsin = new Set<string>();
+  const asinPattern = /data-asin=["']([A-Z0-9]{10})["']/gi;
+  let match: RegExpExecArray | null;
+  while ((match = asinPattern.exec(html)) && items.length < 40) {
+    const asin = match[1];
+    if (seenAsin.has(asin)) continue;
+    seenAsin.add(asin);
+    const windowHtml = html.slice(match.index, match.index + 4000);
+    const titleMatch =
+      windowHtml.match(/<h2\b[^>]*>[\s\S]*?<span[^>]*>([^<]+)<\/span>/i) ??
+      windowHtml.match(/\balt=["']([^"']{4,160})["']/i);
+    if (!titleMatch) continue;
+    const title = decodeHtml(titleMatch[1]);
+    const imageMatch = windowHtml.match(
+      /<img\b[^>]*\bsrc=["'](https:\/\/m\.media-amazon\.com\/images\/I\/[A-Za-z0-9%_.+|~,-]+?\.(?:jpg|jpeg|png))["']/i,
+    );
+    const imageCandidate = imageMatch ? imageMatch[1] : null;
+    const priceMatch = windowHtml.match(/class=["'][^"']*\ba-offscreen\b[^"']*["'][^>]*>\s*([^<]+)</i);
+    const priceCents = priceMatch ? parsePrice(decodeHtml(priceMatch[1])) : null;
+    items.push({
+      title: cleanTitle(title, finalUrl),
+      imageUrl: imageCandidate && isAllowedProductImageUrl(imageCandidate) ? imageCandidate : null,
+      priceCents,
+      currencyCode: priceCents !== null ? "AED" : null,
+      category: inferCategory(title),
+      canonicalUrl: canonicalizeRetailerUrl(new URL(`/dp/${asin}`, finalUrl).toString()).toString(),
+      sourceDomain: finalUrl.hostname,
+      retailer: sourceLabel(finalUrl),
+    });
+  }
+  return items;
+}
+
+export function extractRetailerListing(html: string, finalUrl: URL): RetailerListingItem[] {
+  const seen = new Set<string>();
+  const items: RetailerListingItem[] = [];
+  const add = (candidate: RetailerListingItem | null) => {
+    if (!candidate || items.length >= 40) return;
+    const key = candidate.canonicalUrl || candidate.title.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    items.push(candidate);
+  };
+  for (const product of jsonLdProducts(html)) add(listingItemFromJsonLdProduct(product, finalUrl));
+  if (items.length < 2) amazonSearchResultItems(html, finalUrl).forEach(add);
+  return items;
+}
+
+export type RetailerLinkResult =
+  | { kind: "listing"; sourceDomain: string; retailer: string; items: RetailerListingItem[] }
+  | { kind: "product"; product: RetailerProductPreview };
+
+export async function previewRetailerLink(value: string): Promise<RetailerLinkResult> {
+  let current = canonicalizeRetailerUrl(value);
+  const noonPreview = await previewNoonCatalog(current);
+  if (noonPreview?.title && noonPreview.imageUrl) return { kind: "product", product: noonPreview };
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    for (let redirect = 0; redirect <= MAX_REDIRECTS; redirect += 1) {
+      const response = await fetch(current, {
+        method: "GET",
+        redirect: "manual",
+        signal: controller.signal,
+        headers: {
+          Accept: "text/html,application/xhtml+xml;q=0.9",
+          "Accept-Language": "en-AE,en;q=0.9",
+          "User-Agent": "GhostCartLinkPreview/2.2 (+https://ghost-cart-preview.maaz-n-khan.chatgpt.site)",
+        },
+      });
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get("location");
+        if (!location || redirect === MAX_REDIRECTS) throw new Error("Too many redirects");
+        current = canonicalizeRetailerUrl(new URL(location, current).toString());
+        continue;
+      }
+      if (!response.ok) throw new Error(`Link preview returned ${response.status}`);
+      const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
+      if (!contentType.includes("text/html") && !contentType.includes("application/xhtml+xml")) {
+        throw new Error("The shared link is not an HTML page");
+      }
+      const html = await readLimitedText(response);
+      const listing = extractRetailerListing(html, current);
+      if (listing.length >= 2) {
+        return { kind: "listing", sourceDomain: current.hostname, retailer: sourceLabel(current), items: listing };
+      }
+      return { kind: "product", product: extractRetailerProduct(html, current) };
+    }
+    throw new Error("Unable to follow the shared link");
+  } catch (error) {
+    const canonical = canonicalizeRetailerUrl(current.toString());
+    return {
+      kind: "product",
+      product: {
+        status: "needs_input",
+        retailer: sourceLabel(canonical),
+        sourceDomain: canonical.hostname,
+        canonicalUrl: canonical.toString(),
+        title: fallbackTitle(canonical),
+        imageUrl: null,
+        priceCents: null,
+        currencyCode: null,
+        category: inferCategory(fallbackTitle(canonical)),
+        editable: true,
+        note: error instanceof Error && error.name === "AbortError"
+          ? "This website took too long to answer. Ghost Cart will also try reading it on your device."
+          : "This website did not expose a server preview. Ghost Cart will also try reading it on your device.",
+      },
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function noonSku(url: URL): string | null {

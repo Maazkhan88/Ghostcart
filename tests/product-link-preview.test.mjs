@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   canonicalizeRetailerUrl,
   extractRetailerProduct,
+  extractRetailerListing,
   isAllowedProductImageUrl,
 } from "../lib/product-link-preview.ts";
 
@@ -84,4 +85,48 @@ test("Amazon browser HTML falls back to title, UAE price, and high-resolution pr
   assert.equal(result.currencyCode, "AED");
   assert.equal(result.imageUrl, "https://m.media-amazon.com/images/I/71Xud7FK0UL._AC_SL1500_.jpg");
   assert.equal(result.status, "complete");
+});
+
+test("a listing page with ItemList JSON-LD yields every product with its own link", () => {
+  const html = `
+    <script type="application/ld+json">{
+      "@type": "ItemList",
+      "itemListElement": [
+        {"@type":"ListItem","position":1,"item":{"@type":"Product","name":"Wireless Mouse","url":"/dp/B0AAA11111","image":"https://cdn.example.com/mouse.jpg","offers":{"price":"49.00","priceCurrency":"AED"}}},
+        {"@type":"ListItem","position":2,"item":{"@type":"Product","name":"Mechanical Keyboard","url":"/dp/B0BBB22222","image":"https://cdn.example.com/keyboard.jpg","offers":{"price":"199.00","priceCurrency":"AED"}}}
+      ]
+    }</script>`;
+  const listing = extractRetailerListing(html, new URL("https://shop.example.com/category/accessories"));
+  assert.equal(listing.length, 2);
+  assert.equal(listing[0].title, "Wireless Mouse");
+  assert.equal(listing[0].priceCents, 4900);
+  assert.equal(listing[0].canonicalUrl, "https://shop.example.com/dp/B0AAA11111");
+  assert.equal(listing[1].title, "Mechanical Keyboard");
+  assert.equal(listing[1].priceCents, 19900);
+});
+
+test("a single-product page never yields a multi-item listing", () => {
+  const html = `<script type="application/ld+json">{"@type":"Product","name":"Solo Item","image":"https://cdn.example.com/solo.jpg","offers":{"price":"10.00","priceCurrency":"AED"}}</script>`;
+  const listing = extractRetailerListing(html, new URL("https://shop.example.com/products/solo-item"));
+  assert.equal(listing.length, 1);
+});
+
+test("Amazon search-result markup without JSON-LD is detected via data-asin fallback", () => {
+  const html = `
+    <div data-asin="B0AAA11111" data-component-type="s-search-result">
+      <h2><span>Ghost Bluetooth Speaker - Compact</span></h2>
+      <img src="https://m.media-amazon.com/images/I/71abc123._AC_SL1000_.jpg" alt="Ghost Bluetooth Speaker">
+      <span class="a-price"><span class="a-offscreen">AED 149.00</span></span>
+    </div>
+    <div data-asin="B0BBB22222" data-component-type="s-search-result">
+      <h2><span>Ghost Desk Lamp - Warm White</span></h2>
+      <img src="https://m.media-amazon.com/images/I/81def456._AC_SL1000_.jpg" alt="Ghost Desk Lamp">
+      <span class="a-price"><span class="a-offscreen">AED 79.00</span></span>
+    </div>`;
+  const listing = extractRetailerListing(html, new URL("https://www.amazon.ae/s?k=ghost"));
+  assert.equal(listing.length, 2);
+  assert.equal(listing[0].title, "Ghost Bluetooth Speaker - Compact");
+  assert.equal(listing[0].priceCents, 14900);
+  assert.equal(listing[0].canonicalUrl, "https://www.amazon.ae/dp/B0AAA11111");
+  assert.equal(listing[1].title, "Ghost Desk Lamp - Warm White");
 });

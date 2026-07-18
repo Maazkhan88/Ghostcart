@@ -235,6 +235,12 @@ fun MainNavigation(
                                 appViewModel.clearCaptureSeed()
                                 backStack.clear()
                                 backStack.add(Cooldowns)
+                            },
+                            onAddListingToCart = { items ->
+                                appViewModel.addListingItemsToCart(items)
+                                appViewModel.clearCaptureSeed()
+                                backStack.clear()
+                                backStack.add(GhostCartList)
                             }
                         )
                     }

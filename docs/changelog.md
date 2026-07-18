@@ -4,6 +4,31 @@ All notable changes to the Ghost Cart project will be documented in this file.
 
 ---
 
+## [2.4.0] - 2026-07-18
+
+### Added
+- **Bulk import from listing/category pages.** Pasting a link that turns out
+  to be a listing page (an Amazon/Noon category or search-results page, or
+  any page whose HTML exposes an `ItemList`/multi-`Product` JSON-LD block)
+  is now auto-detected server-side. Instead of a single-item capture form,
+  Ghost Cart shows a checklist of every product found (title, image, price),
+  all selected by default, with "Select all/Deselect all" and an
+  "Add N to Ghost Cart" action that adds every checked item in one tap.
+  Single-product links are unaffected and continue through the existing
+  one-item capture flow.
+  - Backend: `lib/product-link-preview.ts` gained `extractRetailerListing`
+    (JSON-LD `ItemList`/multi-`Product` extraction, plus a `data-asin` regex
+    fallback for Amazon search-result pages without structured data) and
+    `previewRetailerLink`, which decides listing vs. single product from the
+    fetched page content rather than the URL shape. `/api/link-preview` now
+    returns `{ listing: {...} }` when 2+ products are found, otherwise the
+    existing `{ product: {...} }` shape (unchanged for existing callers).
+  - Android: `ProductImportRepository.previewLink` replaces `preview`;
+    `ProductImportState` gained `ListingDetected`; `AppViewModel` gained
+    `addListingItemsToCart`.
+
+---
+
 ## [2.3.2] - 2026-07-18
 
 ### Added

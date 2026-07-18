@@ -1,5 +1,5 @@
 import { consumeRateLimit, requestActorHash } from "../../../lib/rate-limit";
-import { previewRetailerProduct } from "../../../lib/product-link-preview";
+import { previewRetailerLink } from "../../../lib/product-link-preview";
 
 function json(data: unknown, init?: ResponseInit) {
   const headers = new Headers(init?.headers);
@@ -29,8 +29,11 @@ export async function POST(request: Request) {
     if (typeof payload.url !== "string" || payload.url.length > 2048) {
       return json({ error: "Share a valid public HTTPS link" }, { status: 400 });
     }
-    const product = await previewRetailerProduct(payload.url);
-    return json({ product });
+    const result = await previewRetailerLink(payload.url);
+    if (result.kind === "listing") {
+      return json({ listing: { sourceDomain: result.sourceDomain, retailer: result.retailer, items: result.items } });
+    }
+    return json({ product: result.product });
   } catch (error) {
     return json(
       { error: error instanceof Error ? error.message : "Unable to preview this product" },

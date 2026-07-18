@@ -28,6 +28,8 @@ import com.example.ghostcart.data.GhostCardImageExporter
 import com.example.ghostcart.data.CommunityProduct
 import com.example.ghostcart.data.DeviceLinkPreview
 import com.example.ghostcart.data.mergeDeviceMetadata
+import com.example.ghostcart.data.LinkImportResult
+import com.example.ghostcart.data.ListingProductStub
 import com.example.ghostcart.data.ProductImportRepository
 import com.example.ghostcart.data.ProductImportState
 import kotlinx.coroutines.Job
@@ -160,11 +162,24 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun importSharedProduct(sourceUrl: String, sharedTitle: String? = null, sharedImageUrl: String? = null) {
         _uiState.update { it.copy(productImportState = ProductImportState.Loading) }
         viewModelScope.launch {
-            val result = ProductImportRepository.preview(sourceUrl, sharedTitle, sharedImageUrl)
-            val serverProduct = result.getOrElse { error ->
+            val result = ProductImportRepository.previewLink(sourceUrl, sharedTitle, sharedImageUrl)
+            val linkResult = result.getOrElse { error ->
                 _uiState.update { it.copy(productImportState = ProductImportState.Error(error.message ?: "Unable to read this product")) }
                 return@launch
             }
+            if (linkResult is LinkImportResult.Listing) {
+                if (linkResult.items.isEmpty()) {
+                    _uiState.update {
+                        it.copy(productImportState = ProductImportState.Error("Ghost Cart could not find any products on that page. Try a single product link instead."))
+                    }
+                } else {
+                    _uiState.update {
+                        it.copy(productImportState = ProductImportState.ListingDetected(linkResult.sourceDomain, linkResult.retailer, linkResult.items))
+                    }
+                }
+                return@launch
+            }
+            val serverProduct = (linkResult as LinkImportResult.Product).product
             val needsDevicePreview = serverProduct.imageUrl == null || serverProduct.priceCents == null || serverProduct.status != "complete"
             val deviceMetadata = if (needsDevicePreview) {
                 DeviceLinkPreview.read(getApplication(), serverProduct.sourceUrl)
@@ -188,6 +203,26 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
         }
+    }
+
+    fun addListingItemsToCart(items: List<ListingProductStub>) {
+        items.forEach { stub ->
+            addDraftToCart(
+                AlmostBuyDraft(
+                    name = stub.title,
+                    amountCents = if (stub.currencyCode == null || stub.currencyCode == "AED") stub.priceCents ?: 0 else 0,
+                    category = normalizeCategory(stub.category),
+                    trigger = "FOMO",
+                    coolingDurationMillis = recommendedCooling(stub.category),
+                    sourceUrl = stub.sourceUrl,
+                    imageUrl = stub.imageUrl,
+                    sourceKind = "bulk_share"
+                )
+            )
+        }
+        showToast(
+            if (items.size == 1) "Added 1 item to Ghost Cart" else "Added ${items.size} items to Ghost Cart"
+        )
     }
 
     fun clearProductImport() {
