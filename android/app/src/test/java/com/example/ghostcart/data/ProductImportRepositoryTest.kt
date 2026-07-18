@@ -75,6 +75,25 @@ class ProductImportRepositoryTest {
     }
 
     @Test
+    fun prefersAmazonLandingImageOverWarrantyArtwork() {
+        val html = """
+            <title>Schecter Reaper-6 - Satin Sky Burst: Buy Online at Best Price in UAE - Amazon.ae</title>
+            <div class="salama-care extended-warranty">
+                <img src="https://m.media-amazon.com/images/I/51WARRANTY._AC_SL1000_.jpg" alt="Salama Care extended warranty">
+            </div>
+            <div id="imageBlockATF">
+                <img id="landingImage" data-a-image-name="landingImage"
+                    src="https://m.media-amazon.com/images/I/71GUITARMAIN._AC_SL1500_.jpg">
+            </div>
+        """.trimIndent()
+        val metadata = extractRetailerHtmlMetadata(html)
+        assertEquals(
+            "https://m.media-amazon.com/images/I/71GUITARMAIN._AC_SL1500_.jpg",
+            metadata.imageUrl
+        )
+    }
+
+    @Test
     fun deviceMetadataReplacesSkuFallbackAndCompletesTheProduct() {
         val imported = ImportedProduct(
             title = "ZD6752E98E2B3393AF05BZ",

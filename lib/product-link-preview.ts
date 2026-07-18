@@ -114,8 +114,25 @@ function amazonPagePrice(html: string): string | null {
 }
 
 function amazonPageImage(html: string): string | null {
-  const matches = html.match(/https:\/\/m\.media-amazon\.com\/images\/I\/[A-Za-z0-9%_.+|~,-]+?\.(?:jpg|jpeg|png)/gi) ?? [];
-  return matches.find((value) => /_(?:AC_)?SL\d+/i.test(value)) ?? null;
+  const imagePattern = /https:\/\/m\.media-amazon\.com\/images\/I\/[A-Za-z0-9%_.+|~,-]+?\.(?:jpg|jpeg|png)/gi;
+  const candidates = [...html.matchAll(imagePattern)].map((match) => {
+    const index = match.index ?? 0;
+    const context = html.slice(Math.max(0, index - 700), Math.min(html.length, index + match[0].length + 700));
+    let score = 0;
+    if (/id=["']landingImage["']|data-a-image-name=["']landingImage["']/i.test(context)) score += 20_000;
+    if (/imageBlockATF|colorImages|imageGalleryData/i.test(context)) score += 8_000;
+    if (/"hiRes"\s*:|data-old-hires/i.test(context)) score += 3_000;
+    if (/"large"\s*:/i.test(context)) score += 1_000;
+    const resolution = match[0].match(/_(?:AC_)?SL(\d+)/i)?.[1];
+    if (resolution) score += Math.min(Number(resolution), 3_000);
+    if (/warranty|insurance|protection\s*plan|service\s*plan|extended\s*warranty|salama\s*care|attachdss/i.test(context)) {
+      score -= 30_000;
+    }
+    return { url: match[0], score, index };
+  });
+  return candidates
+    .filter((candidate) => candidate.score > -10_000)
+    .sort((left, right) => right.score - left.score || left.index - right.index)[0]?.url ?? null;
 }
 
 function jsonLdProducts(html: string): Record<string, unknown>[] {
@@ -275,9 +292,15 @@ export function extractRetailerProduct(html: string, finalUrl: URL): RetailerPro
     meta(html, ["og:title", "twitter:title", "title"]) ??
     htmlTitle(html) ??
     fallbackTitle(finalUrl);
-  const rawImage = firstString(product.image) ??
-    meta(html, ["og:image:secure_url", "og:image", "twitter:image", "twitter:image:src", "image"]) ??
-    amazonPageImage(html);
+  const structuredImage = firstString(product.image);
+  const documentImage = meta(html, ["og:image:secure_url", "og:image", "twitter:image", "twitter:image:src", "image"]);
+  const amazonImage = amazonPageImage(html);
+  // Amazon pages often embed JSON-LD for an add-on warranty before the actual
+  // product gallery. Prefer the explicitly marked landing/gallery image so a
+  // service-plan tile cannot replace the product photo.
+  const rawImage = hostMatches(finalUrl.hostname, ["amazon.ae", "amazon.com"])
+    ? amazonImage ?? documentImage ?? structuredImage
+    : structuredImage ?? documentImage ?? amazonImage;
   let imageUrl: string | null = null;
   if (rawImage) {
     try {

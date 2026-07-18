@@ -4,6 +4,19 @@ All notable changes to the Ghost Cart project will be documented in this file.
 
 ---
 
+## [2.4.1] - 2026-07-18
+
+### Fixed
+- **Amazon product images now ignore unrelated warranty artwork.** Amazon can
+  embed an add-on protection plan as the first structured product on a page,
+  causing Ghost Cart to capture its thumbnail instead of the item being
+  viewed. The web preview API and Android fallback now prioritize Amazon's
+  primary `landingImage`/image-gallery data and penalize warranty, insurance,
+  protection-plan, and service-plan images. Regression coverage includes the
+  reported Amazon.ae `B07MX15MLK` guitar page.
+
+---
+
 ## [2.4.0] - 2026-07-18
 
 ### Added

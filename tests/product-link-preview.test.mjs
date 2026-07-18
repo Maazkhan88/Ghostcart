@@ -87,6 +87,28 @@ test("Amazon browser HTML falls back to title, UAE price, and high-resolution pr
   assert.equal(result.status, "complete");
 });
 
+test("Amazon landing image beats an earlier warranty JSON-LD image", () => {
+  const html = `
+    <title>Schecter Reaper-6 - Satin Sky Burst: Buy Online at Best Price in UAE - Amazon.ae</title>
+    <script type="application/ld+json">{
+      "@type":"Product",
+      "name":"Schecter Reaper-6 - Satin Sky Burst",
+      "image":"https://m.media-amazon.com/images/I/51WARRANTY._AC_SL1000_.jpg",
+      "offers":{"price":"4399.00","priceCurrency":"AED"}
+    }</script>
+    <div class="salama-care extended-warranty">
+      <img src="https://m.media-amazon.com/images/I/51WARRANTY._AC_SL1000_.jpg" alt="Salama Care extended warranty">
+    </div>
+    <div id="imageBlockATF">
+      <img id="landingImage" data-a-image-name="landingImage"
+        src="https://m.media-amazon.com/images/I/71GUITARMAIN._AC_SL1500_.jpg">
+    </div>`;
+  const result = extractRetailerProduct(html, new URL("https://www.amazon.ae/dp/B07MX15MLK"));
+  assert.equal(result.title, "Schecter Reaper-6 - Satin Sky Burst");
+  assert.equal(result.imageUrl, "https://m.media-amazon.com/images/I/71GUITARMAIN._AC_SL1500_.jpg");
+  assert.equal(result.priceCents, 439900);
+});
+
 test("a listing page with ItemList JSON-LD yields every product with its own link", () => {
   const html = `
     <script type="application/ld+json">{

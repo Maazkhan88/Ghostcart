@@ -196,6 +196,36 @@ private fun allowedRetailerImage(value: String?): String? = value
     ?.trim()
     ?.takeIf(::isSafePublicHttpsUrl)
 
+private fun amazonPrimaryImage(html: String): String? {
+    val imageRegex = Regex(
+        """https://m\.media-amazon\.com/images/I/[A-Za-z0-9%_.+|~,-]+?\.(?:jpg|jpeg|png)""",
+        RegexOption.IGNORE_CASE
+    )
+    return imageRegex.findAll(html)
+        .map { match ->
+            val start = (match.range.first - 700).coerceAtLeast(0)
+            val end = (match.range.last + 701).coerceAtMost(html.length)
+            val context = html.substring(start, end)
+            var score = 0
+            if (Regex("""id=["']landingImage["']|data-a-image-name=["']landingImage["']""", RegexOption.IGNORE_CASE).containsMatchIn(context)) score += 20_000
+            if (Regex("""imageBlockATF|colorImages|imageGalleryData""", RegexOption.IGNORE_CASE).containsMatchIn(context)) score += 8_000
+            if (Regex("""["']hiRes["']\s*:|data-old-hires""", RegexOption.IGNORE_CASE).containsMatchIn(context)) score += 3_000
+            if (Regex("""["']large["']\s*:""", RegexOption.IGNORE_CASE).containsMatchIn(context)) score += 1_000
+            val resolution = Regex("""_(?:AC_)?SL(\d+)""", RegexOption.IGNORE_CASE)
+                .find(match.value)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            score += resolution?.coerceAtMost(3_000) ?: 0
+            if (Regex(
+                    """warranty|insurance|protection\s*plan|service\s*plan|extended\s*warranty|salama\s*care|attachdss""",
+                    RegexOption.IGNORE_CASE
+                ).containsMatchIn(context)
+            ) score -= 30_000
+            Triple(match.value, score, match.range.first)
+        }
+        .filter { (_, score, _) -> score > -10_000 }
+        .sortedWith(compareByDescending<Triple<String, Int, Int>> { it.second }.thenBy { it.third })
+        .firstOrNull()?.first
+}
+
 internal fun extractRetailerHtmlMetadata(html: String): RetailerHtmlMetadata {
     val rawTitle = retailerMeta(html, setOf("og:title", "twitter:title"))
         ?: Regex("""<title\b[^>]*>([\s\S]*?)</title>""", RegexOption.IGNORE_CASE)
@@ -213,13 +243,8 @@ internal fun extractRetailerHtmlMetadata(html: String): RetailerHtmlMetadata {
     val amount = rawPrice?.replace(",", "")?.replace(Regex("[^0-9.]"), "")?.toDoubleOrNull()
     val priceCents = amount?.takeIf { it > 0.0 && it <= 100_000_000.0 }?.let { kotlin.math.round(it * 100).toLong() }
     val metaImage = retailerMeta(html, setOf("og:image", "twitter:image"))
-    val amazonImage = Regex(
-        """https://m\.media-amazon\.com/images/I/[A-Za-z0-9%_.+|~,-]+?\.(?:jpg|jpeg|png)""",
-        RegexOption.IGNORE_CASE
-    ).findAll(html).map { it.value }.firstOrNull {
-        Regex("""_(?:AC_)?SL\d+""", RegexOption.IGNORE_CASE).containsMatchIn(it)
-    }
-    val imageUrl = allowedRetailerImage(metaImage) ?: allowedRetailerImage(amazonImage)
+    val amazonImage = amazonPrimaryImage(html)
+    val imageUrl = allowedRetailerImage(amazonImage) ?: allowedRetailerImage(metaImage)
     val currency = retailerMeta(
         html,
         setOf("product:price:currency", "og:price:currency", "pricecurrency")
