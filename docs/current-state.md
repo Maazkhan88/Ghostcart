@@ -9,13 +9,21 @@ This section is the current operational source of truth. Historical session logs
 ### Repository and release state
 
 - Working branch: `agent/ghost-cart-products-sharing`
-- Latest product implementation: current head of `agent/ghost-cart-products-sharing` (v2.2.0 universal link import).
+- Latest product implementation: current head of `agent/ghost-cart-products-sharing` (v2.7.8 — Google Sign-In Web Client ID wired into the build; this line was stale at v2.2.0 before this update even though `releases/` already held through v2.7.7 — keep this pointer and the APK filename in sync when adding a new release).
 - Draft PR: https://github.com/Maazkhan88/Ghostcart/pull/3
 - Base branch: `main`; current `main` already contains the merged v2 rebuild from PR #2 (`f4bb3ab`).
 - Canonical hosted site/API: https://ghost-cart-preview.maaz-n-khan.chatgpt.site
-- Android release: `releases/GhostCart-v2.2.0-debug.apk`
-- Direct APK: https://raw.githubusercontent.com/Maazkhan88/Ghostcart/agent/ghost-cart-products-sharing/releases/GhostCart-v2.2.0-debug.apk
-- APK SHA-256: `245736BD7B7360B638B0D3949EF17530282DC46EAF1D241EA064FCF70853FE93`
+- Android release: `releases/GhostCart-v2.7.8-debug.apk`
+- Direct APK: https://raw.githubusercontent.com/Maazkhan88/Ghostcart/agent/ghost-cart-products-sharing/releases/GhostCart-v2.7.8-debug.apk
+- APK SHA-256: `C9BEACD5EFC09BDDF13F5C86B1FAB5D1877DD109DE0FFDEA1ED3F2C24F72C183`
+- **v2.7.8 change:** bumped from v2.7.7 (`versionCode` 36→37) solely to bake a real
+  `GHOST_CART_GOOGLE_WEB_CLIENT_ID` into `BuildConfig.GOOGLE_WEB_CLIENT_ID` —
+  confirmed present in v2.7.8's dex bytecode and absent from v2.7.7's. The
+  matching Android OAuth client (package `com.ghostcart.app`, debug keystore
+  SHA-1 `91:9D:3B:72:74:76:7F:9F:65:AC:1F:1B:ED:FB:16:A7:AF:73:81:87`) was
+  registered in Google Cloud Console this session. Release signing will need
+  its own SHA-1 registered separately before Google Sign-In works on a
+  release build.
 
 ### Current product truth
 
