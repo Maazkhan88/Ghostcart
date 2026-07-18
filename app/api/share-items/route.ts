@@ -1,7 +1,7 @@
-import { getD1 } from "../../../db";
 import { readNonNegativeInteger, readSafeUrl, sanitizeShortText } from "../../../lib/backend-contract";
 import { isAllowedProductImageUrl } from "../../../lib/product-link-preview";
 import { consumeRateLimit, requestActorHash } from "../../../lib/rate-limit";
+import { ensureSharedGhostItemsTable } from "../../../lib/shared-ghost-items";
 
 const SHARE_ID_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
@@ -68,7 +68,8 @@ export async function POST(request: Request) {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 180 * 24 * 60 * 60 * 1000).toISOString();
     const imageUrl = image.value ?? fallbackProductImage(title.value!, category.value!, new URL(request.url).origin);
-    await getD1()
+    const db = await ensureSharedGhostItemsTable();
+    await db
       .prepare(
         `INSERT INTO shared_ghost_items
           (id, title, category, price_cents, image_url, source_url, created_at, expires_at)

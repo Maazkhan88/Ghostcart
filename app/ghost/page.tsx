@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getD1 } from "../../db";
+import { ensureSharedGhostItemsTable } from "../../lib/shared-ghost-items";
 import { Brand } from "../components/Brand";
 import { DeviceHandoffActions } from "./DeviceHandoffActions";
 
@@ -51,7 +51,8 @@ async function resolveItem(params: Record<string, string | string[] | undefined>
   const shareId = first(params.s).trim();
   if (/^[23456789A-HJ-NP-Za-km-z]{8}$/.test(shareId)) {
     try {
-      const row = await getD1()
+      const db = await ensureSharedGhostItemsTable();
+      const row = await db
         .prepare(
           `SELECT title, category, price_cents AS priceCents,
                   image_url AS imageUrl, source_url AS sourceUrl

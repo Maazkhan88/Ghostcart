@@ -1,4 +1,4 @@
-import { getD1 } from "../../../../db";
+import { ensureSharedGhostItemsTable } from "../../../../lib/shared-ghost-items";
 
 type SharedItemRow = {
   id: string;
@@ -23,7 +23,8 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     return json({ error: "Shared item not found" }, { status: 404 });
   }
   try {
-    const item = await getD1()
+    const db = await ensureSharedGhostItemsTable();
+    const item = await db
       .prepare(
         `SELECT id, title, category, price_cents AS priceCents,
                 image_url AS imageUrl, source_url AS sourceUrl
