@@ -439,8 +439,12 @@ fun ProductPhoto(
         .trim()
 
     val directAsset = when {
+        normalizedName.contains("spanish latte") -> R.drawable.product_marketplace_spanish_latte
+        normalizedName.contains("midnight burger") -> R.drawable.product_marketplace_midnight_burger
+        normalizedName.contains("white sneaker") -> R.drawable.product_marketplace_white_sneakers
+        normalizedName.contains("headphone") -> R.drawable.product_marketplace_headphones
+        normalizedName.contains("tablet") -> R.drawable.product_marketplace_tablet
         normalizedName.contains("perfume") || normalizedName.contains("cologne") -> R.drawable.product_perfume
-        normalizedName.contains("white sneaker") -> R.drawable.product_sneaker
         else -> null
     }
 
