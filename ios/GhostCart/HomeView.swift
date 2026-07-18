@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject private var store: GhostCartStore
+    @StateObject private var communityFeed = CommunityFeedModel()
     let onGhostSomething: () -> Void
     let onViewCooldowns: () -> Void
 
@@ -114,23 +115,7 @@ struct HomeView: View {
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 10) {
-                    SectionHeading(title: "Most Ghosted Today")
-                    GhostCard {
-                        HStack(alignment: .top, spacing: 14) {
-                            Image(systemName: "person.3.sequence.fill")
-                                .font(.title2)
-                                .foregroundStyle(Color.ghostGreenColor)
-                            VStack(alignment: .leading, spacing: 5) {
-                                Text("Community trends are privacy-protected")
-                                    .font(.subheadline.weight(.bold))
-                                Text("Live items appear only after enough validated Ghost actions meet the anonymity threshold.")
-                                    .font(.caption)
-                                    .foregroundStyle(Color.secondary)
-                            }
-                        }
-                    }
-                }
+                CommunityShelf(feed: communityFeed, onCoolIt: coolCommunityItem)
 
                 SimulationDisclosure()
             }
@@ -139,6 +124,129 @@ struct HomeView: View {
         }
         .background(Color(.systemBackground))
         .navigationBarHidden(true)
+        .onAppear { communityFeed.loadIfNeeded() }
+        .refreshable { await communityFeed.reload() }
+    }
+
+    private func coolCommunityItem(_ product: CommunityProduct) {
+        store.stageCapture(
+            CaptureSeed(
+                name: product.title,
+                amount: product.amount > 0 ? product.amount : nil,
+                category: AlmostBuyCategory(serverName: product.category),
+                sourceURL: product.sourceURL,
+                imageURL: product.imageURL,
+                sourceDomain: product.sourceDomain,
+                retailer: nil,
+                note: nil,
+                offerCommunityShare: false
+            )
+        )
+        onGhostSomething()
+    }
+}
+
+private struct CommunityShelf: View {
+    @ObservedObject var feed: CommunityFeedModel
+    let onCoolIt: (CommunityProduct) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionHeading(title: "User Ghosted")
+            Text("Public retailer links others chose to cool. Everyone here is anonymous, and nothing shows who shared it.")
+                .font(.caption)
+                .foregroundStyle(Color.secondary)
+
+            switch feed.state {
+            case .idle, .loading:
+                GhostCard {
+                    HStack(spacing: 12) {
+                        SwiftUI.ProgressView().tint(Color.ghostGreenColor)
+                        Text("Loading community items...")
+                            .font(.caption)
+                            .foregroundStyle(Color.secondary)
+                    }
+                }
+            case .failed:
+                GhostCard {
+                    HStack(alignment: .top, spacing: 14) {
+                        Image(systemName: "person.3.sequence.fill")
+                            .font(.title2)
+                            .foregroundStyle(Color.ghostGreenColor)
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("Community items are resting")
+                                .font(.subheadline.weight(.bold))
+                            Text("They appear once enough people validate Ghost actions. Try again in a moment.")
+                                .font(.caption)
+                                .foregroundStyle(Color.secondary)
+                        }
+                    }
+                }
+            case .loaded(let products) where products.isEmpty:
+                GhostCard {
+                    HStack(alignment: .top, spacing: 14) {
+                        Image(systemName: "person.3.sequence.fill")
+                            .font(.title2)
+                            .foregroundStyle(Color.ghostGreenColor)
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("No community items yet")
+                                .font(.subheadline.weight(.bold))
+                            Text("Be the first to cool one. Share anonymously from Ghost + to seed the shelf.")
+                                .font(.caption)
+                                .foregroundStyle(Color.secondary)
+                        }
+                    }
+                }
+            case .loaded(let products):
+                ForEach(products) { product in
+                    CommunityShelfRow(product: product, onCoolIt: onCoolIt)
+                }
+            }
+        }
+    }
+}
+
+private struct CommunityShelfRow: View {
+    let product: CommunityProduct
+    let onCoolIt: (CommunityProduct) -> Void
+
+    var body: some View {
+        HStack(spacing: 14) {
+            // Community images come from arbitrary remote retailer hosts. Until
+            // a Ghost Cart-controlled image proxy exists, we intentionally show
+            // a category glyph instead of loading untrusted remote artwork.
+            Image(systemName: AlmostBuyCategory(serverName: product.category).systemImage)
+                .font(.headline)
+                .foregroundStyle(Color.ghostGreenColor)
+                .frame(width: 44, height: 44)
+                .background(Color.ghostGreenColor.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+            VStack(alignment: .leading, spacing: 3) {
+                Text(product.title)
+                    .font(.subheadline.weight(.bold))
+                    .lineLimit(2)
+                HStack(spacing: 8) {
+                    if product.priceCents > 0 {
+                        Text(AmountFormatter.string(product.amount) + " UAE dirham")
+                    }
+                    Text(product.activityTag)
+                }
+                .font(.caption2)
+                .foregroundStyle(Color.secondary)
+            }
+            Spacer(minLength: 8)
+            Button("Cool it") { onCoolIt(product) }
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Color.inkColor)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 9)
+                .background(Color.ghostGreenColor)
+                .clipShape(Capsule())
+        }
+        .padding(14)
+        .background(Color.primary.opacity(0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .accessibilityElement(children: .combine)
     }
 }
 

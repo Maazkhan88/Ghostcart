@@ -13,12 +13,27 @@ struct CaptureView: View {
     @State private var cooldownMinutes = AlmostBuyCategory.other.recommendedCooldownMinutes
     @State private var showCapturedConfirmation = false
 
+    // Link-import state
+    @State private var importState: ProductImportState = .idle
+    @State private var importedImageURL: String?
+    @State private var importedSourceDomain: String?
+    @State private var importedRetailer: String?
+    @State private var shareWithCommunity = false
+
     private var parsedAmount: Double? {
         Double(amountText.replacingOccurrences(of: ",", with: "."))
     }
 
     private var canSubmit: Bool {
         !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && (parsedAmount ?? -1) >= 0
+    }
+
+    private var trimmedSourceURL: String {
+        sourceURL.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var hasShareableLink: Bool {
+        source == .url && isSafePublicHttpsURL(trimmedSourceURL)
     }
 
     var body: some View {
@@ -54,6 +69,10 @@ struct CaptureView: View {
                     }
                 }
 
+                if source == .url {
+                    linkImportSection
+                }
+
                 VStack(alignment: .leading, spacing: 16) {
                     CaptureFieldLabel(title: "What are you tempted by?", required: true)
                     TextField("Example: noise-cancelling headphones", text: $name)
@@ -67,15 +86,6 @@ struct CaptureView: View {
                     Text("Enter the price in UAE dirhams. It will count as Almost Spent, not Money Kept.")
                         .font(.caption)
                         .foregroundStyle(Color.secondary)
-
-                    if source == .url {
-                        CaptureFieldLabel(title: "Product link", required: false)
-                        TextField("https://", text: $sourceURL)
-                            .keyboardType(.URL)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .ghostTextField()
-                    }
                 }
 
                 VStack(alignment: .leading, spacing: 12) {
@@ -133,6 +143,10 @@ struct CaptureView: View {
                     }
                 }
 
+                if hasShareableLink {
+                    communityShareToggle
+                }
+
                 VStack(spacing: 11) {
                     Button("Capture and start cooling") { submit(startCooling: true) }
                         .buttonStyle(GhostPrimaryButtonStyle())
@@ -152,12 +166,243 @@ struct CaptureView: View {
         }
         .background(Color(.systemBackground))
         .navigationBarHidden(true)
+        .onAppear { consumeSeedIfNeeded() }
+        .onChange(of: store.captureSeed) { _ in consumeSeedIfNeeded() }
         .alert("Almost-buy captured", isPresented: $showCapturedConfirmation) {
             Button("View cooldowns", action: onComplete)
             Button("Capture another", role: .cancel) { resetForm() }
         } message: {
             Text("You can resolve it later as skipped, bought intentionally, or needing more time.")
         }
+    }
+
+    // MARK: - Link import UI
+
+    private var linkImportSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            CaptureFieldLabel(title: "Product link", required: false)
+            TextField("https://", text: $sourceURL)
+                .keyboardType(.URL)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .ghostTextField()
+                .onChange(of: sourceURL) { _ in
+                    if case .error = importState { importState = .idle }
+                }
+
+            Button {
+                previewLink()
+            } label: {
+                if case .loading = importState {
+                    HStack(spacing: 8) {
+                        SwiftUI.ProgressView().tint(Color.primary)
+                        Text("Reading link...")
+                    }
+                } else {
+                    Label("Fill details from link", systemImage: "sparkles")
+                }
+            }
+            .buttonStyle(GhostSecondaryButtonStyle())
+            .disabled(!isSafePublicHttpsURL(trimmedSourceURL) || isLoadingImport)
+
+            Text("Ghost Cart reads only public product pages. It never signs in, buys, or opens a real cart.")
+                .font(.caption)
+                .foregroundStyle(Color.secondary)
+
+            importResultView
+        }
+    }
+
+    private var isLoadingImport: Bool {
+        if case .loading = importState { return true }
+        return false
+    }
+
+    @ViewBuilder
+    private var importResultView: some View {
+        switch importState {
+        case .idle, .loading:
+            EmptyView()
+        case .ready(let product):
+            GhostCard {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: AlmostBuyCategory(serverName: product.category).systemImage)
+                        .font(.title3)
+                        .foregroundStyle(Color.ghostGreenColor)
+                        .frame(width: 34)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(readabilityTitle(for: product))
+                            .font(.subheadline.weight(.bold))
+                        Text(captureStatusMessage(product.status))
+                            .font(.caption)
+                            .foregroundStyle(Color.secondary)
+                        if let retailer = importedRetailer, !retailer.isEmpty {
+                            Text(retailer)
+                                .font(.caption2)
+                                .foregroundStyle(Color.secondary)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+        case .listingDetected(_, let retailer, let items):
+            VStack(alignment: .leading, spacing: 8) {
+                Text("This looks like a \(retailer.isEmpty ? "collection" : retailer) page. Pick the item you almost bought:")
+                    .font(.caption)
+                    .foregroundStyle(Color.secondary)
+                ForEach(items.prefix(6)) { item in
+                    Button {
+                        applyListingStub(item)
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: AlmostBuyCategory(serverName: item.category).systemImage)
+                                .foregroundStyle(Color.ghostGreenColor)
+                                .frame(width: 30)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.title).font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(Color.primary)
+                                if let cents = item.priceCents {
+                                    Text(AmountFormatter.string(Double(cents) / 100) + " UAE dirham")
+                                        .font(.caption2)
+                                        .foregroundStyle(Color.secondary)
+                                }
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(Color.secondary)
+                        }
+                        .padding(12)
+                        .background(Color.primary.opacity(0.04))
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        case .error(let message):
+            Text(message)
+                .font(.caption)
+                .foregroundStyle(Color.red)
+        }
+    }
+
+    private var communityShareToggle: some View {
+        GhostCard {
+            Toggle(isOn: $shareWithCommunity) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Share anonymously to the community shelf")
+                        .font(.subheadline.weight(.bold))
+                    Text("Adds a privacy-safe \"User Ghosted\" card. No account, name, or identity is attached, and it never changes your Money Kept.")
+                        .font(.caption)
+                        .foregroundStyle(Color.secondary)
+                }
+            }
+            .tint(Color.ghostGreenColor)
+        }
+    }
+
+    private func captureStatusMessage(_ status: String) -> String {
+        switch status {
+        case "complete": return "Title, price, and category filled from the link. Edit anything before ghosting."
+        case "partial": return "Some details were read. Check the title and price before ghosting."
+        default: return "Ghost Cart could not read everything. Enter the missing details manually."
+        }
+    }
+
+    private func readabilityTitle(for product: ImportedProduct) -> String {
+        titleLooksLikeFallback(product.title) ? (name.isEmpty ? product.title : name) : product.title
+    }
+
+    // MARK: - Actions
+
+    private func previewLink() {
+        let trimmed = trimmedSourceURL
+        guard isSafePublicHttpsURL(trimmed) else {
+            importState = .error("Enter a public https product link.")
+            return
+        }
+        importState = .loading
+        Task {
+            let result = await ProductImportService.previewLink(sourceURL: trimmed)
+            await MainActor.run { handlePreview(result) }
+        }
+    }
+
+    private func handlePreview(_ result: Result<LinkImportResult, ApiError>) {
+        switch result {
+        case .success(.product(let product)):
+            applyImportedProduct(product)
+            importState = .ready(product)
+        case .success(.listing(let domain, let retailer, let items)):
+            importState = .listingDetected(sourceDomain: domain, retailer: retailer, items: items)
+        case .failure(let error):
+            importState = .error(error.message)
+        }
+    }
+
+    private func applyImportedProduct(_ product: ImportedProduct) {
+        if !titleLooksLikeFallback(product.title) {
+            name = product.title
+        }
+        if let amount = product.amount {
+            amountText = amountString(amount)
+        }
+        category = AlmostBuyCategory(serverName: product.category)
+        cooldownMinutes = category.recommendedCooldownMinutes
+        importedImageURL = product.imageURL
+        importedSourceDomain = product.sourceDomain
+        importedRetailer = product.retailer
+        if !product.sourceURL.isEmpty {
+            sourceURL = product.sourceURL
+        }
+    }
+
+    private func applyListingStub(_ stub: ListingProductStub) {
+        name = stub.title
+        if let cents = stub.priceCents {
+            amountText = amountString(Double(cents) / 100)
+        }
+        category = AlmostBuyCategory(serverName: stub.category)
+        cooldownMinutes = category.recommendedCooldownMinutes
+        importedImageURL = stub.imageURL
+        importedSourceDomain = stub.sourceDomain
+        importedRetailer = stub.retailer
+        sourceURL = stub.sourceURL
+        importState = .ready(ImportedProduct(
+            title: stub.title,
+            priceCents: stub.priceCents,
+            currencyCode: nil,
+            category: stub.category,
+            imageURL: stub.imageURL,
+            sourceURL: stub.sourceURL,
+            sourceDomain: stub.sourceDomain,
+            retailer: stub.retailer,
+            status: stub.priceCents != nil ? "partial" : "needs_input",
+            note: nil
+        ))
+    }
+
+    private func consumeSeedIfNeeded() {
+        guard let seed = store.consumeCaptureSeed() else { return }
+        name = seed.name
+        if let amount = seed.amount {
+            amountText = amountString(amount)
+        }
+        category = seed.category
+        cooldownMinutes = seed.category.recommendedCooldownMinutes
+        importedImageURL = seed.imageURL
+        importedSourceDomain = seed.sourceDomain
+        importedRetailer = seed.retailer
+        shareWithCommunity = false
+        if let url = seed.sourceURL, !url.isEmpty {
+            source = .url
+            sourceURL = url
+        }
+        importState = .idle
+    }
+
+    private func amountString(_ amount: Double) -> String {
+        amount == amount.rounded() ? String(Int(amount)) : String(amount)
     }
 
     private var cooldownOptions: [Int] {
@@ -172,16 +417,32 @@ struct CaptureView: View {
 
     private func submit(startCooling: Bool) {
         guard let amount = parsedAmount, canSubmit else { return }
+        let capturedURL = source == .url && !trimmedSourceURL.isEmpty ? trimmedSourceURL : nil
         let id = store.capture(
             name: name,
             amount: amount,
             category: category,
             trigger: trigger,
             source: source,
-            sourceURL: source == .url && !sourceURL.isEmpty ? sourceURL : nil
+            sourceURL: capturedURL
         )
         if startCooling {
             store.startCooling(id: id, minutes: cooldownMinutes)
+        }
+        if shareWithCommunity, let capturedURL {
+            let publishName = name
+            let publishCategory = category
+            let publishImage = importedImageURL
+            Task {
+                // Consent-gated, best-effort, and independent of Money Kept.
+                await ProductImportService.publish(
+                    title: publishName,
+                    category: publishCategory,
+                    amount: amount,
+                    sourceURL: capturedURL,
+                    imageURL: publishImage
+                )
+            }
         }
         showCapturedConfirmation = true
     }
@@ -194,6 +455,11 @@ struct CaptureView: View {
         category = .other
         trigger = .boredom
         cooldownMinutes = AlmostBuyCategory.other.recommendedCooldownMinutes
+        importState = .idle
+        importedImageURL = nil
+        importedSourceDomain = nil
+        importedRetailer = nil
+        shareWithCommunity = false
     }
 }
 

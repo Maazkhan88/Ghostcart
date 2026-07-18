@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-07-18 (Claude — fixed an Amazon-share title bug and an invisible-logo-on-dark-surfaces bug; see v2.7.10 entry below. Also consolidated the split backend onto a single dedicated Cloudflare Worker, `ghostcart-app.maaz-n-khan.workers.dev`; see "Backend consolidated onto a dedicated Cloudflare Worker" below).
+Last updated: 2026-07-18 (Claude — brought iOS to product-sharing/community/Share-Extension parity with Android; see "iOS product-sharing, community, and Share Extension parity pass" below. Earlier the same day: fixed an Amazon-share title bug and an invisible-logo-on-dark-surfaces bug; see v2.7.10 entry below. Also consolidated the split backend onto a single dedicated Cloudflare Worker, `ghostcart-app.maaz-n-khan.workers.dev`; see "Backend consolidated onto a dedicated Cloudflare Worker" below).
 
 ## Canonical handoff for Antigravity and Claude Code (2026-07-18)
 
@@ -149,6 +149,54 @@ this session. If you need to deploy backend changes, use
 `wrangler.ghostcart-app.jsonc` as above (requires `wrangler login` on
 whatever machine runs it). This was also left as a comment on PR #3 so it's
 visible from GitHub directly, not just here.
+
+### iOS product-sharing, community, and Share Extension parity pass (Claude, 2026-07-18)
+
+Brought the iOS app up to feature parity with Android's product-sharing work
+(the reason `agent/ghost-cart-products-sharing` exists). Before this, the iOS
+target was a purely local scaffold with zero networking; the Product-link
+capture source only stored the raw URL string.
+
+- **New app-target Swift files** (all in `ios/GhostCart/`, all referenced in
+  the hand-edited `project.pbxproj`, all passing `ios/scripts/static-check.ps1`):
+  - `ApiClient.swift` - URLSession JSON client, public-HTTPS URL safety, and
+    shared-text URL extraction, mirroring Android `ProductImportRepository`
+    error mapping (non-JSON body -> manual-entry guidance). Targets the single
+    consolidated Worker `ghostcart-app.maaz-n-khan.workers.dev`.
+  - `ProductImport.swift` - `ImportedProduct`/`ListingProductStub`/
+    `CommunityProduct` models, `ProductImportService` (`previewLink`,
+    `communityFeed`, `publish`), `CommunityFeedModel`, `CaptureSeed`, server
+    category mapping, and the `titleLooksLikeFallback`/`mergeSharedMetadata`
+    port including the "Check this out at ..." native-share-caption fix.
+  - `SharedImport.swift` - App Group (`group.com.ghostcart.app`) handoff for
+    the Share Extension; shared with both targets.
+- **UI wiring:** `CaptureView` gains link-preview import (with listing picker),
+  a consent-gated off-by-default anonymous community publish toggle, and
+  capture-seed consumption. `HomeView`'s static "Most Ghosted Today" card was
+  replaced with a live "User Ghosted" community shelf whose "Cool it" seeds a
+  pre-filled capture. `GhostCartStore` gained a transient (non-persisted)
+  `captureSeed`. `ContentView` consumes App Group shared imports on scenePhase
+  active.
+- **Share Extension (`ios/GhostCartShare/`):** new `com.apple.share-services`
+  app-extension target (`ShareViewController` on `SLComposeServiceViewController`,
+  `Info.plist` with web-URL/text activation, own entitlements). Writes a
+  `PendingSharedImport` to the App Group; the app turns it into a capture on
+  next activation. No custom URL scheme and no private auto-foreground hack, so
+  it is App Review-safe.
+- **Two deliberate parity gaps, documented in `ios/README.md`:** (1) no
+  on-device retailer HTML fallback yet (relies on the server preview +
+  share-sheet metadata; Android's on-device Amazon/Noon re-fetch is a
+  follow-up); (2) community cards render category glyphs rather than remote
+  retailer images, because the iOS static check forbids `AsyncImage(url:)`
+  until a Ghost Cart-controlled image proxy exists. `imageUrl` still flows
+  through the models and publish payload.
+- **Verification limits (Windows):** `static-check.ps1` passes for 17 Swift
+  files and I balanced/cross-checked the hand-edited `project.pbxproj`, but
+  Windows cannot compile SwiftUI, so no real Xcode build, simulator run, or
+  code-sign happened. The pbxproj app-extension target addition is the
+  highest-risk piece and must be opened in Xcode first; if rejected it can be
+  recreated via File -> New -> Target -> Share Extension and repopulated from the
+  checked-in sources.
 
 ### Current product truth
 

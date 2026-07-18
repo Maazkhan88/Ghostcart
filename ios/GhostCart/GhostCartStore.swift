@@ -3,6 +3,9 @@ import SwiftUI
 
 final class GhostCartStore: ObservableObject {
     @Published private(set) var items: [AlmostBuy] = []
+    // Transient (not persisted): a community tap or a shared link stages a
+    // pre-filled capture that the Ghost + screen picks up on appear.
+    @Published var captureSeed: CaptureSeed?
     @Published var membership: MembershipProfile {
         didSet { save() }
     }
@@ -74,6 +77,15 @@ final class GhostCartStore: ObservableObject {
         items.insert(item, at: 0)
         save()
         return item.id
+    }
+
+    func stageCapture(_ seed: CaptureSeed) {
+        captureSeed = seed
+    }
+
+    func consumeCaptureSeed() -> CaptureSeed? {
+        defer { captureSeed = nil }
+        return captureSeed
     }
 
     func startCooling(id: UUID, minutes: Int) {

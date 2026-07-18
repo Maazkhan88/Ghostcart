@@ -22,7 +22,37 @@
 		A1000000000000000000000D /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000D /* NotificationService.swift */; };
 		A1000000000000000000000E /* NotificationRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000E /* NotificationRouter.swift */; };
 		A1000000000000000000000F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000F /* Assets.xcassets */; };
+		A10000000000000000000010 /* ApiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000010 /* ApiClient.swift */; };
+		A10000000000000000000011 /* ProductImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000011 /* ProductImport.swift */; };
+		A10000000000000000000012 /* SharedImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000012 /* SharedImport.swift */; };
+		A10000000000000000000020 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000020 /* ShareViewController.swift */; };
+		A10000000000000000000021 /* SharedImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000012 /* SharedImport.swift */; };
+		A10000000000000000000022 /* GhostCartShare.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = B10000000000000000000024 /* GhostCartShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		D10000000000000000000016 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D10000000000000000000004 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D10000000000000000000010;
+			remoteInfo = GhostCartShare;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		D10000000000000000000014 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A10000000000000000000022 /* GhostCartShare.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		B10000000000000000000000 /* GhostCart.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GhostCart.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -41,10 +71,25 @@
 		B1000000000000000000000D /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		B1000000000000000000000E /* NotificationRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationRouter.swift; sourceTree = "<group>"; };
 		B1000000000000000000000F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B10000000000000000000010 /* ApiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiClient.swift; sourceTree = "<group>"; };
+		B10000000000000000000011 /* ProductImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImport.swift; sourceTree = "<group>"; };
+		B10000000000000000000012 /* SharedImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedImport.swift; sourceTree = "<group>"; };
+		B10000000000000000000013 /* GhostCart.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GhostCart.entitlements; sourceTree = "<group>"; };
+		B10000000000000000000020 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		B10000000000000000000021 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B10000000000000000000022 /* GhostCartShare.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GhostCartShare.entitlements; sourceTree = "<group>"; };
+		B10000000000000000000024 /* GhostCartShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = GhostCartShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		C10000000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D10000000000000000000012 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -58,6 +103,7 @@
 			isa = PBXGroup;
 			children = (
 				C10000000000000000000003 /* GhostCart */,
+				C10000000000000000000010 /* GhostCartShare */,
 				C10000000000000000000004 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -79,15 +125,30 @@
 				B1000000000000000000000C /* MembershipCardView.swift */,
 				B1000000000000000000000D /* NotificationService.swift */,
 				B1000000000000000000000E /* NotificationRouter.swift */,
+				B10000000000000000000010 /* ApiClient.swift */,
+				B10000000000000000000011 /* ProductImport.swift */,
+				B10000000000000000000012 /* SharedImport.swift */,
+				B10000000000000000000013 /* GhostCart.entitlements */,
 				B1000000000000000000000F /* Assets.xcassets */,
 			);
 			path = GhostCart;
+			sourceTree = "<group>";
+		};
+		C10000000000000000000010 /* GhostCartShare */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000020 /* ShareViewController.swift */,
+				B10000000000000000000021 /* Info.plist */,
+				B10000000000000000000022 /* GhostCartShare.entitlements */,
+			);
+			path = GhostCartShare;
 			sourceTree = "<group>";
 		};
 		C10000000000000000000004 /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				B10000000000000000000000 /* GhostCart.app */,
+				B10000000000000000000024 /* GhostCartShare.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -102,15 +163,34 @@
 				D10000000000000000000002 /* Sources */,
 				C10000000000000000000001 /* Frameworks */,
 				D10000000000000000000003 /* Resources */,
+				D10000000000000000000014 /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				D10000000000000000000015 /* PBXTargetDependency */,
 			);
 			name = GhostCart;
 			productName = GhostCart;
 			productReference = B10000000000000000000000 /* GhostCart.app */;
 			productType = "com.apple.product-type.application";
+		};
+		D10000000000000000000010 /* GhostCartShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F10000000000000000000010 /* Build configuration list for PBXNativeTarget "GhostCartShare" */;
+			buildPhases = (
+				D10000000000000000000011 /* Sources */,
+				D10000000000000000000012 /* Frameworks */,
+				D10000000000000000000013 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = GhostCartShare;
+			productName = GhostCartShare;
+			productReference = B10000000000000000000024 /* GhostCartShare.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -123,6 +203,9 @@
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
 					D10000000000000000000001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+					D10000000000000000000010 = {
 						CreatedOnToolsVersion = 15.0;
 					};
 				};
@@ -141,6 +224,7 @@
 			projectRoot = "";
 			targets = (
 				D10000000000000000000001 /* GhostCart */,
+				D10000000000000000000010 /* GhostCartShare */,
 			);
 		};
 /* End PBXProject section */
@@ -151,6 +235,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1000000000000000000000F /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D10000000000000000000013 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -175,10 +266,30 @@
 				A1000000000000000000000C /* MembershipCardView.swift in Sources */,
 				A1000000000000000000000D /* NotificationService.swift in Sources */,
 				A1000000000000000000000E /* NotificationRouter.swift in Sources */,
+				A10000000000000000000010 /* ApiClient.swift in Sources */,
+				A10000000000000000000011 /* ProductImport.swift in Sources */,
+				A10000000000000000000012 /* SharedImport.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D10000000000000000000011 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000020 /* ShareViewController.swift in Sources */,
+				A10000000000000000000021 /* SharedImport.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D10000000000000000000015 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D10000000000000000000010 /* GhostCartShare */;
+			targetProxy = D10000000000000000000016 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		E10000000000000000000001 /* Debug */ = {
@@ -215,6 +326,7 @@
 		E10000000000000000000003 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = GhostCart/GhostCart.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -236,6 +348,7 @@
 		E10000000000000000000004 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = GhostCart/GhostCart.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -254,6 +367,49 @@
 			};
 			name = Release;
 		};
+		E10000000000000000000010 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = GhostCartShare/GhostCartShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = GhostCartShare/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ghostcart.app.share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E10000000000000000000011 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = GhostCartShare/GhostCartShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = GhostCartShare/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ghostcart.app.share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -262,6 +418,15 @@
 			buildConfigurations = (
 				E10000000000000000000003 /* Debug */,
 				E10000000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F10000000000000000000010 /* Build configuration list for PBXNativeTarget "GhostCartShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E10000000000000000000010 /* Debug */,
+				E10000000000000000000011 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
