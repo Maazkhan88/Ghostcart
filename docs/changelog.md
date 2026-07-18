@@ -4,6 +4,21 @@ All notable changes to the Ghost Cart project will be documented in this file.
 
 ---
 
+## [2.5.1] - 2026-07-18
+
+### Fixed
+- Restored a clearly visible **Continue as Guest** action on the authentication
+  screen.
+- Made the complete sign-in/sign-up screen scrollable, keyboard-safe, and
+  aware of system bars so the primary action can no longer be clipped on
+  shorter displays.
+- Replaced the temporary Google letter and Apple text placeholders with
+  official provider artwork and compliant light/dark button treatments.
+- Reordered social and email sign-in controls into a clearer, consistent
+  authentication flow.
+
+---
+
 ## [2.5.0] - 2026-07-18
 
 ### Added
