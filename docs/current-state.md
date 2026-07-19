@@ -9,6 +9,8 @@ Last updated: 2026-07-19 (Claude Code — reviewed Antigravity's Phase 3/4 work,
 > **The real Phase 4, which the user has now explicitly authorized starting, is media/R2 upload foundation** (R2 bucket + binding, a `content_blocks` D1 table, `/api/content-blocks` CRUD routes, a new admin Content tab, and the server-side upload validation pipeline — see "Phase 4 — Media storage and content-management foundation" further down this doc and in the negotiated plan). Claude Code is starting this now on a **new, separate branch** — `phase-4/media-upload-foundation` — off `phase-3/share-queue-location-animation`, specifically to avoid colliding with or overwriting your branch name.
 >
 > **Your `phase-4/shared-ghost-attribution-notifications` branch and its uncommitted in-progress files have not been touched and are not being discarded.** Whether to continue that attribution/notifications feature (under a different name, e.g. a "Phase 9" or an unnumbered feature branch) is still an open question for the user to decide — don't resume it and don't discard it without asking them directly first.
+>
+> **Update (Claude Code, 2026-07-19 later same day): the real Phase 4 (media/R2 upload foundation) is now implemented** on `phase-4/media-upload-foundation` (head `dbc0157` at time of writing) — `content_blocks` D1 table + migration, `CONTENT_MEDIA` R2 binding declared, `/api/content-blocks` CRUD + public image-serving routes with full server-side upload validation (PNG/JPEG content sniffing, size/dimension limits, EXIF/metadata stripping — see `lib/image-processing.ts`), and a new admin "Content" tab. Full details in the dated decisions-log entry and the "Phase 4 implementation" section below. **One manual step is still required before this works in production:** run `npx wrangler r2 bucket create ghostcart-content-media` once (this environment has no authenticated wrangler session, so it could not be run here) — the binding will fail at runtime until that bucket exists.
 
 ## Canonical handoff for Antigravity and Claude Code (2026-07-19)
 
@@ -40,8 +42,9 @@ The user has said twice, explicitly: **cooling duration must always be a user ch
 
 ### Repository and release state
 
-- This branch, `phase-3/share-queue-location-animation` (head `c976cd3`), is the authoritative, isolated home for Phase 3 plus all follow-up fixes (bulk-cool-duration regression, share-queue-into-add-product merge, first-share-vs-queue routing, checkbox/button-copy fixes). `phase-4/shared-ghost-attribution-notifications` branches off this same tip but also carries Antigravity's separate, **not-yet-approved** Phase 4 work plus uncommitted in-progress files — see branch-topology note above before touching that branch.
-- Latest product implementation: current head of this branch (`c976cd3` — v2.7.12 Phase 3 multi-share queue/location simulation, plus all follow-up fixes above).
+- `phase-3/share-queue-location-animation` (head `c976cd3`) is the authoritative, isolated home for Phase 3 plus all follow-up fixes (bulk-cool-duration regression, share-queue-into-add-product merge, first-share-vs-queue routing, checkbox/button-copy fixes).
+- `phase-4/media-upload-foundation` (head `dbc0157`, branched off `phase-3` at `07f4906`) is the real Phase 4 — media/R2 upload foundation (`content_blocks` table, R2 binding, `/api/content-blocks` CRUD + image-serving routes, admin Content tab). **Not deployed yet** — needs `npx wrangler r2 bucket create ghostcart-content-media` run once by whoever has an authenticated wrangler session, then a normal deploy.
+- `phase-4/shared-ghost-attribution-notifications` is a **different, separate branch** (Antigravity's, **not-yet-approved** by the user) carrying uncommitted in-progress files — see the notice at the top of this doc before touching it. It is not part of either Phase 3 or the real Phase 4 above.
 - Draft PR: https://github.com/Maazkhan88/Ghostcart/pull/3
 - Base branch: `main`; current `main` already contains the merged v2 rebuild from PR #2 (`f4bb3ab`).
 - **Canonical hosted site/API: https://ghostcart-app.maaz-n-khan.workers.dev**
