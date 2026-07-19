@@ -47,6 +47,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -330,12 +332,30 @@ private val GHOST_CART_STORY_DRAWABLES = listOf(
 )
 
 /**
+ * Expands the composable's measured width by [bleedAmount] on each side and shifts it left by
+ * the same amount, so it visually escapes a parent's positive contentPadding (e.g. a
+ * LazyColumn's) without needing a negative [Modifier.padding] - which Compose Foundation
+ * explicitly rejects at runtime ("Padding must be non-negative").
+ */
+private fun Modifier.fullBleed(bleedAmount: Dp): Modifier = this.layout { measurable, constraints ->
+    val bleedPx = bleedAmount.roundToPx()
+    val widerConstraints = constraints.copy(
+        minWidth = (constraints.minWidth + bleedPx * 2).coerceAtLeast(0),
+        maxWidth = if (constraints.hasBoundedWidth) constraints.maxWidth + bleedPx * 2 else constraints.maxWidth
+    )
+    val placeable = measurable.measure(widerConstraints)
+    layout(placeable.width, placeable.height) {
+        placeable.place(-bleedPx, 0)
+    }
+}
+
+/**
  * Editorial carousel shown right after Favorites on Home. Deliberately labeled "Ghost Cart
  * Stories" rather than "User Generated Content" - these are admin-curated marketing cards, not
  * actual user submissions, and the app must not imply otherwise until real UGC exists.
- * Full-bleed (escapes the LazyColumn's contentPadding via negative horizontal padding on the
- * pager only, so the heading above stays at the normal inset) and swipes independently of the
- * page's own vertical scroll, same as [HorizontalPager] always does.
+ * Full-bleed (escapes the LazyColumn's contentPadding via [fullBleed] on the pager only, so the
+ * heading above stays at the normal inset) and swipes independently of the page's own vertical
+ * scroll, same as [HorizontalPager] always does.
  */
 @Composable
 fun GhostCartStoriesSection(modifier: Modifier = Modifier) {
@@ -350,7 +370,7 @@ fun GhostCartStoriesSection(modifier: Modifier = Modifier) {
         )
         HorizontalPager(
             state = pagerState,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = (-20).dp)
+            modifier = Modifier.fillMaxWidth().fullBleed(20.dp)
         ) { page ->
             androidx.compose.foundation.Image(
                 painter = androidx.compose.ui.res.painterResource(GHOST_CART_STORY_DRAWABLES[page]),
