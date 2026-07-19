@@ -643,7 +643,9 @@ private fun GhostBottomNav(current: NavKey?, cartCount: Int = 0, onNavigate: (Na
                         }
                     }
                 },
-                label = { Text(item.label, color = if (selected) Ink else MutedText, fontSize = 9.sp) },
+                label = if (item.central) null else {
+                    { Text(item.label, color = if (selected) Ink else MutedText, fontSize = 9.sp) }
+                },
                 colors = NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent)
             )
         }
