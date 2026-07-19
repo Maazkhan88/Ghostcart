@@ -83,6 +83,7 @@ import com.example.ghostcart.ui.marketplace.CategoryBrowseScreen
 import com.example.ghostcart.ui.v2.CaptureAlmostBuyScreen
 import com.example.ghostcart.ui.v2.CooldownsScreen
 import com.example.ghostcart.ui.v2.GhostHomeScreen
+import com.example.ghostcart.ui.v2.LegalDocumentScreen
 import com.example.ghostcart.ui.v2.ProfileScreen
 import com.example.ghostcart.ui.v2.ProgressScreen
 import com.example.ghostcart.ui.v2.ShareQueueReviewScreen
@@ -95,6 +96,7 @@ private fun selectedBottomDestination(current: NavKey?): NavKey = when (current)
     Progress -> Progress
     GhostCardSettings, WalletHome, WalletSetup, SalaryShield, Goals,
     WalletActivity, WeeklyStatement, Trends -> GhostCardSettings
+    is LegalDocument -> GhostCardSettings
     GhostCartList, CaptureAlmostBuy, GhostCheckout, OrderGhostedSuccess,
     FakeDeliveryTracking, PayWithGhostCard, OrderProtected -> GhostCartList
     else -> Home
@@ -501,6 +503,7 @@ fun MainNavigation(
                             onDebugTestReminder = { meal, hourOfDay ->
                                 appViewModel.scheduleDailyGhostReminderForDebugVerification(meal, hourOfDay)
                             },
+                            onOpenLegal = { docId -> backStack.add(LegalDocument(docId)) },
                             onDeleteAccount = {
                                 appViewModel.deleteAccountAndLocalData()
                                 backStack.clear()
@@ -512,6 +515,9 @@ fun MainNavigation(
                                 backStack.add(Splash)
                             }
                         )
+                    }
+                    entry<LegalDocument> { key ->
+                        LegalDocumentScreen(docId = key.docId, onBack = { backStack.removeLastOrNull() })
                     }
                 }
             )

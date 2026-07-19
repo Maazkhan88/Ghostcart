@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
@@ -38,6 +39,7 @@ import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ShoppingBag
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -888,6 +890,7 @@ fun ProfileScreen(
     onToggleLunch: () -> Unit,
     onToggleDinner: () -> Unit,
     onDebugTestReminder: (meal: String, hourOfDay: Int) -> Unit = { _, _ -> },
+    onOpenLegal: (docId: String) -> Unit = {},
     onDeleteAccount: () -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier
@@ -972,6 +975,14 @@ fun ProfileScreen(
                 }
             }
         }
+        item { SectionHeader("Legal") }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                LegalRow("Privacy Policy") { onOpenLegal("privacy") }
+                LegalRow("Terms & Conditions") { onOpenLegal("terms") }
+                LegalRow("Data Security") { onOpenLegal("data-security") }
+            }
+        }
         item {
             Text(
                 stringResource(R.string.card_disclosure),
@@ -1004,6 +1015,63 @@ fun ProfileScreen(
             },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel)) } }
         )
+    }
+}
+
+@Composable
+private fun LegalRow(title: String, onClick: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp)
+    ) {
+        Text(title, color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MutedText, modifier = Modifier.size(20.dp))
+    }
+}
+
+private val LEGAL_DOCUMENT_TITLES = mapOf(
+    "privacy" to "Privacy Policy",
+    "terms" to "Terms & Conditions",
+    "data-security" to "Data Security",
+)
+
+private val LEGAL_DOCUMENT_BODIES = mapOf(
+    "privacy" to "This will describe what data Ghost Cart collects, why, and how it's used - covering the anonymous community feed, simulated wallet activity, and any account information you provide.",
+    "terms" to "This will describe the terms of using Ghost Cart, including that all purchases, deliveries, and payments shown in the app are simulated and do not involve real transactions.",
+    "data-security" to "This will describe how Ghost Cart stores and protects your data, including what is anonymized, what is encrypted, and how long records are retained.",
+)
+
+/**
+ * Static placeholder legal screens (Privacy Policy, Terms & Conditions, Data Security), reached
+ * from Profile. Deliberately visible as draft - real legal copy has not been supplied yet, and
+ * this must never look production-final in the meantime.
+ */
+@Composable
+fun LegalDocumentScreen(docId: String, onBack: () -> Unit, modifier: Modifier = Modifier) {
+    val title = LEGAL_DOCUMENT_TITLES[docId] ?: "Legal"
+    val body = LEGAL_DOCUMENT_BODIES[docId] ?: "Legal copy for this document has not been supplied yet."
+
+    Column(modifier = modifier.fillMaxSize().background(Paper).padding(20.dp)) {
+        GhostTopBar(title = title, onBack = onBack)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 18.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(Color(0xFFFEF3C7))
+                .padding(14.dp)
+        ) {
+            Icon(Icons.Filled.Warning, contentDescription = null, tint = Color(0xFFD97706), modifier = Modifier.size(20.dp))
+            Column(modifier = Modifier.padding(start = 10.dp)) {
+                Text("DRAFT — pending legal review", color = Color(0xFF92400E), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+                Text("This is placeholder copy, not real legal text. Do not rely on it.", color = Color(0xFFB45309), fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+            }
+        }
+        Text(body, color = MutedText, fontSize = 13.sp, lineHeight = 19.sp, modifier = Modifier.padding(top = 20.dp))
     }
 }
 
