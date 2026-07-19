@@ -324,7 +324,6 @@ private val GHOST_CART_STORY_DRAWABLES = listOf(
     R.drawable.ghost_cart_story_7,
     R.drawable.ghost_cart_story_8,
     R.drawable.ghost_cart_story_9,
-    R.drawable.ghost_cart_story_10,
 )
 
 /**
