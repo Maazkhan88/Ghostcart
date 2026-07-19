@@ -8,6 +8,19 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
 
+data class ShareQueueItem(
+    val id: String,
+    val name: String,
+    val amountCents: Long,
+    val category: String,
+    val imageUrl: String? = null,
+    val sourceUrl: String? = null,
+    val brand: String? = null,
+    val sourceDomain: String? = null,
+    val timestamp: Long = System.currentTimeMillis(),
+    val duplicateAction: String = "none" // "none", "flagged", "merge", "keep_both", "remove"
+)
+
 /**
  * The durable product record for Ghost Cart's core loop.
  *

@@ -49,6 +49,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.ui.graphics.Path
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -624,6 +630,62 @@ fun FakeDeliveryTrackingScreen(
         Triple(title, caption, deviceTime.format(Date(baseTime + index * intervalMillis)))
     }
 
+    val context = LocalContext.current
+    val hasLocationPermission = remember {
+        androidx.core.content.ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+
+    var locationMethod by remember { mutableStateOf(if (hasLocationPermission) "permission" else "none") }
+    var selectedArea by remember { mutableStateOf<String?>(if (hasLocationPermission) "Approximate Location" else null) }
+    var showAreaDialog by remember { mutableStateOf(false) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted) {
+                locationMethod = "permission"
+                selectedArea = "Approximate Location"
+            } else {
+                showAreaDialog = true
+            }
+        }
+    )
+
+    val areas = listOf("Dubai Marina", "Downtown Dubai", "Deira", "Jumeirah", "Abu Dhabi", "Sharjah")
+
+    if (showAreaDialog) {
+        AlertDialog(
+            onDismissRequest = { showAreaDialog = false },
+            title = { Text("Select General Area", fontWeight = FontWeight.Bold, color = Ink) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    areas.forEach { area ->
+                        Text(
+                            text = area,
+                            color = Ink,
+                            fontSize = 14.sp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    locationMethod = "manual"
+                                    selectedArea = area
+                                    showAreaDialog = false
+                                }
+                                .padding(vertical = 10.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showAreaDialog = false }) { Text("Cancel", color = Ink) }
+            }
+        )
+    }
+
     Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Text(text = "‹", color = Ink, fontSize = 22.sp, modifier = Modifier.width(38.dp))
@@ -697,7 +759,64 @@ fun FakeDeliveryTrackingScreen(
             }
         }
 
-        SimulatedGhostRiderRoute(deliveryStep = deliveryStep)
+        if (locationMethod == "none") {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = SoftGray),
+                shape = RoundedCornerShape(18.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 18.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Filled.LocationOn,
+                            contentDescription = null,
+                            tint = GhostGreen,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = "Customize Delivery Simulation",
+                            color = Ink,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                    Text(
+                        text = "To simulate your delivery path, choose to use approximate location or select a general area manually. This is a simulated route, never precise GPS.",
+                        color = MutedText,
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 14.dp)
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            SecondaryButton(
+                                text = "Approximate",
+                                onClick = {
+                                    permissionLauncher.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+                                }
+                            )
+                        }
+                        Box(modifier = Modifier.weight(1f)) {
+                            SecondaryButton(
+                                text = "Select Area",
+                                onClick = { showAreaDialog = true }
+                            )
+                        }
+                    }
+                }
+            }
+        } else {
+            SimulatedGhostRiderRoute(
+                deliveryStep = deliveryStep,
+                selectedArea = selectedArea ?: "Approximate Location"
+            )
+        }
+
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
             Box(modifier = Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)).background(SoftGray), contentAlignment = Alignment.Center) {
                 GhostMascotPose(poseName = "wave", modifier = Modifier.size(24.dp))
@@ -758,6 +877,7 @@ private fun GhostFeedbackDialog(onSubmit: (Int, String) -> Unit, onDismiss: () -
 @Composable
 private fun SimulatedGhostRiderRoute(
     deliveryStep: Int,
+    selectedArea: String,
     modifier: Modifier = Modifier
 ) {
     val safeStep = deliveryStep.coerceIn(0, 4)
@@ -808,7 +928,7 @@ private fun SimulatedGhostRiderRoute(
             .clip(RoundedCornerShape(18.dp))
             .background(SoftGray)
             .semantics {
-                contentDescription = "Simulated live route. $status. This is not real GPS tracking."
+                contentDescription = "Simulated live route to $selectedArea. $status. This is not real GPS tracking."
             }
     ) {
         Row(
@@ -816,13 +936,22 @@ private fun SimulatedGhostRiderRoute(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(GreenTint)
-                    .padding(horizontal = 9.dp, vertical = 5.dp)
-            ) {
-                Text(text = "● Live simulation", color = GhostGreen, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            Column {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(GreenTint)
+                        .padding(horizontal = 9.dp, vertical = 5.dp)
+                ) {
+                    Text(text = "● Live simulation", color = GhostGreen, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                }
+                Text(
+                    text = "Route to $selectedArea",
+                    color = Ink,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
             }
             Text(text = "NOT REAL GPS", color = MutedText, fontSize = 8.sp, fontWeight = FontWeight.Bold)
         }
@@ -866,8 +995,22 @@ private fun SimulatedGhostRiderRoute(
             }
 
             drawCircle(color = Ink, radius = 7f, center = Offset(startX, roadY))
-            drawCircle(color = GhostGreen, radius = 9f, center = Offset(endX, roadY))
-            drawCircle(color = Paper, radius = 4f, center = Offset(endX, roadY))
+            
+            // Draw doorstep icon (house shape) at endX, roadY
+            val housePath = Path().apply {
+                moveTo(endX, roadY - 12f)
+                lineTo(endX - 12f, roadY)
+                lineTo(endX - 12f, roadY + 12f)
+                lineTo(endX + 12f, roadY + 12f)
+                lineTo(endX + 12f, roadY)
+                close()
+            }
+            drawPath(path = housePath, color = GhostGreen)
+            drawRect(
+                color = Paper,
+                topLeft = Offset(endX - 3f, roadY + 3f),
+                size = Size(6f, 9f)
+            )
         }
 
         val riderWidth = 64.dp

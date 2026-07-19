@@ -85,6 +85,7 @@ import com.example.ghostcart.ui.v2.CooldownsScreen
 import com.example.ghostcart.ui.v2.GhostHomeScreen
 import com.example.ghostcart.ui.v2.ProfileScreen
 import com.example.ghostcart.ui.v2.ProgressScreen
+import com.example.ghostcart.ui.v2.ShareQueueReviewScreen
 import kotlinx.coroutines.delay
 
 private val onboardingDestinations: Set<NavKey> = setOf(Splash, Auth, ProfileSelect, Personalization)
@@ -115,7 +116,8 @@ fun MainNavigation(
     ghostShareRequestKey: Long? = null
 ) {
     val initial = when {
-        initialSharedUrl != null || initialGhostTitle != null || initialGhostShareId != null -> CaptureAlmostBuy
+        initialSharedUrl != null -> ShareQueueReview
+        initialGhostTitle != null || initialGhostShareId != null -> CaptureAlmostBuy
         initialCooldownId != null -> Cooldowns
         else -> Splash
     }
@@ -145,7 +147,7 @@ fun MainNavigation(
     LaunchedEffect(sharedRequestKey) {
         if (initialSharedUrl != null) {
             appViewModel.importSharedProduct(initialSharedUrl, initialSharedTitle, initialSharedImageUrl)
-            if (backStack.lastOrNull() != CaptureAlmostBuy) backStack.add(CaptureAlmostBuy)
+            if (backStack.lastOrNull() != ShareQueueReview) backStack.add(ShareQueueReview)
         }
     }
 
@@ -332,8 +334,24 @@ fun MainNavigation(
                             onAddListingToCart = { items ->
                                 appViewModel.addListingItemsToCart(items)
                                 appViewModel.clearCaptureSeed()
+                                backStack.removeLastOrNull()
+                                backStack.add(ShareQueueReview)
+                            }
+                        )
+                    }
+                    entry<ShareQueueReview> {
+                        ShareQueueReviewScreen(
+                            queue = state.shareQueue,
+                            importState = state.productImportState,
+                            onUpdateItem = appViewModel::updateShareQueueItem,
+                            onRemoveItem = appViewModel::removeShareQueueItem,
+                            onConfirmAll = {
+                                appViewModel.bulkConfirmShareQueue()
                                 backStack.clear()
                                 backStack.add(GhostCartList)
+                            },
+                            onBack = {
+                                backStack.removeLastOrNull()
                             }
                         )
                     }

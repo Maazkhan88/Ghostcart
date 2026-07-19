@@ -32,6 +32,7 @@ import com.example.ghostcart.data.ListingProductStub
 import com.example.ghostcart.data.ProductImportRepository
 import com.example.ghostcart.data.ProductImportState
 import com.example.ghostcart.data.fetchSharedGhostItem
+import com.example.ghostcart.data.ShareQueueItem
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -79,7 +80,8 @@ data class AppUiState(
     val captureSeed: AlmostBuyDraft? = null,
     val appTheme: String = "System",
     val favoriteProductIds: Set<String> = emptySet(),
-    val feedbackSubmittedOrderIds: Set<String> = emptySet()
+    val feedbackSubmittedOrderIds: Set<String> = emptySet(),
+    val shareQueue: List<ShareQueueItem> = emptyList()
 )
 
 internal fun deliveryStepAt(nowMillis: Long, placedAtMillis: Long, intervalMinutes: Int): Int {
@@ -98,6 +100,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         coolingUntilByProductId = loadCoolingPeriods(),
         appTheme = sharedPrefs.getString("app_theme", "System") ?: "System",
         favoriteProductIds = loadFavoriteProductIds(),
+        shareQueue = loadShareQueue(),
         lastOrderId = sharedPrefs.getString("last_order_id", "") ?: "",
         lastOrderTotal = sharedPrefs.getInt("last_order_total", 0),
         lastOrderPlacedAtMillis = sharedPrefs.getLong("last_order_placed_at", 0L),
@@ -294,42 +297,22 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 null
             }
             val product = deviceMetadata?.let { mergeDeviceMetadata(serverProduct, it) } ?: serverProduct
-            _uiState.update {
-                it.copy(
-                    productImportState = ProductImportState.Ready(product),
-                    captureSeed = AlmostBuyDraft(
-                        name = product.title,
-                        amountCents = if (product.currencyCode == null || product.currencyCode == "AED") product.priceCents ?: 0 else 0,
-                        category = product.category,
-                        trigger = "FOMO",
-                        coolingDurationMillis = recommendedCooling(product.category),
-                        sourceUrl = product.sourceUrl,
-                        imageUrl = product.imageUrl,
-                        sourceKind = "share"
-                    )
-                )
-            }
+            val item = ShareQueueItem(
+                id = UUID.randomUUID().toString(),
+                name = product.title,
+                amountCents = if (product.currencyCode == null || product.currencyCode == "AED") product.priceCents ?: 0 else 0,
+                category = product.category,
+                imageUrl = product.imageUrl,
+                sourceUrl = product.sourceUrl,
+                brand = null,
+                sourceDomain = product.sourceDomain
+            )
+            appendToShareQueue(item)
         }
     }
 
     fun addListingItemsToCart(items: List<ListingProductStub>) {
-        items.forEach { stub ->
-            addDraftToCart(
-                AlmostBuyDraft(
-                    name = stub.title,
-                    amountCents = if (stub.currencyCode == null || stub.currencyCode == "AED") stub.priceCents ?: 0 else 0,
-                    category = normalizeCategory(stub.category),
-                    trigger = "FOMO",
-                    coolingDurationMillis = recommendedCooling(stub.category),
-                    sourceUrl = stub.sourceUrl,
-                    imageUrl = stub.imageUrl,
-                    sourceKind = "bulk_share"
-                )
-            )
-        }
-        showToast(
-            if (items.size == 1) "Added 1 item to Ghost Cart" else "Added ${items.size} items to Ghost Cart"
-        )
+        addListingItemsToShareQueue(items)
     }
 
     fun clearProductImport() {
@@ -1003,5 +986,162 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun submitGhostFeedback(orderId: String, rating: Int, comment: String) {
         _uiState.update { it.copy(feedbackSubmittedOrderIds = it.feedbackSubmittedOrderIds + orderId) }
         showToast("Thanks for your feedback!")
+    }
+
+    private fun loadShareQueue(): List<ShareQueueItem> = runCatching {
+        val raw = sharedPrefs.getString("share_queue", null) ?: return@runCatching emptyList()
+        val array = org.json.JSONArray(raw)
+        buildList {
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                add(ShareQueueItem(
+                    id = obj.getString("id"),
+                    name = obj.getString("name"),
+                    amountCents = obj.getLong("amountCents"),
+                    category = obj.getString("category"),
+                    imageUrl = obj.optString("imageUrl").takeIf { it.isNotBlank() },
+                    sourceUrl = obj.optString("sourceUrl").takeIf { it.isNotBlank() },
+                    brand = obj.optString("brand").takeIf { it.isNotBlank() },
+                    sourceDomain = obj.optString("sourceDomain").takeIf { it.isNotBlank() },
+                    timestamp = obj.optLong("timestamp", System.currentTimeMillis()),
+                    duplicateAction = obj.optString("duplicateAction", "none")
+                ))
+            }
+        }
+    }.getOrDefault(emptyList())
+
+    private fun saveShareQueue(queue: List<ShareQueueItem>) {
+        val array = org.json.JSONArray()
+        queue.forEach { item ->
+            array.put(org.json.JSONObject().apply {
+                put("id", item.id)
+                put("name", item.name)
+                put("amountCents", item.amountCents)
+                put("category", item.category)
+                item.imageUrl?.let { put("imageUrl", it) }
+                item.sourceUrl?.let { put("sourceUrl", it) }
+                item.brand?.let { put("brand", it) }
+                item.sourceDomain?.let { put("sourceDomain", it) }
+                put("timestamp", item.timestamp)
+                put("duplicateAction", item.duplicateAction)
+            })
+        }
+        sharedPrefs.edit().putString("share_queue", array.toString()).apply()
+    }
+
+    fun isLikelyDuplicate(a: ShareQueueItem, b: ShareQueueItem): Boolean {
+        val pA = MarketplaceProduct(id = a.id, name = a.name, category = a.category, price = 0, iconName = "", brand = a.brand, sourceUrl = a.sourceUrl, imageUrl = a.imageUrl)
+        val pB = MarketplaceProduct(id = b.id, name = b.name, category = b.category, price = 0, iconName = "", brand = b.brand, sourceUrl = b.sourceUrl, imageUrl = b.imageUrl)
+        return isLikelyDuplicateProduct(pA, pB)
+    }
+
+    fun appendToShareQueue(item: ShareQueueItem) {
+        val current = _uiState.value.shareQueue
+        if (current.size >= 20) {
+            showToast("Share queue is full (max 20 items)")
+            _uiState.update { it.copy(productImportState = ProductImportState.Idle) }
+            return
+        }
+        val hasDuplicate = current.any { isLikelyDuplicate(it, item) }
+        val finalItem = if (hasDuplicate) {
+            item.copy(duplicateAction = "flagged")
+        } else {
+            item.copy(duplicateAction = "none")
+        }
+        val updated = current + finalItem
+        saveShareQueue(updated)
+        _uiState.update {
+            it.copy(
+                shareQueue = updated,
+                productImportState = ProductImportState.Idle
+            )
+        }
+        showToast("Added to share queue")
+    }
+
+    fun addListingItemsToShareQueue(items: List<ListingProductStub>) {
+        val current = _uiState.value.shareQueue.toMutableList()
+        var addedCount = 0
+        items.forEach { stub ->
+            if (current.size >= 20) {
+                return@forEach
+            }
+            val item = ShareQueueItem(
+                id = UUID.randomUUID().toString(),
+                name = stub.title,
+                amountCents = if (stub.currencyCode == null || stub.currencyCode == "AED") stub.priceCents ?: 0 else 0,
+                category = normalizeCategory(stub.category),
+                imageUrl = stub.imageUrl,
+                sourceUrl = stub.sourceUrl,
+                sourceDomain = stub.sourceDomain
+            )
+            val hasDuplicate = current.any { isLikelyDuplicate(it, item) }
+            val finalItem = if (hasDuplicate) {
+                item.copy(duplicateAction = "flagged")
+            } else {
+                item.copy(duplicateAction = "none")
+            }
+            current.add(finalItem)
+            addedCount++
+        }
+        saveShareQueue(current)
+        _uiState.update {
+            it.copy(
+                shareQueue = current,
+                productImportState = ProductImportState.Idle
+            )
+        }
+        if (addedCount > 0) {
+            showToast("Added $addedCount items to share queue")
+        }
+    }
+
+    fun updateShareQueueItem(updated: ShareQueueItem) {
+        val current = _uiState.value.shareQueue.map {
+            if (it.id == updated.id) updated else it
+        }
+        saveShareQueue(current)
+        _uiState.update { it.copy(shareQueue = current) }
+    }
+
+    fun removeShareQueueItem(id: String) {
+        val current = _uiState.value.shareQueue.filterNot { it.id == id }
+        saveShareQueue(current)
+        _uiState.update { it.copy(shareQueue = current) }
+    }
+
+    fun clearShareQueue() {
+        saveShareQueue(emptyList())
+        _uiState.update { it.copy(shareQueue = emptyList()) }
+    }
+
+    fun bulkConfirmShareQueue() {
+        val queue = _uiState.value.shareQueue
+        val activeItems = queue.filter { it.duplicateAction != "remove" }
+        
+        if (activeItems.any { it.duplicateAction == "flagged" }) {
+            showToast("Please resolve all duplicate items before confirming.")
+            return
+        }
+
+        activeItems.forEach { item ->
+            addDraftToCart(
+                AlmostBuyDraft(
+                    name = item.name,
+                    amountCents = item.amountCents,
+                    category = normalizeCategory(item.category),
+                    trigger = "FOMO",
+                    coolingDurationMillis = recommendedCooling(item.category),
+                    sourceUrl = item.sourceUrl,
+                    imageUrl = item.imageUrl,
+                    sourceKind = "share"
+                )
+            )
+        }
+
+        clearShareQueue()
+        showToast(
+            if (activeItems.size == 1) "Added 1 item to Ghost Cart" else "Added ${activeItems.size} items to Ghost Cart"
+        )
     }
 }

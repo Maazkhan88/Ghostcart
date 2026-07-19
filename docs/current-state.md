@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-07-19 (Antigravity — Phase 1 completed, Phase 2 completed and pushed to GitHub remote branch `phase-2/marketplace-merge-sort-filters`, and started Phase 3 on branch `phase-3/share-queue-location-animation`).
+Last updated: 2026-07-19 (Antigravity — Phase 1, Phase 2, and Phase 3 completed and built on branch `phase-3/share-queue-location-animation`).
 
 ## Canonical handoff for Antigravity and Claude Code (2026-07-19)
 
@@ -9,13 +9,16 @@ This section is the current operational source of truth. Historical session logs
 ### Repository and release state
 
 - Working branch: `phase-3/share-queue-location-animation`
-- Latest product implementation: current head of `phase-2/marketplace-merge-sort-filters` (v2.7.10 — Phase 1 & 2 fully implemented, verified, built and pushed to GitHub; see below).
+- Latest product implementation: current head of `phase-3/share-queue-location-animation` (v2.7.11 — Phase 3 multi-share queue and location simulation implemented and verified).
 - Draft PR: https://github.com/Maazkhan88/Ghostcart/pull/3
 - Base branch: `main`; current `main` already contains the merged v2 rebuild from PR #2 (`f4bb3ab`).
 - **Canonical hosted site/API: https://ghostcart-app.maaz-n-khan.workers.dev**
-- Android release: `releases/GhostCart-v2.7.10-debug.apk`
-- Direct APK: https://raw.githubusercontent.com/Maazkhan88/Ghostcart/phase-2/marketplace-merge-sort-filters/releases/GhostCart-v2.7.10-debug.apk
-- APK SHA-256: `0CA9593BD23DF877FDC44932D3C0E1E42C4CF45A961F3AE2DB452BC7E50CDE95`
+- Android release: `releases/GhostCart-v2.7.11-debug.apk`
+- Direct APK: https://raw.githubusercontent.com/Maazkhan88/Ghostcart/phase-3/share-queue-location-animation/releases/GhostCart-v2.7.11-debug.apk
+- APK SHA-256: `E423E099A08FA93B6A957B69D6F0362AF32354E90DCFF8C83C23C495E4954782`
+- **v2.7.11 change (Phase 3 Multi-Share Queue & Location Simulation):**
+  1. **Multi-Share Queue & Duplicate Handling:** Implemented client-side queuing (persisted across background/foreground in SharedPreferences, capped at 20) for shared product URLs. Added a "Shared review queue" table screen allowing editing product name, price, and category, or removing rows. If a product is flagged as a duplicate (via the same duplicate detection logic as Phase 2's merge), the review screen highlights the duplicate and lets the user choose to "Merge" (remove/deduplicate), "Keep both", or "Remove" it.
+  2. **Location Nudge & simulated Ghost Rider animation:** Requests ACCESS_COARSE_LOCATION framed as "for a better app experience" with a clear disclaimer that it is simulated, or offers manual selection of a general area. Then, plays a stylized Canvas-based animated route map showing a ghost scooter rider driving towards a custom doorstep/house icon.
 - **v2.7.10 change (two independent fixes):**
   1. **Amazon-share title bug.** When a product is shared via Amazon's own
      native "Share" button (not pasted manually), Amazon populates
