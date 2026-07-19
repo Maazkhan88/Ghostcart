@@ -404,7 +404,7 @@ fun MarketplaceProductCard(
     // label, title, Dirham-glyph price, and Add to cart / Cool it actions.
     Column(
         modifier = modifier
-            .height(252.dp)
+            .height(266.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(Paper)
             .border(1.dp, FaintBorder, RoundedCornerShape(20.dp))
@@ -471,29 +471,30 @@ fun MarketplaceProductCard(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .height(38.dp)
-                    .clip(RoundedCornerShape(11.dp))
-                    .background(Ink)
+                    .height(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(SoftGray)
+                    .border(1.dp, FaintBorder, RoundedCornerShape(12.dp))
                     .clickable(onClick = onAdd),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = if (onCool == null) "Add to Ghost Cart" else "Add to cart", color = Paper, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text(text = if (onCool == null) "Add to Ghost Cart" else "Add to cart", color = Ink, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             }
             if (onCool != null) {
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .height(38.dp)
-                        .clip(RoundedCornerShape(11.dp))
-                        .background(GreenTint)
+                        .height(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(GhostGreen)
                         .clickable(onClick = onCool),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = "Cool it", color = Ink, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Text(text = "Cool it", color = Color(0xFF0A0A0A), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }

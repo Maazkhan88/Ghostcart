@@ -255,16 +255,16 @@ fun MainNavigation(
                                 appViewModel.addToCart(id)
                             },
                             onCoolCatalog = { id ->
-                                appViewModel.prepareCatalogProduct(id)
-                                backStack.add(CaptureAlmostBuy)
+                                appViewModel.quickGhostCatalogProduct(id)
+                                backStack.add(Cooldowns)
                             },
                             onOpenCatalog = { id -> backStack.add(ProductDetail(id)) },
                             onGhostCommunity = { id ->
                                 appViewModel.addCommunityToCart(id)
                             },
                             onCoolCommunity = { id ->
-                                appViewModel.prepareCommunityProduct(id)
-                                backStack.add(CaptureAlmostBuy)
+                                appViewModel.quickGhostCommunityProduct(id)
+                                backStack.add(Cooldowns)
                             },
                             onOpenCommunity = { id ->
                                 appViewModel.communityProductDetailId(id)?.let { detailId ->
@@ -303,8 +303,8 @@ fun MainNavigation(
                             onOpenProduct = { id -> backStack.add(ProductDetail(id)) },
                             onAddToCart = appViewModel::addToCart,
                             onCoolProduct = { id ->
-                                appViewModel.prepareCatalogProduct(id)
-                                backStack.add(CaptureAlmostBuy)
+                                appViewModel.quickGhostCatalogProduct(id)
+                                backStack.add(Cooldowns)
                             }
                         )
                     }

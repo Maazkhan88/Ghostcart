@@ -379,15 +379,15 @@ private fun DiscoveryProductCard(
             Text(formatProductPrice(priceCents), color = Ink, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 3.dp))
         }
         Box(Modifier.weight(1f))
-        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             Box(
-                modifier = Modifier.weight(1f).height(38.dp).clip(RoundedCornerShape(11.dp)).background(Ink).clickable(onClick = onGhost),
+                modifier = Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(12.dp)).background(SoftGray).border(1.dp, FaintBorder, RoundedCornerShape(12.dp)).clickable(onClick = onGhost),
                 contentAlignment = Alignment.Center
-            ) { Text("Add to cart", color = Paper, fontSize = 9.sp, fontWeight = FontWeight.Bold) }
+            ) { Text("Add to cart", color = Ink, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
             Box(
-                modifier = Modifier.weight(1f).height(38.dp).clip(RoundedCornerShape(11.dp)).background(GreenTint).clickable(onClick = onCool),
+                modifier = Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(12.dp)).background(GhostGreen).clickable(onClick = onCool),
                 contentAlignment = Alignment.Center
-            ) { Text("Cool it", color = Ink, fontSize = 9.sp, fontWeight = FontWeight.Bold) }
+            ) { Text("Cool it", color = Color(0xFF0A0A0A), fontSize = 10.sp, fontWeight = FontWeight.Bold) }
         }
     }
 }
