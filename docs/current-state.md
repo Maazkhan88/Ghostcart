@@ -1,6 +1,61 @@
 # Current State
 
-Last updated: 2026-07-19 (Claude Code — reviewed Antigravity's Phase 3/4 work, fixed one regression, applied two user-requested follow-ups, merged the shared-item-queue-into-add-product change, then fixed the first-share-vs-queue routing and two copy/default bugs the user caught after trying it; full details below).
+Last updated: 2026-07-19 (Claude Code — full session handoff report added below for Antigravity; see "STATUS REPORT" block immediately following this line).
+
+> ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-19, end of session)
+>
+> This is a full handoff. Read this whole block before touching anything — it supersedes the
+> "NOTICE TO ANTIGRAVITY" block below it (that block is left in place for the reasoning/history,
+> this one is the current status).
+>
+> ### Branch map — four branches now exist, know which is which
+>
+> | Branch | Owner | Status | Head |
+> |---|---|---|---|
+> | `phase-3/share-queue-location-animation` | Shared base | Phase 3 + all bug-fix follow-ups. Stable, authorized, isolated. | `73c1867` |
+> | `phase-4/shared-ghost-attribution-notifications` | **You (Antigravity)** | Your self-initiated attribution/notifications feature. **Still not approved by the user.** Has uncommitted files sitting in its working tree — untouched by me all session. | (yours, uncommitted WIP on top of `07f4906`) |
+> | `phase-4/media-upload-foundation` | Claude Code | **The real Phase 4** (media/R2 upload). Implemented, tested, committed. Not deployed (no R2 bucket exists yet, no wrangler credentials in this environment). | `e37a221` |
+> | `phase-5/ghost-cart-stories-section` | Claude Code | New Home-screen "Ghost Cart Stories" section, per direct user request. Implemented, crash found and fixed, redesigned per user feedback, verified on-device, pushed to GitHub. | `5b22103` (pushed) |
+>
+> **Do not merge, rebase, or force-push any of these without asking the user first.** Do not resume or discard your `phase-4/shared-ghost-attribution-notifications` work without asking the user directly — that decision is still theirs, not mine or yours.
+>
+> ### What shipped this session, in order
+>
+> 1. **Reviewed your Phase 3 + version-bump work.** No blocking issues; two process concerns flagged to the user (APK binaries committed to git again; inline `ALTER TABLE`/`try-catch` schema changes instead of Drizzle migrations).
+> 2. **Fixed a regression in your `bulkCoolShareQueue`** — it used a silent fixed cooling duration (`recommendedCooling(category)`), violating the user's explicit "cooling duration is always a user choice" rule. Now routes through `CoolingDurationDialog` like everywhere else. **If you add any new cool/start-cooling entry point, it must do the same — no exceptions.**
+> 3. **Marketplace ordering: user-ghosted items sort first everywhere** (`AppViewModel.unifiedMarketplaceProducts()`, `CategoryBrowseScreen.sortProducts()`).
+> 4. **Merged `ShareQueueReviewScreen` into the `CaptureAlmostBuy` ("Ghost +") flow** instead of a separate destination — per the user's request that the shared-item queue live inside the add-product page.
+> 5. **Fixed first-share-vs-queue routing**: the first shared link now lands on the normal single-item capture screen (`captureSeed`); only a second, concurrent share (while the first is unconfirmed) gets queued. Also fixed the queue's "share anonymously" checkbox default (now checked) and button copy ("Add to Ghost Cart" / "Cool Down Items", no item counts).
+> 6. **Discovered and fixed a branch-topology mix-up**: two of my early fix commits had landed directly on your `phase-4/shared-ghost-attribution-notifications` branch (not deliberately — the working directory was already checked out there). Moved them via a disposable `git worktree` (never touching your uncommitted files) onto `phase-3`, where they now live cleanly.
+> 7. **User confirmed your Phase 4 is not the project's Phase 4** and authorized starting the real one. Implemented the full **Phase 4 — media/R2 upload foundation** on a new `phase-4/media-upload-foundation` branch (see below).
+> 8. **User supplied 10 marketing images and asked for a "Ghost Cart Stories" section on Home, right after Favorites** (this is Phase 5 scope, pulled forward at the user's direct request — not a full Phase 5). Implemented on a new `phase-5/ghost-cart-stories-section` branch (see below).
+>
+> ### Phase 4 — media/R2 upload foundation (`phase-4/media-upload-foundation`, head `e37a221`)
+>
+> - `db/schema.ts`: new `content_blocks` table (banner/story type, image key, link type/target, sort order, is_active). Additive-only migration: `drizzle/0007_aromatic_chameleon.sql`.
+> - `wrangler.ghostcart-app.jsonc`: new `CONTENT_MEDIA` R2 binding declared. **The bucket itself does not exist yet** — needs `npx wrangler r2 bucket create ghostcart-content-media` run once by whoever has an authenticated wrangler session (this sandbox has none; verified via `npx wrangler whoami` before deciding not to attempt it).
+> - `lib/image-processing.ts`: dependency-free PNG/JPEG-only content sniffing (real magic bytes, not claimed MIME/extension — SVG and everything else rejected outright), dimension reading, and metadata stripping (JPEG APP1/EXIF + APP13/Photoshop-IPTC segments; PNG tEXt/zTXt/iTXt/tIME/eXIf chunks). Deliberately does **not** support WebP — full VP8/VP8L/VP8X parsing was judged higher-risk than it's worth for this feature; PNG/JPEG covers the real use cases (admin-exported banners, phone photos).
+> - `lib/content-media.ts`: R2 accessor; object keys are always server-generated UUIDs, never client filenames.
+> - `app/api/content-blocks/route.ts` + `[id]/route.ts` + `image/[key]/route.ts`: admin-gated CRUD (mirrors `app/api/products/route.ts`'s `requireAdminApiUser()` pattern exactly) with full server-side validation on the actual file bytes; public read-only image serving; DELETE removes the D1 row before the R2 object (so a storage failure only orphans an object, never leaves a dangling reference).
+> - `app/admin/AdminCatalog.tsx`: new "Content" tab, upload form + list, matching the existing Products/Merchants pattern.
+> - `tests/image-processing.test.mjs`: 6 new tests, hand-built PNG/JPEG fixtures, no external image library needed.
+> - Verified: `npm run build` succeeds, `npm run test` passes 32/32, `npm run lint` introduces zero new errors.
+>
+> ### Phase 5 slice — Ghost Cart Stories section (`phase-5/ghost-cart-stories-section`, head `5b22103`, pushed to GitHub)
+>
+> - New `GhostCartStoriesSection` composable in `ProductDiscovery.kt`, wired into `GhostHomeScreen`'s outer `LazyColumn` as its own `item{}` right after Favorites (`ProductDiscoverySection`) and before `GhostHeroCard` — matches the plan's exact placement note.
+> - Labeled **"Ghost Cart Stories"**, not "User Generated Content" — these are admin-curated marketing images the user supplied directly, not real user submissions.
+> - 10 user-supplied images converted from ~2MB PNGs to ~200-260KB JPEGs (quality 85, matching this repo's existing `res/drawable/*.jpg` convention for bundled photos) — `ghost_cart_story_1.jpg` through `_10.jpg`.
+> - **A real crash was found and fixed mid-session**: the first implementation used `Modifier.padding(horizontal = (-20).dp)` to make the row bleed to the screen edge. Compose Foundation's `padding()` throws `IllegalArgumentException: Padding must be non-negative` at runtime — it doesn't just render wrong, it crashes the app the moment the row scrolls into view. **If you ever see this exception, this is the cause — never pass a negative value to `Modifier.padding()`; use a custom `Modifier.layout {}` (measure wider, place with a negative offset) if you actually need full-bleed content inside a padded container.**
+> - **After the crash fix, the user gave more feedback**: didn't want big full-bleed images at all — wanted the same small-card treatment as the existing product cards. Redesigned as a `LazyRow` of cards using `DiscoveryProductCard`'s exact width/corner-radius/border/background (188dp wide, 20dp rounded corners, `Paper` background, `FaintBorder` border), sized by the story images' own 9:16 aspect ratio.
+> - Verified on-device end to end (Galaxy Tab, serial `R52R803DF5F`) after each change: crash reproduced and confirmed fixed via logcat `FATAL EXCEPTION` before/after; final card design confirmed rendering correctly, no crash.
+> - Debug APK published to GitHub for the user to test directly: `releases/GhostCart-v2.7.14-debug.apk` on this branch, raw URL `https://raw.githubusercontent.com/Maazkhan88/Ghostcart/phase-5/ghost-cart-stories-section/releases/GhostCart-v2.7.14-debug.apk`.
+>
+> ### Open questions only the user can answer — do not decide these yourself
+>
+> - Whether to continue, rename, or discard your `phase-4/shared-ghost-attribution-notifications` work.
+> - Whether/when to actually run `npx wrangler r2 bucket create ghostcart-content-media` and deploy the real Phase 4 media-upload backend.
+> - Whether to merge `phase-4/media-upload-foundation` and `phase-5/ghost-cart-stories-section` into `phase-3` (or `main`) — nothing has been merged anywhere this session; every branch is still separate, per the negotiated delivery process ("no phase auto-advances, no merge without explicit approval").
 
 > ## ⚠️ NOTICE TO ANTIGRAVITY (from the user, relayed by Claude Code, 2026-07-19)
 >
@@ -9,8 +64,6 @@ Last updated: 2026-07-19 (Claude Code — reviewed Antigravity's Phase 3/4 work,
 > **The real Phase 4, which the user has now explicitly authorized starting, is media/R2 upload foundation** (R2 bucket + binding, a `content_blocks` D1 table, `/api/content-blocks` CRUD routes, a new admin Content tab, and the server-side upload validation pipeline — see "Phase 4 — Media storage and content-management foundation" further down this doc and in the negotiated plan). Claude Code is starting this now on a **new, separate branch** — `phase-4/media-upload-foundation` — off `phase-3/share-queue-location-animation`, specifically to avoid colliding with or overwriting your branch name.
 >
 > **Your `phase-4/shared-ghost-attribution-notifications` branch and its uncommitted in-progress files have not been touched and are not being discarded.** Whether to continue that attribution/notifications feature (under a different name, e.g. a "Phase 9" or an unnumbered feature branch) is still an open question for the user to decide — don't resume it and don't discard it without asking them directly first.
->
-> **Update (Claude Code, 2026-07-19 later same day): the real Phase 4 (media/R2 upload foundation) is now implemented** on `phase-4/media-upload-foundation` (head `dbc0157` at time of writing) — `content_blocks` D1 table + migration, `CONTENT_MEDIA` R2 binding declared, `/api/content-blocks` CRUD + public image-serving routes with full server-side upload validation (PNG/JPEG content sniffing, size/dimension limits, EXIF/metadata stripping — see `lib/image-processing.ts`), and a new admin "Content" tab. Full details in the dated decisions-log entry and the "Phase 4 implementation" section below. **One manual step is still required before this works in production:** run `npx wrangler r2 bucket create ghostcart-content-media` once (this environment has no authenticated wrangler session, so it could not be run here) — the binding will fail at runtime until that bucket exists.
 
 ## Canonical handoff for Antigravity and Claude Code (2026-07-19)
 
@@ -42,9 +95,8 @@ The user has said twice, explicitly: **cooling duration must always be a user ch
 
 ### Repository and release state
 
-- `phase-3/share-queue-location-animation` (head `c976cd3`) is the authoritative, isolated home for Phase 3 plus all follow-up fixes (bulk-cool-duration regression, share-queue-into-add-product merge, first-share-vs-queue routing, checkbox/button-copy fixes).
-- `phase-4/media-upload-foundation` (head `dbc0157`, branched off `phase-3` at `07f4906`) is the real Phase 4 — media/R2 upload foundation (`content_blocks` table, R2 binding, `/api/content-blocks` CRUD + image-serving routes, admin Content tab). **Not deployed yet** — needs `npx wrangler r2 bucket create ghostcart-content-media` run once by whoever has an authenticated wrangler session, then a normal deploy.
-- `phase-4/shared-ghost-attribution-notifications` is a **different, separate branch** (Antigravity's, **not-yet-approved** by the user) carrying uncommitted in-progress files — see the notice at the top of this doc before touching it. It is not part of either Phase 3 or the real Phase 4 above.
+- Working branch: `phase-4/shared-ghost-attribution-notifications` (Antigravity's, has uncommitted Phase 4 work — see branch-topology note above). Claude Code's isolated, authorized fixes now live on `phase-3/share-queue-location-animation` at `c976cd3`.
+- Latest product implementation: current head of `phase-4/shared-ghost-attribution-notifications` (Phase 4 Shared Ghost Attribution & Notifications begun, **not user-approved**).
 - Draft PR: https://github.com/Maazkhan88/Ghostcart/pull/3
 - Base branch: `main`; current `main` already contains the merged v2 rebuild from PR #2 (`f4bb3ab`).
 - **Canonical hosted site/API: https://ghostcart-app.maaz-n-khan.workers.dev**
