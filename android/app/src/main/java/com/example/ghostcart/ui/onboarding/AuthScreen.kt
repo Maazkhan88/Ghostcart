@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -143,6 +144,12 @@ fun AuthScreen(
 
         Spacer(modifier = Modifier.height(22.dp))
 
+        // Cap the form's width and center it so it reads as a normal-sized card on wide
+        // screens (tablets) instead of the tabs/buttons/fields stretching edge-to-edge.
+        Column(
+            modifier = Modifier.widthIn(max = 480.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -212,7 +219,11 @@ fun AuthScreen(
                 contentDescription = "Continue with Apple",
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
-                    .fillMaxWidth()
+                    // Fixed height (matching the Google button's 50dp) instead of fillMaxWidth,
+                    // so the logo/text baked into this bitmap stay Google-sized regardless of
+                    // screen width - deriving size from width instead made the whole image
+                    // (text included) scale up on wide screens.
+                    .height(50.dp)
                     .aspectRatio(680f / 100f)
                     .clickable {
                         errorMessage =
@@ -330,6 +341,7 @@ fun AuthScreen(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+        }
     }
 }
 
