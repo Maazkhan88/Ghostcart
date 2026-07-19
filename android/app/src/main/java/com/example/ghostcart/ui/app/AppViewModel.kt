@@ -301,18 +301,64 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 null
             }
             val product = deviceMetadata?.let { mergeDeviceMetadata(serverProduct, it) } ?: serverProduct
-            val item = ShareQueueItem(
-                id = UUID.randomUUID().toString(),
-                name = product.title,
-                amountCents = if (product.currencyCode == null || product.currencyCode == "AED") product.priceCents ?: 0 else 0,
-                category = product.category,
-                imageUrl = product.imageUrl,
-                sourceUrl = product.sourceUrl,
-                brand = null,
-                sourceDomain = product.sourceDomain
-            )
-            appendToShareQueue(item)
+            val amountCents = if (product.currencyCode == null || product.currencyCode == "AED") product.priceCents ?: 0 else 0
+
+            // First share (nothing else pending): show the normal single-item "Ghost an
+            // almost-buy" screen, pre-filled and editable, same as any other capture. Only once
+            // a second share arrives while the first hasn't been confirmed yet does this become
+            // a queue - see migratePendingCaptureSeedToQueue().
+            val hasPendingShare = _uiState.value.shareQueue.isNotEmpty() ||
+                _uiState.value.captureSeed?.sourceKind == "share"
+            if (hasPendingShare) {
+                migratePendingCaptureSeedToQueue()
+                val item = ShareQueueItem(
+                    id = UUID.randomUUID().toString(),
+                    name = product.title,
+                    amountCents = amountCents,
+                    category = product.category,
+                    imageUrl = product.imageUrl,
+                    sourceUrl = product.sourceUrl,
+                    brand = null,
+                    sourceDomain = product.sourceDomain
+                )
+                appendToShareQueue(item)
+            } else {
+                _uiState.update {
+                    it.copy(
+                        productImportState = ProductImportState.Idle,
+                        captureSeed = AlmostBuyDraft(
+                            name = product.title,
+                            amountCents = amountCents,
+                            category = normalizeCategory(product.category),
+                            trigger = "FOMO",
+                            coolingDurationMillis = recommendedCooling(product.category),
+                            sourceUrl = product.sourceUrl,
+                            imageUrl = product.imageUrl,
+                            sourceKind = "share"
+                        )
+                    )
+                }
+            }
         }
+    }
+
+    /** Moves an in-progress single-share draft (if any) into the share queue as its first item,
+     * so a second concurrent share can join it there instead of silently replacing it. */
+    private fun migratePendingCaptureSeedToQueue() {
+        val seed = _uiState.value.captureSeed?.takeIf { it.sourceKind == "share" } ?: return
+        val item = ShareQueueItem(
+            id = UUID.randomUUID().toString(),
+            name = seed.name,
+            amountCents = seed.amountCents,
+            category = seed.category,
+            imageUrl = seed.imageUrl,
+            sourceUrl = seed.sourceUrl
+        )
+        val current = _uiState.value.shareQueue
+        val finalItem = if (current.any { isLikelyDuplicate(it, item) }) item.copy(duplicateAction = "flagged") else item.copy(duplicateAction = "none")
+        val updated = current + finalItem
+        saveShareQueue(updated)
+        _uiState.update { it.copy(shareQueue = updated, captureSeed = null) }
     }
 
     fun addListingItemsToCart(items: List<ListingProductStub>) {

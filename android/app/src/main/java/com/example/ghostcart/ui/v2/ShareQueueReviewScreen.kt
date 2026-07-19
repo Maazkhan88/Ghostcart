@@ -82,7 +82,7 @@ fun ShareQueueReviewScreen(
 ) {
     var editingItem by remember { mutableStateOf<ShareQueueItem?>(null) }
     val hasUnresolvedDuplicates = queue.any { it.duplicateAction == "flagged" }
-    var shareWithCommunity by remember { mutableStateOf(false) }
+    var shareWithCommunity by remember { mutableStateOf(true) }
     // The cooling duration is always a user choice - never a silent fixed default, even when
     // bulk-cooling every queued item at once.
     var showBulkCoolingDialog by remember { mutableStateOf(false) }
@@ -222,7 +222,7 @@ fun ShareQueueReviewScreen(
                 }
 
                 PrimaryButton(
-                    text = if (hasUnresolvedDuplicates) "Resolve duplicates to confirm" else "Add ${queue.size} to Ghost Cart",
+                    text = if (hasUnresolvedDuplicates) "Resolve duplicates to confirm" else "Add to Ghost Cart",
                     onClick = {
                         if (!hasUnresolvedDuplicates) {
                             onConfirmAll(shareWithCommunity)
@@ -233,7 +233,7 @@ fun ShareQueueReviewScreen(
                 )
 
                 SecondaryButton(
-                    text = if (hasUnresolvedDuplicates) "Resolve duplicates to cool down" else "Cool down ${queue.size} items",
+                    text = if (hasUnresolvedDuplicates) "Resolve duplicates to cool down" else "Cool Down Items",
                     onClick = {
                         if (!hasUnresolvedDuplicates) {
                             showBulkCoolingDialog = true
