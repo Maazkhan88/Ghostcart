@@ -74,12 +74,14 @@ fun ShareQueueReviewScreen(
     importState: ProductImportState,
     onUpdateItem: (ShareQueueItem) -> Unit,
     onRemoveItem: (String) -> Unit,
-    onConfirmAll: () -> Unit,
+    onConfirmAll: (shareWithCommunity: Boolean) -> Unit,
+    onCoolAll: (shareWithCommunity: Boolean) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var editingItem by remember { mutableStateOf<ShareQueueItem?>(null) }
     val hasUnresolvedDuplicates = queue.any { it.duplicateAction == "flagged" }
+    var shareWithCommunity by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -194,15 +196,45 @@ fun ShareQueueReviewScreen(
 
         if (queue.isNotEmpty()) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 6.dp)
+                        .clickable { shareWithCommunity = !shareWithCommunity }
+                ) {
+                    androidx.compose.material3.Checkbox(
+                        checked = shareWithCommunity,
+                        onCheckedChange = { shareWithCommunity = it },
+                        colors = androidx.compose.material3.CheckboxDefaults.colors(checkedColor = GhostGreen)
+                    )
+                    Text(
+                        text = "Share anonymously with community feed",
+                        color = Ink,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
+
                 PrimaryButton(
-                    text = if (hasUnresolvedDuplicates) "Resolve duplicates to confirm" else "Confirm ${queue.size} to Ghost Cart",
+                    text = if (hasUnresolvedDuplicates) "Resolve duplicates to confirm" else "Add ${queue.size} to Ghost Cart",
                     onClick = {
                         if (!hasUnresolvedDuplicates) {
-                            onConfirmAll()
+                            onConfirmAll(shareWithCommunity)
                         }
                     },
                     containerColor = if (hasUnresolvedDuplicates) MutedText else Ink,
                     leadingIcon = Icons.Filled.ShoppingBag
+                )
+
+                SecondaryButton(
+                    text = if (hasUnresolvedDuplicates) "Resolve duplicates to cool down" else "Cool down ${queue.size} immediately",
+                    onClick = {
+                        if (!hasUnresolvedDuplicates) {
+                            onCoolAll(shareWithCommunity)
+                        }
+                    }
                 )
             }
         }

@@ -1115,7 +1115,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(shareQueue = emptyList()) }
     }
 
-    fun bulkConfirmShareQueue() {
+    fun bulkConfirmShareQueue(shareWithCommunity: Boolean) {
         val queue = _uiState.value.shareQueue
         val activeItems = queue.filter { it.duplicateAction != "remove" }
         
@@ -1134,7 +1134,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     coolingDurationMillis = recommendedCooling(item.category),
                     sourceUrl = item.sourceUrl,
                     imageUrl = item.imageUrl,
-                    sourceKind = "share"
+                    sourceKind = "share",
+                    shareWithCommunity = shareWithCommunity
                 )
             )
         }
@@ -1143,5 +1144,33 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         showToast(
             if (activeItems.size == 1) "Added 1 item to Ghost Cart" else "Added ${activeItems.size} items to Ghost Cart"
         )
+    }
+
+    fun bulkCoolShareQueue(shareWithCommunity: Boolean) {
+        val queue = _uiState.value.shareQueue
+        val activeItems = queue.filter { it.duplicateAction != "remove" }
+        
+        if (activeItems.any { it.duplicateAction == "flagged" }) {
+            showToast("Please resolve all duplicate items before cooling.")
+            return
+        }
+
+        activeItems.forEach { item ->
+            createAlmostBuy(
+                AlmostBuyDraft(
+                    name = item.name,
+                    amountCents = item.amountCents,
+                    category = normalizeCategory(item.category),
+                    trigger = "FOMO",
+                    coolingDurationMillis = recommendedCooling(item.category),
+                    sourceUrl = item.sourceUrl,
+                    imageUrl = item.imageUrl,
+                    sourceKind = "share",
+                    shareWithCommunity = shareWithCommunity
+                )
+            )
+        }
+
+        clearShareQueue()
     }
 }

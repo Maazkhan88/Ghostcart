@@ -9,16 +9,17 @@ This section is the current operational source of truth. Historical session logs
 ### Repository and release state
 
 - Working branch: `phase-3/share-queue-location-animation`
-- Latest product implementation: current head of `phase-3/share-queue-location-animation` (v2.7.11 — Phase 3 multi-share queue and location simulation implemented and verified).
+- Latest product implementation: current head of `phase-3/share-queue-location-animation` (v2.7.12 — Phase 3 multi-share queue and location simulation implemented, including community opt-in and direct cooling options).
 - Draft PR: https://github.com/Maazkhan88/Ghostcart/pull/3
 - Base branch: `main`; current `main` already contains the merged v2 rebuild from PR #2 (`f4bb3ab`).
 - **Canonical hosted site/API: https://ghostcart-app.maaz-n-khan.workers.dev**
-- Android release: `releases/GhostCart-v2.7.11-debug.apk`
-- Direct APK: https://raw.githubusercontent.com/Maazkhan88/Ghostcart/phase-3/share-queue-location-animation/releases/GhostCart-v2.7.11-debug.apk
-- APK SHA-256: `E423E099A08FA93B6A957B69D6F0362AF32354E90DCFF8C83C23C495E4954782`
-- **v2.7.11 change (Phase 3 Multi-Share Queue & Location Simulation):**
-  1. **Multi-Share Queue & Duplicate Handling:** Implemented client-side queuing (persisted across background/foreground in SharedPreferences, capped at 20) for shared product URLs. Added a "Shared review queue" table screen allowing editing product name, price, and category, or removing rows. If a product is flagged as a duplicate (via the same duplicate detection logic as Phase 2's merge), the review screen highlights the duplicate and lets the user choose to "Merge" (remove/deduplicate), "Keep both", or "Remove" it.
-  2. **Location Nudge & simulated Ghost Rider animation:** Requests ACCESS_COARSE_LOCATION framed as "for a better app experience" with a clear disclaimer that it is simulated, or offers manual selection of a general area. Then, plays a stylized Canvas-based animated route map showing a ghost scooter rider driving towards a custom doorstep/house icon.
+- Android release: `releases/GhostCart-v2.7.12-debug.apk`
+- Direct APK: https://raw.githubusercontent.com/Maazkhan88/Ghostcart/phase-3/share-queue-location-animation/releases/GhostCart-v2.7.12-debug.apk
+- APK SHA-256: `7AFAA3F8A3D3AE18704DAFC5681BDA12F24D0D4F0C69B79E133F7BEB4EAD245F`
+- **v2.7.12 change (Phase 3 Multi-Share Queue, Direct Cooling, & Location Simulation):**
+  1. **Multi-Share Queue, Duplicate Handling, & Community Opt-in:** Implemented client-side queuing for shared product URLs. Added a "Shared review queue" table screen allowing editing product name, price, and category, or removing rows. If a product is flagged as a duplicate (via the same duplicate detection logic as Phase 2's merge), the review screen highlights the duplicate and lets the user choose to "Merge" (remove/deduplicate), "Keep both", or "Remove" it. Added a checkbox to optionally share the confirmed/cooled queue items anonymously with the community feed.
+  2. **Direct Cooling vs. Ghost Cart:** Added a secondary action "Cool down immediately" on the review screen to bypass checkout/cart completely and put the staged queue items straight into the cooling state, alongside the primary "Add to Ghost Cart" action.
+  3. **Location Nudge & simulated Ghost Rider animation:** Requests ACCESS_COARSE_LOCATION framed as "for a better app experience" with a clear disclaimer that it is simulated, or offers manual selection of a general area. Then, plays a stylized Canvas-based animated route map showing a ghost scooter rider driving towards a custom doorstep/house icon.
 - **v2.7.10 change (two independent fixes):**
   1. **Amazon-share title bug.** When a product is shared via Amazon's own
      native "Share" button (not pasted manually), Amazon populates

@@ -345,10 +345,15 @@ fun MainNavigation(
                             importState = state.productImportState,
                             onUpdateItem = appViewModel::updateShareQueueItem,
                             onRemoveItem = appViewModel::removeShareQueueItem,
-                            onConfirmAll = {
-                                appViewModel.bulkConfirmShareQueue()
+                            onConfirmAll = { shareWithCommunity ->
+                                appViewModel.bulkConfirmShareQueue(shareWithCommunity)
                                 backStack.clear()
                                 backStack.add(GhostCartList)
+                            },
+                            onCoolAll = { shareWithCommunity ->
+                                appViewModel.bulkCoolShareQueue(shareWithCommunity)
+                                backStack.clear()
+                                backStack.add(Cooldowns)
                             },
                             onBack = {
                                 backStack.removeLastOrNull()
