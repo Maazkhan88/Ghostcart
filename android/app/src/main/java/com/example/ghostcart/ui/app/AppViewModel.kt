@@ -4,12 +4,11 @@ import android.app.Application
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import com.ghostcart.app.BuildConfig
 import com.example.ghostcart.data.CoolingReminderWorker
 import com.example.ghostcart.data.DailyGhostReminderWorker
 import com.example.ghostcart.data.AlmostBuy
@@ -575,29 +574,41 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun scheduleDailyGhostReminder(workManager: WorkManager, meal: String, hourOfDay: Int) {
-        val request = PeriodicWorkRequestBuilder<DailyGhostReminderWorker>(24, TimeUnit.HOURS)
+        // A self-rescheduling one-time chain (each firing recomputes the exact delay to the
+        // next occurrence of hourOfDay from the actual current time) instead of a bare 24h
+        // PeriodicWorkRequest, which WorkManager/Doze can defer and then "catch up" on later,
+        // drifting the effective fire time away from the configured hour over several days.
+        // DailyGhostReminderWorker re-enqueues itself via this same unique work name after it runs.
+        val request = OneTimeWorkRequestBuilder<DailyGhostReminderWorker>()
             .setInitialDelay(delayUntilHour(hourOfDay), TimeUnit.MILLISECONDS)
-            .setInputData(workDataOf("meal" to meal))
+            .setInputData(workDataOf("meal" to meal, "hourOfDay" to hourOfDay))
             .addTag("ghost_daily_reminder")
             .build()
-        workManager.enqueueUniquePeriodicWork(
+        workManager.enqueueUniqueWork(
             "ghost_daily_$meal",
-            ExistingPeriodicWorkPolicy.UPDATE,
+            ExistingWorkPolicy.REPLACE,
             request
         )
     }
 
-    private fun delayUntilHour(hourOfDay: Int): Long {
-        val now = Calendar.getInstance()
-        val next = (now.clone() as Calendar).apply {
-            set(Calendar.HOUR_OF_DAY, hourOfDay)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-            if (!after(now)) add(Calendar.DAY_OF_YEAR, 1)
-        }
-        return (next.timeInMillis - now.timeInMillis).coerceAtLeast(0L)
+    /**
+     * Debug-only verification hook: fires the given reminder ~90 seconds out instead of
+     * waiting for the configured hour, so scheduling behavior can be checked on a real
+     * device in minutes rather than over a multi-day observation window. No-op in release
+     * builds.
+     */
+    fun scheduleDailyGhostReminderForDebugVerification(meal: String, hourOfDay: Int) {
+        if (!BuildConfig.DEBUG) return
+        val workManager = WorkManager.getInstance(getApplication<Application>())
+        val request = OneTimeWorkRequestBuilder<DailyGhostReminderWorker>()
+            .setInitialDelay(90, TimeUnit.SECONDS)
+            .setInputData(workDataOf("meal" to meal, "hourOfDay" to hourOfDay))
+            .addTag("ghost_daily_reminder_debug")
+            .build()
+        workManager.enqueueUniqueWork("ghost_daily_debug_$meal", ExistingWorkPolicy.REPLACE, request)
     }
+
+    private fun delayUntilHour(hourOfDay: Int): Long = delayUntilHourFrom(Calendar.getInstance(), hourOfDay)
 
     private fun loadWalletConfig(): WalletConfig {
         val simulatedBalance = if (!sharedPrefs.getBoolean("wallet_balance_v2_initialized", false)) {
@@ -784,7 +795,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             .putInt("last_order_total", total)
             .putLong("last_order_placed_at", placedAt)
             .apply()
-        scheduleDeliveryWorkers(orderId, total, _uiState.value.simulationIntervalMinutes)
+        scheduleDeliveryWorkers(
+            orderId,
+            total,
+            _uiState.value.simulationIntervalMinutes,
+            productImageUrl = ghostedProducts.firstOrNull()?.imageUrl
+        )
         beginDeliveryClock()
         showToast("Ghost Order Placed Successfully!")
 
@@ -829,7 +845,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val placedAt = System.currentTimeMillis()
             sharedPrefs.edit().putLong("last_order_placed_at", placedAt).apply()
             _uiState.update { it.copy(lastOrderPlacedAtMillis = placedAt, deliveryStep = 0) }
-            scheduleDeliveryWorkers(orderId, amountSaved, intervalMinutes)
+            scheduleDeliveryWorkers(
+                orderId,
+                amountSaved,
+                intervalMinutes,
+                productImageUrl = _uiState.value.lastOrderProducts.firstOrNull()?.imageUrl
+            )
         }
         beginDeliveryClock()
     }
@@ -881,7 +902,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun scheduleDeliveryWorkers(orderId: String, amountSaved: Int, intervalMinutes: Int) {
+    private fun scheduleDeliveryWorkers(
+        orderId: String,
+        amountSaved: Int,
+        intervalMinutes: Int,
+        productImageUrl: String? = null
+    ) {
         val context = getApplication<Application>()
         val workManager = WorkManager.getInstance(context)
         workManager.cancelAllWorkByTag("ghost_delivery_simulation")
@@ -891,7 +917,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 .setInputData(workDataOf(
                     "orderId" to orderId,
                     "amountSaved" to amountSaved,
-                    "stepIndex" to step
+                    "stepIndex" to step,
+                    "productImageUrl" to productImageUrl
                 ))
                 .setInitialDelay(delaySeconds, TimeUnit.SECONDS)
                 .addTag("ghost_delivery_simulation")

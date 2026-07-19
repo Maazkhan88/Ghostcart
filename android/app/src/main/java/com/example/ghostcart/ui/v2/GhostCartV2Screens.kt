@@ -83,6 +83,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.ghostcart.app.BuildConfig
 import com.ghostcart.app.R
 import com.example.ghostcart.data.AlmostBuy
 import com.example.ghostcart.data.AlmostBuyDraft
@@ -889,6 +890,7 @@ fun ProfileScreen(
     onToggleCooling: () -> Unit,
     onToggleLunch: () -> Unit,
     onToggleDinner: () -> Unit,
+    onDebugTestReminder: (meal: String, hourOfDay: Int) -> Unit = { _, _ -> },
     onDeleteAccount: () -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier
@@ -954,6 +956,18 @@ fun ProfileScreen(
                     onToggleDinner()
                 }
             )
+        }
+        if (BuildConfig.DEBUG) {
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { onDebugTestReminder("lunch", 13) }) {
+                        Text("Test lunch reminder (~90s)", fontSize = 11.sp)
+                    }
+                    OutlinedButton(onClick = { onDebugTestReminder("dinner", 20) }) {
+                        Text("Test dinner reminder (~90s)", fontSize = 11.sp)
+                    }
+                }
+            }
         }
         item {
             Text(

@@ -685,7 +685,10 @@ private fun CartSummaryButton(
             tint = GhostGreen,
             modifier = Modifier.size(18.dp)
         )
-        Column(modifier = Modifier.padding(start = 9.dp)) {
+        Column(
+            modifier = Modifier.padding(start = 9.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
             Text(
                 text = "View cart",
                 color = Paper,
@@ -695,15 +698,20 @@ private fun CartSummaryButton(
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "$itemCount ${if (itemCount == 1) "item" else "items"} · ",
+                    text = "$itemCount ${if (itemCount == 1) "item" else "items"} ·",
                     color = Paper.copy(alpha = 0.68f),
                     fontSize = 8.sp,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1
                 )
-                DirhamGlyph(tint = Paper.copy(alpha = 0.68f), modifier = Modifier.size(8.dp))
+                DirhamGlyph(
+                    tint = Paper.copy(alpha = 0.68f),
+                    modifier = Modifier
+                        .padding(horizontal = 3.dp)
+                        .size(8.dp)
+                )
                 Text(
-                    text = " $cartTotal",
+                    text = "$cartTotal",
                     color = Paper.copy(alpha = 0.68f),
                     fontSize = 8.sp,
                     fontWeight = FontWeight.Medium,

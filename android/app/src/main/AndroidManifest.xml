@@ -16,9 +16,21 @@
         android:usesCleartextTraffic="false"
         android:windowSoftInputMode="adjustResize"
         android:theme="@style/Theme.GhostCart">
+        <!--
+          singleTask (was singleTop): MainActivity is the app's only Activity, so clear-top
+          semantics have nothing else to wipe. singleTop only dedupes when this Activity is
+          already the top of its OWN task's back stack; it does not guarantee the existing
+          Ghost Cart task is reused when launched via ACTION_SEND from another app's task
+          (e.g. Amazon's share sheet), which is the documented cause of a second app
+          instance/task appearing instead of onNewIntent() firing on the running instance.
+          singleTask instead guarantees the system finds/reuses the existing task across
+          launcher, share, deep-link, and notification-tap entry points. See Phase 1 plan
+          notes for the required 7-path device verification (launcher, single share,
+          sequential shares, deep link, notification tap, Recents, back-navigation).
+        -->
         <activity
             android:name="com.example.ghostcart.MainActivity"
-            android:launchMode="singleTop"
+            android:launchMode="singleTask"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

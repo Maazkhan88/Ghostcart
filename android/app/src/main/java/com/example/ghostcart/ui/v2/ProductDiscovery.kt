@@ -1,6 +1,7 @@
 package com.example.ghostcart.ui.v2
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -59,6 +60,7 @@ import com.example.ghostcart.theme.Ink
 import com.example.ghostcart.theme.MutedText
 import com.example.ghostcart.theme.Paper
 import com.example.ghostcart.theme.SoftGray
+import com.example.ghostcart.ui.GhostMascotPose
 import com.example.ghostcart.ui.ProductPhoto
 import kotlinx.coroutines.delay
 
@@ -103,6 +105,7 @@ fun ProductDiscoverySection(
                 modifier = Modifier.align(Alignment.Center).width(132.dp).height(32.dp),
                 tint = Ink
             )
+            GhostPeekMascot(modifier = Modifier.align(Alignment.CenterStart))
             IconButton(onClick = onNotifications, modifier = Modifier.align(Alignment.CenterEnd)) {
                 Icon(Icons.Filled.Notifications, contentDescription = "Notifications", tint = Ink)
             }
@@ -323,6 +326,35 @@ private fun PromoBannerCarousel(modifier: Modifier = Modifier) {
                 fontWeight = FontWeight.Bold
             )
         }
+    }
+}
+
+/**
+ * Small home-screen easter egg: the ghost mascot briefly peeks in from the header's empty
+ * leading edge, then fades back out. Purely decorative (no click target, no layout impact -
+ * the header Box already reserves this space), same lightweight LaunchedEffect/fade pattern
+ * as [PromoBannerCarousel], no new dependency.
+ */
+@Composable
+private fun GhostPeekMascot(modifier: Modifier = Modifier) {
+    var visible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(25_000)
+            visible = true
+            delay(2_500)
+            visible = false
+        }
+    }
+
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(),
+        exit = fadeOut(),
+        modifier = modifier
+    ) {
+        GhostMascotPose(poseName = "peek", modifier = Modifier.size(28.dp))
     }
 }
 

@@ -9,9 +9,16 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.work.CoroutineWorker
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import com.example.ghostcart.MainActivity
+import com.example.ghostcart.ui.app.delayUntilHourFrom
 import com.ghostcart.app.R
+import java.util.Calendar
+import java.util.concurrent.TimeUnit
 
 private const val PREFS_NAME = "ghost_cart_prefs"
 private const val COOLING_NOTIFICATIONS_KEY = "cooling_notifications_enabled"
@@ -44,6 +51,7 @@ class DailyGhostReminderWorker(
 ) : CoroutineWorker(appContext, workerParams) {
     override suspend fun doWork(): Result {
         val meal = inputData.getString("meal") ?: "meal"
+        val hourOfDay = inputData.getInt("hourOfDay", if (meal == "lunch") 13 else 20)
         val preferenceKey = if (meal == "lunch") "lunch_reminder_enabled" else "dinner_reminder_enabled"
         if (!preferenceEnabled(applicationContext, preferenceKey, false)) return Result.success()
         val (title, text) = when (meal) {
@@ -63,6 +71,21 @@ class DailyGhostReminderWorker(
             notificationId = if (meal == "lunch") 2301 else 2302,
             title = title,
             text = text
+        )
+
+        // Re-anchor the next firing from the actual current time rather than letting a
+        // WorkManager PeriodicWorkRequest drift after a Doze-deferred run. Only reschedules
+        // while the preference is still enabled; toggling it off cancels this unique work
+        // from AppViewModel.syncDailyGhostReminder instead.
+        val nextRequest = OneTimeWorkRequestBuilder<DailyGhostReminderWorker>()
+            .setInitialDelay(delayUntilHourFrom(Calendar.getInstance(), hourOfDay), TimeUnit.MILLISECONDS)
+            .setInputData(workDataOf("meal" to meal, "hourOfDay" to hourOfDay))
+            .addTag("ghost_daily_reminder")
+            .build()
+        WorkManager.getInstance(applicationContext).enqueueUniqueWork(
+            "ghost_daily_$meal",
+            ExistingWorkPolicy.REPLACE,
+            nextRequest
         )
         return Result.success()
     }

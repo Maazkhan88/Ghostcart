@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -206,7 +207,20 @@ fun MainNavigation(
                         AuthScreen(
                             onAuthSuccess = { email ->
                                 appViewModel.authenticate(email)
-                                backStack.add(ProfileSelect)
+                                // If Auth was reached via the checkout sign-in gate (pushed on
+                                // top of GhostCartList without clearing the stack), resume the
+                                // checkout attempt instead of the first-run onboarding flow.
+                                // The backStack itself (rememberNavBackStack, a Serializable
+                                // NavKey list) is the durable mechanism here - it survives
+                                // config changes and process death, so this doesn't need any
+                                // separate transient Compose state to remember where to return.
+                                val cameFromCheckoutGate = backStack.getOrNull(backStack.size - 2) == GhostCartList
+                                if (cameFromCheckoutGate) {
+                                    backStack.removeLastOrNull()
+                                    backStack.add(GhostCheckout)
+                                } else {
+                                    backStack.add(ProfileSelect)
+                                }
                             },
                             onGuest = {
                                 backStack.clear()
@@ -395,8 +409,11 @@ fun MainNavigation(
                             onOpenProduct = { id -> backStack.add(ProductDetail(id)) },
                             onShareProduct = { product -> shareGhostItem(context, product.toGhostShareItem()) },
                             onCheckout = {
-                                if (state.cartQuantities.isEmpty()) appViewModel.showToast("Add an item before checkout")
-                                else backStack.add(GhostCheckout)
+                                when {
+                                    state.cartQuantities.isEmpty() -> appViewModel.showToast("Add an item before checkout")
+                                    state.authEmail == null -> backStack.add(Auth)
+                                    else -> backStack.add(GhostCheckout)
+                                }
                             }
                         )
                     }
@@ -462,6 +479,9 @@ fun MainNavigation(
                             },
                             onToggleDinner = {
                                 appViewModel.updateWalletConfig { it.copy(dinnerReminderEnabled = !it.dinnerReminderEnabled) }
+                            },
+                            onDebugTestReminder = { meal, hourOfDay ->
+                                appViewModel.scheduleDailyGhostReminderForDebugVerification(meal, hourOfDay)
                             },
                             onDeleteAccount = {
                                 appViewModel.deleteAccountAndLocalData()
@@ -587,6 +607,7 @@ private fun GhostBottomNav(current: NavKey?, cartCount: Int = 0, onNavigate: (Na
                         if (item.central && cartCount > 0) {
                             Box(
                                 modifier = Modifier
+                                    .offset(x = 4.dp, y = (-4).dp)
                                     .size(18.dp)
                                     .clip(CircleShape)
                                     .background(Ink)
