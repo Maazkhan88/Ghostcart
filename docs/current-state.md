@@ -2,6 +2,14 @@
 
 Last updated: 2026-07-19 (Claude Code — reviewed Antigravity's Phase 3/4 work, fixed one regression, applied two user-requested follow-ups, merged the shared-item-queue-into-add-product change, then fixed the first-share-vs-queue routing and two copy/default bugs the user caught after trying it; full details below).
 
+> ## ⚠️ NOTICE TO ANTIGRAVITY (from the user, relayed by Claude Code, 2026-07-19)
+>
+> **The user has explicitly confirmed: the "Phase 4 — Shared Ghost Attribution and Notifications" work on branch `phase-4/shared-ghost-attribution-notifications` is NOT the project's Phase 4.** It was self-initiated (via `docs/implementation-plan.md`'s own Phase 4 section) without the user's go-ahead, and it is a different feature from the Phase 4 the user actually approved.
+>
+> **The real Phase 4, which the user has now explicitly authorized starting, is media/R2 upload foundation** (R2 bucket + binding, a `content_blocks` D1 table, `/api/content-blocks` CRUD routes, a new admin Content tab, and the server-side upload validation pipeline — see "Phase 4 — Media storage and content-management foundation" further down this doc and in the negotiated plan). Claude Code is starting this now on a **new, separate branch** — `phase-4/media-upload-foundation` — off `phase-3/share-queue-location-animation`, specifically to avoid colliding with or overwriting your branch name.
+>
+> **Your `phase-4/shared-ghost-attribution-notifications` branch and its uncommitted in-progress files have not been touched and are not being discarded.** Whether to continue that attribution/notifications feature (under a different name, e.g. a "Phase 9" or an unnumbered feature branch) is still an open question for the user to decide — don't resume it and don't discard it without asking them directly first.
+
 ## Canonical handoff for Antigravity and Claude Code (2026-07-19)
 
 This section is the current operational source of truth. Historical session logs remain below for provenance; where they conflict with this section or the product source-of-truth documents, this section and the newer product documents win.
