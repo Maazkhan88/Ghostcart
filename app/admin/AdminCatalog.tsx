@@ -28,8 +28,20 @@ type Product = {
   isActive: boolean;
 };
 
+type InAppMessage = {
+  id: string;
+  title: string;
+  body: string;
+  imageUrl: string | null;
+  linkUrl: string | null;
+  sortOrder: number;
+  isActive: boolean;
+};
+
+type SimulationConsent = { version: number; consentText: string };
+
 type Notice = { kind: "success" | "error"; message: string } | null;
-type AdminTab = "products" | "merchants";
+type AdminTab = "products" | "merchants" | "in-app-messages";
 
 const EMPTY_MERCHANT = {
   name: "",
@@ -51,6 +63,15 @@ const EMPTY_PRODUCT = {
   isActive: true,
 };
 
+const EMPTY_MESSAGE = {
+  title: "",
+  body: "",
+  imageUrl: "",
+  linkUrl: "",
+  sortOrder: "0",
+  isActive: true,
+};
+
 async function readJson<T>(response: Response): Promise<T> {
   const body = (await response.json()) as T & { error?: string };
   if (!response.ok) throw new Error(body.error || "The request could not be completed.");
@@ -67,10 +88,15 @@ export default function AdminCatalog({
   const [tab, setTab] = useState<AdminTab>("products");
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [messages, setMessages] = useState<InAppMessage[]>([]);
+  const [consent, setConsent] = useState<SimulationConsent | null>(null);
+  const [consentDraft, setConsentDraft] = useState("");
   const [merchantForm, setMerchantForm] = useState(EMPTY_MERCHANT);
   const [productForm, setProductForm] = useState(EMPTY_PRODUCT);
+  const [messageForm, setMessageForm] = useState(EMPTY_MESSAGE);
   const [editingMerchantId, setEditingMerchantId] = useState<number | null>(null);
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -78,16 +104,25 @@ export default function AdminCatalog({
 
   const loadCatalog = useCallback(async () => {
     try {
-      const [merchantData, productData] = await Promise.all([
+      const [merchantData, productData, messageData, consentData] = await Promise.all([
         fetch("/api/merchants", { cache: "no-store" }).then((response) =>
           readJson<{ merchants: Merchant[] }>(response),
         ),
         fetch("/api/products", { cache: "no-store" }).then((response) =>
           readJson<{ products: Product[] }>(response),
         ),
+        fetch("/api/in-app-messages", { cache: "no-store" }).then((response) =>
+          readJson<{ messages: InAppMessage[] }>(response),
+        ),
+        fetch("/api/simulation-consent", { cache: "no-store" }).then((response) =>
+          readJson<SimulationConsent>(response),
+        ),
       ]);
       setMerchants(merchantData.merchants);
       setProducts(productData.products);
+      setMessages(messageData.messages);
+      setConsent(consentData);
+      setConsentDraft(consentData.consentText);
       setNotice(null);
     } catch (error) {
       setNotice({
@@ -122,6 +157,12 @@ export default function AdminCatalog({
       ),
     );
   }, [merchants, query]);
+
+  const filteredMessages = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (!term) return messages;
+    return messages.filter((message) => message.title.toLowerCase().includes(term));
+  }, [messages, query]);
 
   const activeCount = products.filter((product) => product.isActive).length;
 
@@ -186,7 +227,61 @@ export default function AdminCatalog({
     }
   }
 
-  async function removeRecord(kind: AdminTab, id: number, name: string) {
+  async function saveMessage(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setNotice(null);
+    try {
+      const payload = {
+        title: messageForm.title,
+        body: messageForm.body,
+        imageUrl: messageForm.imageUrl,
+        linkUrl: messageForm.linkUrl,
+        sortOrder: Number(messageForm.sortOrder),
+        isActive: messageForm.isActive,
+      };
+      const response = await fetch(
+        editingMessageId ? `/api/in-app-messages/${editingMessageId}` : "/api/in-app-messages",
+        {
+          method: editingMessageId ? "PATCH" : "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
+      await readJson(response);
+      setNotice({ kind: "success", message: editingMessageId ? "Message updated." : "Message added." });
+      setMessageForm(EMPTY_MESSAGE);
+      setEditingMessageId(null);
+      await loadCatalog();
+    } catch (error) {
+      setNotice({ kind: "error", message: error instanceof Error ? error.message : "Could not save message." });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function publishConsent() {
+    if (!window.confirm("Publish a new simulation-consent version? Every user, including those who already accepted, will be re-prompted.")) return;
+    setSaving(true);
+    setNotice(null);
+    try {
+      const response = await fetch("/api/simulation-consent", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ consentText: consentDraft }),
+      });
+      const updated = await readJson<SimulationConsent>(response);
+      setConsent(updated);
+      setConsentDraft(updated.consentText);
+      setNotice({ kind: "success", message: `Consent version ${updated.version} published.` });
+    } catch (error) {
+      setNotice({ kind: "error", message: error instanceof Error ? error.message : "Could not publish consent." });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function removeRecord(kind: AdminTab, id: number | string, name: string) {
     const cascadeNote = kind === "merchants" ? " Its products will also be removed." : "";
     if (!window.confirm(`Remove ${name}?${cascadeNote}`)) return;
 
@@ -195,7 +290,8 @@ export default function AdminCatalog({
     try {
       const response = await fetch(`/api/${kind}/${id}`, { method: "DELETE" });
       await readJson(response);
-      setNotice({ kind: "success", message: `${kind === "products" ? "Product" : "Merchant"} removed.` });
+      const label = kind === "products" ? "Product" : kind === "merchants" ? "Merchant" : "Message";
+      setNotice({ kind: "success", message: `${label} removed.` });
       await loadCatalog();
     } catch (error) {
       setNotice({ kind: "error", message: error instanceof Error ? error.message : "Could not remove record." });
@@ -232,11 +328,26 @@ export default function AdminCatalog({
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function editMessage(message: InAppMessage) {
+    setEditingMessageId(message.id);
+    setMessageForm({
+      title: message.title,
+      body: message.body,
+      imageUrl: message.imageUrl ?? "",
+      linkUrl: message.linkUrl ?? "",
+      sortOrder: String(message.sortOrder),
+      isActive: message.isActive,
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function cancelEdit() {
     setEditingMerchantId(null);
     setEditingProductId(null);
+    setEditingMessageId(null);
     setMerchantForm(EMPTY_MERCHANT);
     setProductForm(EMPTY_PRODUCT);
+    setMessageForm(EMPTY_MESSAGE);
   }
 
   return (
@@ -265,6 +376,7 @@ export default function AdminCatalog({
       <section className="admin-metrics" aria-label="Catalog overview">
         <article><span>Products</span><strong>{products.length}</strong><small>{activeCount} active in the demo</small></article>
         <article><span>Merchants</span><strong>{merchants.length}</strong><small>Catalog sources</small></article>
+        <article><span>Messages</span><strong>{messages.length}</strong><small>Consent v{consent?.version ?? "-"}</small></article>
         <article className="admin-safety-card"><span>Catalog</span><strong>Demo mode</strong><small>Product references for Ghost Cart experiences</small></article>
       </section>
 
@@ -273,9 +385,29 @@ export default function AdminCatalog({
           <div className="admin-tabs" role="tablist" aria-label="Catalog type">
             <button type="button" role="tab" aria-selected={tab === "products"} onClick={() => { setTab("products"); cancelEdit(); }}>Products</button>
             <button type="button" role="tab" aria-selected={tab === "merchants"} onClick={() => { setTab("merchants"); cancelEdit(); }}>Merchants</button>
+            <button type="button" role="tab" aria-selected={tab === "in-app-messages"} onClick={() => { setTab("in-app-messages"); cancelEdit(); }}>Messages</button>
           </div>
 
-          {tab === "merchants" ? (
+          {tab === "in-app-messages" ? (
+            <>
+              <form className="admin-form" onSubmit={saveMessage}>
+                <div className="admin-form-heading"><p>{editingMessageId ? "Edit message" : "New message"}</p><span>{editingMessageId ? "Editing" : "In-app"}</span></div>
+                <label>Title<input required value={messageForm.title} onChange={(event) => setMessageForm({ ...messageForm, title: event.target.value })} placeholder="Message title" /></label>
+                <label>Body<textarea required value={messageForm.body} onChange={(event) => setMessageForm({ ...messageForm, body: event.target.value })} placeholder="Message text shown to users" /></label>
+                <label>Image URL <span>optional</span><input type="url" value={messageForm.imageUrl} onChange={(event) => setMessageForm({ ...messageForm, imageUrl: event.target.value })} placeholder="https://…" /></label>
+                <label>Link URL <span>optional</span><input type="url" value={messageForm.linkUrl} onChange={(event) => setMessageForm({ ...messageForm, linkUrl: event.target.value })} placeholder="https://…" /></label>
+                <label>Sort order <span>lower shows first</span><input type="number" step="1" value={messageForm.sortOrder} onChange={(event) => setMessageForm({ ...messageForm, sortOrder: event.target.value })} /></label>
+                <label className="admin-check"><input type="checkbox" checked={messageForm.isActive} onChange={(event) => setMessageForm({ ...messageForm, isActive: event.target.checked })} /><span><strong>Active</strong><small>Shown to users on launch.</small></span></label>
+                <div className="admin-form-actions"><button className="admin-primary" disabled={saving}>{saving ? "Saving…" : editingMessageId ? "Save changes" : "Add message"}</button>{editingMessageId && <button type="button" className="admin-secondary" onClick={cancelEdit}>Cancel</button>}</div>
+              </form>
+              <div className="admin-form" style={{ marginTop: "1.5rem" }}>
+                <div className="admin-form-heading"><p>Simulation consent</p><span>v{consent?.version ?? "-"}</span></div>
+                <p className="admin-inline-note">Shown once on first launch (and again to everyone if you publish a new version below).</p>
+                <label>Consent text<textarea required value={consentDraft} onChange={(event) => setConsentDraft(event.target.value)} /></label>
+                <div className="admin-form-actions"><button type="button" className="admin-primary" disabled={saving || consentDraft.trim() === consent?.consentText} onClick={publishConsent}>Publish new version</button></div>
+              </div>
+            </>
+          ) : tab === "merchants" ? (
             <form className="admin-form" onSubmit={saveMerchant}>
               <div className="admin-form-heading"><p>{editingMerchantId ? "Edit merchant" : "New merchant"}</p><span>{editingMerchantId ? `#${editingMerchantId}` : "Auto-slugged"}</span></div>
               <label>Name<input required value={merchantForm.name} onChange={(event) => setMerchantForm({ ...merchantForm, name: event.target.value })} placeholder="Merchant name" /></label>
@@ -305,10 +437,21 @@ export default function AdminCatalog({
         </aside>
 
         <section className="admin-records" aria-labelledby="records-title">
-          <div className="admin-records-head"><div><p>Catalog records</p><h2 id="records-title">{tab === "products" ? "Products" : "Merchants"}</h2></div><label><span className="sr-only">Search catalog</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${tab}`} /></label></div>
+          <div className="admin-records-head"><div><p>Catalog records</p><h2 id="records-title">{tab === "products" ? "Products" : tab === "merchants" ? "Merchants" : "Messages"}</h2></div><label><span className="sr-only">Search catalog</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${tab}`} /></label></div>
           {notice && <p className={`admin-notice is-${notice.kind}`} role="status">{notice.message}</p>}
           {loading ? (
             <div className="admin-empty">Loading catalog…</div>
+          ) : tab === "in-app-messages" ? (
+            <div className="admin-list">
+              {filteredMessages.length === 0 && <div className="admin-empty">No messages found. Add the first one from the editor.</div>}
+              {filteredMessages.map((message) => (
+                <article className="admin-record" key={message.id}>
+                  <div className="admin-record-art">{message.imageUrl ? <img src={message.imageUrl} alt="" /> : <span>{message.title.slice(0, 1)}</span>}</div>
+                  <div className="admin-record-copy"><div>{!message.isActive && <b>Inactive</b>}</div><h3>{message.title}</h3><p>{message.body.slice(0, 80)}{message.body.length > 80 ? "…" : ""}</p></div>
+                  <div className="admin-record-actions"><button type="button" onClick={() => editMessage(message)}>Edit</button><button type="button" className="is-danger" disabled={saving} onClick={() => removeRecord("in-app-messages", message.id, message.title)}>Remove</button></div>
+                </article>
+              ))}
+            </div>
           ) : tab === "products" ? (
             <div className="admin-list">
               {filteredProducts.length === 0 && <div className="admin-empty">No products found. Add the first demo product from the editor.</div>}
