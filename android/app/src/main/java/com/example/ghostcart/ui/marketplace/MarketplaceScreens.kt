@@ -687,12 +687,14 @@ private fun CartSummaryButton(
         )
         Column(
             modifier = Modifier.padding(start = 9.dp),
-            horizontalAlignment = Alignment.Start
+            horizontalAlignment = Alignment.Start,
+            verticalArrangement = Arrangement.spacedBy(1.dp)
         ) {
             Text(
                 text = "View cart",
                 color = Paper,
                 fontSize = 11.sp,
+                lineHeight = 12.sp,
                 fontWeight = FontWeight.ExtraBold,
                 maxLines = 1
             )
@@ -701,6 +703,7 @@ private fun CartSummaryButton(
                     text = "$itemCount ${if (itemCount == 1) "item" else "items"} ·",
                     color = Paper.copy(alpha = 0.68f),
                     fontSize = 8.sp,
+                    lineHeight = 9.sp,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1
                 )
@@ -714,6 +717,7 @@ private fun CartSummaryButton(
                     text = "$cartTotal",
                     color = Paper.copy(alpha = 0.68f),
                     fontSize = 8.sp,
+                    lineHeight = 9.sp,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1
                 )

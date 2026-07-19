@@ -618,6 +618,7 @@ private fun GhostBottomNav(current: NavKey?, cartCount: Int = 0, onNavigate: (Na
                                     text = if (cartCount > 9) "9+" else "$cartCount",
                                     color = Paper,
                                     fontSize = 8.sp,
+                                    lineHeight = 8.sp,
                                     fontWeight = FontWeight.ExtraBold
                                 )
                             }
