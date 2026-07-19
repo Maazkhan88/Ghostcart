@@ -221,7 +221,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 catalogItem
             }
         }
-        return merged + community.filterNot { it.id in usedCommunityIds }
+        // User-ghosted items surface first in the marketplace, ahead of the curated catalog -
+        // sortedByDescending is stable, so relative order within each group (catalog order,
+        // community recency) is preserved.
+        return (merged + community.filterNot { it.id in usedCommunityIds })
+            .sortedByDescending { it.isUserGhosted }
     }
 
     fun addDraftToCart(draft: AlmostBuyDraft) {
@@ -1146,10 +1150,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    fun bulkCoolShareQueue(shareWithCommunity: Boolean) {
+    /** [coolingDurationMillis] is always a user choice (see CoolingDurationDialog) - never a
+     * silent fixed default, even when bulk-cooling every queued item at once. */
+    fun bulkCoolShareQueue(shareWithCommunity: Boolean, coolingDurationMillis: Long) {
         val queue = _uiState.value.shareQueue
         val activeItems = queue.filter { it.duplicateAction != "remove" }
-        
+
         if (activeItems.any { it.duplicateAction == "flagged" }) {
             showToast("Please resolve all duplicate items before cooling.")
             return
@@ -1162,7 +1168,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     amountCents = item.amountCents,
                     category = normalizeCategory(item.category),
                     trigger = "FOMO",
-                    coolingDurationMillis = recommendedCooling(item.category),
+                    coolingDurationMillis = coolingDurationMillis,
                     sourceUrl = item.sourceUrl,
                     imageUrl = item.imageUrl,
                     sourceKind = "share",

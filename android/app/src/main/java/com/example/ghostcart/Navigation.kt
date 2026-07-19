@@ -350,8 +350,8 @@ fun MainNavigation(
                                 backStack.clear()
                                 backStack.add(GhostCartList)
                             },
-                            onCoolAll = { shareWithCommunity ->
-                                appViewModel.bulkCoolShareQueue(shareWithCommunity)
+                            onCoolAll = { shareWithCommunity, durationMillis ->
+                                appViewModel.bulkCoolShareQueue(shareWithCommunity, durationMillis)
                                 backStack.clear()
                                 backStack.add(Cooldowns)
                             },

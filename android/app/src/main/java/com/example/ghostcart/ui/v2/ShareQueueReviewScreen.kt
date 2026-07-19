@@ -61,6 +61,7 @@ import com.example.ghostcart.theme.MutedText
 import com.example.ghostcart.theme.Paper
 import com.example.ghostcart.theme.SoftGray
 import com.example.ghostcart.ui.DirhamGlyph
+import com.example.ghostcart.ui.common.CoolingDurationDialog
 import com.example.ghostcart.ui.common.GhostTopBar
 import com.example.ghostcart.ui.common.PrimaryButton
 import com.example.ghostcart.ui.common.SecondaryButton
@@ -75,13 +76,16 @@ fun ShareQueueReviewScreen(
     onUpdateItem: (ShareQueueItem) -> Unit,
     onRemoveItem: (String) -> Unit,
     onConfirmAll: (shareWithCommunity: Boolean) -> Unit,
-    onCoolAll: (shareWithCommunity: Boolean) -> Unit,
+    onCoolAll: (shareWithCommunity: Boolean, durationMillis: Long) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var editingItem by remember { mutableStateOf<ShareQueueItem?>(null) }
     val hasUnresolvedDuplicates = queue.any { it.duplicateAction == "flagged" }
     var shareWithCommunity by remember { mutableStateOf(false) }
+    // The cooling duration is always a user choice - never a silent fixed default, even when
+    // bulk-cooling every queued item at once.
+    var showBulkCoolingDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -229,15 +233,25 @@ fun ShareQueueReviewScreen(
                 )
 
                 SecondaryButton(
-                    text = if (hasUnresolvedDuplicates) "Resolve duplicates to cool down" else "Cool down ${queue.size} immediately",
+                    text = if (hasUnresolvedDuplicates) "Resolve duplicates to cool down" else "Cool down ${queue.size} items",
                     onClick = {
                         if (!hasUnresolvedDuplicates) {
-                            onCoolAll(shareWithCommunity)
+                            showBulkCoolingDialog = true
                         }
                     }
                 )
             }
         }
+    }
+
+    if (showBulkCoolingDialog) {
+        CoolingDurationDialog(
+            onConfirm = { option ->
+                onCoolAll(shareWithCommunity, option.durationMillis)
+                showBulkCoolingDialog = false
+            },
+            onDismiss = { showBulkCoolingDialog = false }
+        )
     }
 
     editingItem?.let { item ->

@@ -795,17 +795,26 @@ private enum class ProductSortOption(val label: String) {
     RECENT("Recent")
 }
 
+// User-ghosted items always cluster first, regardless of which sort metric is chosen - the
+// chosen metric only orders within each group (user-ghosted vs. not).
 private fun sortProducts(
     products: List<MarketplaceProduct>,
     sortOption: ProductSortOption,
     activityCounts: Map<String, Int>
 ): List<MarketplaceProduct> = when (sortOption) {
-    ProductSortOption.MOST_GHOSTED -> products.sortedByDescending { activityCounts[it.id] ?: 0 }
+    ProductSortOption.MOST_GHOSTED -> products.sortedWith(
+        compareByDescending<MarketplaceProduct> { it.isUserGhosted }
+            .thenByDescending { activityCounts[it.id] ?: 0 }
+    )
     ProductSortOption.RECENT -> products.sortedWith(
-        compareByDescending<MarketplaceProduct> { it.lastGhostedAtMillis != null }
+        compareByDescending<MarketplaceProduct> { it.isUserGhosted }
+            .thenByDescending { it.lastGhostedAtMillis != null }
             .thenByDescending { it.lastGhostedAtMillis ?: 0L }
     )
-    ProductSortOption.TRENDING -> products.sortedByDescending { trendingScore(it) }
+    ProductSortOption.TRENDING -> products.sortedWith(
+        compareByDescending<MarketplaceProduct> { it.isUserGhosted }
+            .thenByDescending { trendingScore(it) }
+    )
 }
 
 private fun trendingScore(product: MarketplaceProduct): Double {

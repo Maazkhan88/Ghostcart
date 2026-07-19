@@ -1,5 +1,7 @@
 # Implementation plan
 
+> **⚠️ STALE — read `docs/current-state.md`'s "Canonical handoff" section (and specifically its "two plans exist" note, added 2026-07-19) before treating this file's phase numbering as authoritative.** This doc predates the native Android/iOS rewrite (it still references "Expo" and a marketing-site "waitlist," neither of which exist in this codebase). Its "Phase 4" section below is a separately-invented feature (shared-ghost attribution + notifications) that was never approved by the user against the actual negotiated roadmap — check with the user before continuing it.
+
 ## Current state
 
 The workspace began empty. The Sites starter was initialized on 10 July 2026. No official brand assets were present.
