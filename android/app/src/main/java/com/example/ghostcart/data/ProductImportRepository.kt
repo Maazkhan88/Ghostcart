@@ -11,6 +11,21 @@ import java.util.UUID
 private val URL_PATTERN = Regex("""https://[^\s]+""", RegexOption.IGNORE_CASE)
 private val BLOCKED_LINK_SUFFIXES = listOf(".localhost", ".local", ".internal", ".home", ".lan", ".onion")
 
+/**
+ * Parses a `Date().toISOString()`-style timestamp (e.g. "2026-07-19T15:30:00.000Z") from the
+ * backend into epoch millis. Uses SimpleDateFormat rather than java.time since minSdk 24 predates
+ * java.time without core library desugaring.
+ */
+fun parseIsoTimestampMillis(iso: String?): Long? {
+    if (iso.isNullOrBlank()) return null
+    return runCatching {
+        val format = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }
+        format.parse(iso)?.time
+    }.getOrNull()
+}
+
 private fun isSafePublicHttpsUrl(value: String): Boolean = runCatching {
     val url = URL(value)
     val host = url.host.lowercase().trimEnd('.')
@@ -73,7 +88,9 @@ data class CommunityProduct(
     val sourceDomain: String,
     val sourceUrl: String?,
     val ghostCount: Int,
-    val activityTag: String = "User Ghosted"
+    val activityTag: String = "User Ghosted",
+    /** Epoch millis parsed from the server's lastGhostedAt; null if missing/unparseable. */
+    val lastGhostedAtMillis: Long? = null
 )
 
 sealed interface ProductImportState {
@@ -331,7 +348,8 @@ object ProductImportRepository {
                             sourceDomain = item.optString("sourceDomain"),
                             sourceUrl = item.nullableString("sourceUrl"),
                             ghostCount = item.optInt("ghostCount", 1),
-                            activityTag = item.optString("activityTag", "User Ghosted")
+                            activityTag = item.optString("activityTag", "User Ghosted"),
+                            lastGhostedAtMillis = parseIsoTimestampMillis(item.nullableString("lastGhostedAt"))
                         )
                     )
                 }
@@ -368,7 +386,8 @@ object ProductImportRepository {
                     sourceDomain = item.optString("sourceDomain"),
                     sourceUrl = item.nullableString("sourceUrl"),
                     ghostCount = item.optInt("ghostCount", 1),
-                    activityTag = item.optString("activityTag", "User Ghosted")
+                    activityTag = item.optString("activityTag", "User Ghosted"),
+                    lastGhostedAtMillis = parseIsoTimestampMillis(item.nullableString("lastGhostedAt"))
                 )
             }
         }

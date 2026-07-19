@@ -37,9 +37,13 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -73,6 +77,7 @@ import com.example.ghostcart.ui.GhostMascotPose
 import com.example.ghostcart.ui.GhostCartWordmark
 import com.example.ghostcart.ui.ProductPhoto
 import com.example.ghostcart.ui.common.BackButton
+import com.example.ghostcart.ui.common.CoolingDurationDialog
 import com.example.ghostcart.ui.common.ForwardChevron
 import com.example.ghostcart.ui.common.PrimaryButton
 import com.example.ghostcart.ui.common.RoundIconButton
@@ -514,20 +519,26 @@ fun CategoryBrowseScreen(
     onOpenCart: () -> Unit,
     onOpenProduct: (String) -> Unit,
     onAddToCart: (String) -> Unit,
-    onCoolProduct: (String) -> Unit,
+    onCoolProduct: (id: String, durationMillis: Long, durationLabel: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var selectedFilter by remember(categoryId) { mutableStateOf("All") }
+    var sortOption by remember(categoryId) { mutableStateOf(ProductSortOption.TRENDING) }
+    var selectedBrand by remember(categoryId) { mutableStateOf<String?>(null) }
+    var userGhostedOnly by remember(categoryId) { mutableStateOf(false) }
+    var showFiltersDialog by remember { mutableStateOf(false) }
+    var pendingCoolProductId by remember { mutableStateOf<String?>(null) }
     val filters = if (categoryId == "food") {
         listOf("All", "Fast Food", "Coffee & Drinks", "Healthy")
     } else {
         listOf("All")
     }
-    val visibleProducts = if (selectedFilter == "All") {
-        products
-    } else {
-        products.filter { it.category.equals(selectedFilter, ignoreCase = true) }
-    }
+    val availableBrands = remember(products) { products.mapNotNull { it.brand }.distinct().sorted() }
+    val filteredProducts = products
+        .filter { selectedFilter == "All" || it.category.equals(selectedFilter, ignoreCase = true) }
+        .filter { selectedBrand == null || it.brand == selectedBrand }
+        .filter { !userGhostedOnly || it.isUserGhosted }
+    val visibleProducts = sortProducts(filteredProducts, sortOption, activityCounts)
 
     Column(
         modifier = modifier
@@ -566,34 +577,54 @@ fun CategoryBrowseScreen(
         Text(text = title, color = Ink, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 12.dp))
         Text(text = subtitle, color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
 
-        if (filters.size > 1) {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 14.dp)) {
-                items(filters) { filter ->
-                    val selected = filter == selectedFilter
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(999.dp))
-                            .background(if (selected) Ink else Paper)
-                            .border(1.dp, if (selected) Ink else FaintBorder, RoundedCornerShape(999.dp))
-                            .clickable { selectedFilter = filter }
-                            .padding(horizontal = 14.dp, vertical = 10.dp)
-                    ) {
-                        Text(text = filter, color = if (selected) Paper else Ink, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-                item {
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .border(1.dp, FaintBorder, CircleShape)
-                            .padding(10.dp)
-                    ) {
-                        Icon(Icons.Filled.Tune, contentDescription = "More filters", tint = Ink, modifier = Modifier.size(14.dp))
-                    }
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 14.dp)) {
+            items(ProductSortOption.entries.toList()) { option ->
+                val selected = option == sortOption
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(if (selected) Ink else Paper)
+                        .border(1.dp, if (selected) Ink else FaintBorder, RoundedCornerShape(999.dp))
+                        .clickable { sortOption = option }
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                ) {
+                    Text(text = option.label, color = if (selected) Paper else Ink, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
-        } else {
-            Spacer(modifier = Modifier.height(14.dp))
+        }
+
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 14.dp)) {
+            items(filters) { filter ->
+                val selected = filter == selectedFilter
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(if (selected) Ink else Paper)
+                        .border(1.dp, if (selected) Ink else FaintBorder, RoundedCornerShape(999.dp))
+                        .clickable { selectedFilter = filter }
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                ) {
+                    Text(text = filter, color = if (selected) Paper else Ink, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            item {
+                val filtersActive = selectedBrand != null || userGhostedOnly
+                Box(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(if (filtersActive) Ink else Color.Transparent)
+                        .border(1.dp, if (filtersActive) Ink else FaintBorder, CircleShape)
+                        .clickable(role = Role.Button) { showFiltersDialog = true }
+                        .padding(10.dp)
+                ) {
+                    Icon(
+                        Icons.Filled.Tune,
+                        contentDescription = "More filters",
+                        tint = if (filtersActive) Paper else Ink,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
         }
 
         Row(
@@ -655,13 +686,138 @@ fun CategoryBrowseScreen(
                         onToggleFavorite = { onToggleFavorite(product.id) },
                         onClick = { onOpenProduct(product.id) },
                         onAdd = { onAddToCart(product.id) },
-                        onCool = { onCoolProduct(product.id) },
+                        onCool = { pendingCoolProductId = product.id },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
         }
     }
+
+    if (showFiltersDialog) {
+        FiltersDialog(
+            availableBrands = availableBrands,
+            selectedBrand = selectedBrand,
+            userGhostedOnly = userGhostedOnly,
+            onApply = { brand, ghostedOnly ->
+                selectedBrand = brand
+                userGhostedOnly = ghostedOnly
+                showFiltersDialog = false
+            },
+            onDismiss = { showFiltersDialog = false }
+        )
+    }
+
+    pendingCoolProductId?.let { productId ->
+        CoolingDurationDialog(
+            onConfirm = { option ->
+                onCoolProduct(productId, option.durationMillis, option.label)
+                pendingCoolProductId = null
+            },
+            onDismiss = { pendingCoolProductId = null }
+        )
+    }
+}
+
+@Composable
+private fun FiltersDialog(
+    availableBrands: List<String>,
+    selectedBrand: String?,
+    userGhostedOnly: Boolean,
+    onApply: (brand: String?, userGhostedOnly: Boolean) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var brand by remember { mutableStateOf(selectedBrand) }
+    var ghostedOnly by remember { mutableStateOf(userGhostedOnly) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Filters") },
+        text = {
+            Column {
+                if (availableBrands.isNotEmpty()) {
+                    Text("Brand", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Items without a known brand aren't shown here - never guessed.",
+                        color = MutedText,
+                        fontSize = 10.sp,
+                        modifier = Modifier.padding(top = 2.dp, bottom = 8.dp)
+                    )
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        item {
+                            FilterChip(
+                                selected = brand == null,
+                                onClick = { brand = null },
+                                label = { Text("All brands") },
+                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = GreenTint, selectedLabelColor = Ink)
+                            )
+                        }
+                        items(availableBrands) { candidate ->
+                            FilterChip(
+                                selected = brand == candidate,
+                                onClick = { brand = candidate },
+                                label = { Text(candidate) },
+                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = GreenTint, selectedLabelColor = Ink)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+                Text("Source", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+                FilterChip(
+                    selected = ghostedOnly,
+                    onClick = { ghostedOnly = !ghostedOnly },
+                    label = { Text("User Ghosted only") },
+                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = GreenTint, selectedLabelColor = Ink)
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = { onApply(brand, ghostedOnly) }) { Text("Apply") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
+
+/**
+ * Sort semantics (must match the UI labels exactly):
+ * - Trending: all-time ghost count weighted by an exponential recency decay (48h half-life) on
+ *   the item's last known ghost activity - recent activity counts more than old activity. Items
+ *   with no recency signal (e.g. static catalog items) use a modest constant weight rather than
+ *   being suppressed to zero or granted a fabricated recency.
+ * - Most Ghosted: raw ghost count within today's fixed window (state.mostGhostedToday, passed in
+ *   via [activityCounts]) - a hard "today" cutoff, deliberately different from Trending's decay.
+ * - Recent: last known ghost-activity timestamp, descending. Items with no timestamp (catalog
+ *   items lacking any recency signal) sort after everything that has one, in their original order
+ *   - never given a fabricated recent timestamp just to rank higher.
+ */
+private enum class ProductSortOption(val label: String) {
+    TRENDING("Trending"),
+    MOST_GHOSTED("Most Ghosted"),
+    RECENT("Recent")
+}
+
+private fun sortProducts(
+    products: List<MarketplaceProduct>,
+    sortOption: ProductSortOption,
+    activityCounts: Map<String, Int>
+): List<MarketplaceProduct> = when (sortOption) {
+    ProductSortOption.MOST_GHOSTED -> products.sortedByDescending { activityCounts[it.id] ?: 0 }
+    ProductSortOption.RECENT -> products.sortedWith(
+        compareByDescending<MarketplaceProduct> { it.lastGhostedAtMillis != null }
+            .thenByDescending { it.lastGhostedAtMillis ?: 0L }
+    )
+    ProductSortOption.TRENDING -> products.sortedByDescending { trendingScore(it) }
+}
+
+private fun trendingScore(product: MarketplaceProduct): Double {
+    val baseCount = product.ghostCount.coerceAtLeast(0).toDouble()
+    val lastActivity = product.lastGhostedAtMillis
+    val decayWeight = if (lastActivity != null) {
+        val hoursSince = (System.currentTimeMillis() - lastActivity).coerceAtLeast(0L) / 3_600_000.0
+        Math.pow(0.5, hoursSince / 48.0)
+    } else {
+        0.3
+    }
+    return baseCount * decayWeight
 }
 
 @Composable
@@ -738,11 +894,12 @@ fun ProductDetailScreen(
     hasSourceLink: Boolean,
     onAddToCart: () -> Unit,
     onGhostBuyNow: () -> Unit,
-    onStartCooling: () -> Unit,
+    onStartCooling: (durationMillis: Long, durationLabel: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val coolingComplete = coolingUntilMillis != null && coolingUntilMillis <= System.currentTimeMillis()
     val coolingActive = coolingUntilMillis != null && !coolingComplete
+    var showCoolingDialog by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
@@ -822,7 +979,7 @@ fun ProductDetailScreen(
             DetailRow(label = "Scent Profile", value = product.scentOrType)
         }
         if (product.size.isNotBlank()) DetailRow(label = "Size", value = product.size)
-        if (product.brand.isNotBlank()) DetailRow(label = "Brand", value = product.brand)
+        if (!product.brand.isNullOrBlank()) DetailRow(label = "Brand", value = product.brand)
 
         Row(
             modifier = Modifier
@@ -865,7 +1022,7 @@ fun ProductDetailScreen(
                 .clip(RoundedCornerShape(14.dp))
                 .border(1.dp, FaintBorder, RoundedCornerShape(14.dp))
                 .background(if (coolingUntilMillis != null) GreenTint else Paper)
-                .clickable(role = Role.Button, onClick = onStartCooling)
+                .clickable(role = Role.Button, onClick = { showCoolingDialog = true })
                 .padding(14.dp)
         ) {
             Icon(Icons.Filled.Schedule, contentDescription = null, tint = GhostGreen, modifier = Modifier.size(20.dp))
@@ -873,8 +1030,8 @@ fun ProductDetailScreen(
                 Text(
                     text = when {
                         coolingComplete -> "Cooling complete"
-                        coolingActive -> "24-Hour Cooling active"
-                        else -> "Start 24-Hour Cooling"
+                        coolingActive -> "Cooling active"
+                        else -> "Start Cooling"
                     },
                     color = Ink,
                     fontSize = 13.sp,
@@ -884,7 +1041,7 @@ fun ProductDetailScreen(
                     text = when {
                         coolingComplete -> "Review the item now. Do you still want it? Tap to cool it again."
                         coolingActive -> "We'll notify you when this item has cooled off."
-                        else -> "Pause this craving and get a reminder after 24 hours."
+                        else -> "Pause this craving and choose how long to cool it."
                     },
                     color = MutedText,
                     fontSize = 10.sp,
@@ -894,6 +1051,16 @@ fun ProductDetailScreen(
             ForwardChevron()
         }
 
+    }
+
+    if (showCoolingDialog) {
+        CoolingDurationDialog(
+            onConfirm = { option ->
+                onStartCooling(option.durationMillis, option.label)
+                showCoolingDialog = false
+            },
+            onDismiss = { showCoolingDialog = false }
+        )
     }
 }
 

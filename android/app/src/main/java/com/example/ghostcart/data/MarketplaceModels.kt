@@ -9,13 +9,21 @@ data class MarketplaceProduct(
     val description: String = "",
     val scentOrType: String = "",
     val size: String = "",
-    val brand: String = "",
+    /** Null when the brand can't be reliably determined - never fabricate a placeholder value. */
+    val brand: String? = null,
+    /** Source merchant/domain (e.g. "amazon.ae") - distinct from brand, never used as a substitute for it. */
+    val sourceDomain: String? = null,
     val highEmotion: Boolean = false,
     val imageUrl: String? = null,
     /** Original retailer page for user-imported items. Curated products leave this null. */
     val sourceUrl: String? = null,
     /** Real completed Ghost Checkouts reported by the activity service. */
-    val ghostCount: Int = 0
+    val ghostCount: Int = 0,
+    /** True for items merged in from the community feed (anonymous user-ghosted finds). */
+    val isUserGhosted: Boolean = false,
+    /** Epoch millis of the most recent ghost activity, when known. Null means no recency signal
+     * is available (e.g. static catalog items) - never fabricated to make sorting look complete. */
+    val lastGhostedAtMillis: Long? = null
 )
 
 data class OverspendCategory(

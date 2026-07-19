@@ -84,6 +84,7 @@ import com.example.ghostcart.theme.SoftGray
 import com.example.ghostcart.ui.GhostMascotPose
 import com.example.ghostcart.ui.ProductPhoto
 import com.example.ghostcart.ui.common.BackButton
+import com.example.ghostcart.ui.common.CoolingDurationDialog
 import com.example.ghostcart.ui.common.ForwardChevron
 import com.example.ghostcart.ui.common.GhostHeroCard
 import com.example.ghostcart.ui.common.GhostTopBar
@@ -107,13 +108,14 @@ fun GhostCartListScreen(
     onAdd: (String) -> Unit,
     onRemove: (String) -> Unit,
     onClearAll: () -> Unit,
-    onStartCooling: (String) -> Unit,
+    onStartCooling: (id: String, durationMillis: Long, durationLabel: String) -> Unit,
     onOpenProduct: (String) -> Unit,
     onShareProduct: (MarketplaceProduct) -> Unit,
     onCheckout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val subtotal = products.sumOf { (product, qty) -> product.price * qty }
+    var pendingCoolProductId by remember { mutableStateOf<String?>(null) }
 
     Box(modifier = modifier.fillMaxSize().background(Paper)) {
         LazyColumn(
@@ -193,14 +195,14 @@ fun GhostCartListScreen(
                             val coolingUntil = coolingUntilByProductId[product.id]
                             Text(
                                 text = when {
-                                    coolingUntil == null -> "Start 24-hour cooling"
+                                    coolingUntil == null -> "Start cooling"
                                     coolingUntil <= System.currentTimeMillis() -> "Cooled off — review now"
                                     else -> "Cooling active"
                                 },
                                 color = GhostGreen,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(top = 4.dp).clickable { onStartCooling(product.id) }
+                                modifier = Modifier.padding(top = 4.dp).clickable { pendingCoolProductId = product.id }
                             )
                         }
                         Row(
@@ -273,6 +275,16 @@ fun GhostCartListScreen(
         ) {
             PrimaryButton(text = "Proceed to Ghost Checkout", onClick = onCheckout)
         }
+    }
+
+    pendingCoolProductId?.let { productId ->
+        CoolingDurationDialog(
+            onConfirm = { option ->
+                onStartCooling(productId, option.durationMillis, option.label)
+                pendingCoolProductId = null
+            },
+            onDismiss = { pendingCoolProductId = null }
+        )
     }
 }
 

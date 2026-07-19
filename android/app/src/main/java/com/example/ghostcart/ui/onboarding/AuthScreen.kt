@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -211,25 +210,43 @@ fun AuthScreen(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            Image(
-                painter = painterResource(
-                    if (darkMode) R.drawable.sign_in_with_apple_white
-                    else R.drawable.sign_in_with_apple_black
-                ),
-                contentDescription = "Continue with Apple",
-                contentScale = ContentScale.Fit,
+            // Built the same way as the Google button above (same height/corner-radius/border/
+            // text style, same background-per-theme rule) instead of a baked-in bitmap, so the
+            // two buttons read as one consistent button family rather than two different styles
+            // glued together.
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    // Fixed height (matching the Google button's 50dp) instead of fillMaxWidth,
-                    // so the logo/text baked into this bitmap stay Google-sized regardless of
-                    // screen width - deriving size from width instead made the whole image
-                    // (text included) scale up on wide screens.
+                    .fillMaxWidth()
                     .height(50.dp)
-                    .aspectRatio(680f / 100f)
+                    .clip(RoundedCornerShape(25.dp))
+                    .background(if (darkMode) Color(0xFF131314) else Color.White)
+                    .border(
+                        width = 1.dp,
+                        color = if (darkMode) Color(0xFF8E918F) else Color(0xFF747775),
+                        shape = RoundedCornerShape(25.dp)
+                    )
                     .clickable {
                         errorMessage =
                             "Apple Sign-In requires an Apple Services ID and verified callback domain."
                     }
-            )
+            ) {
+                Image(
+                    painter = painterResource(
+                        if (darkMode) R.drawable.apple_logo_white else R.drawable.apple_logo_black
+                    ),
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Text(
+                    text = "Continue with Apple",
+                    color = if (darkMode) Color(0xFFE3E3E3) else Color(0xFF1F1F1F),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(start = 12.dp)
+                )
+            }
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,

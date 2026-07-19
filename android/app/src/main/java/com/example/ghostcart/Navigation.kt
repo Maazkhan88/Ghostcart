@@ -254,10 +254,9 @@ fun MainNavigation(
                     entry<Home> {
                         GhostHomeScreen(
                             items = state.almostBuys,
-                            catalogProducts = appViewModel.allProducts,
+                            unifiedProducts = appViewModel.unifiedMarketplaceProducts(),
                             favoriteProducts = state.favoriteProductIds.mapNotNull(appViewModel::findProduct),
                             favoriteProductIds = state.favoriteProductIds,
-                            communityProducts = state.communityProducts,
                             communityProductsLoading = state.communityProductsLoading,
                             onGhostSomething = {
                                 appViewModel.clearCaptureSeed()
@@ -265,43 +264,30 @@ fun MainNavigation(
                             },
                             onOpenCooldowns = { backStack.add(Cooldowns) },
                             onOpenProgress = { backStack.add(Progress) },
-                            onGhostCatalog = { id ->
-                                appViewModel.addToCart(id)
-                            },
-                            onCoolCatalog = { id ->
-                                appViewModel.quickGhostCatalogProduct(id)
+                            onGhost = { id -> appViewModel.addToCart(id) },
+                            onCool = { id, durationMillis, _ ->
+                                appViewModel.quickGhostCatalogProduct(id, durationMillis)
                                 backStack.add(Cooldowns)
                             },
-                            onOpenCatalog = { id -> backStack.add(ProductDetail(id)) },
-                            onGhostCommunity = { id ->
-                                appViewModel.addCommunityToCart(id)
-                            },
-                            onCoolCommunity = { id ->
-                                appViewModel.quickGhostCommunityProduct(id)
-                                backStack.add(Cooldowns)
-                            },
-                            onOpenCommunity = { id ->
-                                appViewModel.communityProductDetailId(id)?.let { detailId ->
-                                    backStack.add(ProductDetail(detailId))
-                                }
-                            },
-                            onToggleFavoriteCatalog = appViewModel::toggleFavorite,
-                            onToggleFavoriteCommunity = appViewModel::toggleCommunityFavorite,
+                            onOpen = { id -> backStack.add(ProductDetail(id)) },
+                            onToggleFavorite = appViewModel::toggleFavorite,
                             onNotifications = { backStack.add(GhostCardSettings) },
                             onViewAllCatalog = { categoryId -> backStack.add(CategoryBrowse(categoryId)) },
-                            onViewAllCommunity = { backStack.add(CategoryBrowse("community")) },
                             onViewAllFavorites = { backStack.add(CategoryBrowse("favorites")) },
                             onRefresh = { appViewModel.refreshCommunityProducts() }
                         )
                     }
                     entry<CategoryBrowse> { key ->
                         val products = when (key.categoryId) {
-                            "community" -> appViewModel.communityMarketplaceProducts()
+                            // Kept as a backward-compatible alias for any existing deep link;
+                            // the live UI surfaces this same filter as the "User Ghosted" chip
+                            // inside the unified "all" listing instead of a separate category.
+                            "community" -> appViewModel.unifiedMarketplaceProducts().filter { it.isUserGhosted }
                             "favorites" -> state.favoriteProductIds.mapNotNull(appViewModel::findProduct)
                             "most_ghosted" -> state.mostGhostedToday.mapNotNull { ranking ->
                                 appViewModel.findProduct(ranking.productId)
                             }
-                            else -> Marketplace.productsForCategory(key.categoryId, appViewModel.allProducts)
+                            else -> Marketplace.productsForCategory(key.categoryId, appViewModel.unifiedMarketplaceProducts())
                         }
                         CategoryBrowseScreen(
                             categoryId = key.categoryId,
@@ -316,8 +302,8 @@ fun MainNavigation(
                             onOpenCart = { backStack.add(GhostCartList) },
                             onOpenProduct = { id -> backStack.add(ProductDetail(id)) },
                             onAddToCart = appViewModel::addToCart,
-                            onCoolProduct = { id ->
-                                appViewModel.quickGhostCatalogProduct(id)
+                            onCoolProduct = { id, durationMillis, _ ->
+                                appViewModel.quickGhostCatalogProduct(id, durationMillis)
                                 backStack.add(Cooldowns)
                             }
                         )
@@ -393,7 +379,10 @@ fun MainNavigation(
                                     appViewModel.addToCart(product.id)
                                     backStack.add(GhostCartList)
                                 },
-                                onStartCooling = { appViewModel.startCoolingPeriod(product.id) }
+                                onStartCooling = { durationMillis, durationLabel ->
+                                    appViewModel.startCoolingPeriod(product.id, durationMillis, durationLabel)
+                                    backStack.add(Cooldowns)
+                                }
                             )
                         }
                     }
@@ -405,7 +394,10 @@ fun MainNavigation(
                             onAdd = appViewModel::addToCart,
                             onRemove = appViewModel::removeFromCart,
                             onClearAll = appViewModel::clearCart,
-                            onStartCooling = appViewModel::startCoolingPeriod,
+                            onStartCooling = { id, durationMillis, durationLabel ->
+                                appViewModel.startCoolingPeriod(id, durationMillis, durationLabel)
+                                backStack.add(Cooldowns)
+                            },
                             onOpenProduct = { id -> backStack.add(ProductDetail(id)) },
                             onShareProduct = { product -> shareGhostItem(context, product.toGhostShareItem()) },
                             onCheckout = {

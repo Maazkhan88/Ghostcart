@@ -91,7 +91,6 @@ import com.example.ghostcart.data.AlmostBuyDraft
 import com.example.ghostcart.data.AlmostBuyResolution
 import com.example.ghostcart.data.AlmostBuyStatus
 import com.example.ghostcart.data.ProgressSummary
-import com.example.ghostcart.data.CommunityProduct
 import com.example.ghostcart.data.ListingProductStub
 import com.example.ghostcart.data.MarketplaceProduct
 import com.example.ghostcart.data.ProductImportState
@@ -107,6 +106,8 @@ import com.example.ghostcart.theme.SoftGray
 import com.example.ghostcart.ui.DirhamAmount
 import com.example.ghostcart.ui.DirhamGlyph
 import com.example.ghostcart.ui.GhostMascotPose
+import com.example.ghostcart.ui.common.CoolingOption
+import com.example.ghostcart.ui.common.coolingOptions
 import com.example.ghostcart.ui.common.GhostHeroCard
 import com.example.ghostcart.ui.common.GhostTopBar
 import com.example.ghostcart.ui.common.PrimaryButton
@@ -118,37 +119,23 @@ import java.util.concurrent.TimeUnit
 
 private val categories = listOf("Food & drinks", "Fashion", "Beauty", "Electronics", "Home", "Gaming", "Music", "Other")
 private val triggers = listOf("Boredom", "Stress", "FOMO", "Hunger", "Reward", "Late-night scrolling", "Other")
-private val coolingOptions = listOf(
-    CoolingOption("15 min", TimeUnit.MINUTES.toMillis(15)),
-    CoolingOption("24 hours", TimeUnit.HOURS.toMillis(24)),
-    CoolingOption("3 days", TimeUnit.DAYS.toMillis(3)),
-    CoolingOption("7 days", TimeUnit.DAYS.toMillis(7))
-)
-
-private data class CoolingOption(val label: String, val durationMillis: Long)
 
 @Composable
 fun GhostHomeScreen(
     items: List<AlmostBuy>,
-    catalogProducts: List<MarketplaceProduct>,
+    unifiedProducts: List<MarketplaceProduct>,
     favoriteProducts: List<MarketplaceProduct>,
     favoriteProductIds: Set<String>,
-    communityProducts: List<CommunityProduct>,
     communityProductsLoading: Boolean,
     onGhostSomething: () -> Unit,
     onOpenCooldowns: () -> Unit,
     onOpenProgress: () -> Unit,
-    onGhostCatalog: (String) -> Unit,
-    onCoolCatalog: (String) -> Unit,
-    onOpenCatalog: (String) -> Unit,
-    onGhostCommunity: (String) -> Unit,
-    onCoolCommunity: (String) -> Unit,
-    onOpenCommunity: (String) -> Unit,
-    onToggleFavoriteCatalog: (String) -> Unit,
-    onToggleFavoriteCommunity: (String) -> Unit,
+    onGhost: (String) -> Unit,
+    onCool: (id: String, durationMillis: Long, durationLabel: String) -> Unit,
+    onOpen: (String) -> Unit,
+    onToggleFavorite: (String) -> Unit,
     onNotifications: () -> Unit,
     onViewAllCatalog: (String) -> Unit,
-    onViewAllCommunity: () -> Unit,
     onViewAllFavorites: () -> Unit,
     onRefresh: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -181,22 +168,16 @@ fun GhostHomeScreen(
     ) {
         item {
             ProductDiscoverySection(
-                catalogProducts = catalogProducts,
+                unifiedProducts = unifiedProducts,
                 favoriteProducts = favoriteProducts,
                 favoriteProductIds = favoriteProductIds,
-                communityProducts = communityProducts,
                 communityProductsLoading = communityProductsLoading,
-                onGhostCatalog = onGhostCatalog,
-                onCoolCatalog = onCoolCatalog,
-                onOpenCatalog = onOpenCatalog,
-                onGhostCommunity = onGhostCommunity,
-                onCoolCommunity = onCoolCommunity,
-                onOpenCommunity = onOpenCommunity,
-                onToggleFavoriteCatalog = onToggleFavoriteCatalog,
-                onToggleFavoriteCommunity = onToggleFavoriteCommunity,
+                onGhost = onGhost,
+                onCool = onCool,
+                onOpen = onOpen,
+                onToggleFavorite = onToggleFavorite,
                 onNotifications = onNotifications,
                 onViewAllCatalog = onViewAllCatalog,
-                onViewAllCommunity = onViewAllCommunity,
                 onViewAllFavorites = onViewAllFavorites
             )
         }

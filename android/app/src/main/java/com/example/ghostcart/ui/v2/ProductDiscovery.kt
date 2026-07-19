@@ -49,7 +49,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.example.ghostcart.data.CommunityProduct
 import com.example.ghostcart.data.Marketplace
 import com.example.ghostcart.data.MarketplaceProduct
 import com.example.ghostcart.data.iconForProduct
@@ -62,37 +61,33 @@ import com.example.ghostcart.theme.Paper
 import com.example.ghostcart.theme.SoftGray
 import com.example.ghostcart.ui.GhostMascotPose
 import com.example.ghostcart.ui.ProductPhoto
+import com.example.ghostcart.ui.common.CoolingDurationDialog
 import kotlinx.coroutines.delay
 
 @Composable
 fun ProductDiscoverySection(
-    catalogProducts: List<MarketplaceProduct>,
+    unifiedProducts: List<MarketplaceProduct>,
     favoriteProducts: List<MarketplaceProduct>,
     favoriteProductIds: Set<String>,
-    communityProducts: List<CommunityProduct>,
     communityProductsLoading: Boolean,
-    onGhostCatalog: (String) -> Unit,
-    onCoolCatalog: (String) -> Unit,
-    onOpenCatalog: (String) -> Unit,
-    onGhostCommunity: (String) -> Unit,
-    onCoolCommunity: (String) -> Unit,
-    onOpenCommunity: (String) -> Unit,
-    onToggleFavoriteCatalog: (String) -> Unit,
-    onToggleFavoriteCommunity: (String) -> Unit,
+    onGhost: (String) -> Unit,
+    onCool: (id: String, durationMillis: Long, durationLabel: String) -> Unit,
+    onOpen: (String) -> Unit,
+    onToggleFavorite: (String) -> Unit,
     onNotifications: () -> Unit,
     onViewAllCatalog: (String) -> Unit,
-    onViewAllCommunity: () -> Unit,
     onViewAllFavorites: () -> Unit
 ) {
     var query by remember { mutableStateOf("") }
     var categoryId by remember { mutableStateOf("all") }
-    val categoryProducts = Marketplace.productsForCategory(categoryId, catalogProducts)
+    var userGhostedOnly by remember { mutableStateOf(false) }
+    // The cooling duration is always a user choice - tapping "Cool it" opens this picker instead
+    // of silently applying a fixed default.
+    var pendingCoolProductId by remember { mutableStateOf<String?>(null) }
+    val categoryProducts = Marketplace.productsForCategory(categoryId, unifiedProducts)
     val visibleCatalog = categoryProducts.filter {
-        query.isBlank() || it.name.contains(query, ignoreCase = true) || it.category.contains(query, ignoreCase = true)
-    }
-    val visibleCommunity = communityProducts.filter {
-        (categoryId == "all" || communityMatchesCategory(it, categoryId)) &&
-            (query.isBlank() || it.title.contains(query, ignoreCase = true) || it.category.contains(query, ignoreCase = true))
+        (!userGhostedOnly || it.isUserGhosted) &&
+            (query.isBlank() || it.name.contains(query, ignoreCase = true) || it.category.contains(query, ignoreCase = true))
     }
     val visibleFavorites = favoriteProducts.filter {
         (categoryId == "all" || Marketplace.productsForCategory(categoryId, listOf(it)).isNotEmpty()) &&
@@ -138,8 +133,32 @@ fun ProductDiscoverySection(
             subtitle = "browse every temptation",
             onViewAll = { onViewAllCatalog(categoryId) }
         )
-        if (visibleCatalog.isEmpty()) {
-            Text("No catalogue matches. Paste the product link in Ghost + instead.", color = MutedText, fontSize = 12.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = !userGhostedOnly,
+                onClick = { userGhostedOnly = false },
+                label = { Text("All") },
+                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Ink, selectedLabelColor = Paper)
+            )
+            FilterChip(
+                selected = userGhostedOnly,
+                onClick = { userGhostedOnly = true },
+                label = { Text("User Ghosted") },
+                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Ink, selectedLabelColor = Paper)
+            )
+        }
+        if (userGhostedOnly && communityProductsLoading && visibleCatalog.none { it.isUserGhosted }) {
+            Box(Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(18.dp)).background(SoftGray))
+        } else if (visibleCatalog.isEmpty()) {
+            Text(
+                text = if (userGhostedOnly) {
+                    "No user-ghosted finds yet in this category."
+                } else {
+                    "No catalogue matches. Paste the product link in Ghost + instead."
+                },
+                color = MutedText,
+                fontSize = 12.sp
+            )
         } else {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(visibleCatalog.take(12), key = { it.id }) { product ->
@@ -161,58 +180,12 @@ fun ProductDiscoverySection(
                                 }
                             }
                         },
-                        onOpen = { onOpenCatalog(product.id) },
-                        onToggleFavorite = { onToggleFavoriteCatalog(product.id) },
-                        onGhost = { onGhostCatalog(product.id) },
-                        onCool = { onCoolCatalog(product.id) }
+                        onOpen = { onOpen(product.id) },
+                        onToggleFavorite = { onToggleFavorite(product.id) },
+                        onGhost = { onGhost(product.id) },
+                        onCool = { pendingCoolProductId = product.id }
                     )
                 }
-            }
-        }
-
-        run {
-            DiscoverySectionHeader(
-                title = "Community products",
-                subtitle = "anonymous user-ghosted finds",
-                onViewAll = onViewAllCommunity
-            )
-            if (communityProductsLoading) {
-                Box(Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(18.dp)).background(SoftGray))
-            } else if (visibleCommunity.isNotEmpty()) {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(visibleCommunity, key = { it.id }) { product ->
-                        DiscoveryProductCard(
-                            title = product.title,
-                            category = product.sourceDomain,
-                            priceCents = product.priceCents,
-                            isFavorite = "community_${product.id}" in favoriteProductIds,
-                            image = {
-                                Box(Modifier.fillMaxSize().background(Color.White)) {
-                                    ProductPhoto(product.title, "gadget", Modifier.fillMaxSize())
-                                    if (product.imageUrl != null) {
-                                        AsyncImage(
-                                            model = product.imageUrl,
-                                            contentDescription = "${product.title} product image",
-                                            contentScale = ContentScale.Fit,
-                                            modifier = Modifier.fillMaxSize().background(Color.White)
-                                        )
-                                    }
-                                }
-                            },
-                            onOpen = { onOpenCommunity(product.id) },
-                            onToggleFavorite = { onToggleFavoriteCommunity(product.id) },
-                            onGhost = { onGhostCommunity(product.id) },
-                            onCool = { onCoolCommunity(product.id) }
-                        )
-                    }
-                }
-            } else {
-                Text(
-                    text = "Community products will appear after people ghost shared finds.",
-                    color = MutedText,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
             }
         }
 
@@ -249,14 +222,24 @@ fun ProductDiscoverySection(
                                 }
                             }
                         },
-                        onOpen = { onOpenCatalog(product.id) },
-                        onToggleFavorite = { onToggleFavoriteCatalog(product.id) },
-                        onGhost = { onGhostCatalog(product.id) },
-                        onCool = { onCoolCatalog(product.id) }
+                        onOpen = { onOpen(product.id) },
+                        onToggleFavorite = { onToggleFavorite(product.id) },
+                        onGhost = { onGhost(product.id) },
+                        onCool = { pendingCoolProductId = product.id }
                     )
                 }
             }
         }
+    }
+
+    pendingCoolProductId?.let { productId ->
+        CoolingDurationDialog(
+            onConfirm = { option ->
+                onCool(productId, option.durationMillis, option.label)
+                pendingCoolProductId = null
+            },
+            onDismiss = { pendingCoolProductId = null }
+        )
     }
 }
 
@@ -421,21 +404,6 @@ private fun DiscoveryProductCard(
                 contentAlignment = Alignment.Center
             ) { Text("Cool it", color = Color(0xFF0A0A0A), fontSize = 10.sp, fontWeight = FontWeight.Bold) }
         }
-    }
-}
-
-private fun communityMatchesCategory(product: CommunityProduct, categoryId: String): Boolean {
-    val text = "${product.category} ${product.title}".lowercase()
-    return when (categoryId) {
-        "electronics" -> listOf("electronic", "phone", "laptop", "tablet", "earbud", "watch").any(text::contains)
-        "apparel" -> listOf("fashion", "shirt", "shoe", "dress", "bag").any(text::contains)
-        "music" -> listOf("music", "guitar", "keyboard", "drum", "microphone").any(text::contains)
-        "jewelry" -> listOf("jewel", "ring", "necklace", "bracelet", "watch").any(text::contains)
-        "gaming" -> listOf("game", "console", "controller").any(text::contains)
-        "beauty" -> listOf("beauty", "perfume", "makeup", "skin").any(text::contains)
-        "home" -> listOf("home", "decor", "chair", "lamp", "kitchen").any(text::contains)
-        "food" -> listOf("food", "coffee", "meal", "drink", "burger").any(text::contains)
-        else -> true
     }
 }
 

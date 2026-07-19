@@ -147,13 +147,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(appTheme = normalized) }
     }
 
-    fun addCommunityToCart(productId: String) {
-        val source = _uiState.value.communityProducts.find { it.id == productId } ?: return
-        val product = communityMarketplaceProduct(source)
-        sharedCartProducts[product.id] = product
-        addToCart(product.id)
-    }
-
     fun toggleFavorite(productId: String) {
         if (findProduct(productId) == null) return
         _uiState.update { current ->
@@ -181,25 +174,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         return legacy + stable
     }
 
-    fun toggleCommunityFavorite(productId: String) {
-        communityProductDetailId(productId)?.let(::toggleFavorite)
-    }
-
-    /** Makes an anonymous community item available to the shared details screen. */
-    fun communityProductDetailId(productId: String): String? {
-        val source = _uiState.value.communityProducts.find { it.id == productId } ?: return null
-        val product = communityMarketplaceProduct(source)
-        sharedCartProducts[product.id] = product
-        return product.id
-    }
-
     private fun communityMarketplaceProduct(source: CommunityProduct) = MarketplaceProduct(
         id = "community_${source.id}",
         name = source.title,
         category = normalizeCategory(source.category),
         price = (source.priceCents / 100L).toInt().coerceAtLeast(0),
         iconName = "gadget",
-        brand = source.sourceDomain,
+        // The real brand of a community-shared item isn't reliably known - source domain (e.g.
+        // "amazon.ae") is a separate signal and must never be shown/used as if it were the brand.
+        brand = null,
+        sourceDomain = source.sourceDomain,
+        isUserGhosted = true,
+        lastGhostedAtMillis = source.lastGhostedAtMillis,
         imageUrl = source.imageUrl,
         sourceUrl = source.sourceUrl,
         ghostCount = source.ghostCount
@@ -209,6 +195,31 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.value.communityProducts.map { source ->
             communityMarketplaceProduct(source).also { sharedCartProducts[it.id] = it }
         }
+
+    /**
+     * Catalog + community products combined into one list, with likely duplicates (the same
+     * underlying product appearing in both) collapsed into a single card rather than shown twice.
+     * When a duplicate is found, the curated catalog entry is kept (more complete data) but
+     * flagged as also user-ghosted, with the higher of the two ghost counts.
+     */
+    fun unifiedMarketplaceProducts(): List<MarketplaceProduct> {
+        val community = communityMarketplaceProducts()
+        val usedCommunityIds = mutableSetOf<String>()
+        val merged = allProducts.map { catalogItem ->
+            val duplicate = community.firstOrNull { it.id !in usedCommunityIds && isLikelyDuplicateProduct(catalogItem, it) }
+            if (duplicate != null) {
+                usedCommunityIds += duplicate.id
+                catalogItem.copy(
+                    isUserGhosted = true,
+                    ghostCount = maxOf(catalogItem.ghostCount, duplicate.ghostCount),
+                    lastGhostedAtMillis = duplicate.lastGhostedAtMillis ?: catalogItem.lastGhostedAtMillis
+                )
+            } else {
+                catalogItem
+            }
+        }
+        return merged + community.filterNot { it.id in usedCommunityIds }
+    }
 
     fun addDraftToCart(draft: AlmostBuyDraft) {
         val id = "shared_${UUID.randomUUID()}"
@@ -325,7 +336,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(productImportState = ProductImportState.Idle, captureSeed = null) }
     }
 
-    fun prepareCatalogProduct(productId: String) {
+    fun prepareCatalogProduct(productId: String, coolingDurationMillis: Long) {
         val product = findProduct(productId) ?: return
         _uiState.update {
             it.copy(captureSeed = AlmostBuyDraft(
@@ -333,22 +344,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 amountCents = product.price.toLong() * 100,
                 category = normalizeCategory(product.category),
                 trigger = "FOMO",
-                coolingDurationMillis = recommendedCooling(product.category),
-                sourceKind = "catalog"
-            ))
-        }
-    }
-
-    fun prepareCommunityProduct(productId: String) {
-        val product = _uiState.value.communityProducts.find { it.id == productId } ?: return
-        _uiState.update {
-            it.copy(captureSeed = AlmostBuyDraft(
-                name = product.title,
-                amountCents = product.priceCents,
-                category = normalizeCategory(product.category),
-                trigger = "FOMO",
-                coolingDurationMillis = recommendedCooling(product.category),
-                imageUrl = product.imageUrl,
+                coolingDurationMillis = coolingDurationMillis,
                 sourceKind = "catalog"
             ))
         }
@@ -358,16 +354,52 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(captureSeed = null, productImportState = ProductImportState.Idle) }
     }
 
-    fun quickGhostCatalogProduct(productId: String, onCreated: () -> Unit = {}) {
-        prepareCatalogProduct(productId)
+    /** The cooling duration is always a user choice (see CoolingDurationDialog) - never a silent
+     * fixed default, even for the quick "Cool it" action on a product card. */
+    fun quickGhostCatalogProduct(productId: String, coolingDurationMillis: Long, onCreated: () -> Unit = {}) {
+        prepareCatalogProduct(productId, coolingDurationMillis)
         val draft = _uiState.value.captureSeed ?: return
         createAlmostBuy(draft) { clearCaptureSeed(); onCreated() }
     }
 
-    fun quickGhostCommunityProduct(productId: String, onCreated: () -> Unit = {}) {
-        prepareCommunityProduct(productId)
-        val draft = _uiState.value.captureSeed ?: return
-        createAlmostBuy(draft) { clearCaptureSeed(); onCreated() }
+    /**
+     * True when [a] and [b] are likely the same underlying product, checked in priority order:
+     * normalized source URL match, then normalized title (+ brand tiebreaker when both known).
+     * A "merchant product ID" tier isn't implemented - neither the catalog nor the community
+     * data model carries one. An exact image-URL match is only ever used to corroborate a close
+     * (not exact) title match, never as a duplicate signal by itself.
+     */
+    private fun isLikelyDuplicateProduct(a: MarketplaceProduct, b: MarketplaceProduct): Boolean {
+        val urlA = normalizedUrlForDedup(a.sourceUrl)
+        val urlB = normalizedUrlForDedup(b.sourceUrl)
+        if (urlA != null && urlB != null && urlA == urlB) return true
+
+        val titleA = normalizedTextForDedup(a.name)
+        val titleB = normalizedTextForDedup(b.name)
+        if (titleA != null && titleA == titleB) {
+            val brandA = normalizedTextForDedup(a.brand)
+            val brandB = normalizedTextForDedup(b.brand)
+            return if (brandA != null && brandB != null) brandA == brandB else true
+        }
+
+        if (a.imageUrl != null && a.imageUrl == b.imageUrl && titleA != null && titleB != null) {
+            val wordsA = titleA.split(" ").filter(String::isNotBlank).toSet()
+            val wordsB = titleB.split(" ").filter(String::isNotBlank).toSet()
+            val smaller = minOf(wordsA.size, wordsB.size)
+            if (smaller > 0 && wordsA.intersect(wordsB).size.toDouble() / smaller >= 0.6) return true
+        }
+
+        return false
+    }
+
+    private fun normalizedTextForDedup(value: String?): String? =
+        value?.lowercase()?.replace(Regex("[^a-z0-9]+"), " ")?.trim()?.takeIf { it.isNotBlank() }
+
+    private fun normalizedUrlForDedup(value: String?): String? = value?.let { url ->
+        runCatching {
+            val parsed = java.net.URL(url)
+            "${parsed.host.lowercase().removePrefix("www.")}${parsed.path.trimEnd('/')}"
+        }.getOrNull()
     }
 
     private fun normalizeCategory(value: String): String = when {
@@ -527,15 +559,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun startCoolingPeriod(productId: String) {
+    /** [durationLabel] (e.g. "24 hours") is only used for the confirmation toast copy. */
+    fun startCoolingPeriod(productId: String, durationMillis: Long, durationLabel: String) {
         val product = findProduct(productId) ?: return
-        val coolingUntil = System.currentTimeMillis() + TimeUnit.HOURS.toMillis(24)
+        val coolingUntil = System.currentTimeMillis() + durationMillis
         val updatedPeriods = _uiState.value.coolingUntilByProductId + (productId to coolingUntil)
         persistCoolingPeriods(updatedPeriods)
         _uiState.update { it.copy(coolingUntilByProductId = updatedPeriods) }
 
         val request = OneTimeWorkRequestBuilder<CoolingReminderWorker>()
-            .setInitialDelay(24, TimeUnit.HOURS)
+            .setInitialDelay(durationMillis, TimeUnit.MILLISECONDS)
             .setInputData(workDataOf("productName" to product.name, "productId" to product.id))
             .addTag("ghost_cooling_reminder")
             .build()
@@ -544,7 +577,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             ExistingWorkPolicy.REPLACE,
             request
         )
-        showToast("24-hour cooling started for ${product.name}")
+        showToast("$durationLabel cooling started for ${product.name}")
     }
 
     private fun loadCoolingPeriods(): Map<String, Long> =
