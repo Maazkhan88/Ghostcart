@@ -24,53 +24,44 @@ Acceptance: the site builds, core demo works using mouse/touch/keyboard, every s
 - Add account-backed Ghost Cart, cooling sessions, Ghost Receipts, and Almost-Bought Archive.
 - Reuse the data contract for a future Expo mobile app.
 
-## Phase 4 — shared Ghost attribution and notifications
+## Phase 4 — Shared Ghost Attribution and Notifications
 
-Goal: let a sender know that a friend completed a Ghost Checkout from their
-shared item, and show trustworthy Ghost counts without turning link opens into
-fake activity.
+Goal: Let a sender know that a friend completed a Ghost Checkout from their shared item, and show trustworthy Ghost counts without turning link opens into fake activity.
 
-### Data and attribution
+### Database & Schema Updates
+- **shared_ghost_items table:** Add nullable columns `user_id` (INTEGER) and `sender_installation_id` (TEXT) to associate the share with the sender's logged-in account or their private device installation.
+- **ghost_events table:** Add nullable column `share_id` (TEXT) to carry the attribution ID into the checkout event.
+- **ghost_notifications table:** Add a new table to store notification records for senders:
+  - `id` (TEXT PRIMARY KEY)
+  - `user_id` (INTEGER NULL, references users)
+  - `sender_installation_id` (TEXT NULL)
+  - `title` (TEXT)
+  - `body` (TEXT)
+  - `share_id` (TEXT references shared_ghost_items)
+  - `read_at` (TEXT NULL)
+  - `created_at` (TEXT)
 
-- Give every compact share an opaque share ID linked to the sending account or
-  private installation ID. Never expose that identity on the public handoff.
-- Carry the share ID into the recipient's imported item and completed Ghost
-  Checkout event.
-- Count only a completed simulated Ghost Checkout as **ghosted**. Page views,
-  app opens, additions to cart, and cooling starts remain separate funnel
-  events and do not increase the Ghost count.
-- Use a unique checkout event key plus recipient/account deduplication so
-  retries, refreshes, and repeated delivery workers cannot inflate counts.
-- Store per-item totals for total Ghost Checkouts and unique ghosters. Keep
-  Money Kept and intentional-purchase resolutions separate.
+- **ensureSharedGhostItemsTable() update:** Programmatically execute the `CREATE TABLE IF NOT EXISTS ghost_notifications` and the `ALTER TABLE` schema migration statements during runtime setup in `lib/shared-ghost-items.ts` to seamlessly update all databases.
 
-### Sender experience
+### Backend APIs
+- **POST /api/share-items:** Read sender session or installation ID header (`X-Ghost-Cart-Installation-Id`). Store `user_id` / `sender_installation_id` alongside the created short link.
+- **GET /api/share-items:** Fetch the private list of links shared by the requesting sender, joined with `ghost_events` matching `share_id` to aggregate:
+  - `uniqueGhosters` (count of distinct `actor_hash`)
+  - `totalTimesGhosted` (count of events)
+  - `lastActivityAt` (max `created_at`)
+- **GET /api/share-items/[id]:** Return item details but **never** expose sender user ID or installation ID.
+- **POST /api/ghost-events:** Accept optional payload parameter `shareIds: Record<string, string>`. Record the checkout event under the corresponding `share_id`.
+  - Check the originating share. If checking-out actor's hash != sender's hash, generate a notification.
+  - Apply batching logic: if an unread notification exists for the same `share_id` in the last 15 minutes, update it (e.g., *"3 people ghosted your shared item"*). Otherwise, create a new entry.
+- **GET /api/notifications:** Fetch unread notifications for active session/installation.
+- **POST /api/notifications/read:** Mark notifications as read.
 
-- Add a **Shared by you** screen showing each shared product, link status,
-  unique ghosters, total times ghosted, and the most recent Ghost activity.
-- Add an opt-in push/in-app notification: **Someone ghosted the item you
-  shared.** The notification may name the product but never the recipient.
-- Deep-link the notification to the relevant shared-item activity screen.
-- Batch rapid activity into a summary such as **3 people ghosted your shared
-  item** and apply frequency caps and quiet hours.
+### Android Client Implementation
+- **SharedByYouScreen.kt:** Add a list screen under Profile showing shared products, status, and activity metrics.
+- **GhostNotificationWorker.kt:** Setup a recurring WorkManager background task (15-min intervals) to fetch `/api/notifications` and post local notifications.
+- **AppViewModel.kt:** Generate and save a private UUID as `sender_installation_id` on first run, pass it in headers, and carry `shareId` in the local DB.
 
-### Item counts
-
-- Product Details and eligible community cards may display **Ghosted X times**
-  using completed Ghost Checkout events only.
-- Distinguish **your share's count** from the product's global anonymous count.
-- Global/public counts remain hidden below the privacy threshold; a sender can
-  see the private count for their own share without seeing recipient identity.
-- Add an admin/analytics view for opens → imports → coolings → Ghost Checkouts,
-  with clear labels so conversion metrics are not confused with purchases.
-
-### Acceptance criteria
-
-- One recipient checkout increments the originating share exactly once.
-- Retrying the request or reopening the success screen does not increment it.
-- The sender receives no notification for their own Ghost Checkout.
-- Notification opt-out, quiet hours, account deletion, and expired shares are
-  respected.
-- No screen describes a Ghost count as a purchase, sale, payment, or confirmed
-  financial saving.
+### Verification Plan
+- **Automated:** Write backend endpoint tests asserting attribution mapping and batching/notifications criteria.
+- **Manual:** Simulate share creation on Device A $\rightarrow$ Checkout on Device B $\rightarrow$ Check notifications/counts on Device A.
 
