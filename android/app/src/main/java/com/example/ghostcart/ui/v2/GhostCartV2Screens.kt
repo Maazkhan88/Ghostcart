@@ -1,6 +1,7 @@
 package com.example.ghostcart.ui.v2
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -154,6 +155,19 @@ fun GhostHomeScreen(
 ) {
     val summary = items.progressSummary()
     val active = items.filter { it.status == AlmostBuyStatus.COOLING }.sortedBy { it.coolingUntilMillis }
+
+    // Ask for notification permission once, the first time the user reaches Home (covers both
+    // the guest and signed-up onboarding paths), rather than only when a specific reminder
+    // toggle is switched on - otherwise a user who never visits Profile never gets asked at all.
+    val context = LocalContext.current
+    val requestNotificationsOnFirstRun = rememberNotificationPermissionRequest()
+    LaunchedEffect(Unit) {
+        val prefs = context.getSharedPreferences("ghost_cart_prefs", Context.MODE_PRIVATE)
+        if (!prefs.getBoolean("notification_permission_prompted", false)) {
+            requestNotificationsOnFirstRun()
+            prefs.edit().putBoolean("notification_permission_prompted", true).apply()
+        }
+    }
 
     PullToRefreshBox(
         isRefreshing = communityProductsLoading,
@@ -960,10 +974,16 @@ fun ProfileScreen(
         if (BuildConfig.DEBUG) {
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { onDebugTestReminder("lunch", 13) }) {
+                    OutlinedButton(onClick = {
+                        requestNotifications()
+                        onDebugTestReminder("lunch", 13)
+                    }) {
                         Text("Test lunch reminder (~90s)", fontSize = 11.sp)
                     }
-                    OutlinedButton(onClick = { onDebugTestReminder("dinner", 20) }) {
+                    OutlinedButton(onClick = {
+                        requestNotifications()
+                        onDebugTestReminder("dinner", 20)
+                    }) {
                         Text("Test dinner reminder (~90s)", fontSize = 11.sp)
                     }
                 }

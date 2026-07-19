@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -209,10 +210,10 @@ fun AuthScreen(
                     else R.drawable.sign_in_with_apple_black
                 ),
                 contentDescription = "Continue with Apple",
-                contentScale = ContentScale.FillBounds,
+                contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp)
+                    .aspectRatio(680f / 100f)
                     .clickable {
                         errorMessage =
                             "Apple Sign-In requires an Apple Services ID and verified callback domain."

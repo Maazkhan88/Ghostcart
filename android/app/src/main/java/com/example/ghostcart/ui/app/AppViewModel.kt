@@ -599,6 +599,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun scheduleDailyGhostReminderForDebugVerification(meal: String, hourOfDay: Int) {
         if (!BuildConfig.DEBUG) return
+        // The worker checks lunch_reminder_enabled/dinner_reminder_enabled before showing
+        // anything (see DailyGhostReminderWorker) - without this, tapping the debug button
+        // while the real toggle is off makes the worker silently no-op (still "succeeds",
+        // just never posts), which looks identical to the notification failing to fire.
+        // Route through updateWalletConfig (not a raw SharedPreferences write) so the in-memory
+        // state and the visible toggle switch stay consistent with what actually got persisted.
+        if (meal == "lunch") {
+            updateWalletConfig { it.copy(lunchReminderEnabled = true) }
+        } else {
+            updateWalletConfig { it.copy(dinnerReminderEnabled = true) }
+        }
         val workManager = WorkManager.getInstance(getApplication<Application>())
         val request = OneTimeWorkRequestBuilder<DailyGhostReminderWorker>()
             .setInitialDelay(90, TimeUnit.SECONDS)
