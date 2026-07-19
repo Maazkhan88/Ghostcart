@@ -15,7 +15,6 @@ import kotlinx.serialization.Serializable
 @Serializable data object Home : NavKey
 @Serializable data object Cooldowns : NavKey
 @Serializable data object CaptureAlmostBuy : NavKey
-@Serializable data object ShareQueueReview : NavKey
 @Serializable data object Progress : NavKey
 @Serializable data class CategoryBrowse(val categoryId: String) : NavKey
 @Serializable data class ProductDetail(val productId: String) : NavKey

@@ -116,7 +116,7 @@ fun MainNavigation(
     ghostShareRequestKey: Long? = null
 ) {
     val initial = when {
-        initialSharedUrl != null -> ShareQueueReview
+        initialSharedUrl != null -> CaptureAlmostBuy
         initialGhostTitle != null || initialGhostShareId != null -> CaptureAlmostBuy
         initialCooldownId != null -> Cooldowns
         else -> Splash
@@ -147,7 +147,7 @@ fun MainNavigation(
     LaunchedEffect(sharedRequestKey) {
         if (initialSharedUrl != null) {
             appViewModel.importSharedProduct(initialSharedUrl, initialSharedTitle, initialSharedImageUrl)
-            if (backStack.lastOrNull() != ShareQueueReview) backStack.add(ShareQueueReview)
+            if (backStack.lastOrNull() != CaptureAlmostBuy) backStack.add(CaptureAlmostBuy)
         }
     }
 
@@ -311,54 +311,57 @@ fun MainNavigation(
                         )
                     }
                     entry<CaptureAlmostBuy> {
-                        CaptureAlmostBuyScreen(
-                            seed = state.captureSeed,
-                            importState = state.productImportState,
-                            onImportSharedUrl = appViewModel::importSharedProduct,
-                            onBack = {
-                                appViewModel.clearCaptureSeed()
-                                backStack.removeLastOrNull()
-                            },
-                            onAddToCart = {
-                                appViewModel.addDraftToCart(it)
-                                appViewModel.clearCaptureSeed()
-                                backStack.clear()
-                                backStack.add(GhostCartList)
-                            },
-                            onCoolIt = {
-                                appViewModel.createAlmostBuy(it)
-                                appViewModel.clearCaptureSeed()
-                                backStack.clear()
-                                backStack.add(Cooldowns)
-                            },
-                            onAddListingToCart = { items ->
-                                appViewModel.addListingItemsToCart(items)
-                                appViewModel.clearCaptureSeed()
-                                backStack.removeLastOrNull()
-                                backStack.add(ShareQueueReview)
-                            }
-                        )
-                    }
-                    entry<ShareQueueReview> {
-                        ShareQueueReviewScreen(
-                            queue = state.shareQueue,
-                            importState = state.productImportState,
-                            onUpdateItem = appViewModel::updateShareQueueItem,
-                            onRemoveItem = appViewModel::removeShareQueueItem,
-                            onConfirmAll = { shareWithCommunity ->
-                                appViewModel.bulkConfirmShareQueue(shareWithCommunity)
-                                backStack.clear()
-                                backStack.add(GhostCartList)
-                            },
-                            onCoolAll = { shareWithCommunity, durationMillis ->
-                                appViewModel.bulkCoolShareQueue(shareWithCommunity, durationMillis)
-                                backStack.clear()
-                                backStack.add(Cooldowns)
-                            },
-                            onBack = {
-                                backStack.removeLastOrNull()
-                            }
-                        )
+                        // Sharing product links (single or sequential) into the app is the same
+                        // "add a product" flow as the manual Ghost + form - it's not a separate
+                        // destination the user has to navigate to. When links are queued, this
+                        // same screen shows the queue review instead of the single-item form.
+                        if (state.shareQueue.isNotEmpty()) {
+                            ShareQueueReviewScreen(
+                                queue = state.shareQueue,
+                                importState = state.productImportState,
+                                onUpdateItem = appViewModel::updateShareQueueItem,
+                                onRemoveItem = appViewModel::removeShareQueueItem,
+                                onConfirmAll = { shareWithCommunity ->
+                                    appViewModel.bulkConfirmShareQueue(shareWithCommunity)
+                                    backStack.clear()
+                                    backStack.add(GhostCartList)
+                                },
+                                onCoolAll = { shareWithCommunity, durationMillis ->
+                                    appViewModel.bulkCoolShareQueue(shareWithCommunity, durationMillis)
+                                    backStack.clear()
+                                    backStack.add(Cooldowns)
+                                },
+                                onBack = {
+                                    backStack.removeLastOrNull()
+                                }
+                            )
+                        } else {
+                            CaptureAlmostBuyScreen(
+                                seed = state.captureSeed,
+                                importState = state.productImportState,
+                                onImportSharedUrl = appViewModel::importSharedProduct,
+                                onBack = {
+                                    appViewModel.clearCaptureSeed()
+                                    backStack.removeLastOrNull()
+                                },
+                                onAddToCart = {
+                                    appViewModel.addDraftToCart(it)
+                                    appViewModel.clearCaptureSeed()
+                                    backStack.clear()
+                                    backStack.add(GhostCartList)
+                                },
+                                onCoolIt = {
+                                    appViewModel.createAlmostBuy(it)
+                                    appViewModel.clearCaptureSeed()
+                                    backStack.clear()
+                                    backStack.add(Cooldowns)
+                                },
+                                onAddListingToCart = { items ->
+                                    appViewModel.addListingItemsToCart(items)
+                                    appViewModel.clearCaptureSeed()
+                                }
+                            )
+                        }
                     }
                     entry<Cooldowns> {
                         CooldownsScreen(
