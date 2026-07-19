@@ -21,8 +21,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
@@ -47,8 +45,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.layout
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -332,54 +328,35 @@ private val GHOST_CART_STORY_DRAWABLES = listOf(
 )
 
 /**
- * Expands the composable's measured width by [bleedAmount] on each side and shifts it left by
- * the same amount, so it visually escapes a parent's positive contentPadding (e.g. a
- * LazyColumn's) without needing a negative [Modifier.padding] - which Compose Foundation
- * explicitly rejects at runtime ("Padding must be non-negative").
- */
-private fun Modifier.fullBleed(bleedAmount: Dp): Modifier = this.layout { measurable, constraints ->
-    val bleedPx = bleedAmount.roundToPx()
-    val widerConstraints = constraints.copy(
-        minWidth = (constraints.minWidth + bleedPx * 2).coerceAtLeast(0),
-        maxWidth = if (constraints.hasBoundedWidth) constraints.maxWidth + bleedPx * 2 else constraints.maxWidth
-    )
-    val placeable = measurable.measure(widerConstraints)
-    layout(placeable.width, placeable.height) {
-        placeable.place(-bleedPx, 0)
-    }
-}
-
-/**
  * Editorial carousel shown right after Favorites on Home. Deliberately labeled "Ghost Cart
  * Stories" rather than "User Generated Content" - these are admin-curated marketing cards, not
  * actual user submissions, and the app must not imply otherwise until real UGC exists.
- * Full-bleed (escapes the LazyColumn's contentPadding via [fullBleed] on the pager only, so the
- * heading above stays at the normal inset) and swipes independently of the page's own vertical
- * scroll, same as [HorizontalPager] always does.
+ * Uses the same card treatment (width, corner radius, border, background) as
+ * [DiscoveryProductCard] rather than full-bleed images, so it reads as part of the same product
+ * grid rather than an oversized inserted banner.
  */
 @Composable
 fun GhostCartStoriesSection(modifier: Modifier = Modifier) {
-    val pagerState = rememberPagerState(pageCount = { GHOST_CART_STORY_DRAWABLES.size })
-    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(
-            "Ghost Cart Stories",
-            color = Ink,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.ExtraBold,
-            modifier = Modifier.padding(horizontal = 20.dp)
-        )
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxWidth().fullBleed(20.dp)
-        ) { page ->
-            androidx.compose.foundation.Image(
-                painter = androidx.compose.ui.res.painterResource(GHOST_CART_STORY_DRAWABLES[page]),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(9f / 16f)
-            )
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Ghost Cart Stories", color = Ink, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(GHOST_CART_STORY_DRAWABLES) { drawableRes ->
+                Box(
+                    modifier = Modifier
+                        .width(188.dp)
+                        .aspectRatio(9f / 16f)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Paper)
+                        .border(1.dp, FaintBorder, RoundedCornerShape(20.dp))
+                ) {
+                    androidx.compose.foundation.Image(
+                        painter = androidx.compose.ui.res.painterResource(drawableRes),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
         }
     }
 }
