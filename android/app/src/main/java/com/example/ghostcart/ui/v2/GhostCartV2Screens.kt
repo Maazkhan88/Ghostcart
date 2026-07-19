@@ -182,6 +182,8 @@ fun GhostHomeScreen(
             )
         }
 
+        item { GhostCartStoriesSection() }
+
         item {
             GhostHeroCard(containerColor = Color(0xFF161616)) {
                 SimulationBadge(text = stringResource(R.string.simulation_only), dark = true)

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,6 +21,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
@@ -49,6 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.ghostcart.app.R
 import com.example.ghostcart.data.Marketplace
 import com.example.ghostcart.data.MarketplaceProduct
 import com.example.ghostcart.data.iconForProduct
@@ -307,6 +311,54 @@ private fun PromoBannerCarousel(modifier: Modifier = Modifier) {
                 color = Paper,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+private val GHOST_CART_STORY_DRAWABLES = listOf(
+    R.drawable.ghost_cart_story_1,
+    R.drawable.ghost_cart_story_2,
+    R.drawable.ghost_cart_story_3,
+    R.drawable.ghost_cart_story_4,
+    R.drawable.ghost_cart_story_5,
+    R.drawable.ghost_cart_story_6,
+    R.drawable.ghost_cart_story_7,
+    R.drawable.ghost_cart_story_8,
+    R.drawable.ghost_cart_story_9,
+    R.drawable.ghost_cart_story_10,
+)
+
+/**
+ * Editorial carousel shown right after Favorites on Home. Deliberately labeled "Ghost Cart
+ * Stories" rather than "User Generated Content" - these are admin-curated marketing cards, not
+ * actual user submissions, and the app must not imply otherwise until real UGC exists.
+ * Full-bleed (escapes the LazyColumn's contentPadding via negative horizontal padding on the
+ * pager only, so the heading above stays at the normal inset) and swipes independently of the
+ * page's own vertical scroll, same as [HorizontalPager] always does.
+ */
+@Composable
+fun GhostCartStoriesSection(modifier: Modifier = Modifier) {
+    val pagerState = rememberPagerState(pageCount = { GHOST_CART_STORY_DRAWABLES.size })
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(
+            "Ghost Cart Stories",
+            color = Ink,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.ExtraBold,
+            modifier = Modifier.padding(horizontal = 20.dp)
+        )
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = (-20).dp)
+        ) { page ->
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(GHOST_CART_STORY_DRAWABLES[page]),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(9f / 16f)
             )
         }
     }
