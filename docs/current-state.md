@@ -1,21 +1,21 @@
 # Current State
 
-Last updated: 2026-07-18 (Claude — Android marketplace/card UI polish: unified the browse/community listing card with the home card, smaller top-right favorite, cart-count badge on the Ghost Cart nav icon, shorter View cart button, and swept remaining "AED"/"dirhams" text to the official Dirham glyph; see "Android marketplace card + Dirham-glyph UI polish" below. Also brought iOS to product-sharing/community/Share-Extension parity with Android; see "iOS product-sharing, community, and Share Extension parity pass" below. Earlier the same day: fixed an Amazon-share title bug and an invisible-logo-on-dark-surfaces bug; see v2.7.10 entry below. Also consolidated the split backend onto a single dedicated Cloudflare Worker, `ghostcart-app.maaz-n-khan.workers.dev`; see "Backend consolidated onto a dedicated Cloudflare Worker" below).
+Last updated: 2026-07-19 (Antigravity — Phase 1 completed, Phase 2 completed and pushed to GitHub remote branch `phase-2/marketplace-merge-sort-filters`, and started Phase 3 on branch `phase-3/share-queue-location-animation`).
 
-## Canonical handoff for Antigravity and Claude Code (2026-07-18)
+## Canonical handoff for Antigravity and Claude Code (2026-07-19)
 
 This section is the current operational source of truth. Historical session logs remain below for provenance; where they conflict with this section or the product source-of-truth documents, this section and the newer product documents win.
 
 ### Repository and release state
 
-- Working branch: `agent/ghost-cart-products-sharing`
-- Latest product implementation: current head of `agent/ghost-cart-products-sharing` (v2.7.10 — Amazon share-title bug fixed, white/transparent logo variant added for dark surfaces; see below).
+- Working branch: `phase-3/share-queue-location-animation`
+- Latest product implementation: current head of `phase-2/marketplace-merge-sort-filters` (v2.7.10 — Phase 1 & 2 fully implemented, verified, built and pushed to GitHub; see below).
 - Draft PR: https://github.com/Maazkhan88/Ghostcart/pull/3
 - Base branch: `main`; current `main` already contains the merged v2 rebuild from PR #2 (`f4bb3ab`).
-- **Canonical hosted site/API: https://ghostcart-app.maaz-n-khan.workers.dev** (changed this session — see "Backend consolidated onto a dedicated Cloudflare Worker" below; do not use either of the two domains previously recorded here).
+- **Canonical hosted site/API: https://ghostcart-app.maaz-n-khan.workers.dev**
 - Android release: `releases/GhostCart-v2.7.10-debug.apk`
-- Direct APK: https://raw.githubusercontent.com/Maazkhan88/Ghostcart/agent/ghost-cart-products-sharing/releases/GhostCart-v2.7.10-debug.apk
-- APK SHA-256: `152478F7AF0F976501D2D0678124547BE134EFF94B19C489D1D0925AD5547B0E`
+- Direct APK: https://raw.githubusercontent.com/Maazkhan88/Ghostcart/phase-2/marketplace-merge-sort-filters/releases/GhostCart-v2.7.10-debug.apk
+- APK SHA-256: `0CA9593BD23DF877FDC44932D3C0E1E42C4CF45A961F3AE2DB452BC7E50CDE95`
 - **v2.7.10 change (two independent fixes):**
   1. **Amazon-share title bug.** When a product is shared via Amazon's own
      native "Share" button (not pasted manually), Amazon populates
