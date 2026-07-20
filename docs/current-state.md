@@ -1,7 +1,82 @@
 # Current State
 
-Last updated: 2026-07-20 (Claude Code — admin panel fixed + Phase 4 merged + Google Sign-In backend added; see "STATUS REPORT" block immediately following this line). The 2026-07-19 report below it is now historical — this one supersedes it, but is left in place for provenance.
+Last updated: 2026-07-20, later same day (Claude Code — admin panel is live and working end-to-end, Phase 7 shipped in a real APK for the first time, admin user-visibility work started). See the "STATUS REPORT" block immediately below — it supersedes the one after it, which is now historical (left for provenance).
 
+> ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-20, later same session — usage window closing)
+>
+> Short version: admin panel is fully working (password + Google sign-in both verified live by the
+> user). Phase 7 in-app messaging shipped in a real APK for the first time ever. New work started
+> (admin visibility into real users/community-products/ghost-activity) is half-built and NOT yet
+> wired into the UI or deployed — see "In progress, not finished" below before touching
+> `app/admin/AdminCatalog.tsx` or `app/api/admin/`.
+>
+> ### What happened after the previous report (below)
+>
+> - **Deployed `fix/admin-auth-standalone` live** (Cloudflare Worker `ghostcart-app`, Version ID
+>   `61b73090-53ce-448f-8170-88070d89242c` as of this report). `/admin` and `/admin/login` are
+>   confirmed working in production by the user, both via email/password and via a new
+>   **"Sign in with Google" button on `/admin/login`** (Google Identity Services JS SDK, backend
+>   route `POST /api/admin/login/google`, shared token-verification helper `lib/google-auth.ts`
+>   used by both this and the Android-facing `POST /api/auth/google`).
+> - **Two real bugs found and fixed live**, both in `app/admin/login/AdminLoginForm.tsx`:
+>   1. `completeSignIn()` was called with an unresolved `Promise<Response>` instead of an awaited
+>      `Response` on the Google path only — threw `"e.json is not a function"` right after a
+>      successful Google credential callback. Fixed by resolving the fetch first.
+>   2. Post-sign-in navigation used `router.push("/admin") + router.refresh()`, which left the
+>      user stuck on `/admin/login` with no error (the fresh httpOnly cookie wasn't reliably
+>      picked up by a soft client-side nav in this app's router). Replaced with a hard
+>      `window.location.href = "/admin"` navigation. **If you add any other post-auth redirect
+>      anywhere in `app/admin/`, use a hard navigation, not `router.push`/`refresh` — this router
+>      has not proven reliable for auth-state transitions.**
+> - **maaz.n.khan@gmail.com is now flagged `is_admin = 1`** on live D1 (user id 2, created via
+>   Google Sign-In — Android's Google Sign-In previously never touched the backend at all; see
+>   the previous report for that fix).
+> - **Google OAuth web client had no registered JS origin** — `https://ghostcart-app.maaz-n-khan.workers.dev`
+>   had to be added to the OAuth client's "Authorized JavaScript origins" in Google Cloud Console
+>   (done by the user) before the browser-side Google Sign-In flow would work at all. Android's
+>   flow doesn't need this (no JS origin check on native ID-token verification).
+> - **Phase 7 (in-app messaging + simulation consent) had never actually shipped in any installed
+>   APK, ever.** Root cause: it was built entirely on a separate `phase-7/in-app-messaging`
+>   branch (backend commit `f661ff6`, Android commit `c17b893`) that forked off an older point
+>   (`e6ab0e9`, v2.7.17) and was never merged forward into `phase-5/ghost-cart-stories-section`
+>   (which kept moving ahead with the banner carousel / button-size / nav-spacing fixes through
+>   v2.7.20). The user published and installed several APKs believing this feature was in them;
+>   it never was. **Merged `origin/phase-7/in-app-messaging` into `phase-5/ghost-cart-stories-section`
+>   — clean merge, zero conflicts** (both branches only added new files/tables, no overlapping
+>   edits). Verified post-merge that `SimulationConsentScreen`/`InAppMessageDialog` are actually
+>   wired into `Navigation.kt` (not dead code) and that the earlier Google Sign-In fix survived.
+>   Published as **v2.7.22** to the same canonical APK URL (same filename, `releases/GhostCart-v2.7.14-debug.apk`,
+>   on `phase-5/ghost-cart-stories-section` — this is the URL the user has bookmarked/shared, kept
+>   stable across every version bump per the established pattern).
+> - **New domain**: user purchased `TheGhostcart.com` on Cloudflare. **Not wired to the Worker
+>   yet** — next step whenever resumed.
+>
+> ### ⚠️ In progress, not finished — do not assume this is done
+>
+> User asked "why can't I see the users on the app and the products added by users and the
+> ghostcart items?" — correct gap: the admin panel has zero visibility into real `users`,
+> `community_products`, or `almost_buys` (ghosted items) tables, only the static demo catalog +
+> content/messages. User chose "view + moderate" (not read-only) when asked. Started building:
+> - `app/api/admin/users/route.ts` (GET, list users + their almost-buy count) — **done, committed,
+>   builds clean.**
+> - `app/api/admin/users/[id]/route.ts` (PATCH, grant/revoke `is_admin`, blocks self-demotion) —
+>   **done, committed, builds clean.**
+> - `app/api/admin/community-products/route.ts` + `[id]/route.ts` (GET list / DELETE moderate) —
+>   **NOT STARTED.**
+> - `app/api/admin/ghost-activity/route.ts` (GET `almost_buys` joined with user email) — **NOT
+>   STARTED.**
+> - A "Users" / "Community" / "Activity" tab (or however you choose to lay it out) in
+>   `app/admin/AdminCatalog.tsx` to actually surface any of this — **NOT STARTED.** The two
+>   finished routes above are backend-only right now; nothing in the UI calls them yet.
+> - **None of this has been deployed.** The live Worker (Version ID above) does NOT have the new
+>   `/api/admin/users` routes yet — only what was in `fix/admin-auth-standalone` at deploy time.
+>
+> If you pick this up: branch is `fix/admin-auth-standalone`, worktree
+> `C:\Users\Admin\Downloads\ghostcart-admin-auth`. Follow the exact pattern in
+> `app/api/merchants/[id]/route.ts` (admin-gated CRUD) and `almost_buys`/`community_products`
+> schema in `db/schema.ts` (note: both use `text` UUID primary keys, not integers — `parseId()`
+> from `lib/api-helpers.ts` only handles integer IDs like `users.id`, don't use it for those two).
+>
 > ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-20, end of session)
 >
 > Read this whole block before touching anything in `db/schema.ts`, `drizzle/`, `app/admin/`, or
