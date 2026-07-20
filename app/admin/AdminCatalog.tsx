@@ -50,8 +50,54 @@ type ContentBlock = {
   isActive: boolean;
 };
 
+type AdminUser = {
+  id: number;
+  email: string;
+  displayName: string | null;
+  isAdmin: boolean;
+  createdAt: string;
+  almostBuyCount: number;
+};
+
+type CommunityProduct = {
+  id: string;
+  canonicalUrl: string;
+  sourceDomain: string;
+  title: string;
+  category: string;
+  imageUrl: string | null;
+  priceCents: number;
+  currencyCode: string;
+  ghostCount: number;
+  status: "visible" | "pending" | "hidden";
+  lastGhostedAt: string;
+  createdAt: string;
+};
+
+type GhostActivityItem = {
+  id: string;
+  userId: number;
+  userEmail: string;
+  title: string;
+  category: string;
+  state: string;
+  sourceKind: string;
+  currencyCode: string;
+  almostSpentCents: number;
+  confirmedMoneyKeptCents: number;
+  capturedAt: string;
+  updatedAt: string;
+};
+
 type Notice = { kind: "success" | "error"; message: string } | null;
-type AdminTab = "products" | "merchants" | "in-app-messages" | "content-blocks";
+type AdminTab =
+  | "products"
+  | "merchants"
+  | "in-app-messages"
+  | "content-blocks"
+  | "users"
+  | "community-products"
+  | "ghost-activity";
 
 const EMPTY_MERCHANT = {
   name: "",
@@ -96,6 +142,10 @@ async function readJson<T>(response: Response): Promise<T> {
   return body;
 }
 
+function formatMoney(cents: number, currencyCode: string): string {
+  return `${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currencyCode}`;
+}
+
 export default function AdminCatalog({
   userName,
   userEmail,
@@ -110,6 +160,9 @@ export default function AdminCatalog({
   const [consent, setConsent] = useState<SimulationConsent | null>(null);
   const [consentDraft, setConsentDraft] = useState("");
   const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([]);
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
+  const [communityProducts, setCommunityProducts] = useState<CommunityProduct[]>([]);
+  const [ghostActivity, setGhostActivity] = useState<GhostActivityItem[]>([]);
   const [merchantForm, setMerchantForm] = useState(EMPTY_MERCHANT);
   const [productForm, setProductForm] = useState(EMPTY_PRODUCT);
   const [messageForm, setMessageForm] = useState(EMPTY_MESSAGE);
@@ -126,7 +179,16 @@ export default function AdminCatalog({
 
   const loadCatalog = useCallback(async () => {
     try {
-      const [merchantData, productData, messageData, consentData, contentBlockData] = await Promise.all([
+      const [
+        merchantData,
+        productData,
+        messageData,
+        consentData,
+        contentBlockData,
+        userData,
+        communityProductData,
+        ghostActivityData,
+      ] = await Promise.all([
         fetch("/api/merchants", { cache: "no-store" }).then((response) =>
           readJson<{ merchants: Merchant[] }>(response),
         ),
@@ -142,6 +204,15 @@ export default function AdminCatalog({
         fetch("/api/content-blocks", { cache: "no-store" }).then((response) =>
           readJson<{ contentBlocks: ContentBlock[] }>(response),
         ),
+        fetch("/api/admin/users", { cache: "no-store" }).then((response) =>
+          readJson<{ users: AdminUser[] }>(response),
+        ),
+        fetch("/api/admin/community-products", { cache: "no-store" }).then((response) =>
+          readJson<{ communityProducts: CommunityProduct[] }>(response),
+        ),
+        fetch("/api/admin/ghost-activity", { cache: "no-store" }).then((response) =>
+          readJson<{ ghostActivity: GhostActivityItem[] }>(response),
+        ),
       ]);
       setMerchants(merchantData.merchants);
       setProducts(productData.products);
@@ -149,6 +220,9 @@ export default function AdminCatalog({
       setConsent(consentData);
       setConsentDraft(consentData.consentText);
       setContentBlocks(contentBlockData.contentBlocks);
+      setAdminUsers(userData.users);
+      setCommunityProducts(communityProductData.communityProducts);
+      setGhostActivity(ghostActivityData.ghostActivity);
       setNotice(null);
     } catch (error) {
       setNotice({
@@ -197,6 +271,34 @@ export default function AdminCatalog({
       [block.type, block.linkType].some((value) => value.toLowerCase().includes(term)),
     );
   }, [contentBlocks, query]);
+
+  const filteredUsers = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (!term) return adminUsers;
+    return adminUsers.filter((user) =>
+      [user.email, user.displayName ?? ""].some((value) => value.toLowerCase().includes(term)),
+    );
+  }, [adminUsers, query]);
+
+  const filteredCommunityProducts = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (!term) return communityProducts;
+    return communityProducts.filter((product) =>
+      [product.title, product.sourceDomain, product.category].some((value) =>
+        value.toLowerCase().includes(term),
+      ),
+    );
+  }, [communityProducts, query]);
+
+  const filteredGhostActivity = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (!term) return ghostActivity;
+    return ghostActivity.filter((item) =>
+      [item.title, item.userEmail, item.category, item.state].some((value) =>
+        value.toLowerCase().includes(term),
+      ),
+    );
+  }, [ghostActivity, query]);
 
   const activeCount = products.filter((product) => product.isActive).length;
 
@@ -365,6 +467,62 @@ export default function AdminCatalog({
     }
   }
 
+  async function toggleUserAdmin(user: AdminUser) {
+    const verb = user.isAdmin ? "Remove admin access from" : "Grant admin access to";
+    if (!window.confirm(`${verb} ${user.email}?`)) return;
+    setSaving(true);
+    setNotice(null);
+    try {
+      const response = await fetch(`/api/admin/users/${user.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ isAdmin: !user.isAdmin }),
+      });
+      await readJson(response);
+      setNotice({ kind: "success", message: `${user.email} ${user.isAdmin ? "is no longer" : "is now"} an admin.` });
+      await loadCatalog();
+    } catch (error) {
+      setNotice({ kind: "error", message: error instanceof Error ? error.message : "Could not update admin access." });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function setCommunityProductStatus(product: CommunityProduct, status: CommunityProduct["status"]) {
+    setSaving(true);
+    setNotice(null);
+    try {
+      const response = await fetch(`/api/admin/community-products/${product.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      await readJson(response);
+      setNotice({ kind: "success", message: `${product.title} is now ${status}.` });
+      await loadCatalog();
+    } catch (error) {
+      setNotice({ kind: "error", message: error instanceof Error ? error.message : "Could not update status." });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteCommunityProduct(product: CommunityProduct) {
+    if (!window.confirm(`Permanently remove "${product.title}"? This cannot be undone.`)) return;
+    setSaving(true);
+    setNotice(null);
+    try {
+      const response = await fetch(`/api/admin/community-products/${product.id}`, { method: "DELETE" });
+      await readJson(response);
+      setNotice({ kind: "success", message: "Community product removed." });
+      await loadCatalog();
+    } catch (error) {
+      setNotice({ kind: "error", message: error instanceof Error ? error.message : "Could not remove record." });
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function removeRecord(kind: AdminTab, id: number | string, name: string) {
     const cascadeNote = kind === "merchants" ? " Its products will also be removed." : "";
     if (!window.confirm(`Remove ${name}?${cascadeNote}`)) return;
@@ -453,6 +611,14 @@ export default function AdminCatalog({
     setContentBlockFile(null);
   }
 
+  const recordsTitle =
+    tab === "products" ? "Products" :
+    tab === "merchants" ? "Merchants" :
+    tab === "in-app-messages" ? "Messages" :
+    tab === "content-blocks" ? "Content blocks" :
+    tab === "users" ? "Users" :
+    tab === "community-products" ? "Community products" : "Ghost activity";
+
   return (
     <main className="admin-shell">
       <header className="admin-topbar">
@@ -489,8 +655,8 @@ export default function AdminCatalog({
       <section className="admin-metrics" aria-label="Catalog overview">
         <article><span>Products</span><strong>{products.length}</strong><small>{activeCount} active in the demo</small></article>
         <article><span>Merchants</span><strong>{merchants.length}</strong><small>Catalog sources</small></article>
-        <article><span>Messages</span><strong>{messages.length}</strong><small>Consent v{consent?.version ?? "-"}</small></article>
-        <article><span>Content</span><strong>{contentBlocks.length}</strong><small>Banners &amp; Ghost Cart Stories</small></article>
+        <article><span>Users</span><strong>{adminUsers.length}</strong><small>{adminUsers.filter((u) => u.isAdmin).length} admin</small></article>
+        <article><span>Community</span><strong>{communityProducts.length}</strong><small>User-ghosted products</small></article>
         <article className="admin-safety-card"><span>Catalog</span><strong>Demo mode</strong><small>Product references for Ghost Cart experiences</small></article>
       </section>
 
@@ -501,9 +667,27 @@ export default function AdminCatalog({
             <button type="button" role="tab" aria-selected={tab === "merchants"} onClick={() => { setTab("merchants"); cancelEdit(); }}>Merchants</button>
             <button type="button" role="tab" aria-selected={tab === "in-app-messages"} onClick={() => { setTab("in-app-messages"); cancelEdit(); }}>Messages</button>
             <button type="button" role="tab" aria-selected={tab === "content-blocks"} onClick={() => { setTab("content-blocks"); cancelEdit(); }}>Content</button>
+            <button type="button" role="tab" aria-selected={tab === "users"} onClick={() => { setTab("users"); cancelEdit(); }}>Users</button>
+            <button type="button" role="tab" aria-selected={tab === "community-products"} onClick={() => { setTab("community-products"); cancelEdit(); }}>Community</button>
+            <button type="button" role="tab" aria-selected={tab === "ghost-activity"} onClick={() => { setTab("ghost-activity"); cancelEdit(); }}>Activity</button>
           </div>
 
-          {tab === "in-app-messages" ? (
+          {tab === "users" ? (
+            <div className="admin-form">
+              <div className="admin-form-heading"><p>Registered users</p><span>Read + moderate</span></div>
+              <p className="admin-inline-note">Everyone who has signed up (email/password or Google). Grant or revoke admin access from the list on the right - this is the only user field you can change here.</p>
+            </div>
+          ) : tab === "community-products" ? (
+            <div className="admin-form">
+              <div className="admin-form-heading"><p>Community products</p><span>Read + moderate</span></div>
+              <p className="admin-inline-note">Every product a user has shared or ghosted into the anonymous community feed, regardless of visibility. Hide a product to pull it from the public feed without deleting its history, or remove it permanently.</p>
+            </div>
+          ) : tab === "ghost-activity" ? (
+            <div className="admin-form">
+              <div className="admin-form-heading"><p>Ghost activity</p><span>Read-only</span></div>
+              <p className="admin-inline-note">Every user's almost-buys (ghosted items), most recently updated first, with the owning account's email. No edit actions here - use the Users tab to manage the account itself.</p>
+            </div>
+          ) : tab === "in-app-messages" ? (
             <>
               <form className="admin-form" onSubmit={saveMessage}>
                 <div className="admin-form-heading"><p>{editingMessageId ? "Edit message" : "New message"}</p><span>{editingMessageId ? "Editing" : "In-app"}</span></div>
@@ -569,10 +753,49 @@ export default function AdminCatalog({
         </aside>
 
         <section className="admin-records" aria-labelledby="records-title">
-          <div className="admin-records-head"><div><p>Catalog records</p><h2 id="records-title">{tab === "products" ? "Products" : tab === "merchants" ? "Merchants" : tab === "in-app-messages" ? "Messages" : "Content blocks"}</h2></div><label><span className="sr-only">Search catalog</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${tab}`} /></label></div>
+          <div className="admin-records-head"><div><p>Catalog records</p><h2 id="records-title">{recordsTitle}</h2></div><label><span className="sr-only">Search catalog</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${tab}`} /></label></div>
           {notice && <p className={`admin-notice is-${notice.kind}`} role="status">{notice.message}</p>}
           {loading ? (
             <div className="admin-empty">Loading catalog…</div>
+          ) : tab === "users" ? (
+            <div className="admin-list">
+              {filteredUsers.length === 0 && <div className="admin-empty">No users found.</div>}
+              {filteredUsers.map((user) => (
+                <article className="admin-record" key={user.id}>
+                  <div className="admin-record-art"><span>{(user.displayName || user.email).slice(0, 1).toUpperCase()}</span></div>
+                  <div className="admin-record-copy"><div>{user.isAdmin && <b>Admin</b>}</div><h3>{user.displayName || user.email}</h3><p>{user.email} · {user.almostBuyCount} ghosted item{user.almostBuyCount === 1 ? "" : "s"} · joined {new Date(user.createdAt).toLocaleDateString()}</p></div>
+                  <div className="admin-record-actions"><button type="button" disabled={saving} onClick={() => toggleUserAdmin(user)}>{user.isAdmin ? "Revoke admin" : "Make admin"}</button></div>
+                </article>
+              ))}
+            </div>
+          ) : tab === "community-products" ? (
+            <div className="admin-list">
+              {filteredCommunityProducts.length === 0 && <div className="admin-empty">No community products yet.</div>}
+              {filteredCommunityProducts.map((product) => (
+                <article className="admin-record" key={product.id}>
+                  <div className="admin-record-art">{product.imageUrl ? <img src={product.imageUrl} alt="" /> : <span>{product.title.slice(0, 1)}</span>}</div>
+                  <div className="admin-record-copy"><div><span>{product.category}</span>{product.status !== "visible" && <b>{product.status}</b>}</div><h3>{product.title}</h3><p>{product.sourceDomain} · {formatMoney(product.priceCents, product.currencyCode)} · ghosted {product.ghostCount}×</p></div>
+                  <div className="admin-record-actions">
+                    {product.status !== "hidden" ? (
+                      <button type="button" disabled={saving} onClick={() => setCommunityProductStatus(product, "hidden")}>Hide</button>
+                    ) : (
+                      <button type="button" disabled={saving} onClick={() => setCommunityProductStatus(product, "visible")}>Unhide</button>
+                    )}
+                    <button type="button" className="is-danger" disabled={saving} onClick={() => deleteCommunityProduct(product)}>Remove</button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : tab === "ghost-activity" ? (
+            <div className="admin-list">
+              {filteredGhostActivity.length === 0 && <div className="admin-empty">No ghost activity yet.</div>}
+              {filteredGhostActivity.map((item) => (
+                <article className="admin-record" key={item.id}>
+                  <div className="admin-record-art"><span>{item.title.slice(0, 1)}</span></div>
+                  <div className="admin-record-copy"><div><span>{item.category}</span><b>{item.state}</b></div><h3>{item.title}</h3><p>{item.userEmail} · {formatMoney(item.almostSpentCents, item.currencyCode)} · updated {new Date(item.updatedAt).toLocaleString()}</p></div>
+                </article>
+              ))}
+            </div>
           ) : tab === "in-app-messages" ? (
             <div className="admin-list">
               {filteredMessages.length === 0 && <div className="admin-empty">No messages found. Add the first one from the editor.</div>}
