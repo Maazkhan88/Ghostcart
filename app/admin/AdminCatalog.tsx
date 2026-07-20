@@ -154,6 +154,84 @@ function formatMoney(cents: number, currencyCode: string): string {
   return `${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currencyCode}`;
 }
 
+/**
+ * Drag-and-drop (or click-to-browse) image upload. Disabled with an
+ * explanatory note until a record exists to attach the photo to - a brand
+ * new, not-yet-saved product has no id for the upload route to target.
+ */
+function ImageDropzone({
+  uploadUrl,
+  onUploaded,
+  onError,
+  disabled,
+}: {
+  uploadUrl: string | null;
+  onUploaded: (imageUrl: string) => void;
+  onError: (message: string) => void;
+  disabled?: boolean;
+}) {
+  const [dragActive, setDragActive] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  async function upload(file: File) {
+    if (!uploadUrl) return;
+    setUploading(true);
+    try {
+      const body = new FormData();
+      body.set("file", file);
+      const response = await fetch(uploadUrl, { method: "POST", body });
+      const result = await readJson<{ product?: { imageUrl: string }; communityProduct?: { imageUrl: string } }>(response);
+      const imageUrl = result.product?.imageUrl ?? result.communityProduct?.imageUrl;
+      if (imageUrl) onUploaded(imageUrl);
+    } catch (error) {
+      onError(error instanceof Error ? error.message : "Could not upload the image.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  const inactive = disabled || !uploadUrl || uploading;
+
+  return (
+    <label
+      className="admin-dropzone"
+      data-active={dragActive || undefined}
+      data-disabled={inactive || undefined}
+      onDragOver={(event) => {
+        if (inactive) return;
+        event.preventDefault();
+        setDragActive(true);
+      }}
+      onDragLeave={() => setDragActive(false)}
+      onDrop={(event) => {
+        event.preventDefault();
+        setDragActive(false);
+        if (inactive) return;
+        const file = event.dataTransfer.files?.[0];
+        if (file) void upload(file);
+      }}
+    >
+      <input
+        type="file"
+        accept="image/png,image/jpeg"
+        disabled={inactive}
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) void upload(file);
+          event.target.value = "";
+        }}
+      />
+      <span>
+        {uploading
+          ? "Uploading…"
+          : !uploadUrl
+            ? "Save the record first, then upload a photo"
+            : "Drag & drop a PNG/JPEG here, or click to browse"}
+      </span>
+    </label>
+  );
+}
+
 export default function AdminCatalog({
   userName,
   userEmail,
@@ -758,6 +836,14 @@ export default function AdminCatalog({
               <label>Title<input required value={communityProductForm.title} onChange={(event) => setCommunityProductForm({ ...communityProductForm, title: event.target.value })} placeholder="Product title" /></label>
               <div className="admin-field-row"><label>Category<input required value={communityProductForm.category} onChange={(event) => setCommunityProductForm({ ...communityProductForm, category: event.target.value })} placeholder="Tech" /></label><label>Price <span>minor units</span><input required type="number" min="0" step="1" value={communityProductForm.priceCents} onChange={(event) => setCommunityProductForm({ ...communityProductForm, priceCents: event.target.value })} /></label></div>
               <label>Image URL <span>optional</span><input type="url" value={communityProductForm.imageUrl} onChange={(event) => setCommunityProductForm({ ...communityProductForm, imageUrl: event.target.value })} placeholder="https://…" /></label>
+              <ImageDropzone
+                uploadUrl={editingCommunityProductId ? `/api/admin/community-products/${editingCommunityProductId}/image` : null}
+                onUploaded={(imageUrl) => {
+                  setCommunityProductForm((form) => ({ ...form, imageUrl }));
+                  void loadCatalog();
+                }}
+                onError={(message) => setNotice({ kind: "error", message })}
+              />
               <div className="admin-form-actions"><button className="admin-primary" disabled={saving}>{saving ? "Saving…" : editingCommunityProductId ? "Save changes" : "Add community product"}</button>{editingCommunityProductId && <button type="button" className="admin-secondary" onClick={cancelEdit}>Cancel</button>}</div>
             </form>
           ) : tab === "ghost-activity" ? (
@@ -820,6 +906,14 @@ export default function AdminCatalog({
               <div className="admin-field-row"><label>Category<input required value={productForm.category} onChange={(event) => setProductForm({ ...productForm, category: event.target.value })} placeholder="Tech" /></label><label>Price <span>minor units</span><input required type="number" min="0" step="1" value={productForm.priceCents} onChange={(event) => setProductForm({ ...productForm, priceCents: event.target.value })} /></label></div>
               <label>Description<textarea value={productForm.description} onChange={(event) => setProductForm({ ...productForm, description: event.target.value })} placeholder="Why this almost-buy feels tempting" /></label>
               <label>Image URL <span>optional</span><input type="url" value={productForm.imageUrl} onChange={(event) => setProductForm({ ...productForm, imageUrl: event.target.value })} placeholder="https://…" /></label>
+              <ImageDropzone
+                uploadUrl={editingProductId ? `/api/products/${editingProductId}/image` : null}
+                onUploaded={(imageUrl) => {
+                  setProductForm((form) => ({ ...form, imageUrl }));
+                  void loadCatalog();
+                }}
+                onError={(message) => setNotice({ kind: "error", message })}
+              />
               <div className="admin-check-grid">
                 <label className="admin-check"><input type="checkbox" checked={productForm.isActive} onChange={(event) => setProductForm({ ...productForm, isActive: event.target.checked })} /><span><strong>Active</strong><small>May appear in the demo.</small></span></label>
                 <label className="admin-check"><input type="checkbox" checked={productForm.isFlashDeal} onChange={(event) => setProductForm({ ...productForm, isFlashDeal: event.target.checked })} /><span><strong>Fake flash deal</strong><small>Promotional demo label.</small></span></label>
