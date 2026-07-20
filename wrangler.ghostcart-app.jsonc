@@ -24,6 +24,18 @@
   "assets": {
     "directory": "dist/client"
   },
+  // Adding `routes` disables the workers.dev URL by default unless
+  // `workers_dev` is explicitly set - the Android/iOS apps and everything
+  // else still point at ghostcart-app.maaz-n-khan.workers.dev, so it must
+  // stay live alongside the new custom domain, not be replaced by it.
+  "workers_dev": true,
+  // Custom domain, purchased through Cloudflare on the same account as this
+  // Worker/zone - wrangler provisions the DNS record + SSL cert for these
+  // automatically on deploy since the zone is already on this account.
+  "routes": [
+    { "pattern": "theghostcart.com", "custom_domain": true },
+    { "pattern": "www.theghostcart.com", "custom_domain": true }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
