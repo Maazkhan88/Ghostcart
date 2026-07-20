@@ -61,13 +61,12 @@ export default function AdminLoginForm({ googleClientId }: { googleClientId: str
       callback: (response) => {
         setError(null);
         setLoading(true);
-        completeSignIn(
-          fetch("/api/admin/login/google", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ idToken: response.credential }),
-          }).then((r) => r),
-        )
+        fetch("/api/admin/login/google", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ idToken: response.credential }),
+        })
+          .then((res) => completeSignIn(res))
           .catch((err) => setError(err instanceof Error ? err.message : "Could not sign in."))
           .finally(() => setLoading(false));
       },
