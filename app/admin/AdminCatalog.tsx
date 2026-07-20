@@ -89,6 +89,8 @@ type GhostActivityItem = {
   updatedAt: string;
 };
 
+type Category = { id: number; name: string; createdAt: string };
+
 type Notice = { kind: "success" | "error"; message: string } | null;
 type AdminTab =
   | "products"
@@ -97,7 +99,8 @@ type AdminTab =
   | "content-blocks"
   | "users"
   | "community-products"
-  | "ghost-activity";
+  | "ghost-activity"
+  | "categories";
 
 const EMPTY_MERCHANT = {
   name: "",
@@ -529,6 +532,9 @@ export default function AdminCatalog({
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [communityProducts, setCommunityProducts] = useState<CommunityProduct[]>([]);
   const [ghostActivity, setGhostActivity] = useState<GhostActivityItem[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryName, setCategoryName] = useState("");
+  const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
   const [merchantForm, setMerchantForm] = useState(EMPTY_MERCHANT);
   const [productForm, setProductForm] = useState(EMPTY_PRODUCT);
   const [messageForm, setMessageForm] = useState(EMPTY_MESSAGE);
@@ -557,6 +563,7 @@ export default function AdminCatalog({
         userData,
         communityProductData,
         ghostActivityData,
+        categoryData,
       ] = await Promise.all([
         fetch("/api/merchants", { cache: "no-store" }).then((response) =>
           readJson<{ merchants: Merchant[] }>(response),
@@ -582,6 +589,9 @@ export default function AdminCatalog({
         fetch("/api/admin/ghost-activity", { cache: "no-store" }).then((response) =>
           readJson<{ ghostActivity: GhostActivityItem[] }>(response),
         ),
+        fetch("/api/admin/categories", { cache: "no-store" }).then((response) =>
+          readJson<{ categories: Category[] }>(response),
+        ),
       ]);
       setMerchants(merchantData.merchants);
       setProducts(productData.products);
@@ -592,6 +602,7 @@ export default function AdminCatalog({
       setAdminUsers(userData.users);
       setCommunityProducts(communityProductData.communityProducts);
       setGhostActivity(ghostActivityData.ghostActivity);
+      setCategories(categoryData.categories);
       setNotice(null);
     } catch (error) {
       setNotice({
@@ -668,6 +679,12 @@ export default function AdminCatalog({
       ),
     );
   }, [ghostActivity, query]);
+
+  const filteredCategories = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (!term) return categories;
+    return categories.filter((category) => category.name.toLowerCase().includes(term));
+  }, [categories, query]);
 
   const activeCount = products.filter((product) => product.isActive).length;
 
@@ -831,6 +848,53 @@ export default function AdminCatalog({
       setNotice({ kind: "success", message: `Consent version ${updated.version} published.` });
     } catch (error) {
       setNotice({ kind: "error", message: error instanceof Error ? error.message : "Could not publish consent." });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveCategory(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setNotice(null);
+    try {
+      const response = await fetch(
+        editingCategoryId ? `/api/admin/categories/${editingCategoryId}` : "/api/admin/categories",
+        {
+          method: editingCategoryId ? "PATCH" : "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: categoryName }),
+        },
+      );
+      await readJson(response);
+      setNotice({ kind: "success", message: editingCategoryId ? "Category renamed." : "Category added." });
+      setCategoryName("");
+      setEditingCategoryId(null);
+      await loadCatalog();
+    } catch (error) {
+      setNotice({ kind: "error", message: error instanceof Error ? error.message : "Could not save category." });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function editCategory(category: Category) {
+    setEditingCategoryId(category.id);
+    setCategoryName(category.name);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function deleteCategory(category: Category) {
+    if (!window.confirm(`Remove "${category.name}" from the category picklist? Existing products keep this category text either way.`)) return;
+    setSaving(true);
+    setNotice(null);
+    try {
+      const response = await fetch(`/api/admin/categories/${category.id}`, { method: "DELETE" });
+      await readJson(response);
+      setNotice({ kind: "success", message: "Category removed." });
+      await loadCatalog();
+    } catch (error) {
+      setNotice({ kind: "error", message: error instanceof Error ? error.message : "Could not remove category." });
     } finally {
       setSaving(false);
     }
@@ -1033,12 +1097,14 @@ export default function AdminCatalog({
     setEditingMessageId(null);
     setEditingContentBlockId(null);
     setEditingCommunityProductId(null);
+    setEditingCategoryId(null);
     setMerchantForm(EMPTY_MERCHANT);
     setProductForm(EMPTY_PRODUCT);
     setMessageForm(EMPTY_MESSAGE);
     setContentBlockForm(EMPTY_CONTENT_BLOCK);
     setContentBlockFile(null);
     setCommunityProductForm(EMPTY_COMMUNITY_PRODUCT);
+    setCategoryName("");
     setBulkImportMode(false);
   }
 
@@ -1048,7 +1114,8 @@ export default function AdminCatalog({
     tab === "in-app-messages" ? "Messages" :
     tab === "content-blocks" ? "Content blocks" :
     tab === "users" ? "Users" :
-    tab === "community-products" ? "Community products" : "Ghost activity";
+    tab === "community-products" ? "Community products" :
+    tab === "categories" ? "Categories" : "Ghost activity";
 
   return (
     <main className="admin-shell">
@@ -1101,6 +1168,7 @@ export default function AdminCatalog({
             <button type="button" role="tab" aria-selected={tab === "users"} onClick={() => { setTab("users"); cancelEdit(); }}>Users</button>
             <button type="button" role="tab" aria-selected={tab === "community-products"} onClick={() => { setTab("community-products"); cancelEdit(); }}>Community</button>
             <button type="button" role="tab" aria-selected={tab === "ghost-activity"} onClick={() => { setTab("ghost-activity"); cancelEdit(); }}>Activity</button>
+            <button type="button" role="tab" aria-selected={tab === "categories"} onClick={() => { setTab("categories"); cancelEdit(); }}>Categories</button>
           </div>
 
           {tab === "users" ? (
@@ -1116,7 +1184,7 @@ export default function AdminCatalog({
                 <label>Source URL<input required type="url" value={communityProductForm.sourceUrl} onChange={(event) => setCommunityProductForm({ ...communityProductForm, sourceUrl: event.target.value })} placeholder="https://…" /></label>
               )}
               <label>Title<input required value={communityProductForm.title} onChange={(event) => setCommunityProductForm({ ...communityProductForm, title: event.target.value })} placeholder="Product title" /></label>
-              <div className="admin-field-row"><label>Category<input required value={communityProductForm.category} onChange={(event) => setCommunityProductForm({ ...communityProductForm, category: event.target.value })} placeholder="Tech" /></label><label>Price <span>minor units</span><input required type="number" min="0" step="1" value={communityProductForm.priceCents} onChange={(event) => setCommunityProductForm({ ...communityProductForm, priceCents: event.target.value })} /></label></div>
+              <div className="admin-field-row"><label>Category<select required value={communityProductForm.category} onChange={(event) => setCommunityProductForm({ ...communityProductForm, category: event.target.value })}><option value="">Select category</option>{categories.map((category) => <option key={category.id} value={category.name}>{category.name}</option>)}{communityProductForm.category && !categories.some((c) => c.name === communityProductForm.category) && <option value={communityProductForm.category}>{communityProductForm.category} (not in list)</option>}</select></label><label>Price <span>minor units</span><input required type="number" min="0" step="1" value={communityProductForm.priceCents} onChange={(event) => setCommunityProductForm({ ...communityProductForm, priceCents: event.target.value })} /></label></div>
               <label>Image URL <span>optional</span><input type="url" value={communityProductForm.imageUrl} onChange={(event) => setCommunityProductForm({ ...communityProductForm, imageUrl: event.target.value })} placeholder="https://…" /></label>
               <ImageDropzone
                 uploadUrl={editingCommunityProductId ? `/api/admin/community-products/${editingCommunityProductId}/image` : null}
@@ -1133,6 +1201,13 @@ export default function AdminCatalog({
               <div className="admin-form-heading"><p>Ghost activity</p><span>Read-only</span></div>
               <p className="admin-inline-note">Every user's almost-buys (ghosted items), most recently updated first, with the owning account's email. No edit actions here - use the Users tab to manage the account itself.</p>
             </div>
+          ) : tab === "categories" ? (
+            <form className="admin-form" onSubmit={saveCategory}>
+              <div className="admin-form-heading"><p>{editingCategoryId ? "Rename category" : "New category"}</p><span>{editingCategoryId ? "Editing" : "Picklist"}</span></div>
+              <p className="admin-inline-note">Shows up as an option in the Products and Community category dropdowns. Renaming or removing a category never changes the category text already saved on existing products.</p>
+              <label>Name<input required value={categoryName} onChange={(event) => setCategoryName(event.target.value)} placeholder="e.g. Home Decor" /></label>
+              <div className="admin-form-actions"><button className="admin-primary" disabled={saving}>{saving ? "Saving…" : editingCategoryId ? "Save changes" : "Add category"}</button>{editingCategoryId && <button type="button" className="admin-secondary" onClick={cancelEdit}>Cancel</button>}</div>
+            </form>
           ) : tab === "in-app-messages" ? (
             <>
               <form className="admin-form" onSubmit={saveMessage}>
@@ -1199,7 +1274,7 @@ export default function AdminCatalog({
               {merchants.length === 0 && <p className="admin-inline-note">Add a merchant first, then create its products.</p>}
               <label>Merchant<select required value={productForm.merchantId} onChange={(event) => setProductForm({ ...productForm, merchantId: event.target.value })}><option value="">Select merchant</option>{merchants.map((merchant) => <option key={merchant.id} value={merchant.id}>{merchant.name}</option>)}</select></label>
               <label>Name<input required value={productForm.name} onChange={(event) => setProductForm({ ...productForm, name: event.target.value })} placeholder="Product name" /></label>
-              <div className="admin-field-row"><label>Category<input required value={productForm.category} onChange={(event) => setProductForm({ ...productForm, category: event.target.value })} placeholder="Tech" /></label><label>Price <span>minor units</span><input required type="number" min="0" step="1" value={productForm.priceCents} onChange={(event) => setProductForm({ ...productForm, priceCents: event.target.value })} /></label></div>
+              <div className="admin-field-row"><label>Category<select required value={productForm.category} onChange={(event) => setProductForm({ ...productForm, category: event.target.value })}><option value="">Select category</option>{categories.map((category) => <option key={category.id} value={category.name}>{category.name}</option>)}{productForm.category && !categories.some((c) => c.name === productForm.category) && <option value={productForm.category}>{productForm.category} (not in list)</option>}</select></label><label>Price <span>minor units</span><input required type="number" min="0" step="1" value={productForm.priceCents} onChange={(event) => setProductForm({ ...productForm, priceCents: event.target.value })} /></label></div>
               <label>Description<textarea value={productForm.description} onChange={(event) => setProductForm({ ...productForm, description: event.target.value })} placeholder="Why this almost-buy feels tempting" /></label>
               <label>Image URL <span>optional</span><input type="url" value={productForm.imageUrl} onChange={(event) => setProductForm({ ...productForm, imageUrl: event.target.value })} placeholder="https://…" /></label>
               <ImageDropzone
@@ -1262,6 +1337,17 @@ export default function AdminCatalog({
                 <article className="admin-record" key={item.id}>
                   <div className="admin-record-art"><span>{item.title.slice(0, 1)}</span></div>
                   <div className="admin-record-copy"><div><span>{item.category}</span><b>{item.state}</b></div><h3>{item.title}</h3><p>{item.userEmail} · {formatMoney(item.almostSpentCents, item.currencyCode)} · updated {new Date(item.updatedAt).toLocaleString()}</p></div>
+                </article>
+              ))}
+            </div>
+          ) : tab === "categories" ? (
+            <div className="admin-list">
+              {filteredCategories.length === 0 && <div className="admin-empty">No categories yet. Add the first one from the editor.</div>}
+              {filteredCategories.map((category) => (
+                <article className="admin-record" key={category.id}>
+                  <div className="admin-record-art"><span>{category.name.slice(0, 1)}</span></div>
+                  <div className="admin-record-copy"><h3>{category.name}</h3><p>{products.filter((p) => p.category === category.name).length} products using this category</p></div>
+                  <div className="admin-record-actions"><button type="button" onClick={() => editCategory(category)}>Edit</button><button type="button" className="is-danger" disabled={saving} onClick={() => deleteCategory(category)}>Remove</button></div>
                 </article>
               ))}
             </div>

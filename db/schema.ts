@@ -12,6 +12,18 @@ import {
 // integer minor units used to describe an almost-buy; no row represents money
 // held, transferred, charged, or deposited.
 
+// Managed category list for the Products/Community tabs' dropdowns, so admin
+// picks from an existing name instead of free-typing a near-duplicate
+// ("Coffee" vs "Coffee & Drinks"). Products/community products still store
+// category as plain text (unchanged, no FK) - this table is a picklist, not
+// a hard constraint, so existing rows and any future one-off value never
+// become invalid just because they're not in this list.
+export const categories = sqliteTable("categories", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull().unique(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const merchants = sqliteTable("merchants", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
