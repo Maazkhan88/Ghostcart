@@ -1,6 +1,99 @@
 # Current State
 
-Last updated: 2026-07-19 (Claude Code — full session handoff report added below for Antigravity; see "STATUS REPORT" block immediately following this line).
+Last updated: 2026-07-20 (Claude Code — admin panel fixed + Phase 4 merged + Google Sign-In backend added; see "STATUS REPORT" block immediately following this line). The 2026-07-19 report below it is now historical — this one supersedes it, but is left in place for provenance.
+
+> ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-20, end of session)
+>
+> Read this whole block before touching anything in `db/schema.ts`, `drizzle/`, `app/admin/`, or
+> Android auth files — it supersedes the 2026-07-19 report below it.
+>
+> ### Branch map — three worktrees active this session (main dir untouched)
+>
+> | Branch (worktree) | What's on it | Status |
+> |---|---|---|
+> | `fix/admin-auth-standalone` (`C:\Users\Admin\Downloads\ghostcart-admin-auth`) | Admin panel now uses Ghost Cart's own users/sessions (was completely broken — dead ChatGPT-OAuth dependency). Merged in `phase-4/media-upload-foundation` (R2 content-blocks). Added `POST /api/auth/google`. | Built, 32/32 tests pass. Migrations applied to **live D1**. Not yet `wrangler deploy`'d — waiting on a Google OAuth secret, see below. |
+> | `feature/google-signin-backend` (`C:\Users\Admin\Downloads\ghostcart-google-signin`, based on `agent/ghost-cart-products-sharing`@`c75bccc`) | Android `AuthRepository.kt`/`AuthScreen.kt` now calls the new `/api/auth/google` backend route instead of trusting the on-device email claim. | Built, 26/26 tests pass. This is where the next APK build needs to come from (or cherry-pick these two Android files) to actually exercise the new backend route. |
+> | `phase-4/shared-ghost-attribution-notifications` (main dir) | Your uncommitted WIP | **Untouched again this session.** Still awaiting the user's call on continue/rename/discard from the 2026-07-19 notice below. |
+>
+> ### Why: the admin panel and "Admin Center" request
+>
+> The user asked for an "Admin Center" button gated on admin access, and separately reported the
+> admin panel itself was completely broken. Root cause: `/admin` depended on `getChatGPTUser()`
+> (`app/chatgpt-auth.ts`), which only worked behind OpenAI's "ChatGPT Sites" reverse proxy — a
+> hosting layer this project retired when consolidating onto the standalone Worker. Confirmed live
+> via curl: `/admin` → 307 → `/signin-with-chatgpt` → 404.
+>
+> Fix (user chose "reuse the app's own login" over building a separate admin identity system):
+> - `users.is_admin` column (migration `drizzle/0008_cheerful_shockwave.sql`, **applied to live D1**).
+> - `lib/admin-auth.ts`: `getGhostCartAdminUser()` reads an httpOnly `ghost_cart_admin_session`
+>   cookie, resolves it via a new shared `resolveSessionByToken()` (extracted from
+>   `lib/session-auth.ts`'s existing bearer-token path — Android/iOS are unaffected), then checks
+>   `users.is_admin`.
+> - `app/admin/login/page.tsx` + `POST /api/admin/login` + `POST /api/admin/logout` (new).
+> - `app/admin/page.tsx` and `app/admin/AdminCatalog.tsx` no longer import anything from
+>   `chatgpt-auth.ts`.
+>
+> ### Merge with your Phase 4 work
+>
+> While fixing admin-auth, the user separately said "I've set up R2 on Cloudflare," unblocking the
+> real `phase-4/media-upload-foundation` branch (content-blocks/banners, R2-backed — **not** your
+> `phase-4/shared-ghost-attribution-notifications`, still a different feature per the 2026-07-19
+> notice). Both had to ship together, so I merged `phase-4/media-upload-foundation` into
+> `fix/admin-auth-standalone`. Conflict notes, in case you hit the same collision on your branch:
+> - `db/schema.ts`: both branches were additive (your Phase 7 tables vs. their `content_blocks`
+>   table) — kept both table sets, no real conflict.
+> - `app/admin/AdminCatalog.tsx`: both branches independently added a third tab to the same
+>   originally-2-tab file. Rewrote it from scratch with all four tabs (Products, Merchants,
+>   Messages, Content) rather than resolving 16 conflict hunks by hand.
+> - **Drizzle migration numbering collision**: both branches generated a migration numbered
+>   `0007` from the same base snapshot (one real one, `0007_damp_doctor_octopus.sql`, was
+>   **already applied to live D1**; the other, phase-4's `content_blocks` migration, was not).
+>   Renamed the unapplied one to `0009_aromatic_chameleon.sql`, hand-rebuilt its meta snapshot on
+>   top of `0008`'s, and verified with `npx drizzle-kit generate` that it reports **zero drift**
+>   against the merged `schema.ts`. **If you ever hit a same-numbered-migration collision like
+>   this, check `wrangler d1 execute --remote` history (or ask the user) before renumbering
+>   anything — renumbering an already-applied migration would desync every client's local
+>   migration state from the git history.**
+>
+> ### Google Sign-In: was 100% cosmetic, now creates a real account
+>
+> Investigating "why is there no account to flag admin" turned up a separate, real gap: Android's
+> `AuthScreen.signInWithGoogle()` only read the on-device credential's email and called
+> `onAuthSuccess(email)` directly — it never called the backend at all. No `users` row, no
+> session, nothing to flag as admin, for any Google-signed-in user, ever.
+>
+> Fixed (user chose "wire it to the backend" over "just use email+password for now"):
+> - `POST /api/auth/google` (new, both worktrees above): verifies the raw ID token via Google's
+>   `tokeninfo` endpoint (checks `aud` against a `GOOGLE_OAUTH_WEB_CLIENT_ID` Worker secret, `iss`,
+>   `email_verified`), then finds-or-creates the `users` row and mints a real session via the
+>   existing `createApiSession()` — same response shape as `/api/auth/signin`/`signup`.
+> - Android: `AuthRepository.signInWithGoogle()` (new) posts the credential's `idToken` (not just
+>   `.id`); `AuthScreen` now uses the backend's verified email for `onAuthSuccess`, not the raw
+>   on-device claim.
+>
+> ### Still open — do not decide these yourself, they're the user's call
+>
+> - **`GOOGLE_OAUTH_WEB_CLIENT_ID` Worker secret is not set yet.** `/api/auth/google` returns a
+>   500 config error until `wrangler secret put GOOGLE_OAUTH_WEB_CLIENT_ID` is run with the same
+>   value as Android's `GHOST_CART_GOOGLE_WEB_CLIENT_ID` build property. I couldn't find that
+>   value anywhere in the repo/working tree (not committed, not in `local.properties` here) — the
+>   user has it from when Google Sign-In was originally set up (v2.7.8 release).
+> - `fix/admin-auth-standalone` is not yet deployed live (`wrangler deploy`) — holding for the
+>   secret above so both land together, unless the user wants the admin-login path live sooner
+>   without Google Sign-In working yet (they're independent features; nothing stops deploying
+>   admin-auth alone).
+> - No account is flagged `is_admin` yet. Once Google Sign-In is live end-to-end (needs a new APK
+>   build off `feature/google-signin-backend` or with those two Android files cherry-picked in),
+>   the user signs in once to create a real `users` row, then `UPDATE users SET is_admin = 1
+>   WHERE email = '<theirs>'` gets run against live D1.
+> - `feature/google-signin-backend`'s Android changes need to land wherever the next real APK
+>   build comes from — currently based on `agent/ghost-cart-products-sharing`@`c75bccc`, **not**
+>   on top of your `phase-4/shared-ghost-attribution-notifications` WIP. If your branch becomes
+>   the one that ships next, these two files (`AuthRepository.kt`, `AuthScreen.kt`) need to be
+>   cherry-picked or merged in too.
+> - The "Admin Center button in Profile, visible only to admins" and "notification bell → real
+>   notification history" requests from the user are still not built — the admin-panel prerequisite
+>   above is what blocked both; next real step once an admin account exists.
 
 > ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-19, end of session)
 >
