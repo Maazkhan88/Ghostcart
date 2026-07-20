@@ -29,6 +29,10 @@ import com.example.ghostcart.data.DeviceLinkPreview
 import com.example.ghostcart.data.mergeDeviceMetadata
 import com.example.ghostcart.data.LinkImportResult
 import com.example.ghostcart.data.ListingProductStub
+import com.example.ghostcart.data.InAppMessage
+import com.example.ghostcart.data.InAppMessageRepository
+import com.example.ghostcart.data.SimulationConsentRepository
+import com.example.ghostcart.data.SimulationConsentStatus
 import com.example.ghostcart.data.ProductImportRepository
 import com.example.ghostcart.data.ProductImportState
 import com.example.ghostcart.data.fetchSharedGhostItem
@@ -81,7 +85,9 @@ data class AppUiState(
     val appTheme: String = "System",
     val favoriteProductIds: Set<String> = emptySet(),
     val feedbackSubmittedOrderIds: Set<String> = emptySet(),
-    val shareQueue: List<ShareQueueItem> = emptyList()
+    val shareQueue: List<ShareQueueItem> = emptyList(),
+    val simulationConsentStatus: SimulationConsentStatus? = null,
+    val activeInAppMessage: InAppMessage? = null
 )
 
 internal fun deliveryStepAt(nowMillis: Long, placedAtMillis: Long, intervalMinutes: Int): Int {
@@ -127,6 +133,60 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             almostBuyRepository.items.collect { items ->
                 _uiState.update { it.copy(almostBuys = items) }
             }
+        }
+        refreshSimulationConsentStatus()
+        refreshInAppMessages()
+    }
+
+    private fun refreshSimulationConsentStatus() {
+        viewModelScope.launch {
+            SimulationConsentRepository.fetchStatus(getApplication())
+                .onSuccess { status ->
+                    _uiState.update { it.copy(simulationConsentStatus = status) }
+                }
+                .onFailure {
+                    // Offline/unreachable: fail open rather than stranding the user on a splash
+                    // screen forever. version=0 never matches a real published version, so if
+                    // connectivity returns later this placeholder is simply replaced by the real
+                    // status on the next app start - it never gets treated as a genuine
+                    // acceptance record server-side (nothing is ever POSTed for it).
+                    _uiState.update {
+                        it.copy(simulationConsentStatus = SimulationConsentStatus(0, "", accepted = true))
+                    }
+                }
+        }
+    }
+
+    /** Only ever called from the consent screen's own explicit "I understand" button - never
+     * inferred or auto-accepted on the user's behalf. */
+    fun acceptSimulationConsent() {
+        val status = _uiState.value.simulationConsentStatus ?: return
+        viewModelScope.launch {
+            SimulationConsentRepository.submitAcceptance(getApplication(), status.version)
+                .onSuccess {
+                    _uiState.update { it.copy(simulationConsentStatus = status.copy(accepted = true)) }
+                }
+                .onFailure {
+                    showToast("Could not record your acceptance - check your connection and try again.")
+                }
+        }
+    }
+
+    private fun refreshInAppMessages() {
+        viewModelScope.launch {
+            val dismissedIds = sharedPrefs.getStringSet("dismissed_in_app_message_ids", emptySet()).orEmpty()
+            InAppMessageRepository.fetchActiveMessages().onSuccess { messages ->
+                val next = messages.firstOrNull { it.id !in dismissedIds }
+                _uiState.update { it.copy(activeInAppMessage = next) }
+            }
+        }
+    }
+
+    fun dismissInAppMessage(id: String) {
+        val current = sharedPrefs.getStringSet("dismissed_in_app_message_ids", emptySet()).orEmpty()
+        sharedPrefs.edit().putStringSet("dismissed_in_app_message_ids", current + id).apply()
+        _uiState.update {
+            if (it.activeInAppMessage?.id == id) it.copy(activeInAppMessage = null) else it
         }
     }
 

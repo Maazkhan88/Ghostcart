@@ -82,6 +82,8 @@ import com.example.ghostcart.ui.marketplace.ProductDetailScreen
 import com.example.ghostcart.ui.marketplace.CategoryBrowseScreen
 import com.example.ghostcart.ui.v2.CaptureAlmostBuyScreen
 import com.example.ghostcart.ui.v2.CooldownsScreen
+import com.example.ghostcart.ui.common.InAppMessageDialog
+import com.example.ghostcart.ui.onboarding.SimulationConsentScreen
 import com.example.ghostcart.ui.v2.GhostHomeScreen
 import com.example.ghostcart.ui.v2.LegalDocumentScreen
 import com.example.ghostcart.ui.v2.ProfileScreen
@@ -170,6 +172,19 @@ fun MainNavigation(
     }
 
     GhostCartTheme(darkTheme = darkTheme) {
+    val consentStatus = state.simulationConsentStatus
+    if (consentStatus == null) {
+        // Still checking (or the check failed and will retry) - show a neutral splash rather
+        // than either the gate or the full app. Letting the full app briefly mount here would
+        // let other launch-time UI (e.g. the in-app message dialog) flash on and get torn down
+        // the instant the real consentStatus arrives, if it turns out acceptance is required.
+        SplashContent()
+    } else if (!consentStatus.accepted) {
+        SimulationConsentScreen(
+            consentText = consentStatus.consentText,
+            onAccept = appViewModel::acceptSimulationConsent
+        )
+    } else {
     Box(Modifier.fillMaxSize()) {
         Scaffold(
             containerColor = Paper,
@@ -539,6 +554,15 @@ fun MainNavigation(
                 Text(message, color = Paper, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
             }
         }
+
+        state.activeInAppMessage?.let { message ->
+            InAppMessageDialog(
+                message = message,
+                onDismiss = { appViewModel.dismissInAppMessage(message.id) },
+                onOpenLink = { url -> openProductSource(context, url) }
+            )
+        }
+    }
     }
     }
 }
