@@ -232,6 +232,286 @@ function ImageDropzone({
   );
 }
 
+// Minimal RFC4180-ish CSV parser (quoted fields, escaped "" quotes, commas
+// inside quotes) - good enough for admin-authored/spreadsheet-exported
+// files without pulling in a dependency for it.
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let inQuotes = false;
+  const pushField = () => { row.push(field); field = ""; };
+  const pushRow = () => { pushField(); rows.push(row); row = []; };
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (inQuotes) {
+      if (char === '"' && text[i + 1] === '"') { field += '"'; i++; }
+      else if (char === '"') inQuotes = false;
+      else field += char;
+    } else if (char === '"') {
+      inQuotes = true;
+    } else if (char === ",") {
+      pushField();
+    } else if (char === "\n") {
+      pushRow();
+    } else if (char === "\r") {
+      // skip, \n handles the row break
+    } else {
+      field += char;
+    }
+  }
+  if (field.length > 0 || row.length > 0) pushRow();
+  return rows.filter((r) => r.some((cell) => cell.trim() !== ""));
+}
+
+type BulkRow = {
+  line: number;
+  name: string;
+  category: string;
+  price: string;
+  merchant: string;
+  description: string;
+  imageFilename: string;
+  error?: string;
+};
+
+const BULK_CSV_TEMPLATE =
+  "name,category,price,merchant,description,image\n" +
+  "Spanish Latte,Food & Coffee,38.00,Ghost Cart Demo Catalog,,latte.jpg\n";
+
+function BulkImportPanel({
+  merchants,
+  onDone,
+  onExit,
+}: {
+  merchants: Merchant[];
+  onDone: () => void;
+  onExit: () => void;
+}) {
+  const [rows, setRows] = useState<BulkRow[]>([]);
+  const [imageFiles, setImageFiles] = useState<Map<string, File>>(new Map());
+  const [autoCreateMerchants, setAutoCreateMerchants] = useState(true);
+  const [importing, setImporting] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [log, setLog] = useState<string[]>([]);
+
+  function downloadTemplate() {
+    const blob = new Blob([BULK_CSV_TEMPLATE], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "ghost-cart-products-template.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleCsvFile(file: File) {
+    const text = await file.text();
+    const table = parseCsv(text);
+    if (table.length === 0) { setRows([]); return; }
+    const header = table[0].map((cell) => cell.trim().toLowerCase());
+    const col = (name: string) => header.indexOf(name);
+    const nameCol = col("name");
+    const categoryCol = col("category");
+    const priceCol = col("price");
+    const merchantCol = col("merchant");
+    const descriptionCol = col("description");
+    const imageCol = col("image");
+    if (nameCol === -1 || categoryCol === -1 || priceCol === -1 || merchantCol === -1) {
+      setRows([{
+        line: 1, name: "", category: "", price: "", merchant: "", description: "", imageFilename: "",
+        error: "CSV header must include name, category, price, merchant columns (image and description are optional).",
+      }]);
+      return;
+    }
+    const parsed: BulkRow[] = table.slice(1).map((cells, index) => {
+      const name = (cells[nameCol] ?? "").trim();
+      const category = (cells[categoryCol] ?? "").trim();
+      const price = (cells[priceCol] ?? "").trim();
+      const merchant = (cells[merchantCol] ?? "").trim();
+      const description = descriptionCol >= 0 ? (cells[descriptionCol] ?? "").trim() : "";
+      const imageFilename = imageCol >= 0 ? (cells[imageCol] ?? "").trim() : "";
+      let error: string | undefined;
+      if (!name) error = "Missing name";
+      else if (!category) error = "Missing category";
+      else if (!price || Number.isNaN(Number(price)) || Number(price) < 0) error = "Invalid price";
+      else if (!merchant) error = "Missing merchant";
+      return { line: index + 2, name, category, price, merchant, description, imageFilename, error };
+    });
+    setRows(parsed);
+  }
+
+  function handleImageFilesSelected(fileList: FileList) {
+    const next = new Map<string, File>();
+    for (const file of Array.from(fileList)) next.set(file.name.toLowerCase(), file);
+    setImageFiles(next);
+  }
+
+  async function runImport() {
+    setImporting(true);
+    setLog([]);
+    const validRows = rows.filter((r) => !r.error);
+    setProgress({ done: 0, total: validRows.length });
+    const merchantCache = new Map<string, number>(
+      merchants.map((m) => [m.name.trim().toLowerCase(), m.id]),
+    );
+    const nextLog: string[] = [];
+
+    for (let i = 0; i < validRows.length; i++) {
+      const row = validRows[i];
+      try {
+        let merchantId = merchantCache.get(row.merchant.toLowerCase());
+        if (!merchantId) {
+          if (!autoCreateMerchants) {
+            nextLog.push(`Row ${row.line}: skipped - no merchant named "${row.merchant}" (enable auto-create or add it first)`);
+            setProgress({ done: i + 1, total: validRows.length });
+            continue;
+          }
+          const merchantResponse = await fetch("/api/merchants", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ name: row.merchant, category: row.category, description: "" }),
+          });
+          const merchantBody = await readJson<{ merchant: Merchant }>(merchantResponse);
+          merchantId = merchantBody.merchant.id;
+          merchantCache.set(row.merchant.toLowerCase(), merchantId);
+        }
+
+        const priceCents = Math.round(Number(row.price) * 100);
+        const productResponse = await fetch("/api/products", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            merchantId,
+            name: row.name,
+            category: row.category,
+            description: row.description,
+            priceCents,
+            isActive: true,
+          }),
+        });
+        const productBody = await readJson<{ product: Product }>(productResponse);
+
+        if (row.imageFilename) {
+          const matched = imageFiles.get(row.imageFilename.toLowerCase());
+          if (matched) {
+            const body = new FormData();
+            body.set("file", matched);
+            const imageResponse = await fetch(`/api/products/${productBody.product.id}/image`, { method: "POST", body });
+            if (!imageResponse.ok) {
+              const errorBody = (await imageResponse.json().catch(() => ({}))) as { error?: string };
+              nextLog.push(`Row ${row.line}: "${row.name}" created, but photo failed - ${errorBody.error ?? "upload error"}`);
+            }
+          } else {
+            nextLog.push(`Row ${row.line}: "${row.name}" created, but no selected file matches "${row.imageFilename}"`);
+          }
+        }
+      } catch (error) {
+        nextLog.push(`Row ${row.line}: failed - ${error instanceof Error ? error.message : "unknown error"}`);
+      }
+      setProgress({ done: i + 1, total: validRows.length });
+    }
+
+    setLog(nextLog.length > 0 ? nextLog : ["All rows imported successfully."]);
+    setImporting(false);
+    onDone();
+  }
+
+  const validCount = rows.filter((r) => !r.error).length;
+  const errorCount = rows.length - validCount;
+
+  return (
+    <div className="admin-form">
+      <div className="admin-form-heading"><p>Bulk import products</p><span>CSV + photos</span></div>
+      <div className="admin-form-actions">
+        <button type="button" className="admin-secondary" onClick={onExit} disabled={importing}>Back to single product</button>
+      </div>
+      <p className="admin-inline-note">
+        CSV columns: <code>name, category, price, merchant, description, image</code>. The{" "}
+        <code>image</code> column is just a filename (e.g. <code>latte.jpg</code>) - select the
+        matching photo files below and they get matched by name, no URLs or hosting needed.
+      </p>
+      <div className="admin-form-actions">
+        <button type="button" className="admin-secondary" onClick={downloadTemplate}>Download CSV template</button>
+      </div>
+      <label>
+        1. CSV file
+        <input
+          type="file"
+          accept=".csv,text/csv"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) void handleCsvFile(file);
+          }}
+        />
+      </label>
+      <label>
+        2. Photo files <span>optional, select all at once</span>
+        <input
+          type="file"
+          accept="image/png,image/jpeg"
+          multiple
+          onChange={(event) => {
+            if (event.target.files) handleImageFilesSelected(event.target.files);
+          }}
+        />
+      </label>
+      {imageFiles.size > 0 && <p className="admin-inline-note">{imageFiles.size} photo file{imageFiles.size === 1 ? "" : "s"} selected.</p>}
+      <label className="admin-check">
+        <input type="checkbox" checked={autoCreateMerchants} onChange={(event) => setAutoCreateMerchants(event.target.checked)} />
+        <span><strong>Auto-create unknown merchants</strong><small>If a row's merchant name doesn't already exist, create it automatically.</small></span>
+      </label>
+
+      {rows.length > 0 && (
+        <div className="admin-list" style={{ maxHeight: 260, overflowY: "auto" }}>
+          {rows.map((row) => (
+            <article className="admin-record" key={row.line}>
+              <div className="admin-record-art"><span>{row.line}</span></div>
+              <div className="admin-record-copy">
+                <div>{row.error ? <b>{row.error}</b> : <span>{row.merchant}</span>}</div>
+                <h3>{row.name || "(missing name)"}</h3>
+                <p>
+                  {row.category} · {row.price} ·{" "}
+                  {row.imageFilename
+                    ? imageFiles.has(row.imageFilename.toLowerCase())
+                      ? `photo matched (${row.imageFilename})`
+                      : `photo NOT found (${row.imageFilename})`
+                    : "no photo"}
+                </p>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+
+      {rows.length > 0 && (
+        <p className="admin-inline-note">
+          {validCount} row{validCount === 1 ? "" : "s"} ready to import{errorCount > 0 ? `, ${errorCount} with errors (skipped)` : ""}.
+        </p>
+      )}
+
+      <div className="admin-form-actions">
+        <button
+          type="button"
+          className="admin-primary"
+          disabled={importing || validCount === 0}
+          onClick={runImport}
+        >
+          {importing
+            ? `Importing ${progress?.done ?? 0}/${progress?.total ?? 0}…`
+            : `Import ${validCount} product${validCount === 1 ? "" : "s"}`}
+        </button>
+      </div>
+
+      {log.length > 0 && (
+        <div className="admin-form" style={{ padding: 0, gap: 6 }}>
+          {log.map((line, index) => <p key={index} className="admin-inline-note">{line}</p>)}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminCatalog({
   userName,
   userEmail,
@@ -260,6 +540,7 @@ export default function AdminCatalog({
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingContentBlockId, setEditingContentBlockId] = useState<number | null>(null);
   const [editingCommunityProductId, setEditingCommunityProductId] = useState<string | null>(null);
+  const [bulkImportMode, setBulkImportMode] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -758,6 +1039,7 @@ export default function AdminCatalog({
     setContentBlockForm(EMPTY_CONTENT_BLOCK);
     setContentBlockFile(null);
     setCommunityProductForm(EMPTY_COMMUNITY_PRODUCT);
+    setBulkImportMode(false);
   }
 
   const recordsTitle =
@@ -897,9 +1179,23 @@ export default function AdminCatalog({
               <label className="admin-check"><input type="checkbox" checked={merchantForm.isSponsored} onChange={(event) => setMerchantForm({ ...merchantForm, isSponsored: event.target.checked })} /><span><strong>Sponsored simulation</strong><small>Marks the merchant clearly in demo surfaces.</small></span></label>
               <div className="admin-form-actions"><button className="admin-primary" disabled={saving}>{saving ? "Saving…" : editingMerchantId ? "Save changes" : "Add merchant"}</button>{editingMerchantId && <button type="button" className="admin-secondary" onClick={cancelEdit}>Cancel</button>}</div>
             </form>
+          ) : bulkImportMode ? (
+            <BulkImportPanel
+              merchants={merchants}
+              onDone={() => { void loadCatalog(); }}
+              onExit={() => setBulkImportMode(false)}
+            />
           ) : (
             <form className="admin-form" onSubmit={saveProduct}>
-              <div className="admin-form-heading"><p>{editingProductId ? "Edit product" : "New product"}</p><span>{editingProductId ? `#${editingProductId}` : "Demo catalog"}</span></div>
+              <div className="admin-form-heading">
+                <p>{editingProductId ? "Edit product" : "New product"}</p>
+                <span>{editingProductId ? `#${editingProductId}` : "Demo catalog"}</span>
+              </div>
+              {!editingProductId && (
+                <div className="admin-form-actions">
+                  <button type="button" className="admin-secondary" onClick={() => setBulkImportMode(true)}>Bulk import from CSV…</button>
+                </div>
+              )}
               {merchants.length === 0 && <p className="admin-inline-note">Add a merchant first, then create its products.</p>}
               <label>Merchant<select required value={productForm.merchantId} onChange={(event) => setProductForm({ ...productForm, merchantId: event.target.value })}><option value="">Select merchant</option>{merchants.map((merchant) => <option key={merchant.id} value={merchant.id}>{merchant.name}</option>)}</select></label>
               <label>Name<input required value={productForm.name} onChange={(event) => setProductForm({ ...productForm, name: event.target.value })} placeholder="Product name" /></label>
