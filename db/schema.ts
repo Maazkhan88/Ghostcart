@@ -108,6 +108,9 @@ export const users = sqliteTable("users", {
   passwordHash: text("password_hash").notNull(),
   passwordSalt: text("password_salt").notNull(),
   displayName: text("display_name"),
+  // Grants access to /admin and its APIs. Never settable via any user-facing
+  // API - only flipped directly in D1 by whoever operates the deployment.
+  isAdmin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });

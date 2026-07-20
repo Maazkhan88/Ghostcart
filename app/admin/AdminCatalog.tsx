@@ -360,7 +360,17 @@ export default function AdminCatalog({
         </Link>
         <div className="admin-user">
           <span><strong>{userName}</strong><small>{userEmail}</small></span>
-          <a href="/signout-with-chatgpt?return_to=%2F">Sign out</a>
+          <a
+            href="/admin/login"
+            onClick={(event) => {
+              event.preventDefault();
+              void fetch("/api/admin/logout", { method: "POST" }).finally(() => {
+                window.location.href = "/admin/login";
+              });
+            }}
+          >
+            Sign out
+          </a>
         </div>
       </header>
 
