@@ -21,6 +21,7 @@ const FAQS = [
   ["Will Ghost Cart remind me?", "The planned app can notify you when a cooling period ends. Meal and habit reminders are optional, individually controlled and easy to pause."],
   ["Is anything delivered?", "No. Any checkout or delivery-style moment is playful and imaginary. No real payment, purchase or delivery ever takes place."],
   ["When is Ghost Cart launching?", "Ghost Cart is currently being shaped and tested. Join the waitlist for launch updates without a promised date."],
+  ["How do I get support or ask a question?", "Email info@theghostcart.com and we'll get back to you."],
 ] as const;
 
 export default function Home() {
@@ -207,9 +208,10 @@ export default function Home() {
         <div className="gc-footer-links">
           <div><span>Explore</span><a href="#how-it-works">How it works</a><a href="#try-it">Try it</a><a href="#progress">Progress</a></div>
           <div><span>Product</span><a href="#faq">FAQ</a><a href="#waitlist">Join waitlist</a><a href="/admin">Catalog admin</a></div>
+          <div><span>Contact</span><a href="mailto:info@theghostcart.com">info@theghostcart.com</a></div>
           <div><span>Follow</span><a href="#waitlist">Instagram · coming soon</a><a href="#waitlist">TikTok · coming soon</a><a href="#waitlist">LinkedIn · coming soon</a></div>
         </div>
-        <div className="gc-footer-bottom"><p>Simulation only. No real payment. No real delivery.</p><p>Ghost Cart is not a bank, wallet or payment instrument.</p><span>© Ghost Cart</span></div>
+        <div className="gc-footer-bottom"><p>Simulation only. No real payment. No real delivery.</p><p>Ghost Cart is not a bank, wallet or payment instrument.</p><span>© Ghost Cart · <a href="mailto:info@theghostcart.com">info@theghostcart.com</a></span></div>
       </footer>
     </main>
   );
