@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import Script from "next/script";
 
 type GoogleCredentialResponse = { credential: string };
@@ -26,13 +25,14 @@ export default function AdminLoginForm({ googleClientId }: { googleClientId: str
   const [loading, setLoading] = useState(false);
   const [googleReady, setGoogleReady] = useState(false);
   const googleButtonRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
 
   async function completeSignIn(response: Response) {
     const body = (await response.json()) as { error?: string };
     if (!response.ok) throw new Error(body.error || "Could not sign in.");
-    router.push("/admin");
-    router.refresh();
+    // A hard navigation (not router.push/refresh) guarantees the server
+    // re-reads the just-set admin session cookie fresh, with no client
+    // router cache in the way.
+    window.location.href = "/admin";
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
