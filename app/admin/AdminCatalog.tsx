@@ -136,6 +136,14 @@ const EMPTY_CONTENT_BLOCK = {
   isActive: true,
 };
 
+const EMPTY_COMMUNITY_PRODUCT = {
+  sourceUrl: "",
+  title: "",
+  category: "",
+  imageUrl: "",
+  priceCents: "0",
+};
+
 async function readJson<T>(response: Response): Promise<T> {
   const body = (await response.json()) as T & { error?: string };
   if (!response.ok) throw new Error(body.error || "The request could not be completed.");
@@ -168,10 +176,12 @@ export default function AdminCatalog({
   const [messageForm, setMessageForm] = useState(EMPTY_MESSAGE);
   const [contentBlockForm, setContentBlockForm] = useState(EMPTY_CONTENT_BLOCK);
   const [contentBlockFile, setContentBlockFile] = useState<File | null>(null);
+  const [communityProductForm, setCommunityProductForm] = useState(EMPTY_COMMUNITY_PRODUCT);
   const [editingMerchantId, setEditingMerchantId] = useState<number | null>(null);
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingContentBlockId, setEditingContentBlockId] = useState<number | null>(null);
+  const [editingCommunityProductId, setEditingCommunityProductId] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -523,6 +533,53 @@ export default function AdminCatalog({
     }
   }
 
+  async function saveCommunityProduct(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setNotice(null);
+    try {
+      const payload = editingCommunityProductId
+        ? {
+            title: communityProductForm.title,
+            category: communityProductForm.category,
+            imageUrl: communityProductForm.imageUrl || null,
+            priceCents: Number(communityProductForm.priceCents),
+          }
+        : {
+            sourceUrl: communityProductForm.sourceUrl,
+            title: communityProductForm.title,
+            category: communityProductForm.category,
+            imageUrl: communityProductForm.imageUrl || null,
+            priceCents: Number(communityProductForm.priceCents),
+          };
+      const response = await fetch(
+        editingCommunityProductId
+          ? `/api/admin/community-products/${editingCommunityProductId}`
+          : "/api/admin/community-products",
+        {
+          method: editingCommunityProductId ? "PATCH" : "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
+      await readJson(response);
+      setNotice({
+        kind: "success",
+        message: editingCommunityProductId ? "Community product updated." : "Community product added.",
+      });
+      setCommunityProductForm(EMPTY_COMMUNITY_PRODUCT);
+      setEditingCommunityProductId(null);
+      await loadCatalog();
+    } catch (error) {
+      setNotice({
+        kind: "error",
+        message: error instanceof Error ? error.message : "Could not save community product.",
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function removeRecord(kind: AdminTab, id: number | string, name: string) {
     const cascadeNote = kind === "merchants" ? " Its products will also be removed." : "";
     if (!window.confirm(`Remove ${name}?${cascadeNote}`)) return;
@@ -599,16 +656,30 @@ export default function AdminCatalog({
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function editCommunityProduct(product: CommunityProduct) {
+    setEditingCommunityProductId(product.id);
+    setCommunityProductForm({
+      sourceUrl: product.canonicalUrl,
+      title: product.title,
+      category: product.category,
+      imageUrl: product.imageUrl ?? "",
+      priceCents: String(product.priceCents),
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function cancelEdit() {
     setEditingMerchantId(null);
     setEditingProductId(null);
     setEditingMessageId(null);
     setEditingContentBlockId(null);
+    setEditingCommunityProductId(null);
     setMerchantForm(EMPTY_MERCHANT);
     setProductForm(EMPTY_PRODUCT);
     setMessageForm(EMPTY_MESSAGE);
     setContentBlockForm(EMPTY_CONTENT_BLOCK);
     setContentBlockFile(null);
+    setCommunityProductForm(EMPTY_COMMUNITY_PRODUCT);
   }
 
   const recordsTitle =
@@ -678,10 +749,17 @@ export default function AdminCatalog({
               <p className="admin-inline-note">Everyone who has signed up (email/password or Google). Grant or revoke admin access from the list on the right - this is the only user field you can change here.</p>
             </div>
           ) : tab === "community-products" ? (
-            <div className="admin-form">
-              <div className="admin-form-heading"><p>Community products</p><span>Read + moderate</span></div>
-              <p className="admin-inline-note">Every product a user has shared or ghosted into the anonymous community feed, regardless of visibility. Hide a product to pull it from the public feed without deleting its history, or remove it permanently.</p>
-            </div>
+            <form className="admin-form" onSubmit={saveCommunityProduct}>
+              <div className="admin-form-heading"><p>{editingCommunityProductId ? "Edit community product" : "New community product"}</p><span>{editingCommunityProductId ? "Editing" : "User-shared"}</span></div>
+              <p className="admin-inline-note">{editingCommunityProductId ? "Editing title/category/image/price only - the source link and ghost count are never admin-editable." : "Adds directly to the anonymous community feed, same as a real user share."}</p>
+              {!editingCommunityProductId && (
+                <label>Source URL<input required type="url" value={communityProductForm.sourceUrl} onChange={(event) => setCommunityProductForm({ ...communityProductForm, sourceUrl: event.target.value })} placeholder="https://…" /></label>
+              )}
+              <label>Title<input required value={communityProductForm.title} onChange={(event) => setCommunityProductForm({ ...communityProductForm, title: event.target.value })} placeholder="Product title" /></label>
+              <div className="admin-field-row"><label>Category<input required value={communityProductForm.category} onChange={(event) => setCommunityProductForm({ ...communityProductForm, category: event.target.value })} placeholder="Tech" /></label><label>Price <span>minor units</span><input required type="number" min="0" step="1" value={communityProductForm.priceCents} onChange={(event) => setCommunityProductForm({ ...communityProductForm, priceCents: event.target.value })} /></label></div>
+              <label>Image URL <span>optional</span><input type="url" value={communityProductForm.imageUrl} onChange={(event) => setCommunityProductForm({ ...communityProductForm, imageUrl: event.target.value })} placeholder="https://…" /></label>
+              <div className="admin-form-actions"><button className="admin-primary" disabled={saving}>{saving ? "Saving…" : editingCommunityProductId ? "Save changes" : "Add community product"}</button>{editingCommunityProductId && <button type="button" className="admin-secondary" onClick={cancelEdit}>Cancel</button>}</div>
+            </form>
           ) : tab === "ghost-activity" ? (
             <div className="admin-form">
               <div className="admin-form-heading"><p>Ghost activity</p><span>Read-only</span></div>
@@ -776,6 +854,7 @@ export default function AdminCatalog({
                   <div className="admin-record-art">{product.imageUrl ? <img src={product.imageUrl} alt="" /> : <span>{product.title.slice(0, 1)}</span>}</div>
                   <div className="admin-record-copy"><div><span>{product.category}</span>{product.status !== "visible" && <b>{product.status}</b>}</div><h3>{product.title}</h3><p>{product.sourceDomain} · {formatMoney(product.priceCents, product.currencyCode)} · ghosted {product.ghostCount}×</p></div>
                   <div className="admin-record-actions">
+                    <button type="button" onClick={() => editCommunityProduct(product)}>Edit</button>
                     {product.status !== "hidden" ? (
                       <button type="button" disabled={saving} onClick={() => setCommunityProductStatus(product, "hidden")}>Hide</button>
                     ) : (
