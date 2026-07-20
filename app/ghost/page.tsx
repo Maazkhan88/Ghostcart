@@ -7,7 +7,7 @@ type GhostPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-const SITE_ORIGIN = "https://ghostcart-app.maaz-n-khan.workers.dev";
+const SITE_ORIGIN = "https://theghostcart.com";
 const ANDROID_PACKAGE = "com.ghostcart.app";
 
 type SharedItem = {
