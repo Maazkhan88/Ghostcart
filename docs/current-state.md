@@ -1,6 +1,72 @@
 # Current State
 
-Last updated: 2026-07-20, later same day (Claude Code — custom domain theghostcart.com connected and verified; admin Google Sign-In confirmed working on www.theghostcart.com; admin user/community/activity visibility work in progress). See the "STATUS REPORT" block immediately below — it supersedes the one after it, which is now historical (left for provenance).
+Last updated: 2026-07-21 (Claude Code — admin panel now has full catalog management: photo upload, CSV bulk import, managed categories; workers.dev fully retired, theghostcart.com is the only live endpoint; product/feature overview doc added for business planning). See the "STATUS REPORT" block immediately below — it supersedes everything after it, which is historical (left for provenance).
+
+> ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-21)
+>
+> Short version: the admin-visibility work flagged as "in progress" in the previous report is now
+> **fully done and deployed**, plus three new admin features shipped on top of it, plus
+> `workers.dev` is gone - `theghostcart.com` is the only live URL now. Read the "If you touch
+> admin/domain/Android networking" note at the bottom before changing any of those areas.
+>
+> ### Shipped and deployed since the last report
+>
+> - **Admin visibility (previously "in progress") - now complete.** Users/Community/Activity tabs
+>   all live, all verified. See the 2026-07-20 report below for the original design notes - no
+>   further backend work needed there.
+> - **Drag-and-drop / click-to-browse photo upload** for Products and Community products, reusing
+>   the same validated pipeline (`lib/content-media.ts`'s `uploadImageFile()`) the Content tab's
+>   banner/story uploads already used. New routes: `POST /api/products/[id]/image`,
+>   `POST /api/admin/community-products/[id]/image`.
+> - **CSV bulk import for Products** (Products tab -> "Bulk import from CSV…"): columns
+>   `name, category, price, merchant, description, image`, where `image` is just a filename
+>   matched client-side against a separate multi-file photo picker - no image URLs to host or
+>   paste. Reuses existing `POST /api/products` + the new image-upload route per row; no new
+>   backend endpoints beyond what photo upload already added. Client-side dependency-free CSV
+>   parser in `app/admin/AdminCatalog.tsx` (`parseCsv`).
+> - **Managed Categories picklist** (new "Categories" admin tab + `categories` table, migration
+>   `drizzle/0010_breezy_electro.sql`, seeded with the 14 category values already in use).
+>   Products/Community forms' category field is now a `<select>` sourced from this table instead
+>   of free text - closes the "Coffee" vs "Coffee & Drinks" duplicate-typo problem.
+>   **Deliberately not a foreign key** - `products.category`/`community_products.category` stay
+>   plain text, so renaming/removing a category never touches existing product rows.
+> - **`theghostcart.com` migration finished, `workers.dev` is now fully retired** (user's explicit
+>   choice, confirmed knowing it breaks any device still on a pre-v2.7.23 APK build until it
+>   updates): `wrangler.ghostcart-app.jsonc` now has `"workers_dev": false`. Android's
+>   `ApiConfig.BASE_URL`/`PRODUCT_API_BASE_URL` and the `/ghost` share page's `SITE_ORIGIN` were
+>   already switched to `theghostcart.com` in the v2.7.23 APK (see the 2026-07-20 report). The
+>   link-preview fetcher's User-Agent contact URL was also updated to match.
+>   **If you deploy this Worker and see the workers.dev URL stop responding, that is expected,
+>   not a regression to fix.**
+> - **Fixed a real bug found while investigating a user's share-link question**: `/download/android`
+>   (the fallback APK link shown on shared Ghost-item pages when the recipient doesn't have the
+>   app) was pointed at a stale, months-untouched branch/path
+>   (`agent/ghost-cart-products-sharing`'s raw `android/app/build/outputs/...`, not the
+>   `releases/` folder), so it was silently serving an old build missing every fix from this
+>   session. Now points at the actively-updated `phase-5/ghost-cart-stories-section`
+>   `releases/GhostCart-v2.7.14-debug.apk`. **If you ever add another hardcoded APK URL anywhere,
+>   point it at that same file/branch, not a build-output path.**
+> - **`docs/ghost-cart-overview-for-planning.md`** (new) - a business/product-planning briefing
+>   doc the user asked for, to hand to another AI for roadmap/business-plan work. Not project
+>   status (that's this file) - a snapshot of what's shipped vs. aspirational, written for a
+>   non-technical planning audience. Worth skimming if you want the same "what actually exists"
+>   framing without re-deriving it from code.
+>
+> ### If you touch admin/domain/Android networking
+>
+> - Any new hardcoded backend URL anywhere (Android, backend, docs) should be `theghostcart.com`,
+>   never `workers.dev` or the two already-retired hosts (`nameless-d98e`,
+>   `ghost-cart-preview...chatgpt.site`).
+> - Admin Google Sign-In's authorized JS origin is currently only `https://theghostcart.com`
+>   (apex, no `www`) in Google Cloud Console - the user removed `www` and `workers.dev` from that
+>   list when retiring `workers.dev`. If admin Google Sign-In ever fails with "no registered
+>   origin" again, check that list first before assuming it's a code bug.
+> - `app/admin/AdminCatalog.tsx` is now a large single-file admin UI (~1400+ lines: 7 tabs,
+>   `ImageDropzone` and `BulkImportPanel` as inline components). If it keeps growing, it's a
+>   reasonable candidate to split into per-tab files, but that's a refactor, not a functional
+>   change - don't do it incidentally while adding an unrelated feature.
+>
+> ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-20, later same session — usage window closing)
 
 > **Domain update (same day, after the report below):** `theghostcart.com` and
 > `www.theghostcart.com` are now attached to the `ghostcart-app` Worker as custom domains
