@@ -373,3 +373,56 @@ export const ghostEventsRelations = relations(ghostEvents, ({ one }) => ({
     references: [products.id],
   }),
 }));
+
+// Admin-composed messages shown on app launch (custom in-app messaging, not the
+// Firebase In-App Messaging SDK). image_url/link_url reference plain external
+// URLs, not Phase 4's R2 content_blocks table - the two features are independent.
+export const inAppMessages = sqliteTable(
+  "in_app_messages",
+  {
+    id: text("id").primaryKey(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    imageUrl: text("image_url"),
+    linkUrl: text("link_url"),
+    audience: text("audience").notNull().default("all"),
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    check("in_app_messages_audience_check", sql`${table.audience} IN ('all')`),
+    index("in_app_messages_active_sort_idx").on(table.isActive, table.sortOrder),
+  ],
+);
+
+// The single current "this app is a simulation" consent text/version. Only ever
+// one row (id = 1) - publishing a new version bumps `version` and updates
+// `consentText`, which re-requires acceptance from everyone who accepted an
+// earlier version (see simulationConsentAcceptances).
+export const simulationConsentConfig = sqliteTable("simulation_consent_config", {
+  id: integer("id").primaryKey(),
+  version: integer("version").notNull().default(1),
+  consentText: text("consent_text").notNull(),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+// One row per (actor, version accepted). actor_key is "user:<id>" for a signed-in
+// account or "install:<installation id>" for an anonymous device - never a raw
+// email or other directly-identifying value. Presence of a row for the *current*
+// config version is what "accepted" means; no separate boolean is needed.
+export const simulationConsentAcceptances = sqliteTable(
+  "simulation_consent_acceptances",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    actorKey: text("actor_key").notNull(),
+    version: integer("version").notNull(),
+    locale: text("locale").notNull().default("en-AE"),
+    acceptedAt: text("accepted_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("simulation_consent_actor_version_unique").on(table.actorKey, table.version),
+    index("simulation_consent_actor_idx").on(table.actorKey),
+  ],
+);
