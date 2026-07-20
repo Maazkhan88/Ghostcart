@@ -606,7 +606,7 @@ private fun GhostBottomNav(current: NavKey?, cartCount: Int = 0, onNavigate: (Na
                 selected = selected,
                 onClick = { onNavigate(item.destination) },
                 icon = {
-                    Box(contentAlignment = Alignment.TopEnd) {
+                    Box(contentAlignment = Alignment.TopEnd, modifier = Modifier.offset(y = 6.dp)) {
                         Box(
                             modifier = Modifier
                                 .size(if (item.central) 48.dp else 34.dp)
