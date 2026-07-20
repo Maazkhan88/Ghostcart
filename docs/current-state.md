@@ -71,21 +71,27 @@ Last updated: 2026-07-20 (Claude Code — admin panel fixed + Phase 4 merged + G
 >   `.id`); `AuthScreen` now uses the backend's verified email for `onAuthSuccess`, not the raw
 >   on-device claim.
 >
+> ### Deployed live (2026-07-20, later same session)
+>
+> `fix/admin-auth-standalone` is now live: `wrangler deploy` succeeded (Version ID
+> `c02315a4-2412-45f7-bf55-a1ad9a62d23a`), `GOOGLE_OAUTH_WEB_CLIENT_ID` secret is set (value
+> recovered from strings inside the already-published `releases/GhostCart-v2.7.8-debug.apk`
+> dex bytecode — the previous session that wired Google Sign-In registered the OAuth clients
+> directly in Google Cloud Console and never wrote the ID to any file; user confirmed it's still
+> the correct client ID). Verified live:
+> - `GET /admin` → `307` → `/admin/login`, which renders `200` with the real sign-in form.
+> - `POST /api/auth/google` with a garbage token → `{"error":"Could not verify Google sign-in"}`
+>   (was `"...not configured..."` before the secret propagated — confirms the audience check is
+>   actually running against live traffic now).
+>
 > ### Still open — do not decide these yourself, they're the user's call
 >
-> - **`GOOGLE_OAUTH_WEB_CLIENT_ID` Worker secret is not set yet.** `/api/auth/google` returns a
->   500 config error until `wrangler secret put GOOGLE_OAUTH_WEB_CLIENT_ID` is run with the same
->   value as Android's `GHOST_CART_GOOGLE_WEB_CLIENT_ID` build property. I couldn't find that
->   value anywhere in the repo/working tree (not committed, not in `local.properties` here) — the
->   user has it from when Google Sign-In was originally set up (v2.7.8 release).
-> - `fix/admin-auth-standalone` is not yet deployed live (`wrangler deploy`) — holding for the
->   secret above so both land together, unless the user wants the admin-login path live sooner
->   without Google Sign-In working yet (they're independent features; nothing stops deploying
->   admin-auth alone).
-> - No account is flagged `is_admin` yet. Once Google Sign-In is live end-to-end (needs a new APK
->   build off `feature/google-signin-backend` or with those two Android files cherry-picked in),
->   the user signs in once to create a real `users` row, then `UPDATE users SET is_admin = 1
->   WHERE email = '<theirs>'` gets run against live D1.
+> - No account is flagged `is_admin` yet, because no build with the new
+>   `AuthRepository.signInWithGoogle()` / `AuthScreen` changes has been installed on a device yet
+>   — those two files only exist on `feature/google-signin-backend` so far, not in any shipped
+>   APK. Next step: cut a debug APK off that branch (or cherry-pick the two files into whatever
+>   branch ships next), have the user sign in with Google once to create a real `users` row, then
+>   run `UPDATE users SET is_admin = 1 WHERE email = '<theirs>'` against live D1.
 > - `feature/google-signin-backend`'s Android changes need to land wherever the next real APK
 >   build comes from — currently based on `agent/ghost-cart-products-sharing`@`c75bccc`, **not**
 >   on top of your `phase-4/shared-ghost-attribution-notifications` WIP. If your branch becomes
