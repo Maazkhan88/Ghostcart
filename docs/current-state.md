@@ -1,6 +1,32 @@
 # Current State
 
-Last updated: 2026-07-20, later same day (Claude Code — admin panel is live and working end-to-end, Phase 7 shipped in a real APK for the first time, admin user-visibility work started). See the "STATUS REPORT" block immediately below — it supersedes the one after it, which is now historical (left for provenance).
+Last updated: 2026-07-20, later same day (Claude Code — custom domain theghostcart.com connected and verified; admin Google Sign-In confirmed working on www.theghostcart.com; admin user/community/activity visibility work in progress). See the "STATUS REPORT" block immediately below — it supersedes the one after it, which is now historical (left for provenance).
+
+> **Domain update (same day, after the report below):** `theghostcart.com` and
+> `www.theghostcart.com` are now attached to the `ghostcart-app` Worker as custom domains
+> (`wrangler.ghostcart-app.jsonc` `routes`), alongside the `workers.dev` URL, which was
+> deliberately kept alive (`workers_dev: true` — adding `routes` disables it by default
+> otherwise, which would've broken every Android/iOS client). User added
+> `https://www.theghostcart.com` to the Google OAuth client's authorized JS origins and
+> confirmed Google Sign-In works there. The bare apex and `workers.dev` origins are **not**
+> registered with Google yet — admin Google Sign-In only works from `www.theghostcart.com` right
+> now, not from the other two hostnames.
+>
+> **Admin visibility work (same day, finished and deployed — Version ID
+> `2b159321-f5f4-4e9a-a48e-29d444f7b303`):** the admin panel previously had zero view into real
+> app data (only the static demo catalog + content/messages). Added three new tabs to
+> `app/admin/AdminCatalog.tsx`, all live now:
+> - **Users** — every registered user, ghosted-item count, grant/revoke-admin action
+>   (`GET/PATCH /api/admin/users(/[id])`; PATCH blocks an admin removing their own access).
+> - **Community** — every community product regardless of moderation status (the public
+>   `/api/community-products` only ever returns `visible` ones), with hide/unhide + permanent
+>   remove (`GET /api/admin/community-products`, `PATCH/DELETE .../[id]`).
+> - **Activity** — every user's almost-buys (ghosted items) joined with the owning account's
+>   email, read-only (`GET /api/admin/ghost-activity`).
+>
+> All three gated by the existing `requireAdminApiUser()`, verified live returning 401 without a
+> session. This closes the "admin visibility, not yet finished" item from the previous report —
+> that item is now done, not partial.
 
 > ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-20, later same session — usage window closing)
 >
