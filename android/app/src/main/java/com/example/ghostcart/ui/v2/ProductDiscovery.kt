@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
@@ -272,45 +274,50 @@ private fun DiscoverySectionHeader(
     }
 }
 
-private val PROMO_BANNER_MESSAGES = listOf(
-    "Ghost it before you regret it. 👻",
-    "New arrivals just dropped in your favorite categories.",
-    "Cool it now, decide later — nothing is charged.",
-    "Share a product link from any app to import it instantly."
+private val PROMO_BANNER_DRAWABLES = listOf(
+    R.drawable.home_banner_1,
+    R.drawable.home_banner_2,
+    R.drawable.home_banner_3,
+    R.drawable.home_banner_4,
+    R.drawable.home_banner_5,
 )
 
+/**
+ * Swipeable, image-based home banner carousel - replaces the old single-height (56dp)
+ * text-only auto-advancing banner. Images are bundled (not fetched from Phase 4's
+ * content-blocks API, which isn't deployed yet); swapping to a dynamic source later only
+ * means changing where PROMO_BANNER_DRAWABLES's contents come from, not this composable's
+ * structure.
+ *
+ * Sized by the banners' own 3:1 aspect ratio rather than a fixed "double height" (112dp):
+ * these are pre-composed marketing graphics with text/logo spread across the full image, not
+ * croppable stock photos - a fixed height with ContentScale.Crop was clipping headlines at
+ * the top and bottom of the frame. Full-width, uncropped is the correct trade-off here.
+ */
 @Composable
 private fun PromoBannerCarousel(modifier: Modifier = Modifier) {
-    var index by remember { mutableIntStateOf(0) }
+    val pagerState = rememberPagerState(pageCount = { PROMO_BANNER_DRAWABLES.size })
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(pagerState) {
         while (true) {
             delay(4000)
-            index = (index + 1) % PROMO_BANNER_MESSAGES.size
+            val next = (pagerState.currentPage + 1) % PROMO_BANNER_DRAWABLES.size
+            pagerState.animateScrollToPage(next)
         }
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(Ink)
-            .padding(horizontal = 16.dp),
-        contentAlignment = Alignment.CenterStart
-    ) {
-        AnimatedContent(
-            targetState = index,
-            transitionSpec = { fadeIn() togetherWith fadeOut() },
-            label = "promoBanner"
-        ) { messageIndex ->
-            Text(
-                text = PROMO_BANNER_MESSAGES[messageIndex],
-                color = Paper,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
+    HorizontalPager(
+        state = pagerState,
+        modifier = modifier.fillMaxWidth().aspectRatio(3f)
+    ) { page ->
+        androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(PROMO_BANNER_DRAWABLES[page]),
+            contentDescription = null,
+            contentScale = ContentScale.FillWidth,
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(16.dp))
+        )
     }
 }
 
