@@ -3,27 +3,8 @@ import { eq } from "drizzle-orm";
 import { getDb } from "../../../../db";
 import { userPreferences, users } from "../../../../db/schema";
 import { generateSalt, hashPassword } from "../../../../lib/password";
+import { verifyGoogleIdToken } from "../../../../lib/google-auth";
 import { createApiSession } from "../../../../lib/session-auth";
-
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-type GoogleTokenInfo = {
-  aud?: string;
-  email?: string;
-  email_verified?: string;
-  iss?: string;
-  exp?: string;
-  name?: string;
-  error_description?: string;
-};
-
-async function verifyGoogleIdToken(idToken: string): Promise<GoogleTokenInfo | null> {
-  const response = await fetch(
-    `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`,
-  );
-  if (!response.ok) return null;
-  return (await response.json()) as GoogleTokenInfo;
-}
 
 export async function POST(request: Request) {
   try {
@@ -44,27 +25,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const tokenInfo = await verifyGoogleIdToken(idToken);
-    if (
-      !tokenInfo ||
-      tokenInfo.aud !== expectedAudience ||
-      (tokenInfo.iss !== "accounts.google.com" && tokenInfo.iss !== "https://accounts.google.com") ||
-      tokenInfo.email_verified !== "true" ||
-      !tokenInfo.email
-    ) {
+    const verified = await verifyGoogleIdToken(idToken, expectedAudience);
+    if (!verified) {
       return Response.json(
         { error: "Could not verify Google sign-in" },
         { status: 401, headers: { "Cache-Control": "no-store" } },
       );
     }
-
-    const email = tokenInfo.email.trim().toLowerCase();
-    if (!EMAIL.test(email) || email.length > 254) {
-      return Response.json(
-        { error: "Could not verify Google sign-in" },
-        { status: 401, headers: { "Cache-Control": "no-store" } },
-      );
-    }
+    const { email, name } = verified;
 
     const db = getDb();
     const [existing] = await db
@@ -80,12 +48,9 @@ export async function POST(request: Request) {
       // it with a random value nobody can ever produce by hashing a guess.
       const passwordSalt = generateSalt();
       const passwordHash = await hashPassword(crypto.randomUUID(), passwordSalt);
-      const displayName = typeof tokenInfo.name === "string" && tokenInfo.name.trim()
-        ? tokenInfo.name.trim().slice(0, 80)
-        : null;
       const [created] = await db
         .insert(users)
-        .values({ email, passwordHash, passwordSalt, displayName })
+        .values({ email, passwordHash, passwordSalt, displayName: name })
         .returning({ id: users.id, email: users.email, displayName: users.displayName });
       await db.insert(userPreferences).values({ userId: created.id });
       user = created;
