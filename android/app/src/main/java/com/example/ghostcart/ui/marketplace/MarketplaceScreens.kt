@@ -487,7 +487,7 @@ fun MarketplaceProductCard(
                     .clickable(onClick = onAdd),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = if (onCool == null) "Add to Ghost Cart" else "Add to cart", color = Ink, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text(text = if (onCool == null) "Add to Ghost Cart" else "Add to cart", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (onCool != null) {
                 Box(
@@ -499,7 +499,7 @@ fun MarketplaceProductCard(
                         .clickable(onClick = onCool),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = "Cool it", color = Color(0xFF0A0A0A), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(text = "Cool it", color = Color(0xFF0A0A0A), fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 }
             }
         }

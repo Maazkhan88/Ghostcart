@@ -453,11 +453,11 @@ private fun DiscoveryProductCard(
             Box(
                 modifier = Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(12.dp)).background(SoftGray).border(1.dp, FaintBorder, RoundedCornerShape(12.dp)).clickable(onClick = onGhost),
                 contentAlignment = Alignment.Center
-            ) { Text("Add to cart", color = Ink, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+            ) { Text("Add to cart", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1) }
             Box(
                 modifier = Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(12.dp)).background(GhostGreen).clickable(onClick = onCool),
                 contentAlignment = Alignment.Center
-            ) { Text("Cool it", color = Color(0xFF0A0A0A), fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+            ) { Text("Cool it", color = Color(0xFF0A0A0A), fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1) }
         }
     }
 }

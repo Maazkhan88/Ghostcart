@@ -609,7 +609,7 @@ private fun GhostBottomNav(current: NavKey?, cartCount: Int = 0, onNavigate: (Na
                     Box(contentAlignment = Alignment.TopEnd) {
                         Box(
                             modifier = Modifier
-                                .size(if (item.central) 42.dp else 30.dp)
+                                .size(if (item.central) 48.dp else 34.dp)
                                 .clip(CircleShape)
                                 .background(if (item.central) GhostGreen else Color.Transparent),
                             contentAlignment = Alignment.Center
@@ -617,14 +617,14 @@ private fun GhostBottomNav(current: NavKey?, cartCount: Int = 0, onNavigate: (Na
                             if (item.central) {
                                 GhostMascotPose(
                                     poseName = "cart",
-                                    modifier = Modifier.size(34.dp)
+                                    modifier = Modifier.size(40.dp)
                                 )
                             } else {
                                 Icon(
                                     item.icon,
                                     contentDescription = item.label,
                                     tint = if (selected) GhostGreen else MutedText,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(26.dp)
                                 )
                             }
                         }
