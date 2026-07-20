@@ -71,4 +71,39 @@ object AuthRepository {
             Result.failure(e)
         }
     }
+
+    // Backend verifies the Google ID token (audience, issuer, email_verified)
+    // and creates/finds the matching users row before minting a real Ghost
+    // Cart session - Google Sign-In used to only set a local display email
+    // with no backend account behind it at all.
+    suspend fun signInWithGoogle(idToken: String): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val url = URL("${ApiConfig.BASE_URL}/api/auth/google")
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.connectTimeout = ApiConfig.CONNECT_TIMEOUT_MS
+            conn.readTimeout = ApiConfig.READ_TIMEOUT_MS
+            conn.doOutput = true
+
+            val payload = JSONObject().apply {
+                put("idToken", idToken)
+            }
+
+            OutputStreamWriter(conn.outputStream).use { it.write(payload.toString()) }
+
+            val responseCode = conn.responseCode
+            if (responseCode in 200..299) {
+                val response = conn.inputStream.bufferedReader().use { it.readText() }
+                Result.success(response)
+            } else {
+                val error = conn.errorStream?.bufferedReader()?.use { it.readText() }
+                    ?: "Error code $responseCode"
+                val errorMsg = try { JSONObject(error).getString("error") } catch(e: Exception) { error }
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
