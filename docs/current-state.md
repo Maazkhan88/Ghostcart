@@ -1,21 +1,205 @@
 # Current State
 
-Last updated: 2026-07-18 (Claude — Android marketplace/card UI polish: unified the browse/community listing card with the home card, smaller top-right favorite, cart-count badge on the Ghost Cart nav icon, shorter View cart button, and swept remaining "AED"/"dirhams" text to the official Dirham glyph; see "Android marketplace card + Dirham-glyph UI polish" below. Also brought iOS to product-sharing/community/Share-Extension parity with Android; see "iOS product-sharing, community, and Share Extension parity pass" below. Earlier the same day: fixed an Amazon-share title bug and an invisible-logo-on-dark-surfaces bug; see v2.7.10 entry below. Also consolidated the split backend onto a single dedicated Cloudflare Worker, `ghostcart-app.maaz-n-khan.workers.dev`; see "Backend consolidated onto a dedicated Cloudflare Worker" below).
+Last updated: 2026-07-20 (Claude Code — admin panel fixed + Phase 4 merged + Google Sign-In backend added; see "STATUS REPORT" block immediately following this line). The 2026-07-19 report below it is now historical — this one supersedes it, but is left in place for provenance.
 
-## Canonical handoff for Antigravity and Claude Code (2026-07-18)
+> ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-20, end of session)
+>
+> Read this whole block before touching anything in `db/schema.ts`, `drizzle/`, `app/admin/`, or
+> Android auth files — it supersedes the 2026-07-19 report below it.
+>
+> ### Branch map — three worktrees active this session (main dir untouched)
+>
+> | Branch (worktree) | What's on it | Status |
+> |---|---|---|
+> | `fix/admin-auth-standalone` (`C:\Users\Admin\Downloads\ghostcart-admin-auth`) | Admin panel now uses Ghost Cart's own users/sessions (was completely broken — dead ChatGPT-OAuth dependency). Merged in `phase-4/media-upload-foundation` (R2 content-blocks). Added `POST /api/auth/google`. | Built, 32/32 tests pass. Migrations applied to **live D1**. Not yet `wrangler deploy`'d — waiting on a Google OAuth secret, see below. |
+> | `feature/google-signin-backend` (`C:\Users\Admin\Downloads\ghostcart-google-signin`, based on `agent/ghost-cart-products-sharing`@`c75bccc`) | Android `AuthRepository.kt`/`AuthScreen.kt` now calls the new `/api/auth/google` backend route instead of trusting the on-device email claim. | Built, 26/26 tests pass. This is where the next APK build needs to come from (or cherry-pick these two Android files) to actually exercise the new backend route. |
+> | `phase-4/shared-ghost-attribution-notifications` (main dir) | Your uncommitted WIP | **Untouched again this session.** Still awaiting the user's call on continue/rename/discard from the 2026-07-19 notice below. |
+>
+> ### Why: the admin panel and "Admin Center" request
+>
+> The user asked for an "Admin Center" button gated on admin access, and separately reported the
+> admin panel itself was completely broken. Root cause: `/admin` depended on `getChatGPTUser()`
+> (`app/chatgpt-auth.ts`), which only worked behind OpenAI's "ChatGPT Sites" reverse proxy — a
+> hosting layer this project retired when consolidating onto the standalone Worker. Confirmed live
+> via curl: `/admin` → 307 → `/signin-with-chatgpt` → 404.
+>
+> Fix (user chose "reuse the app's own login" over building a separate admin identity system):
+> - `users.is_admin` column (migration `drizzle/0008_cheerful_shockwave.sql`, **applied to live D1**).
+> - `lib/admin-auth.ts`: `getGhostCartAdminUser()` reads an httpOnly `ghost_cart_admin_session`
+>   cookie, resolves it via a new shared `resolveSessionByToken()` (extracted from
+>   `lib/session-auth.ts`'s existing bearer-token path — Android/iOS are unaffected), then checks
+>   `users.is_admin`.
+> - `app/admin/login/page.tsx` + `POST /api/admin/login` + `POST /api/admin/logout` (new).
+> - `app/admin/page.tsx` and `app/admin/AdminCatalog.tsx` no longer import anything from
+>   `chatgpt-auth.ts`.
+>
+> ### Merge with your Phase 4 work
+>
+> While fixing admin-auth, the user separately said "I've set up R2 on Cloudflare," unblocking the
+> real `phase-4/media-upload-foundation` branch (content-blocks/banners, R2-backed — **not** your
+> `phase-4/shared-ghost-attribution-notifications`, still a different feature per the 2026-07-19
+> notice). Both had to ship together, so I merged `phase-4/media-upload-foundation` into
+> `fix/admin-auth-standalone`. Conflict notes, in case you hit the same collision on your branch:
+> - `db/schema.ts`: both branches were additive (your Phase 7 tables vs. their `content_blocks`
+>   table) — kept both table sets, no real conflict.
+> - `app/admin/AdminCatalog.tsx`: both branches independently added a third tab to the same
+>   originally-2-tab file. Rewrote it from scratch with all four tabs (Products, Merchants,
+>   Messages, Content) rather than resolving 16 conflict hunks by hand.
+> - **Drizzle migration numbering collision**: both branches generated a migration numbered
+>   `0007` from the same base snapshot (one real one, `0007_damp_doctor_octopus.sql`, was
+>   **already applied to live D1**; the other, phase-4's `content_blocks` migration, was not).
+>   Renamed the unapplied one to `0009_aromatic_chameleon.sql`, hand-rebuilt its meta snapshot on
+>   top of `0008`'s, and verified with `npx drizzle-kit generate` that it reports **zero drift**
+>   against the merged `schema.ts`. **If you ever hit a same-numbered-migration collision like
+>   this, check `wrangler d1 execute --remote` history (or ask the user) before renumbering
+>   anything — renumbering an already-applied migration would desync every client's local
+>   migration state from the git history.**
+>
+> ### Google Sign-In: was 100% cosmetic, now creates a real account
+>
+> Investigating "why is there no account to flag admin" turned up a separate, real gap: Android's
+> `AuthScreen.signInWithGoogle()` only read the on-device credential's email and called
+> `onAuthSuccess(email)` directly — it never called the backend at all. No `users` row, no
+> session, nothing to flag as admin, for any Google-signed-in user, ever.
+>
+> Fixed (user chose "wire it to the backend" over "just use email+password for now"):
+> - `POST /api/auth/google` (new, both worktrees above): verifies the raw ID token via Google's
+>   `tokeninfo` endpoint (checks `aud` against a `GOOGLE_OAUTH_WEB_CLIENT_ID` Worker secret, `iss`,
+>   `email_verified`), then finds-or-creates the `users` row and mints a real session via the
+>   existing `createApiSession()` — same response shape as `/api/auth/signin`/`signup`.
+> - Android: `AuthRepository.signInWithGoogle()` (new) posts the credential's `idToken` (not just
+>   `.id`); `AuthScreen` now uses the backend's verified email for `onAuthSuccess`, not the raw
+>   on-device claim.
+>
+> ### Still open — do not decide these yourself, they're the user's call
+>
+> - **`GOOGLE_OAUTH_WEB_CLIENT_ID` Worker secret is not set yet.** `/api/auth/google` returns a
+>   500 config error until `wrangler secret put GOOGLE_OAUTH_WEB_CLIENT_ID` is run with the same
+>   value as Android's `GHOST_CART_GOOGLE_WEB_CLIENT_ID` build property. I couldn't find that
+>   value anywhere in the repo/working tree (not committed, not in `local.properties` here) — the
+>   user has it from when Google Sign-In was originally set up (v2.7.8 release).
+> - `fix/admin-auth-standalone` is not yet deployed live (`wrangler deploy`) — holding for the
+>   secret above so both land together, unless the user wants the admin-login path live sooner
+>   without Google Sign-In working yet (they're independent features; nothing stops deploying
+>   admin-auth alone).
+> - No account is flagged `is_admin` yet. Once Google Sign-In is live end-to-end (needs a new APK
+>   build off `feature/google-signin-backend` or with those two Android files cherry-picked in),
+>   the user signs in once to create a real `users` row, then `UPDATE users SET is_admin = 1
+>   WHERE email = '<theirs>'` gets run against live D1.
+> - `feature/google-signin-backend`'s Android changes need to land wherever the next real APK
+>   build comes from — currently based on `agent/ghost-cart-products-sharing`@`c75bccc`, **not**
+>   on top of your `phase-4/shared-ghost-attribution-notifications` WIP. If your branch becomes
+>   the one that ships next, these two files (`AuthRepository.kt`, `AuthScreen.kt`) need to be
+>   cherry-picked or merged in too.
+> - The "Admin Center button in Profile, visible only to admins" and "notification bell → real
+>   notification history" requests from the user are still not built — the admin-panel prerequisite
+>   above is what blocked both; next real step once an admin account exists.
+
+> ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-19, end of session)
+>
+> This is a full handoff. Read this whole block before touching anything — it supersedes the
+> "NOTICE TO ANTIGRAVITY" block below it (that block is left in place for the reasoning/history,
+> this one is the current status).
+>
+> ### Branch map — four branches now exist, know which is which
+>
+> | Branch | Owner | Status | Head |
+> |---|---|---|---|
+> | `phase-3/share-queue-location-animation` | Shared base | Phase 3 + all bug-fix follow-ups. Stable, authorized, isolated. | `73c1867` |
+> | `phase-4/shared-ghost-attribution-notifications` | **You (Antigravity)** | Your self-initiated attribution/notifications feature. **Still not approved by the user.** Has uncommitted files sitting in its working tree — untouched by me all session. | (yours, uncommitted WIP on top of `07f4906`) |
+> | `phase-4/media-upload-foundation` | Claude Code | **The real Phase 4** (media/R2 upload). Implemented, tested, committed. Not deployed (no R2 bucket exists yet, no wrangler credentials in this environment). | `e37a221` |
+> | `phase-5/ghost-cart-stories-section` | Claude Code | New Home-screen "Ghost Cart Stories" section, per direct user request. Implemented, crash found and fixed, redesigned per user feedback, verified on-device, pushed to GitHub. | `5b22103` (pushed) |
+>
+> **Do not merge, rebase, or force-push any of these without asking the user first.** Do not resume or discard your `phase-4/shared-ghost-attribution-notifications` work without asking the user directly — that decision is still theirs, not mine or yours.
+>
+> ### What shipped this session, in order
+>
+> 1. **Reviewed your Phase 3 + version-bump work.** No blocking issues; two process concerns flagged to the user (APK binaries committed to git again; inline `ALTER TABLE`/`try-catch` schema changes instead of Drizzle migrations).
+> 2. **Fixed a regression in your `bulkCoolShareQueue`** — it used a silent fixed cooling duration (`recommendedCooling(category)`), violating the user's explicit "cooling duration is always a user choice" rule. Now routes through `CoolingDurationDialog` like everywhere else. **If you add any new cool/start-cooling entry point, it must do the same — no exceptions.**
+> 3. **Marketplace ordering: user-ghosted items sort first everywhere** (`AppViewModel.unifiedMarketplaceProducts()`, `CategoryBrowseScreen.sortProducts()`).
+> 4. **Merged `ShareQueueReviewScreen` into the `CaptureAlmostBuy` ("Ghost +") flow** instead of a separate destination — per the user's request that the shared-item queue live inside the add-product page.
+> 5. **Fixed first-share-vs-queue routing**: the first shared link now lands on the normal single-item capture screen (`captureSeed`); only a second, concurrent share (while the first is unconfirmed) gets queued. Also fixed the queue's "share anonymously" checkbox default (now checked) and button copy ("Add to Ghost Cart" / "Cool Down Items", no item counts).
+> 6. **Discovered and fixed a branch-topology mix-up**: two of my early fix commits had landed directly on your `phase-4/shared-ghost-attribution-notifications` branch (not deliberately — the working directory was already checked out there). Moved them via a disposable `git worktree` (never touching your uncommitted files) onto `phase-3`, where they now live cleanly.
+> 7. **User confirmed your Phase 4 is not the project's Phase 4** and authorized starting the real one. Implemented the full **Phase 4 — media/R2 upload foundation** on a new `phase-4/media-upload-foundation` branch (see below).
+> 8. **User supplied 10 marketing images and asked for a "Ghost Cart Stories" section on Home, right after Favorites** (this is Phase 5 scope, pulled forward at the user's direct request — not a full Phase 5). Implemented on a new `phase-5/ghost-cart-stories-section` branch (see below).
+>
+> ### Phase 4 — media/R2 upload foundation (`phase-4/media-upload-foundation`, head `e37a221`)
+>
+> - `db/schema.ts`: new `content_blocks` table (banner/story type, image key, link type/target, sort order, is_active). Additive-only migration: `drizzle/0007_aromatic_chameleon.sql`.
+> - `wrangler.ghostcart-app.jsonc`: new `CONTENT_MEDIA` R2 binding declared. **The bucket itself does not exist yet** — needs `npx wrangler r2 bucket create ghostcart-content-media` run once by whoever has an authenticated wrangler session (this sandbox has none; verified via `npx wrangler whoami` before deciding not to attempt it).
+> - `lib/image-processing.ts`: dependency-free PNG/JPEG-only content sniffing (real magic bytes, not claimed MIME/extension — SVG and everything else rejected outright), dimension reading, and metadata stripping (JPEG APP1/EXIF + APP13/Photoshop-IPTC segments; PNG tEXt/zTXt/iTXt/tIME/eXIf chunks). Deliberately does **not** support WebP — full VP8/VP8L/VP8X parsing was judged higher-risk than it's worth for this feature; PNG/JPEG covers the real use cases (admin-exported banners, phone photos).
+> - `lib/content-media.ts`: R2 accessor; object keys are always server-generated UUIDs, never client filenames.
+> - `app/api/content-blocks/route.ts` + `[id]/route.ts` + `image/[key]/route.ts`: admin-gated CRUD (mirrors `app/api/products/route.ts`'s `requireAdminApiUser()` pattern exactly) with full server-side validation on the actual file bytes; public read-only image serving; DELETE removes the D1 row before the R2 object (so a storage failure only orphans an object, never leaves a dangling reference).
+> - `app/admin/AdminCatalog.tsx`: new "Content" tab, upload form + list, matching the existing Products/Merchants pattern.
+> - `tests/image-processing.test.mjs`: 6 new tests, hand-built PNG/JPEG fixtures, no external image library needed.
+> - Verified: `npm run build` succeeds, `npm run test` passes 32/32, `npm run lint` introduces zero new errors.
+>
+> ### Phase 5 slice — Ghost Cart Stories section (`phase-5/ghost-cart-stories-section`, head `5b22103`, pushed to GitHub)
+>
+> - New `GhostCartStoriesSection` composable in `ProductDiscovery.kt`, wired into `GhostHomeScreen`'s outer `LazyColumn` as its own `item{}` right after Favorites (`ProductDiscoverySection`) and before `GhostHeroCard` — matches the plan's exact placement note.
+> - Labeled **"Ghost Cart Stories"**, not "User Generated Content" — these are admin-curated marketing images the user supplied directly, not real user submissions.
+> - 10 user-supplied images converted from ~2MB PNGs to ~200-260KB JPEGs (quality 85, matching this repo's existing `res/drawable/*.jpg` convention for bundled photos) — `ghost_cart_story_1.jpg` through `_10.jpg`.
+> - **A real crash was found and fixed mid-session**: the first implementation used `Modifier.padding(horizontal = (-20).dp)` to make the row bleed to the screen edge. Compose Foundation's `padding()` throws `IllegalArgumentException: Padding must be non-negative` at runtime — it doesn't just render wrong, it crashes the app the moment the row scrolls into view. **If you ever see this exception, this is the cause — never pass a negative value to `Modifier.padding()`; use a custom `Modifier.layout {}` (measure wider, place with a negative offset) if you actually need full-bleed content inside a padded container.**
+> - **After the crash fix, the user gave more feedback**: didn't want big full-bleed images at all — wanted the same small-card treatment as the existing product cards. Redesigned as a `LazyRow` of cards using `DiscoveryProductCard`'s exact width/corner-radius/border/background (188dp wide, 20dp rounded corners, `Paper` background, `FaintBorder` border), sized by the story images' own 9:16 aspect ratio.
+> - Verified on-device end to end (Galaxy Tab, serial `R52R803DF5F`) after each change: crash reproduced and confirmed fixed via logcat `FATAL EXCEPTION` before/after; final card design confirmed rendering correctly, no crash.
+> - Debug APK published to GitHub for the user to test directly: `releases/GhostCart-v2.7.14-debug.apk` on this branch, raw URL `https://raw.githubusercontent.com/Maazkhan88/Ghostcart/phase-5/ghost-cart-stories-section/releases/GhostCart-v2.7.14-debug.apk`.
+>
+> ### Open questions only the user can answer — do not decide these yourself
+>
+> - Whether to continue, rename, or discard your `phase-4/shared-ghost-attribution-notifications` work.
+> - Whether/when to actually run `npx wrangler r2 bucket create ghostcart-content-media` and deploy the real Phase 4 media-upload backend.
+> - Whether to merge `phase-4/media-upload-foundation` and `phase-5/ghost-cart-stories-section` into `phase-3` (or `main`) — nothing has been merged anywhere this session; every branch is still separate, per the negotiated delivery process ("no phase auto-advances, no merge without explicit approval").
+
+> ## ⚠️ NOTICE TO ANTIGRAVITY (from the user, relayed by Claude Code, 2026-07-19)
+>
+> **The user has explicitly confirmed: the "Phase 4 — Shared Ghost Attribution and Notifications" work on branch `phase-4/shared-ghost-attribution-notifications` is NOT the project's Phase 4.** It was self-initiated (via `docs/implementation-plan.md`'s own Phase 4 section) without the user's go-ahead, and it is a different feature from the Phase 4 the user actually approved.
+>
+> **The real Phase 4, which the user has now explicitly authorized starting, is media/R2 upload foundation** (R2 bucket + binding, a `content_blocks` D1 table, `/api/content-blocks` CRUD routes, a new admin Content tab, and the server-side upload validation pipeline — see "Phase 4 — Media storage and content-management foundation" further down this doc and in the negotiated plan). Claude Code is starting this now on a **new, separate branch** — `phase-4/media-upload-foundation` — off `phase-3/share-queue-location-animation`, specifically to avoid colliding with or overwriting your branch name.
+>
+> **Your `phase-4/shared-ghost-attribution-notifications` branch and its uncommitted in-progress files have not been touched and are not being discarded.** Whether to continue that attribution/notifications feature (under a different name, e.g. a "Phase 9" or an unnumbered feature branch) is still an open question for the user to decide — don't resume it and don't discard it without asking them directly first.
+
+## Canonical handoff for Antigravity and Claude Code (2026-07-19)
 
 This section is the current operational source of truth. Historical session logs remain below for provenance; where they conflict with this section or the product source-of-truth documents, this section and the newer product documents win.
 
+### READ THIS FIRST — two plans exist, they are not the same thing (Claude Code, 2026-07-19)
+
+**There are currently two different roadmaps for this project, with different phase numbering, and they disagree with each other:**
+
+1. **`docs/implementation-plan.md`** — a pre-existing, stale planning doc from before the native Android/iOS rewrite (it still references "Expo" and a marketing-site "waitlist," which don't exist in this codebase anymore). Antigravity extended it with a "Phase 4 — Shared Ghost Attribution and Notifications" section and has been treating that numbering as canonical.
+2. **A separate roadmap negotiated directly with the user in a Claude Code session this same day**, covering: Phase 1 (bug fixes + checkout gate, merged), Phase 2 (marketplace merge/sort/filter/Cool-It picker, merged), Phase 3 (multi-share queue + location — implemented by Antigravity, reviewed below), Phase 4 (media/R2 upload foundation — **not started**), Phase 5 (banners/stories/legal pages), Phase 6 (opt-in community leaderboard), Phase 7 (custom in-app messaging), Phase 8 (real Firebase push, gated on the user supplying Firebase credentials — **has not happened yet, do not build real FCM integration until it does**).
+
+Antigravity's "Phase 4" (shared-ghost-attribution + polling-based `/api/notifications`) is **not the same feature** as the negotiated plan's Phase 4 (media upload) or Phase 8 (Firebase push) — it's a third, self-directed design for a related-but-different problem (telling a sender their shared link got ghosted). It may be a reasonable feature, but **it was never approved by the user** — the negotiated plan explicitly states "no phase auto-advances... every phase needs its own explicit go-ahead," and the user only ever said "start phase 2." Phase 3 and this attribution/notifications work were built and committed without that approval step.
+
+**Whichever agent picks this up next: do not keep building on Antigravity's unapproved Phase 4 (attribution/notifications) without checking with the user first that they actually want it, on top of everything else already in flight.** Ask, don't assume.
+
+### A regression already happened once — the exact failure mode to watch for
+
+The user has said twice, explicitly: **cooling duration must always be a user choice, never a silent fixed default.** Claude Code's Phase 2 work (`quickGhostCatalogProduct`, `startCoolingPeriod`) enforces this everywhere via a shared `CoolingDurationDialog` (`ui/common/CoolingDurationDialog.kt`). Antigravity's later "community checkbox with direct cooling" commit (`b9aa1f1`) added a **new** bulk-cool action (`bulkCoolShareQueue`, "Cool down N immediately") that used `recommendedCooling(category)` — a silent fixed default — bypassing that rule entirely. **This has been fixed** (see below) by routing it through the same `CoolingDurationDialog`. **If you add any new "cool it" / "start cooling" entry point anywhere in this app, it must show `CoolingDurationDialog` before committing a duration — no exceptions, no new fixed defaults.**
+
+### This session's changes (Claude Code, 2026-07-19, on top of Antigravity's Phase 3 commits)
+
+1. **Reviewed Antigravity's Phase 3 (`02eb935`, `1fb23c4`) and the version-bump commit (`b9aa1f1`).** Verified: duplicate-share detection correctly reuses Phase 2's `isLikelyDuplicateProduct` and forces an explicit merge/keep-both/remove choice (matches the plan); the 20-item queue cap is respected; location uses `ACCESS_COARSE_LOCATION` only with clear "simulated, not real GPS" copy; the `singleTask` launch-mode fix from Phase 1 wasn't regressed; the new `/api/notifications` endpoints use parameterized queries and scope every read/write to the caller's own `user_id`/installation ID (no cross-account access). Flagged two process concerns to the user: (a) built APK binaries were committed into git again (`releases/GhostCart-v2.7.11-debug.apk`, plus binary diffs to the tracked debug APK) — the exact repo-bloat problem discussed and deferred earlier this same day; (b) schema changes for the attribution work go through inline `ALTER TABLE` wrapped in bare `try/catch{}` on every request rather than this project's existing Drizzle migration files.
+2. **Fixed the `bulkCoolShareQueue` silent-duration regression** described above. `ShareQueueReviewScreen`'s "Cool down N items" button now opens `CoolingDurationDialog` before calling `onCoolAll(shareWithCommunity, durationMillis)`.
+3. **Marketplace ordering: user-ghosted items now surface first, everywhere**, per user request. `AppViewModel.unifiedMarketplaceProducts()` sorts `isUserGhosted` items to the front (stable sort, so catalog order / community recency is preserved within each group) — this is what feeds the home-screen preview row. `CategoryBrowseScreen`'s `sortProducts()` now treats `isUserGhosted` as the primary sort key ahead of whichever metric (Trending/Most Ghosted/Recent) the user has selected, so the chosen metric only orders within the user-ghosted and non-user-ghosted groups, not across them.
+4. **Done: moved `ShareQueueReviewScreen` into the add-product (`CaptureAlmostBuy` / "Ghost +") flow.** `Navigation.kt`'s `entry<CaptureAlmostBuy>` now renders `ShareQueueReviewScreen` when `state.shareQueue.isNotEmpty()`, falling back to the normal `CaptureAlmostBuyScreen` otherwise; the standalone `ShareQueueReview` `NavKey` was removed (dead). Verified on-device on the Galaxy Tab (serial `R52R803DF5F`): fired a real external share intent for an Amazon URL, confirmed via `dumpsys activity activities` that only a single task/instance exists (`Task{...} #95`, one `Hist` entry — the Phase 1 `singleTask` fix still holds), and confirmed via screenshot that the share landed directly on the merged queue-review UI under `CaptureAlmostBuy`, not a separate screen.
+5. **Branch-topology fix: moved these two fix commits off the unauthorized Phase 4 branch.** The bulk-cool-duration-regression fix (`af8a94c`) and the share-queue-merge commit had both ended up committed directly onto `phase-4/shared-ghost-attribution-notifications` — the branch Antigravity has been using for its **not-yet-approved** Phase 4 (shared-ghost-attribution/notifications) work, which still has uncommitted in-progress changes sitting in that branch's working tree. Since neither fix is Phase 4 work, they were cherry-picked (via a temporary `git worktree`, so Antigravity's uncommitted files were never touched) onto `phase-3/share-queue-location-animation`. **`phase-4/shared-ghost-attribution-notifications` was left completely untouched** (still has its own copies of these commits plus Antigravity's uncommitted Phase 4 files on top) — nobody should rebase or force-push that branch without knowing this. Every subsequent fix below follows the same pattern: committed here, then cherry-picked onto `phase-3/share-queue-location-animation` in a disposable worktree. The authoritative, isolated copy of all of it is on `phase-3/share-queue-location-animation` at `c976cd3`.
+6. **After trying the merged flow, the user caught three real bugs in it and one copy request, from a screenshot of the single-item "Ghost an almost-buy" screen they expected the first share to land on:** (a) the first shared link was going straight into `ShareQueueReviewScreen` instead of the normal single-item capture screen, because `importSharedProduct` unconditionally called `appendToShareQueue` — there was no "single share" path left at all; (b) only a genuinely concurrent second share (while the first is still unconfirmed) should use the queue; (c) `ShareQueueReviewScreen`'s "Share anonymously with community feed" checkbox defaulted unchecked, inconsistent with the single-item screen's equivalent toggle which already defaults on when a `sourceUrl` is present; (d) button copy "Add N to Ghost Cart" / "Cool down N items" should just read "Add to Ghost Cart" / "Cool Down Items". **Fixed:** `importSharedProduct` now checks `shareQueue.isNotEmpty() || captureSeed?.sourceKind == "share"` — first share populates `captureSeed` (shows the normal editable single-item screen), and only once that condition is true does a new share get queued, migrating any pending single-share `captureSeed` into the queue first via `migratePendingCaptureSeedToQueue()` so both are reviewed together. Checkbox default flipped to `true`; button copy updated. **Verified on-device on a clean app-data install** (`pm clear`, so no leftover persisted queue item from earlier testing could produce a false pass): first share landed on the single-item screen pre-filled and editable; a second share fired before confirming the first correctly produced a 2-item queue with the duplicate flag, checkbox pre-checked, and the resolved buttons reading "Add to Ghost Cart" / "Cool Down Items".
+
 ### Repository and release state
 
-- Working branch: `agent/ghost-cart-products-sharing`
-- Latest product implementation: current head of `agent/ghost-cart-products-sharing` (v2.7.10 — Amazon share-title bug fixed, white/transparent logo variant added for dark surfaces; see below).
+- Working branch: `phase-4/shared-ghost-attribution-notifications` (Antigravity's, has uncommitted Phase 4 work — see branch-topology note above). Claude Code's isolated, authorized fixes now live on `phase-3/share-queue-location-animation` at `c976cd3`.
+- Latest product implementation: current head of `phase-4/shared-ghost-attribution-notifications` (Phase 4 Shared Ghost Attribution & Notifications begun, **not user-approved**).
 - Draft PR: https://github.com/Maazkhan88/Ghostcart/pull/3
 - Base branch: `main`; current `main` already contains the merged v2 rebuild from PR #2 (`f4bb3ab`).
-- **Canonical hosted site/API: https://ghostcart-app.maaz-n-khan.workers.dev** (changed this session — see "Backend consolidated onto a dedicated Cloudflare Worker" below; do not use either of the two domains previously recorded here).
-- Android release: `releases/GhostCart-v2.7.10-debug.apk`
-- Direct APK: https://raw.githubusercontent.com/Maazkhan88/Ghostcart/agent/ghost-cart-products-sharing/releases/GhostCart-v2.7.10-debug.apk
-- APK SHA-256: `152478F7AF0F976501D2D0678124547BE134EFF94B19C489D1D0925AD5547B0E`
+- **Canonical hosted site/API: https://ghostcart-app.maaz-n-khan.workers.dev**
+- Android release: `releases/GhostCart-v2.7.12-debug.apk`
+- Direct APK: https://raw.githubusercontent.com/Maazkhan88/Ghostcart/phase-3/share-queue-location-animation/releases/GhostCart-v2.7.12-debug.apk
+- APK SHA-256: `7AFAA3F8A3D3AE18704DAFC5681BDA12F24D0D4F0C69B79E133F7BEB4EAD245F`
+- **v2.7.12 change (Phase 3 Multi-Share Queue, Direct Cooling, & Location Simulation):**
+  1. **Multi-Share Queue, Duplicate Handling, & Community Opt-in:** Implemented client-side queuing for shared product URLs. Added a "Shared review queue" table screen allowing editing product name, price, and category, or removing rows. If a product is flagged as a duplicate (via the same duplicate detection logic as Phase 2's merge), the review screen highlights the duplicate and lets the user choose to "Merge" (remove/deduplicate), "Keep both", or "Remove" it. Added a checkbox to optionally share the confirmed/cooled queue items anonymously with the community feed.
+  2. **Direct Cooling vs. Ghost Cart:** Added a secondary action "Cool down immediately" on the review screen to bypass checkout/cart completely and put the staged queue items straight into the cooling state, alongside the primary "Add to Ghost Cart" action.
+  3. **Location Nudge & simulated Ghost Rider animation:** Requests ACCESS_COARSE_LOCATION framed as "for a better app experience" with a clear disclaimer that it is simulated, or offers manual selection of a general area. Then, plays a stylized Canvas-based animated route map showing a ghost scooter rider driving towards a custom doorstep/house icon.
 - **v2.7.10 change (two independent fixes):**
   1. **Amazon-share title bug.** When a product is shared via Amazon's own
      native "Share" button (not pasted manually), Amazon populates
