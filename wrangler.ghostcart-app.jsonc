@@ -24,11 +24,12 @@
   "assets": {
     "directory": "dist/client"
   },
-  // Adding `routes` disables the workers.dev URL by default unless
-  // `workers_dev` is explicitly set - the Android/iOS apps and everything
-  // else still point at ghostcart-app.maaz-n-khan.workers.dev, so it must
-  // stay live alongside the new custom domain, not be replaced by it.
-  "workers_dev": true,
+  // The workers.dev URL was kept alive temporarily while every client
+  // migrated to the theghostcart.com custom domain (Android's ApiConfig.BASE_URL
+  // switched in v2.7.23). User explicitly asked to retire it now - any
+  // device still on a pre-v2.7.23 APK build loses connectivity until it
+  // updates; that trade-off was confirmed, not accidental.
+  "workers_dev": false,
   // Custom domain, purchased through Cloudflare on the same account as this
   // Worker/zone - wrangler provisions the DNS record + SSL cert for these
   // automatically on deploy since the zone is already on this account.
