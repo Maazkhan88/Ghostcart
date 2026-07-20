@@ -14,21 +14,22 @@ async function render(path = "/", headers = {}) {
   );
 }
 
-test("protects and renders the Ghost Cart catalog admin", async () => {
-  process.env.GHOST_CART_ADMIN_EMAILS = "owner@example.com";
-
+test("protects the Ghost Cart catalog admin and serves its own sign-in page", async () => {
+  // The admin panel used to depend on ChatGPT's OAuth reverse proxy
+  // (`/signin-with-chatgpt`), which no longer exists now that the backend is
+  // a standalone Cloudflare Worker. It now reuses Ghost Cart's own
+  // users/sessions and gates on `users.is_admin` (see lib/admin-auth.ts).
   const anonymousResponse = await render("/admin");
   assert.ok([302, 303, 307, 308].includes(anonymousResponse.status));
-  assert.match(anonymousResponse.headers.get("location") ?? "", /signin-with-chatgpt/i);
+  assert.match(anonymousResponse.headers.get("location") ?? "", /\/admin\/login/i);
+  assert.doesNotMatch(anonymousResponse.headers.get("location") ?? "", /chatgpt/i);
 
-  const response = await render("/admin", {
-    "oai-authenticated-user-email": "owner@example.com",
-  });
-  assert.equal(response.status, 200);
-  const html = await response.text();
-  assert.match(html, /Demo catalog control/i);
-  assert.match(html, /Manage merchants and demo products/i);
-  assert.match(html, /Nothing here creates a real order, payment, or delivery/i);
+  const loginResponse = await render("/admin/login");
+  assert.equal(loginResponse.status, 200);
+  const html = await loginResponse.text();
+  assert.match(html, /Ghost Cart Admin/i);
+  assert.match(html, /type="email"/i);
+  assert.match(html, /type="password"/i);
 });
 
 test("server-renders the complete Ghost Cart v2 experience", async () => {
