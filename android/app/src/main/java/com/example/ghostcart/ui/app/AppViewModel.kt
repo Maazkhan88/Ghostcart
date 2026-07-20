@@ -15,6 +15,7 @@ import com.example.ghostcart.data.AlmostBuy
 import com.example.ghostcart.data.AlmostBuyDraft
 import com.example.ghostcart.data.AlmostBuyRepository
 import com.example.ghostcart.data.AlmostBuyResolution
+import com.example.ghostcart.data.ContentBlockItem
 import com.example.ghostcart.data.LocalAlmostBuyRepository
 import com.example.ghostcart.data.Marketplace
 import com.example.ghostcart.data.MarketplaceProduct
@@ -81,6 +82,11 @@ data class AppUiState(
     val productImportState: ProductImportState = ProductImportState.Idle,
     val communityProducts: List<CommunityProduct> = emptyList(),
     val communityProductsLoading: Boolean = true,
+    /** Admin-managed catalog from /api/products. Null = not yet loaded or the fetch failed,
+     * in which case the bundled fallback catalog is used instead - never an empty app. */
+    val catalogProducts: List<MarketplaceProduct>? = null,
+    val homeBanners: List<ContentBlockItem> = emptyList(),
+    val ghostCartStories: List<ContentBlockItem> = emptyList(),
     val captureSeed: AlmostBuyDraft? = null,
     val appTheme: String = "System",
     val favoriteProductIds: Set<String> = emptySet(),
@@ -126,6 +132,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     init {
         refreshMostGhostedToday()
         refreshCommunityProducts()
+        refreshCatalogProducts()
+        refreshHomeBanners()
+        refreshGhostCartStories()
         syncDailyGhostReminder("lunch", 13, _uiState.value.walletConfig.lunchReminderEnabled)
         syncDailyGhostReminder("dinner", 20, _uiState.value.walletConfig.dinnerReminderEnabled)
         if (_uiState.value.deliveryStep in 0..3) beginDeliveryClock()
@@ -190,9 +199,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    val allProducts: List<MarketplaceProduct> =
+    // Bundled catalog used only as an offline/failed-fetch fallback - the admin-managed
+    // /api/products catalog (this exact list, seeded once into D1) is the real source of
+    // truth now, so admin add/edit/remove actually shows up in the app.
+    private val bundledFallbackCatalog: List<MarketplaceProduct> =
         (Marketplace.featuredCatalog + Marketplace.discoveryCatalog + Marketplace.fakeFlashDeals + Marketplace.foodAndCoffeeCatalog + Marketplace.merchCatalog)
             .distinctBy { it.id }
+
+    val allProducts: List<MarketplaceProduct>
+        get() = _uiState.value.catalogProducts ?: bundledFallbackCatalog
 
     fun findProduct(id: String): MarketplaceProduct? =
         allProducts.find { it.id == id }
@@ -312,6 +327,31 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     _uiState.update { it.copy(communityProducts = products, communityProductsLoading = false) }
                 }
                 .onFailure { _uiState.update { it.copy(communityProductsLoading = false) } }
+        }
+    }
+
+    /** Leaves catalogProducts null (falling back to the bundled catalog) on failure - never
+     * strands the user with an empty marketplace because of one bad network call. */
+    fun refreshCatalogProducts() {
+        viewModelScope.launch {
+            ProductImportRepository.fetchCatalogProducts()
+                .onSuccess { fetched ->
+                    if (fetched.isNotEmpty()) _uiState.update { it.copy(catalogProducts = fetched) }
+                }
+        }
+    }
+
+    fun refreshHomeBanners() {
+        viewModelScope.launch {
+            ProductImportRepository.fetchContentBlocks("banner")
+                .onSuccess { banners -> _uiState.update { it.copy(homeBanners = banners) } }
+        }
+    }
+
+    fun refreshGhostCartStories() {
+        viewModelScope.launch {
+            ProductImportRepository.fetchContentBlocks("story")
+                .onSuccess { stories -> _uiState.update { it.copy(ghostCartStories = stories) } }
         }
     }
 

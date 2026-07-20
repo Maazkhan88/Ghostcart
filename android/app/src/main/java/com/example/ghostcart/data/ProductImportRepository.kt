@@ -93,6 +93,14 @@ data class CommunityProduct(
     val lastGhostedAtMillis: Long? = null
 )
 
+/** An admin-managed home banner or "Ghost Cart Story" image, fetched from /api/content-blocks. */
+data class ContentBlockItem(
+    val id: Int,
+    val type: String,
+    val imageUrl: String,
+    val sortOrder: Int
+)
+
 sealed interface ProductImportState {
     data object Idle : ProductImportState
     data object Loading : ProductImportState
@@ -354,6 +362,60 @@ object ProductImportRepository {
                     )
                 }
             }
+        }
+    }
+
+    /**
+     * The admin-managed demo/marketplace catalog (Products tab in /admin). Replaces the
+     * previously-hardcoded MarketplaceModels.kt catalogs at the call site - this repository
+     * function is the only thing that needs to change if the fetch shape ever changes, not
+     * every screen that reads AppViewModel.allProducts.
+     */
+    suspend fun fetchCatalogProducts(): Result<List<MarketplaceProduct>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val response = request("/api/products", "GET")
+            val items = response.optJSONArray("products")
+            buildList {
+                if (items != null) for (index in 0 until items.length()) {
+                    val item = items.getJSONObject(index)
+                    if (!item.optBoolean("isActive", true)) continue
+                    add(
+                        MarketplaceProduct(
+                            id = "catalog_${item.getInt("id")}",
+                            name = item.getString("name"),
+                            category = item.optString("category", "Other"),
+                            price = (item.optLong("priceCents", 0) / 100L).toInt(),
+                            iconName = "bag",
+                            description = item.optString("description", ""),
+                            imageUrl = item.nullableString("imageUrl")
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    /** Admin-managed home banners and "Ghost Cart Stories" (Content tab in /admin). */
+    suspend fun fetchContentBlocks(type: String): Result<List<ContentBlockItem>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val response = request("/api/content-blocks", "GET")
+            val items = response.optJSONArray("contentBlocks")
+            buildList {
+                if (items != null) for (index in 0 until items.length()) {
+                    val item = items.getJSONObject(index)
+                    if (item.optString("type") != type) continue
+                    if (!item.optBoolean("isActive", true)) continue
+                    val key = item.getString("imageKey")
+                    add(
+                        ContentBlockItem(
+                            id = item.getInt("id"),
+                            type = type,
+                            imageUrl = "${ApiConfig.BASE_URL}/api/content-blocks/image/$key",
+                            sortOrder = item.optInt("sortOrder", 0)
+                        )
+                    )
+                }
+            }.sortedBy { it.sortOrder }
         }
     }
 

@@ -80,7 +80,8 @@ fun ProductDiscoverySection(
     onToggleFavorite: (String) -> Unit,
     onNotifications: () -> Unit,
     onViewAllCatalog: (String) -> Unit,
-    onViewAllFavorites: () -> Unit
+    onViewAllFavorites: () -> Unit,
+    homeBanners: List<com.example.ghostcart.data.ContentBlockItem> = emptyList()
 ) {
     var query by remember { mutableStateOf("") }
     var categoryId by remember { mutableStateOf("all") }
@@ -109,7 +110,7 @@ fun ProductDiscoverySection(
                 Icon(Icons.Filled.Notifications, contentDescription = "Notifications", tint = Ink)
             }
         }
-        PromoBannerCarousel()
+        PromoBannerCarousel(banners = homeBanners)
         OutlinedTextField(
             value = query,
             onValueChange = { query = it.take(80) },
@@ -284,10 +285,9 @@ private val PROMO_BANNER_DRAWABLES = listOf(
 
 /**
  * Swipeable, image-based home banner carousel - replaces the old single-height (56dp)
- * text-only auto-advancing banner. Images are bundled (not fetched from Phase 4's
- * content-blocks API, which isn't deployed yet); swapping to a dynamic source later only
- * means changing where PROMO_BANNER_DRAWABLES's contents come from, not this composable's
- * structure.
+ * text-only auto-advancing banner. Fetched from the admin-managed /api/content-blocks
+ * (Content tab in /admin); falls back to the bundled drawables only if that fetch hasn't
+ * returned anything yet (first frame) or failed (offline), so the carousel is never empty.
  *
  * Sized by the banners' own 3:1 aspect ratio rather than a fixed "double height" (112dp):
  * these are pre-composed marketing graphics with text/logo spread across the full image, not
@@ -295,13 +295,17 @@ private val PROMO_BANNER_DRAWABLES = listOf(
  * the top and bottom of the frame. Full-width, uncropped is the correct trade-off here.
  */
 @Composable
-private fun PromoBannerCarousel(modifier: Modifier = Modifier) {
-    val pagerState = rememberPagerState(pageCount = { PROMO_BANNER_DRAWABLES.size })
+private fun PromoBannerCarousel(
+    banners: List<com.example.ghostcart.data.ContentBlockItem>,
+    modifier: Modifier = Modifier,
+) {
+    val bannerCount = if (banners.isNotEmpty()) banners.size else PROMO_BANNER_DRAWABLES.size
+    val pagerState = rememberPagerState(pageCount = { bannerCount })
 
-    LaunchedEffect(pagerState) {
+    LaunchedEffect(pagerState, bannerCount) {
         while (true) {
             delay(4000)
-            val next = (pagerState.currentPage + 1) % PROMO_BANNER_DRAWABLES.size
+            val next = (pagerState.currentPage + 1) % bannerCount
             pagerState.animateScrollToPage(next)
         }
     }
@@ -310,14 +314,25 @@ private fun PromoBannerCarousel(modifier: Modifier = Modifier) {
         state = pagerState,
         modifier = modifier.fillMaxWidth().aspectRatio(3f)
     ) { page ->
-        androidx.compose.foundation.Image(
-            painter = androidx.compose.ui.res.painterResource(PROMO_BANNER_DRAWABLES[page]),
-            contentDescription = null,
-            contentScale = ContentScale.FillWidth,
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(RoundedCornerShape(16.dp))
-        )
+        if (banners.isNotEmpty()) {
+            coil3.compose.AsyncImage(
+                model = banners[page].imageUrl,
+                contentDescription = null,
+                contentScale = ContentScale.FillWidth,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(16.dp))
+            )
+        } else {
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(PROMO_BANNER_DRAWABLES[page]),
+                contentDescription = null,
+                contentScale = ContentScale.FillWidth,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(16.dp))
+            )
+        }
     }
 }
 
@@ -340,27 +355,53 @@ private val GHOST_CART_STORY_DRAWABLES = listOf(
  * Uses the same card treatment (width, corner radius, border, background) as
  * [DiscoveryProductCard] rather than full-bleed images, so it reads as part of the same product
  * grid rather than an oversized inserted banner.
+ *
+ * Fetched from the admin-managed /api/content-blocks (Content tab in /admin); falls back to
+ * the bundled drawables only if that fetch hasn't returned anything yet or failed.
  */
 @Composable
-fun GhostCartStoriesSection(modifier: Modifier = Modifier) {
+fun GhostCartStoriesSection(
+    stories: List<com.example.ghostcart.data.ContentBlockItem> = emptyList(),
+    modifier: Modifier = Modifier,
+) {
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Ghost Cart Stories", color = Ink, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(GHOST_CART_STORY_DRAWABLES) { drawableRes ->
-                Box(
-                    modifier = Modifier
-                        .width(188.dp)
-                        .aspectRatio(9f / 16f)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Paper)
-                        .border(1.dp, FaintBorder, RoundedCornerShape(20.dp))
-                ) {
-                    androidx.compose.foundation.Image(
-                        painter = androidx.compose.ui.res.painterResource(drawableRes),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
+            if (stories.isNotEmpty()) {
+                items(stories) { story ->
+                    Box(
+                        modifier = Modifier
+                            .width(188.dp)
+                            .aspectRatio(9f / 16f)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Paper)
+                            .border(1.dp, FaintBorder, RoundedCornerShape(20.dp))
+                    ) {
+                        coil3.compose.AsyncImage(
+                            model = story.imageUrl,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                }
+            } else {
+                items(GHOST_CART_STORY_DRAWABLES) { drawableRes ->
+                    Box(
+                        modifier = Modifier
+                            .width(188.dp)
+                            .aspectRatio(9f / 16f)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Paper)
+                            .border(1.dp, FaintBorder, RoundedCornerShape(20.dp))
+                    ) {
+                        androidx.compose.foundation.Image(
+                            painter = androidx.compose.ui.res.painterResource(drawableRes),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
         }

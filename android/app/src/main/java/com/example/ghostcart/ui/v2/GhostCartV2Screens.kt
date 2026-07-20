@@ -140,6 +140,8 @@ fun GhostHomeScreen(
     onViewAllCatalog: (String) -> Unit,
     onViewAllFavorites: () -> Unit,
     onRefresh: () -> Unit = {},
+    homeBanners: List<com.example.ghostcart.data.ContentBlockItem> = emptyList(),
+    ghostCartStories: List<com.example.ghostcart.data.ContentBlockItem> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     val summary = items.progressSummary()
@@ -180,11 +182,12 @@ fun GhostHomeScreen(
                 onToggleFavorite = onToggleFavorite,
                 onNotifications = onNotifications,
                 onViewAllCatalog = onViewAllCatalog,
-                onViewAllFavorites = onViewAllFavorites
+                onViewAllFavorites = onViewAllFavorites,
+                homeBanners = homeBanners
             )
         }
 
-        item { GhostCartStoriesSection() }
+        item { GhostCartStoriesSection(stories = ghostCartStories) }
 
         item {
             GhostHeroCard(containerColor = Color(0xFF161616)) {

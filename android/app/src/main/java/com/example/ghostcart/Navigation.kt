@@ -293,7 +293,14 @@ fun MainNavigation(
                             onNotifications = { backStack.add(GhostCardSettings) },
                             onViewAllCatalog = { categoryId -> backStack.add(CategoryBrowse(categoryId)) },
                             onViewAllFavorites = { backStack.add(CategoryBrowse("favorites")) },
-                            onRefresh = { appViewModel.refreshCommunityProducts() }
+                            onRefresh = {
+                                appViewModel.refreshCommunityProducts()
+                                appViewModel.refreshCatalogProducts()
+                                appViewModel.refreshHomeBanners()
+                                appViewModel.refreshGhostCartStories()
+                            },
+                            homeBanners = state.homeBanners,
+                            ghostCartStories = state.ghostCartStories
                         )
                     }
                     entry<CategoryBrowse> { key ->
