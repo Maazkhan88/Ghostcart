@@ -40,8 +40,18 @@ type InAppMessage = {
 
 type SimulationConsent = { version: number; consentText: string };
 
+type ContentBlock = {
+  id: number;
+  type: "banner" | "story";
+  imageKey: string;
+  linkType: "none" | "product" | "category";
+  linkTargetId: string | null;
+  sortOrder: number;
+  isActive: boolean;
+};
+
 type Notice = { kind: "success" | "error"; message: string } | null;
-type AdminTab = "products" | "merchants" | "in-app-messages";
+type AdminTab = "products" | "merchants" | "in-app-messages" | "content-blocks";
 
 const EMPTY_MERCHANT = {
   name: "",
@@ -72,6 +82,14 @@ const EMPTY_MESSAGE = {
   isActive: true,
 };
 
+const EMPTY_CONTENT_BLOCK = {
+  type: "banner" as "banner" | "story",
+  linkType: "none" as "none" | "product" | "category",
+  linkTargetId: "",
+  sortOrder: "0",
+  isActive: true,
+};
+
 async function readJson<T>(response: Response): Promise<T> {
   const body = (await response.json()) as T & { error?: string };
   if (!response.ok) throw new Error(body.error || "The request could not be completed.");
@@ -91,12 +109,16 @@ export default function AdminCatalog({
   const [messages, setMessages] = useState<InAppMessage[]>([]);
   const [consent, setConsent] = useState<SimulationConsent | null>(null);
   const [consentDraft, setConsentDraft] = useState("");
+  const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([]);
   const [merchantForm, setMerchantForm] = useState(EMPTY_MERCHANT);
   const [productForm, setProductForm] = useState(EMPTY_PRODUCT);
   const [messageForm, setMessageForm] = useState(EMPTY_MESSAGE);
+  const [contentBlockForm, setContentBlockForm] = useState(EMPTY_CONTENT_BLOCK);
+  const [contentBlockFile, setContentBlockFile] = useState<File | null>(null);
   const [editingMerchantId, setEditingMerchantId] = useState<number | null>(null);
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingContentBlockId, setEditingContentBlockId] = useState<number | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -104,7 +126,7 @@ export default function AdminCatalog({
 
   const loadCatalog = useCallback(async () => {
     try {
-      const [merchantData, productData, messageData, consentData] = await Promise.all([
+      const [merchantData, productData, messageData, consentData, contentBlockData] = await Promise.all([
         fetch("/api/merchants", { cache: "no-store" }).then((response) =>
           readJson<{ merchants: Merchant[] }>(response),
         ),
@@ -117,12 +139,16 @@ export default function AdminCatalog({
         fetch("/api/simulation-consent", { cache: "no-store" }).then((response) =>
           readJson<SimulationConsent>(response),
         ),
+        fetch("/api/content-blocks", { cache: "no-store" }).then((response) =>
+          readJson<{ contentBlocks: ContentBlock[] }>(response),
+        ),
       ]);
       setMerchants(merchantData.merchants);
       setProducts(productData.products);
       setMessages(messageData.messages);
       setConsent(consentData);
       setConsentDraft(consentData.consentText);
+      setContentBlocks(contentBlockData.contentBlocks);
       setNotice(null);
     } catch (error) {
       setNotice({
@@ -163,6 +189,14 @@ export default function AdminCatalog({
     if (!term) return messages;
     return messages.filter((message) => message.title.toLowerCase().includes(term));
   }, [messages, query]);
+
+  const filteredContentBlocks = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (!term) return contentBlocks;
+    return contentBlocks.filter((block) =>
+      [block.type, block.linkType].some((value) => value.toLowerCase().includes(term)),
+    );
+  }, [contentBlocks, query]);
 
   const activeCount = products.filter((product) => product.isActive).length;
 
@@ -260,6 +294,56 @@ export default function AdminCatalog({
     }
   }
 
+  async function saveContentBlock(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setNotice(null);
+    try {
+      if (editingContentBlockId) {
+        const response = await fetch(`/api/content-blocks/${editingContentBlockId}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            type: contentBlockForm.type,
+            linkType: contentBlockForm.linkType,
+            linkTargetId: contentBlockForm.linkType === "none" ? null : contentBlockForm.linkTargetId,
+            sortOrder: Number(contentBlockForm.sortOrder),
+            isActive: contentBlockForm.isActive,
+          }),
+        });
+        await readJson(response);
+        setNotice({ kind: "success", message: "Content block updated." });
+      } else {
+        if (!contentBlockFile) {
+          setNotice({ kind: "error", message: "Choose an image file to upload." });
+          setSaving(false);
+          return;
+        }
+        const body = new FormData();
+        body.set("type", contentBlockForm.type);
+        body.set("linkType", contentBlockForm.linkType);
+        if (contentBlockForm.linkType !== "none") body.set("linkTargetId", contentBlockForm.linkTargetId);
+        body.set("sortOrder", contentBlockForm.sortOrder);
+        body.set("isActive", String(contentBlockForm.isActive));
+        body.set("file", contentBlockFile);
+        const response = await fetch("/api/content-blocks", { method: "POST", body });
+        await readJson(response);
+        setNotice({ kind: "success", message: "Content block added." });
+      }
+      setContentBlockForm(EMPTY_CONTENT_BLOCK);
+      setContentBlockFile(null);
+      setEditingContentBlockId(null);
+      await loadCatalog();
+    } catch (error) {
+      setNotice({
+        kind: "error",
+        message: error instanceof Error ? error.message : "Could not save content block.",
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function publishConsent() {
     if (!window.confirm("Publish a new simulation-consent version? Every user, including those who already accepted, will be re-prompted.")) return;
     setSaving(true);
@@ -290,7 +374,10 @@ export default function AdminCatalog({
     try {
       const response = await fetch(`/api/${kind}/${id}`, { method: "DELETE" });
       await readJson(response);
-      const label = kind === "products" ? "Product" : kind === "merchants" ? "Merchant" : "Message";
+      const label =
+        kind === "products" ? "Product" :
+        kind === "merchants" ? "Merchant" :
+        kind === "content-blocks" ? "Content block" : "Message";
       setNotice({ kind: "success", message: `${label} removed.` });
       await loadCatalog();
     } catch (error) {
@@ -341,13 +428,29 @@ export default function AdminCatalog({
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function editContentBlock(block: ContentBlock) {
+    setEditingContentBlockId(block.id);
+    setContentBlockForm({
+      type: block.type,
+      linkType: block.linkType,
+      linkTargetId: block.linkTargetId ?? "",
+      sortOrder: String(block.sortOrder),
+      isActive: block.isActive,
+    });
+    setContentBlockFile(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function cancelEdit() {
     setEditingMerchantId(null);
     setEditingProductId(null);
     setEditingMessageId(null);
+    setEditingContentBlockId(null);
     setMerchantForm(EMPTY_MERCHANT);
     setProductForm(EMPTY_PRODUCT);
     setMessageForm(EMPTY_MESSAGE);
+    setContentBlockForm(EMPTY_CONTENT_BLOCK);
+    setContentBlockFile(null);
   }
 
   return (
@@ -387,6 +490,7 @@ export default function AdminCatalog({
         <article><span>Products</span><strong>{products.length}</strong><small>{activeCount} active in the demo</small></article>
         <article><span>Merchants</span><strong>{merchants.length}</strong><small>Catalog sources</small></article>
         <article><span>Messages</span><strong>{messages.length}</strong><small>Consent v{consent?.version ?? "-"}</small></article>
+        <article><span>Content</span><strong>{contentBlocks.length}</strong><small>Banners &amp; Ghost Cart Stories</small></article>
         <article className="admin-safety-card"><span>Catalog</span><strong>Demo mode</strong><small>Product references for Ghost Cart experiences</small></article>
       </section>
 
@@ -396,6 +500,7 @@ export default function AdminCatalog({
             <button type="button" role="tab" aria-selected={tab === "products"} onClick={() => { setTab("products"); cancelEdit(); }}>Products</button>
             <button type="button" role="tab" aria-selected={tab === "merchants"} onClick={() => { setTab("merchants"); cancelEdit(); }}>Merchants</button>
             <button type="button" role="tab" aria-selected={tab === "in-app-messages"} onClick={() => { setTab("in-app-messages"); cancelEdit(); }}>Messages</button>
+            <button type="button" role="tab" aria-selected={tab === "content-blocks"} onClick={() => { setTab("content-blocks"); cancelEdit(); }}>Content</button>
           </div>
 
           {tab === "in-app-messages" ? (
@@ -417,6 +522,23 @@ export default function AdminCatalog({
                 <div className="admin-form-actions"><button type="button" className="admin-primary" disabled={saving || consentDraft.trim() === consent?.consentText} onClick={publishConsent}>Publish new version</button></div>
               </div>
             </>
+          ) : tab === "content-blocks" ? (
+            <form className="admin-form" onSubmit={saveContentBlock}>
+              <div className="admin-form-heading"><p>{editingContentBlockId ? "Edit content block" : "New content block"}</p><span>{editingContentBlockId ? `#${editingContentBlockId}` : "Banner or story"}</span></div>
+              <label>Placement<select value={contentBlockForm.type} onChange={(event) => setContentBlockForm({ ...contentBlockForm, type: event.target.value as "banner" | "story" })}><option value="banner">Home banner</option><option value="story">Ghost Cart Story</option></select></label>
+              {editingContentBlockId ? (
+                <p className="admin-inline-note">To change the image itself, remove this block and add a new one - editing here only updates placement/link/order.</p>
+              ) : (
+                <label>Image<input required type="file" accept="image/png,image/jpeg" onChange={(event) => setContentBlockFile(event.target.files?.[0] ?? null)} /><span>PNG or JPEG only, max 8MB. EXIF/location metadata is stripped automatically.</span></label>
+              )}
+              <label>Links to<select value={contentBlockForm.linkType} onChange={(event) => setContentBlockForm({ ...contentBlockForm, linkType: event.target.value as "none" | "product" | "category", linkTargetId: "" })}><option value="none">Nothing (decorative)</option><option value="product">A product</option><option value="category">A category</option></select></label>
+              {contentBlockForm.linkType !== "none" && (
+                <label>{contentBlockForm.linkType === "product" ? "Product ID" : "Category ID"}<input required value={contentBlockForm.linkTargetId} onChange={(event) => setContentBlockForm({ ...contentBlockForm, linkTargetId: event.target.value })} placeholder={contentBlockForm.linkType === "product" ? "e.g. 42" : "e.g. food"} /></label>
+              )}
+              <label>Sort order <span>lower shows first</span><input type="number" step="1" value={contentBlockForm.sortOrder} onChange={(event) => setContentBlockForm({ ...contentBlockForm, sortOrder: event.target.value })} /></label>
+              <label className="admin-check"><input type="checkbox" checked={contentBlockForm.isActive} onChange={(event) => setContentBlockForm({ ...contentBlockForm, isActive: event.target.checked })} /><span><strong>Active</strong><small>May appear in the app.</small></span></label>
+              <div className="admin-form-actions"><button className="admin-primary" disabled={saving}>{saving ? "Saving…" : editingContentBlockId ? "Save changes" : "Upload content block"}</button>{editingContentBlockId && <button type="button" className="admin-secondary" onClick={cancelEdit}>Cancel</button>}</div>
+            </form>
           ) : tab === "merchants" ? (
             <form className="admin-form" onSubmit={saveMerchant}>
               <div className="admin-form-heading"><p>{editingMerchantId ? "Edit merchant" : "New merchant"}</p><span>{editingMerchantId ? `#${editingMerchantId}` : "Auto-slugged"}</span></div>
@@ -447,7 +569,7 @@ export default function AdminCatalog({
         </aside>
 
         <section className="admin-records" aria-labelledby="records-title">
-          <div className="admin-records-head"><div><p>Catalog records</p><h2 id="records-title">{tab === "products" ? "Products" : tab === "merchants" ? "Merchants" : "Messages"}</h2></div><label><span className="sr-only">Search catalog</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${tab}`} /></label></div>
+          <div className="admin-records-head"><div><p>Catalog records</p><h2 id="records-title">{tab === "products" ? "Products" : tab === "merchants" ? "Merchants" : tab === "in-app-messages" ? "Messages" : "Content blocks"}</h2></div><label><span className="sr-only">Search catalog</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${tab}`} /></label></div>
           {notice && <p className={`admin-notice is-${notice.kind}`} role="status">{notice.message}</p>}
           {loading ? (
             <div className="admin-empty">Loading catalog…</div>
@@ -459,6 +581,17 @@ export default function AdminCatalog({
                   <div className="admin-record-art">{message.imageUrl ? <img src={message.imageUrl} alt="" /> : <span>{message.title.slice(0, 1)}</span>}</div>
                   <div className="admin-record-copy"><div>{!message.isActive && <b>Inactive</b>}</div><h3>{message.title}</h3><p>{message.body.slice(0, 80)}{message.body.length > 80 ? "…" : ""}</p></div>
                   <div className="admin-record-actions"><button type="button" onClick={() => editMessage(message)}>Edit</button><button type="button" className="is-danger" disabled={saving} onClick={() => removeRecord("in-app-messages", message.id, message.title)}>Remove</button></div>
+                </article>
+              ))}
+            </div>
+          ) : tab === "content-blocks" ? (
+            <div className="admin-list">
+              {filteredContentBlocks.length === 0 && <div className="admin-empty">No content blocks found. Upload the first banner or story from the editor.</div>}
+              {filteredContentBlocks.map((block) => (
+                <article className="admin-record" key={block.id}>
+                  <div className="admin-record-art"><img src={`/api/content-blocks/image/${block.imageKey}`} alt="" /></div>
+                  <div className="admin-record-copy"><div><span>{block.type === "banner" ? "Home banner" : "Ghost Cart Story"}</span>{!block.isActive && <b>Inactive</b>}</div><h3>#{block.id}</h3><p>{block.linkType === "none" ? "No link" : `Links to ${block.linkType} ${block.linkTargetId}`} · order {block.sortOrder}</p></div>
+                  <div className="admin-record-actions"><button type="button" onClick={() => editContentBlock(block)}>Edit</button><button type="button" className="is-danger" disabled={saving} onClick={() => removeRecord("content-blocks", block.id, `content block #${block.id}`)}>Remove</button></div>
                 </article>
               ))}
             </div>

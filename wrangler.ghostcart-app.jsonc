@@ -30,5 +30,14 @@
       "database_name": "ghostcart-v2-db",
       "database_id": "325c0966-2b01-4a60-97a9-1a6d974d8039"
     }
+  ],
+  // Requires the bucket to exist before deploy:
+  //   npx wrangler r2 bucket create ghostcart-content-media
+  // Not created automatically by this config - see Phase 4 rollout notes.
+  "r2_buckets": [
+    {
+      "binding": "CONTENT_MEDIA",
+      "bucket_name": "ghostcart-content-media"
+    }
   ]
 }

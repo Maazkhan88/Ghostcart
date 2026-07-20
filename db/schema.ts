@@ -429,3 +429,34 @@ export const simulationConsentAcceptances = sqliteTable(
     index("simulation_consent_actor_idx").on(table.actorKey),
   ],
 );
+
+// Admin-managed editorial media (home banners, "Ghost Cart Stories" cards).
+// image_key is a server-generated R2 object key - never a user-supplied
+// filename - and is the only thing deleteRecord()-style handlers need to also
+// remove from R2 so no dangling reference or orphaned object is left behind.
+export const contentBlocks = sqliteTable(
+  "content_blocks",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    type: text("type").notNull(),
+    imageKey: text("image_key").notNull(),
+    linkType: text("link_type").notNull().default("none"),
+    linkTargetId: text("link_target_id"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    check("content_blocks_type_check", sql`${table.type} IN ('banner', 'story')`),
+    check(
+      "content_blocks_link_type_check",
+      sql`${table.linkType} IN ('none', 'product', 'category')`,
+    ),
+    index("content_blocks_type_active_sort_idx").on(
+      table.type,
+      table.isActive,
+      table.sortOrder,
+    ),
+  ],
+);
