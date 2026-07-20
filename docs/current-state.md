@@ -1,6 +1,180 @@
 # Current State
 
-Last updated: 2026-07-19 (Claude Code — full session handoff report added below for Antigravity; see "STATUS REPORT" block immediately following this line).
+Last updated: 2026-07-20, later same day (Claude Code — admin panel is live and working end-to-end, Phase 7 shipped in a real APK for the first time, admin user-visibility work started). See the "STATUS REPORT" block immediately below — it supersedes the one after it, which is now historical (left for provenance).
+
+> ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-20, later same session — usage window closing)
+>
+> Short version: admin panel is fully working (password + Google sign-in both verified live by the
+> user). Phase 7 in-app messaging shipped in a real APK for the first time ever. New work started
+> (admin visibility into real users/community-products/ghost-activity) is half-built and NOT yet
+> wired into the UI or deployed — see "In progress, not finished" below before touching
+> `app/admin/AdminCatalog.tsx` or `app/api/admin/`.
+>
+> ### What happened after the previous report (below)
+>
+> - **Deployed `fix/admin-auth-standalone` live** (Cloudflare Worker `ghostcart-app`, Version ID
+>   `61b73090-53ce-448f-8170-88070d89242c` as of this report). `/admin` and `/admin/login` are
+>   confirmed working in production by the user, both via email/password and via a new
+>   **"Sign in with Google" button on `/admin/login`** (Google Identity Services JS SDK, backend
+>   route `POST /api/admin/login/google`, shared token-verification helper `lib/google-auth.ts`
+>   used by both this and the Android-facing `POST /api/auth/google`).
+> - **Two real bugs found and fixed live**, both in `app/admin/login/AdminLoginForm.tsx`:
+>   1. `completeSignIn()` was called with an unresolved `Promise<Response>` instead of an awaited
+>      `Response` on the Google path only — threw `"e.json is not a function"` right after a
+>      successful Google credential callback. Fixed by resolving the fetch first.
+>   2. Post-sign-in navigation used `router.push("/admin") + router.refresh()`, which left the
+>      user stuck on `/admin/login` with no error (the fresh httpOnly cookie wasn't reliably
+>      picked up by a soft client-side nav in this app's router). Replaced with a hard
+>      `window.location.href = "/admin"` navigation. **If you add any other post-auth redirect
+>      anywhere in `app/admin/`, use a hard navigation, not `router.push`/`refresh` — this router
+>      has not proven reliable for auth-state transitions.**
+> - **maaz.n.khan@gmail.com is now flagged `is_admin = 1`** on live D1 (user id 2, created via
+>   Google Sign-In — Android's Google Sign-In previously never touched the backend at all; see
+>   the previous report for that fix).
+> - **Google OAuth web client had no registered JS origin** — `https://ghostcart-app.maaz-n-khan.workers.dev`
+>   had to be added to the OAuth client's "Authorized JavaScript origins" in Google Cloud Console
+>   (done by the user) before the browser-side Google Sign-In flow would work at all. Android's
+>   flow doesn't need this (no JS origin check on native ID-token verification).
+> - **Phase 7 (in-app messaging + simulation consent) had never actually shipped in any installed
+>   APK, ever.** Root cause: it was built entirely on a separate `phase-7/in-app-messaging`
+>   branch (backend commit `f661ff6`, Android commit `c17b893`) that forked off an older point
+>   (`e6ab0e9`, v2.7.17) and was never merged forward into `phase-5/ghost-cart-stories-section`
+>   (which kept moving ahead with the banner carousel / button-size / nav-spacing fixes through
+>   v2.7.20). The user published and installed several APKs believing this feature was in them;
+>   it never was. **Merged `origin/phase-7/in-app-messaging` into `phase-5/ghost-cart-stories-section`
+>   — clean merge, zero conflicts** (both branches only added new files/tables, no overlapping
+>   edits). Verified post-merge that `SimulationConsentScreen`/`InAppMessageDialog` are actually
+>   wired into `Navigation.kt` (not dead code) and that the earlier Google Sign-In fix survived.
+>   Published as **v2.7.22** to the same canonical APK URL (same filename, `releases/GhostCart-v2.7.14-debug.apk`,
+>   on `phase-5/ghost-cart-stories-section` — this is the URL the user has bookmarked/shared, kept
+>   stable across every version bump per the established pattern).
+> - **New domain**: user purchased `TheGhostcart.com` on Cloudflare. **Not wired to the Worker
+>   yet** — next step whenever resumed.
+>
+> ### ⚠️ In progress, not finished — do not assume this is done
+>
+> User asked "why can't I see the users on the app and the products added by users and the
+> ghostcart items?" — correct gap: the admin panel has zero visibility into real `users`,
+> `community_products`, or `almost_buys` (ghosted items) tables, only the static demo catalog +
+> content/messages. User chose "view + moderate" (not read-only) when asked. Started building:
+> - `app/api/admin/users/route.ts` (GET, list users + their almost-buy count) — **done, committed,
+>   builds clean.**
+> - `app/api/admin/users/[id]/route.ts` (PATCH, grant/revoke `is_admin`, blocks self-demotion) —
+>   **done, committed, builds clean.**
+> - `app/api/admin/community-products/route.ts` + `[id]/route.ts` (GET list / DELETE moderate) —
+>   **NOT STARTED.**
+> - `app/api/admin/ghost-activity/route.ts` (GET `almost_buys` joined with user email) — **NOT
+>   STARTED.**
+> - A "Users" / "Community" / "Activity" tab (or however you choose to lay it out) in
+>   `app/admin/AdminCatalog.tsx` to actually surface any of this — **NOT STARTED.** The two
+>   finished routes above are backend-only right now; nothing in the UI calls them yet.
+> - **None of this has been deployed.** The live Worker (Version ID above) does NOT have the new
+>   `/api/admin/users` routes yet — only what was in `fix/admin-auth-standalone` at deploy time.
+>
+> If you pick this up: branch is `fix/admin-auth-standalone`, worktree
+> `C:\Users\Admin\Downloads\ghostcart-admin-auth`. Follow the exact pattern in
+> `app/api/merchants/[id]/route.ts` (admin-gated CRUD) and `almost_buys`/`community_products`
+> schema in `db/schema.ts` (note: both use `text` UUID primary keys, not integers — `parseId()`
+> from `lib/api-helpers.ts` only handles integer IDs like `users.id`, don't use it for those two).
+>
+> ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-20, end of session)
+>
+> Read this whole block before touching anything in `db/schema.ts`, `drizzle/`, `app/admin/`, or
+> Android auth files — it supersedes the 2026-07-19 report below it.
+>
+> ### Branch map — three worktrees active this session (main dir untouched)
+>
+> | Branch (worktree) | What's on it | Status |
+> |---|---|---|
+> | `fix/admin-auth-standalone` (`C:\Users\Admin\Downloads\ghostcart-admin-auth`) | Admin panel now uses Ghost Cart's own users/sessions (was completely broken — dead ChatGPT-OAuth dependency). Merged in `phase-4/media-upload-foundation` (R2 content-blocks). Added `POST /api/auth/google`. | Built, 32/32 tests pass. Migrations applied to **live D1**. Not yet `wrangler deploy`'d — waiting on a Google OAuth secret, see below. |
+> | `feature/google-signin-backend` (`C:\Users\Admin\Downloads\ghostcart-google-signin`, based on `agent/ghost-cart-products-sharing`@`c75bccc`) | Android `AuthRepository.kt`/`AuthScreen.kt` now calls the new `/api/auth/google` backend route instead of trusting the on-device email claim. | Built, 26/26 tests pass. This is where the next APK build needs to come from (or cherry-pick these two Android files) to actually exercise the new backend route. |
+> | `phase-4/shared-ghost-attribution-notifications` (main dir) | Your uncommitted WIP | **Untouched again this session.** Still awaiting the user's call on continue/rename/discard from the 2026-07-19 notice below. |
+>
+> ### Why: the admin panel and "Admin Center" request
+>
+> The user asked for an "Admin Center" button gated on admin access, and separately reported the
+> admin panel itself was completely broken. Root cause: `/admin` depended on `getChatGPTUser()`
+> (`app/chatgpt-auth.ts`), which only worked behind OpenAI's "ChatGPT Sites" reverse proxy — a
+> hosting layer this project retired when consolidating onto the standalone Worker. Confirmed live
+> via curl: `/admin` → 307 → `/signin-with-chatgpt` → 404.
+>
+> Fix (user chose "reuse the app's own login" over building a separate admin identity system):
+> - `users.is_admin` column (migration `drizzle/0008_cheerful_shockwave.sql`, **applied to live D1**).
+> - `lib/admin-auth.ts`: `getGhostCartAdminUser()` reads an httpOnly `ghost_cart_admin_session`
+>   cookie, resolves it via a new shared `resolveSessionByToken()` (extracted from
+>   `lib/session-auth.ts`'s existing bearer-token path — Android/iOS are unaffected), then checks
+>   `users.is_admin`.
+> - `app/admin/login/page.tsx` + `POST /api/admin/login` + `POST /api/admin/logout` (new).
+> - `app/admin/page.tsx` and `app/admin/AdminCatalog.tsx` no longer import anything from
+>   `chatgpt-auth.ts`.
+>
+> ### Merge with your Phase 4 work
+>
+> While fixing admin-auth, the user separately said "I've set up R2 on Cloudflare," unblocking the
+> real `phase-4/media-upload-foundation` branch (content-blocks/banners, R2-backed — **not** your
+> `phase-4/shared-ghost-attribution-notifications`, still a different feature per the 2026-07-19
+> notice). Both had to ship together, so I merged `phase-4/media-upload-foundation` into
+> `fix/admin-auth-standalone`. Conflict notes, in case you hit the same collision on your branch:
+> - `db/schema.ts`: both branches were additive (your Phase 7 tables vs. their `content_blocks`
+>   table) — kept both table sets, no real conflict.
+> - `app/admin/AdminCatalog.tsx`: both branches independently added a third tab to the same
+>   originally-2-tab file. Rewrote it from scratch with all four tabs (Products, Merchants,
+>   Messages, Content) rather than resolving 16 conflict hunks by hand.
+> - **Drizzle migration numbering collision**: both branches generated a migration numbered
+>   `0007` from the same base snapshot (one real one, `0007_damp_doctor_octopus.sql`, was
+>   **already applied to live D1**; the other, phase-4's `content_blocks` migration, was not).
+>   Renamed the unapplied one to `0009_aromatic_chameleon.sql`, hand-rebuilt its meta snapshot on
+>   top of `0008`'s, and verified with `npx drizzle-kit generate` that it reports **zero drift**
+>   against the merged `schema.ts`. **If you ever hit a same-numbered-migration collision like
+>   this, check `wrangler d1 execute --remote` history (or ask the user) before renumbering
+>   anything — renumbering an already-applied migration would desync every client's local
+>   migration state from the git history.**
+>
+> ### Google Sign-In: was 100% cosmetic, now creates a real account
+>
+> Investigating "why is there no account to flag admin" turned up a separate, real gap: Android's
+> `AuthScreen.signInWithGoogle()` only read the on-device credential's email and called
+> `onAuthSuccess(email)` directly — it never called the backend at all. No `users` row, no
+> session, nothing to flag as admin, for any Google-signed-in user, ever.
+>
+> Fixed (user chose "wire it to the backend" over "just use email+password for now"):
+> - `POST /api/auth/google` (new, both worktrees above): verifies the raw ID token via Google's
+>   `tokeninfo` endpoint (checks `aud` against a `GOOGLE_OAUTH_WEB_CLIENT_ID` Worker secret, `iss`,
+>   `email_verified`), then finds-or-creates the `users` row and mints a real session via the
+>   existing `createApiSession()` — same response shape as `/api/auth/signin`/`signup`.
+> - Android: `AuthRepository.signInWithGoogle()` (new) posts the credential's `idToken` (not just
+>   `.id`); `AuthScreen` now uses the backend's verified email for `onAuthSuccess`, not the raw
+>   on-device claim.
+>
+> ### Deployed live (2026-07-20, later same session)
+>
+> `fix/admin-auth-standalone` is now live: `wrangler deploy` succeeded (Version ID
+> `c02315a4-2412-45f7-bf55-a1ad9a62d23a`), `GOOGLE_OAUTH_WEB_CLIENT_ID` secret is set (value
+> recovered from strings inside the already-published `releases/GhostCart-v2.7.8-debug.apk`
+> dex bytecode — the previous session that wired Google Sign-In registered the OAuth clients
+> directly in Google Cloud Console and never wrote the ID to any file; user confirmed it's still
+> the correct client ID). Verified live:
+> - `GET /admin` → `307` → `/admin/login`, which renders `200` with the real sign-in form.
+> - `POST /api/auth/google` with a garbage token → `{"error":"Could not verify Google sign-in"}`
+>   (was `"...not configured..."` before the secret propagated — confirms the audience check is
+>   actually running against live traffic now).
+>
+> ### Still open — do not decide these yourself, they're the user's call
+>
+> - No account is flagged `is_admin` yet, because no build with the new
+>   `AuthRepository.signInWithGoogle()` / `AuthScreen` changes has been installed on a device yet
+>   — those two files only exist on `feature/google-signin-backend` so far, not in any shipped
+>   APK. Next step: cut a debug APK off that branch (or cherry-pick the two files into whatever
+>   branch ships next), have the user sign in with Google once to create a real `users` row, then
+>   run `UPDATE users SET is_admin = 1 WHERE email = '<theirs>'` against live D1.
+> - `feature/google-signin-backend`'s Android changes need to land wherever the next real APK
+>   build comes from — currently based on `agent/ghost-cart-products-sharing`@`c75bccc`, **not**
+>   on top of your `phase-4/shared-ghost-attribution-notifications` WIP. If your branch becomes
+>   the one that ships next, these two files (`AuthRepository.kt`, `AuthScreen.kt`) need to be
+>   cherry-picked or merged in too.
+> - The "Admin Center button in Profile, visible only to admins" and "notification bell → real
+>   notification history" requests from the user are still not built — the admin-panel prerequisite
+>   above is what blocked both; next real step once an admin account exists.
 
 > ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-19, end of session)
 >
