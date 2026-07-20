@@ -64,6 +64,7 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.ghostcart.app.BuildConfig
 import com.ghostcart.app.R
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 @Composable
 fun AuthScreen(
@@ -89,7 +90,7 @@ fun AuthScreen(
         loading = true
         errorMessage = ""
         scope.launch {
-            runCatching {
+            val credentialResult = runCatching {
                 val option = GetSignInWithGoogleOption.Builder(BuildConfig.GOOGLE_WEB_CLIENT_ID).build()
                 val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
                 val credential = credentialManager.getCredential(context, request).credential
@@ -97,13 +98,33 @@ fun AuthScreen(
                     credential is CustomCredential &&
                         credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
                 )
-                GoogleIdTokenCredential.createFrom(credential.data).id
-            }.onSuccess { googleEmail ->
+                GoogleIdTokenCredential.createFrom(credential.data).idToken
+            }
+
+            val googleIdToken = credentialResult.getOrNull()
+            if (googleIdToken == null) {
                 loading = false
-                onAuthSuccess(googleEmail)
+                errorMessage = credentialResult.exceptionOrNull()?.message
+                    ?: "Google Sign-In was cancelled or unavailable."
+                return@launch
+            }
+
+            // The raw ID token goes to the backend for verification (audience, issuer,
+            // email_verified) so a real Ghost Cart account/session gets created - trusting
+            // the on-device claim alone never touched the backend at all.
+            val result = AuthRepository.signInWithGoogle(googleIdToken)
+            loading = false
+            result.onSuccess { response ->
+                val verifiedEmail = runCatching {
+                    JSONObject(response).getJSONObject("user").getString("email")
+                }.getOrDefault("")
+                if (verifiedEmail.isNotBlank()) {
+                    onAuthSuccess(verifiedEmail)
+                } else {
+                    errorMessage = "Google Sign-In succeeded but the response was unexpected."
+                }
             }.onFailure { error ->
-                loading = false
-                errorMessage = error.message ?: "Google Sign-In was cancelled or unavailable."
+                errorMessage = error.message ?: "Google Sign-In failed."
             }
         }
     }
