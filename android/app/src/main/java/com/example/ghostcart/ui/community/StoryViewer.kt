@@ -54,6 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.example.ghostcart.data.Analytics
 import com.example.ghostcart.data.ContentBlockItem
 import kotlinx.coroutines.delay
 import kotlin.math.abs
@@ -114,6 +115,10 @@ fun StoryViewer(
     }
     fun goPrevious() {
         if (index > 0) index -= 1
+    }
+
+    LaunchedEffect(index) {
+        Analytics.logStoryViewed(context, index)
     }
 
     LaunchedEffect(index, paused, showActions) {
@@ -286,6 +291,7 @@ fun StoryViewer(
                                 putExtra(Intent.EXTRA_TEXT, "Check this out on Ghost Cart:\n${story.imageUrl}")
                             }
                             context.startActivity(Intent.createChooser(shareIntent, "Share this story"))
+                            Analytics.logShare(context, "story")
                         }
                     )
                 }

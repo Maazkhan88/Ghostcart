@@ -1,0 +1,71 @@
+package com.example.ghostcart.data
+
+import android.content.Context
+import android.os.Bundle
+import com.google.firebase.analytics.FirebaseAnalytics
+
+/**
+ * Thin wrapper around Firebase Analytics with a fixed, named event taxonomy -
+ * call sites use these typed methods instead of raw logEvent() calls
+ * scattered around, so the full list of what's tracked is always visible in
+ * one file.
+ *
+ * Every event name/param mirrors the website's GoogleAnalytics.tsx
+ * (trackEvent) taxonomy where they overlap (e.g. "download_clicked" isn't
+ * relevant here, but "sign_in"/"leaderboard_opt_in" are conceptually the
+ * same shape on both platforms) so cross-platform funnels line up in GA4.
+ */
+object Analytics {
+    private fun analytics(context: Context) = FirebaseAnalytics.getInstance(context)
+
+    fun logSignIn(context: Context, method: String) {
+        analytics(context).logEvent(FirebaseAnalytics.Event.LOGIN, Bundle().apply {
+            putString(FirebaseAnalytics.Param.METHOD, method)
+        })
+    }
+
+    fun logCaptureCompleted(context: Context, sourceKind: String, category: String) {
+        analytics(context).logEvent("capture_completed", Bundle().apply {
+            putString("source_kind", sourceKind)
+            putString("category", category)
+        })
+    }
+
+    fun logCooldownResolved(context: Context, outcome: String) {
+        analytics(context).logEvent("cooldown_resolved", Bundle().apply {
+            putString("outcome", outcome)
+        })
+    }
+
+    fun logNotificationReceived(context: Context, type: String) {
+        analytics(context).logEvent("notification_received", Bundle().apply {
+            putString("type", type)
+        })
+    }
+
+    fun logNotificationOpened(context: Context, type: String) {
+        analytics(context).logEvent("notification_opened", Bundle().apply {
+            putString("type", type)
+        })
+    }
+
+    fun logLeaderboardViewed(context: Context) {
+        analytics(context).logEvent("leaderboard_viewed", null)
+    }
+
+    fun logLeaderboardOptIn(context: Context, optedIn: Boolean) {
+        analytics(context).logEvent(if (optedIn) "leaderboard_opt_in" else "leaderboard_opt_out", null)
+    }
+
+    fun logStoryViewed(context: Context, index: Int) {
+        analytics(context).logEvent("story_viewed", Bundle().apply {
+            putInt("index", index)
+        })
+    }
+
+    fun logShare(context: Context, contentType: String) {
+        analytics(context).logEvent(FirebaseAnalytics.Event.SHARE, Bundle().apply {
+            putString(FirebaseAnalytics.Param.CONTENT_TYPE, contentType)
+        })
+    }
+}

@@ -552,7 +552,10 @@ fun MainNavigation(
                         LegalDocumentScreen(docId = key.docId, onBack = { backStack.removeLastOrNull() })
                     }
                     entry<Leaderboard> {
-                        LaunchedEffect(Unit) { appViewModel.refreshLeaderboard() }
+                        LaunchedEffect(Unit) {
+                            appViewModel.refreshLeaderboard()
+                            com.example.ghostcart.data.Analytics.logLeaderboardViewed(context)
+                        }
                         com.example.ghostcart.ui.community.LeaderboardScreen(
                             entries = state.leaderboard,
                             loading = state.leaderboardLoading,

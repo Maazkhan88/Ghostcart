@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "172577078460",
+    "project_id": "ghost-cart-14cff",
+    "storage_bucket": "ghost-cart-14cff.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:172577078460:android:479f23145ae22d9b7f64b9",
+        "android_client_info": {
+          "package_name": "com.ghostcart.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBBcNWwWF6FipZXjUr81ua4mtXQm0qo3pU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

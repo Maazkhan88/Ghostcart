@@ -2,6 +2,7 @@ plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.compose.compiler)
   alias(libs.plugins.kotlin.serialization)
+  alias(libs.plugins.google.services)
 }
 
 val googleWebClientId = providers.gradleProperty("GHOST_CART_GOOGLE_WEB_CLIENT_ID")
@@ -15,8 +16,8 @@ android {
         applicationId = "com.ghostcart.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 55
-        versionName = "2.7.26"
+        versionCode = 56
+        versionName = "2.7.27"
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
     }
 
@@ -96,4 +97,9 @@ dependencies {
   implementation("com.google.android.libraries.identity.googleid:googleid:1.2.0")
   implementation("io.coil-kt.coil3:coil-compose:3.5.0")
   implementation("io.coil-kt.coil3:coil-network-okhttp:3.5.0")
+
+  // Firebase Analytics (google-services.json is project config, not a secret -
+  // see ApiConfig.kt-adjacent conventions in this repo for why it's committed)
+  implementation(platform(libs.firebase.bom))
+  implementation(libs.firebase.analytics)
 }

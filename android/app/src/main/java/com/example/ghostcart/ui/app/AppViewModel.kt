@@ -15,6 +15,7 @@ import com.example.ghostcart.data.AlmostBuy
 import com.example.ghostcart.data.AlmostBuyDraft
 import com.example.ghostcart.data.AlmostBuyRepository
 import com.example.ghostcart.data.AlmostBuyResolution
+import com.example.ghostcart.data.Analytics
 import com.example.ghostcart.data.CommunityProfileRepository
 import com.example.ghostcart.data.ContentBlockItem
 import com.example.ghostcart.data.LeaderboardEntry
@@ -326,6 +327,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         )
         sharedCartProducts[id] = product
         addToCart(id)
+        Analytics.logCaptureCompleted(getApplication(), draft.sourceKind, product.category)
         if (draft.shareWithCommunity) publishCommunityDraft(draft)
     }
 
@@ -392,6 +394,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             CommunityProfileRepository.updateProfile(getApplication(), username = username, communityConsent = consent)
                 .onSuccess { profile ->
                     _uiState.update { it.copy(profile = profile, profileSaving = false) }
+                    Analytics.logLeaderboardOptIn(getApplication(), consent)
                     if (consent) refreshLeaderboard()
                 }
                 .onFailure { error ->
@@ -926,6 +929,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         sharedPrefs.edit().putString("auth_email", email).apply()
         _uiState.update { it.copy(authEmail = email) }
         showToast("Signed in as $email")
+        Analytics.logSignIn(getApplication(), "app")
         refreshProfile()
     }
 
@@ -971,6 +975,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun resolveAlmostBuy(id: String, resolution: AlmostBuyResolution) {
         viewModelScope.launch {
             val item = almostBuyRepository.resolve(id, resolution) ?: return@launch
+            Analytics.logCooldownResolved(getApplication(), resolution.name.lowercase())
             WorkManager.getInstance(getApplication<Application>())
                 .cancelUniqueWork("ghost_cooling_${item.id}")
             showToast(
