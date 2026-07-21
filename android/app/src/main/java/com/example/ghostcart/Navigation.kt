@@ -166,16 +166,18 @@ fun MainNavigation(
     // opened the app (the local WorkManager notification already fired, but
     // people miss/dismiss notifications) - surfaces the same Cooldowns
     // resolve prompt proactively instead of waiting for it to be noticed.
-    // Only fires once per process, and only on a plain app open (not when a
-    // notification/share/deep link already routed the user somewhere else).
+    // Only fires once per process, and only once Home has actually been
+    // reached (never while still on Splash - it must not race the splash
+    // screen or preempt reaching Home at all, since first-open notification
+    // permission is requested from Home and would otherwise never fire).
     var expiredCooldownPromptShown by remember { mutableStateOf(false) }
-    LaunchedEffect(state.almostBuys) {
+    LaunchedEffect(current, state.almostBuys) {
         if (expiredCooldownPromptShown || initialCooldownId != null) return@LaunchedEffect
         val now = System.currentTimeMillis()
         val hasExpiredCooldown = state.almostBuys.any {
             it.status == AlmostBuyStatus.COOLING && it.coolingUntilMillis <= now
         }
-        if (hasExpiredCooldown && backStack.lastOrNull() in setOf(Splash, Home)) {
+        if (hasExpiredCooldown && current == Home) {
             expiredCooldownPromptShown = true
             backStack.add(Cooldowns)
         }

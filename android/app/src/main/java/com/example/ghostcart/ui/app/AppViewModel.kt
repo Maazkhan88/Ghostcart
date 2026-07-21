@@ -17,6 +17,7 @@ import com.example.ghostcart.data.AlmostBuyRepository
 import com.example.ghostcart.data.AlmostBuyResolution
 import com.example.ghostcart.data.AlmostBuySync
 import com.example.ghostcart.data.Analytics
+import com.example.ghostcart.data.AuthRepository
 import com.example.ghostcart.data.CommunityProfileRepository
 import com.example.ghostcart.data.ContentBlockItem
 import com.example.ghostcart.data.LeaderboardEntry
@@ -116,7 +117,20 @@ internal fun deliveryStepAt(nowMillis: Long, placedAtMillis: Long, intervalMinut
 class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val sharedPrefs = application.getSharedPreferences("ghost_cart_prefs", Context.MODE_PRIVATE)
     private val almostBuyRepository: AlmostBuyRepository = LocalAlmostBuyRepository(application)
-    
+
+    init {
+        // Self-heal a stale sign-in: accounts that signed in before the
+        // auth-token fix (or whose session simply expired) have an
+        // auth_email remembered locally with no real token behind it - every
+        // authenticated call (profile, avatar, leaderboard opt-in) would
+        // silently fail with "Not signed in" while the app still claims to
+        // be signed in. Clearing both here forces a real re-sign-in, which
+        // now correctly saves a token.
+        if (sharedPrefs.getString("auth_email", null) != null && AuthRepository.getToken(application) == null) {
+            sharedPrefs.edit().remove("auth_email").apply()
+        }
+    }
+
     private val _uiState = MutableStateFlow(AppUiState(
         authEmail = sharedPrefs.getString("auth_email", null),
         walletConfig = loadWalletConfig(),
