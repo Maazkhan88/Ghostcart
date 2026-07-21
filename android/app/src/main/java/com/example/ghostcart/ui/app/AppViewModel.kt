@@ -15,6 +15,7 @@ import com.example.ghostcart.data.AlmostBuy
 import com.example.ghostcart.data.AlmostBuyDraft
 import com.example.ghostcart.data.AlmostBuyRepository
 import com.example.ghostcart.data.AlmostBuyResolution
+import com.example.ghostcart.data.AlmostBuySync
 import com.example.ghostcart.data.Analytics
 import com.example.ghostcart.data.CommunityProfileRepository
 import com.example.ghostcart.data.ContentBlockItem
@@ -41,6 +42,7 @@ import com.example.ghostcart.data.SimulationConsentStatus
 import com.example.ghostcart.data.ProductImportRepository
 import com.example.ghostcart.data.ProductImportState
 import com.example.ghostcart.data.fetchSharedGhostItem
+import com.example.ghostcart.data.registerCurrentFcmToken
 import com.example.ghostcart.data.ShareQueueItem
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -156,6 +158,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
         refreshSimulationConsentStatus()
         refreshInAppMessages()
+        if (_uiState.value.authEmail != null) {
+            viewModelScope.launch { registerCurrentFcmToken(getApplication()) }
+        }
     }
 
     private fun refreshSimulationConsentStatus() {
@@ -931,6 +936,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         showToast("Signed in as $email")
         Analytics.logSignIn(getApplication(), "app")
         refreshProfile()
+        viewModelScope.launch { registerCurrentFcmToken(getApplication()) }
     }
 
     fun signOut() {
@@ -969,6 +975,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             }
             showToast("${item.name} is cooling")
             onCreated(item)
+            // Best-effort: mirrors this cooldown to the backend so the server-side
+            // sweep can push a notification when it expires. No-ops silently when
+            // signed out; the local cooldown/notification already work either way.
+            val context = getApplication<Application>()
+            launch {
+                AlmostBuySync.syncCreate(context, item)?.let { serverId ->
+                    almostBuyRepository.attachServerId(item.id, serverId)
+                }
+            }
         }
     }
 
@@ -978,6 +993,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             Analytics.logCooldownResolved(getApplication(), resolution.name.lowercase())
             WorkManager.getInstance(getApplication<Application>())
                 .cancelUniqueWork("ghost_cooling_${item.id}")
+            item.serverId?.let { serverId ->
+                launch { AlmostBuySync.syncResolve(getApplication(), serverId, resolution) }
+            }
             showToast(
                 if (resolution == AlmostBuyResolution.SKIPPED) {
                     "Confirmed as money kept"

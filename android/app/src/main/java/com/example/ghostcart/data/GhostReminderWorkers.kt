@@ -95,7 +95,7 @@ private fun preferenceEnabled(context: Context, key: String, default: Boolean): 
     context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         .getBoolean(key, default)
 
-private object GhostNotificationPublisher {
+object GhostNotificationPublisher {
     fun show(
         context: Context,
         channelId: String,

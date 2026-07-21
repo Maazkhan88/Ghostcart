@@ -16,8 +16,8 @@ android {
         applicationId = "com.ghostcart.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 56
-        versionName = "2.7.27"
+        versionCode = 57
+        versionName = "2.7.28"
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
     }
 
@@ -102,4 +102,5 @@ dependencies {
   // see ApiConfig.kt-adjacent conventions in this repo for why it's committed)
   implementation(platform(libs.firebase.bom))
   implementation(libs.firebase.analytics)
+  implementation(libs.firebase.messaging)
 }

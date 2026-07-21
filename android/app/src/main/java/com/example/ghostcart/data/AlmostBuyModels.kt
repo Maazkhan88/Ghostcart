@@ -41,7 +41,8 @@ data class AlmostBuy(
     val sourceUrl: String? = null,
     val imageUrl: String? = null,
     val sourceKind: String = "manual",
-    val sharedAnonymously: Boolean = false
+    val sharedAnonymously: Boolean = false,
+    val serverId: String? = null
 )
 
 enum class AlmostBuyStatus {
@@ -95,6 +96,7 @@ interface AlmostBuyRepository {
     suspend fun resolve(id: String, resolution: AlmostBuyResolution): AlmostBuy?
     suspend fun extendCooling(id: String, durationMillis: Long): AlmostBuy?
     suspend fun clearAll()
+    suspend fun attachServerId(id: String, serverId: String)
 }
 
 class LocalAlmostBuyRepository(context: Context) : AlmostBuyRepository {
@@ -157,6 +159,11 @@ coolingUntilMillis = now + draft.coolingDurationMillis.coerceAtLeast(60_000L),
         update(emptyList())
     }
 
+    override suspend fun attachServerId(id: String, serverId: String) {
+        val next = state.value.map { item -> if (item.id == id) item.copy(serverId = serverId) else item }
+        update(next)
+    }
+
     private fun update(items: List<AlmostBuy>) {
         state.value = items
         val array = JSONArray()
@@ -175,6 +182,7 @@ item.resolvedAtMillis?.let { put("resolvedAtMillis", it) }
                 item.imageUrl?.let { put("imageUrl", it) }
                 put("sourceKind", item.sourceKind)
                 put("sharedAnonymously", item.sharedAnonymously)
+                item.serverId?.let { put("serverId", it) }
             })
         }
         preferences.edit().putString(ITEMS_KEY, array.toString()).apply()
@@ -200,7 +208,8 @@ resolvedAtMillis = value.optLong("resolvedAtMillis").takeIf { value.has("resolve
                         sourceUrl = value.optString("sourceUrl").takeIf { it.isNotBlank() },
                         imageUrl = value.optString("imageUrl").takeIf { it.isNotBlank() },
                         sourceKind = value.optString("sourceKind", "manual"),
-                        sharedAnonymously = value.optBoolean("sharedAnonymously", false)
+                        sharedAnonymously = value.optBoolean("sharedAnonymously", false),
+                        serverId = value.optString("serverId").takeIf { it.isNotBlank() }
                     )
                 )
             }
