@@ -98,7 +98,8 @@ data class ContentBlockItem(
     val id: Int,
     val type: String,
     val imageUrl: String,
-    val sortOrder: Int
+    val sortOrder: Int,
+    val mediaType: String = "image"
 )
 
 sealed interface ProductImportState {
@@ -411,7 +412,8 @@ object ProductImportRepository {
                             id = item.getInt("id"),
                             type = type,
                             imageUrl = "${ApiConfig.BASE_URL}/api/content-blocks/image/$key",
-                            sortOrder = item.optInt("sortOrder", 0)
+                            sortOrder = item.optInt("sortOrder", 0),
+                            mediaType = item.optString("mediaType", "image")
                         )
                     )
                 }

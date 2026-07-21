@@ -1,5 +1,8 @@
 package com.example.ghostcart
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -27,6 +31,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
@@ -34,6 +39,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -45,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -55,7 +62,10 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
+import coil3.compose.AsyncImage
 import com.example.ghostcart.data.AlmostBuyResolution
+import com.example.ghostcart.data.AlmostBuyStatus
+import com.example.ghostcart.data.ContentBlockItem
 import com.example.ghostcart.data.Marketplace
 import com.example.ghostcart.data.openProductSource
 import com.example.ghostcart.data.shareGhostItem
@@ -152,6 +162,25 @@ fun MainNavigation(
         }
     }
 
+    // In-app nudge for a cooldown that already expired before the user
+    // opened the app (the local WorkManager notification already fired, but
+    // people miss/dismiss notifications) - surfaces the same Cooldowns
+    // resolve prompt proactively instead of waiting for it to be noticed.
+    // Only fires once per process, and only on a plain app open (not when a
+    // notification/share/deep link already routed the user somewhere else).
+    var expiredCooldownPromptShown by remember { mutableStateOf(false) }
+    LaunchedEffect(state.almostBuys) {
+        if (expiredCooldownPromptShown || initialCooldownId != null) return@LaunchedEffect
+        val now = System.currentTimeMillis()
+        val hasExpiredCooldown = state.almostBuys.any {
+            it.status == AlmostBuyStatus.COOLING && it.coolingUntilMillis <= now
+        }
+        if (hasExpiredCooldown && backStack.lastOrNull() in setOf(Splash, Home)) {
+            expiredCooldownPromptShown = true
+            backStack.add(Cooldowns)
+        }
+    }
+
     LaunchedEffect(sharedRequestKey) {
         if (initialSharedUrl != null) {
             appViewModel.importSharedProduct(initialSharedUrl, initialSharedTitle, initialSharedImageUrl)
@@ -219,12 +248,13 @@ fun MainNavigation(
                 onBack = { backStack.removeLastOrNull() },
                 entryProvider = entryProvider {
                     entry<Splash> {
-                        LaunchedEffect(state.authEmail) {
-                            delay(1_200)
-                            backStack.clear()
-                            backStack.add(if (state.authEmail == null) Auth else Home)
-                        }
-                        SplashContent()
+                        RandomStorySplashScreen(
+                            stories = state.ghostCartStories,
+                            onFinished = {
+                                backStack.clear()
+                                backStack.add(if (state.authEmail == null) Auth else Home)
+                            }
+                        )
                     }
                     entry<Auth> {
                         AuthScreen(
@@ -611,6 +641,73 @@ private fun SplashContent() {
             GhostCartWordmark(modifier = Modifier.width(220.dp).height(72.dp), tint = Ink)
             Spacer(Modifier.height(12.dp))
             Text("For everything you almost bought.", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+        }
+    }
+}
+
+private const val SPLASH_SKIP_BUTTON_DELAY_MS = 3_000L
+private const val SPLASH_AUTO_ADVANCE_MS = 5_000L
+private const val SPLASH_FALLBACK_MS = 1_200L
+
+/**
+ * Cold-start splash: picks one random Ghost Cart Story to show full-bleed
+ * (the same admin-managed content the Stories rail uses), with a Skip button
+ * that appears after 3s and an automatic advance at 5s regardless. Falls
+ * back to the plain wordmark splash (old behavior, ~1.2s) if no story is
+ * available yet - stories are fetched async on app start and may not have
+ * arrived by the time this renders, especially on a cold/slow connection.
+ */
+@Composable
+private fun RandomStorySplashScreen(stories: List<ContentBlockItem>, onFinished: () -> Unit) {
+    // Image stories only - autoplaying a video (with audio) on cold start,
+    // on top of the fixed 3s/5s skip timing below, isn't a good splash
+    // experience. Video stories still play in full in the regular viewer.
+    val imageStories = remember(stories) { stories.filter { it.mediaType != "video" } }
+    val story = remember(imageStories.isNotEmpty()) { imageStories.randomOrNull() }
+    var showSkip by remember { mutableStateOf(false) }
+    var finished by remember { mutableStateOf(false) }
+    val finish = {
+        if (!finished) {
+            finished = true
+            onFinished()
+        }
+    }
+
+    if (story == null) {
+        LaunchedEffect(Unit) {
+            delay(SPLASH_FALLBACK_MS)
+            finish()
+        }
+        SplashContent()
+        return
+    }
+
+    LaunchedEffect(story) {
+        delay(SPLASH_SKIP_BUTTON_DELAY_MS)
+        showSkip = true
+        delay(SPLASH_AUTO_ADVANCE_MS - SPLASH_SKIP_BUTTON_DELAY_MS)
+        finish()
+    }
+
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+        AsyncImage(
+            model = story.imageUrl,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+        AnimatedVisibility(
+            visible = showSkip,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(24.dp).navigationBarsPadding(),
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            TextButton(
+                onClick = { finish() },
+                colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
+            ) {
+                Text("Skip", fontWeight = FontWeight.Bold)
+            }
         }
     }
 }

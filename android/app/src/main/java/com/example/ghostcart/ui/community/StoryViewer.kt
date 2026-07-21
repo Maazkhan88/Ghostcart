@@ -35,6 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -53,6 +54,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
 import com.example.ghostcart.data.Analytics
 import com.example.ghostcart.data.ContentBlockItem
@@ -75,9 +82,9 @@ private const val DISMISS_SWIPE_THRESHOLD_PX = 140f
  * once it ends; a second finger touching down mid-gesture switches it to
  * pinch-zoom.
  *
- * Video isn't supported - the backend's content-blocks upload pipeline
- * (lib/image-processing.ts) only accepts PNG/JPEG today, so every
- * [ContentBlockItem] is an image; there's no video content anywhere to play.
+ * A video story ([ContentBlockItem.mediaType] == "video") plays in full via
+ * ExoPlayer instead of the fixed 7s image timer - it advances to the next
+ * story when playback actually ends, not on a clock.
  *
  * Like is a local, per-session toggle only - there's no backend concept of
  * liking a content block yet, so nothing is persisted or counted server-side.
@@ -104,6 +111,22 @@ fun StoryViewer(
     val animatedOffsetX by animateFloatAsState(offsetX, animationSpec = tween(220), label = "storyOffsetX")
     val animatedOffsetY by animateFloatAsState(offsetY, animationSpec = tween(220), label = "storyOffsetY")
 
+    val currentStory = stories[index]
+    val exoPlayer = remember(index) {
+        if (currentStory.mediaType == "video") {
+            ExoPlayer.Builder(context).build().apply {
+                setMediaItem(MediaItem.fromUri(currentStory.imageUrl))
+                prepare()
+            }
+        } else null
+    }
+    DisposableEffect(exoPlayer) {
+        onDispose { exoPlayer?.release() }
+    }
+    LaunchedEffect(paused, exoPlayer) {
+        exoPlayer?.playWhenReady = !paused
+    }
+
     fun resetZoom() {
         scale = 1f
         offsetX = 0f
@@ -121,8 +144,22 @@ fun StoryViewer(
         Analytics.logStoryViewed(context, index)
     }
 
-    LaunchedEffect(index, paused, showActions) {
+    LaunchedEffect(index, paused, showActions, exoPlayer) {
         if (paused || showActions) return@LaunchedEffect
+        if (exoPlayer != null) {
+            while (true) {
+                delay(100L)
+                val duration = exoPlayer.duration
+                if (duration > 0) {
+                    progress = (exoPlayer.currentPosition.toFloat() / duration).coerceIn(0f, 1f)
+                }
+                if (exoPlayer.playbackState == Player.STATE_ENDED) {
+                    goNext()
+                    break
+                }
+            }
+            return@LaunchedEffect
+        }
         val tickMs = 16L
         while (progress < 1f) {
             delay(tickMs)
@@ -136,7 +173,7 @@ fun StoryViewer(
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        val story = stories[index]
+        val story = currentStory
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -199,19 +236,39 @@ fun StoryViewer(
                     }
                 }
         ) {
-            AsyncImage(
-                model = story.imageUrl,
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer(
-                        scaleX = animatedScale,
-                        scaleY = animatedScale,
-                        translationX = animatedOffsetX,
-                        translationY = animatedOffsetY
-                    )
-            )
+            if (exoPlayer != null) {
+                AndroidView(
+                    factory = { viewContext ->
+                        PlayerView(viewContext).apply {
+                            player = exoPlayer
+                            useController = false
+                            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer(
+                            scaleX = animatedScale,
+                            scaleY = animatedScale,
+                            translationX = animatedOffsetX,
+                            translationY = animatedOffsetY
+                        )
+                )
+            } else {
+                AsyncImage(
+                    model = story.imageUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer(
+                            scaleX = animatedScale,
+                            scaleY = animatedScale,
+                            translationX = animatedOffsetX,
+                            translationY = animatedOffsetY
+                        )
+                )
+            }
         }
 
         Row(

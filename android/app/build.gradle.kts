@@ -16,8 +16,8 @@ android {
         applicationId = "com.ghostcart.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 57
-        versionName = "2.7.28"
+        versionCode = 58
+        versionName = "2.7.29"
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
     }
 
@@ -103,4 +103,9 @@ dependencies {
   implementation(platform(libs.firebase.bom))
   implementation(libs.firebase.analytics)
   implementation(libs.firebase.messaging)
+
+  // Video playback for Ghost Cart Stories (admin can now upload MP4s, not
+  // just images)
+  implementation(libs.media3.exoplayer)
+  implementation(libs.media3.ui)
 }
