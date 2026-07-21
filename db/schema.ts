@@ -214,6 +214,7 @@ export const almostBuys = sqliteTable(
     coolOffUntil: text("cool_off_until"),
     snoozedUntil: text("snoozed_until"),
     resolvedAt: text("resolved_at"),
+    pushSentAt: text("push_sent_at"),
     capturedAt: text("captured_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     version: integer("version").notNull().default(1),
@@ -237,6 +238,11 @@ export const almostBuys = sqliteTable(
       table.updatedAt,
     ),
     index("almost_buys_user_cooling_idx").on(table.userId, table.coolOffUntil),
+    index("almost_buys_state_cool_off_push_idx").on(
+      table.state,
+      table.coolOffUntil,
+      table.pushSentAt,
+    ),
   ],
 );
 
@@ -492,3 +498,24 @@ export const waitlistSignups = sqliteTable("waitlist_signups", {
   email: text("email").notNull().unique(),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
+
+// FCM registration tokens for signed-in users. A push can only be sent to an
+// account that's both signed in and has registered a token from this device;
+// anonymous/offline almost-buys are never pushed to.
+export const deviceTokens = sqliteTable(
+  "device_tokens",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
+    platform: text("platform").notNull().default("android"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    check("device_tokens_platform_check", sql`${table.platform} IN ('android', 'ios')`),
+    index("device_tokens_user_idx").on(table.userId),
+  ],
+);

@@ -99,6 +99,13 @@
       "when": 1784654756988,
       "tag": "0013_flawless_vision",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1784656449303,
+      "tag": "0014_rare_talon",
+      "breakpoints": true
     }
   ]
 }

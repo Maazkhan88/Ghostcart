@@ -52,5 +52,13 @@
       "binding": "CONTENT_MEDIA",
       "bucket_name": "ghostcart-content-media"
     }
-  ]
+  ],
+  // Sweeps expired cooldowns and sends the FCM push (see
+  // lib/cooldown-push-sweep.ts / worker/index.ts `scheduled`). Every 5
+  // minutes balances promptness against D1/FCM load - a cooldown can sit
+  // resolved-but-unpushed for up to ~5 minutes, which is fine for this use
+  // case (nobody needs sub-minute precision on "you can decide now").
+  "triggers": {
+    "crons": ["*/5 * * * *"]
+  }
 }

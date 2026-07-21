@@ -1,10 +1,12 @@
 /** Cloudflare Worker entry point for the vinext-starter template. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
+import { sweepExpiredCooldowns } from "../lib/cooldown-push-sweep";
 
 interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
+  FCM_SERVICE_ACCOUNT_JSON?: string;
   IMAGES: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {
@@ -41,6 +43,14 @@ const worker = {
     }
 
     return handler.fetch(request, env, ctx);
+  },
+
+  async scheduled(_event: unknown, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(
+      sweepExpiredCooldowns(env.DB, env.FCM_SERVICE_ACCOUNT_JSON).then((result) => {
+        console.log(`cooldown push sweep: ${JSON.stringify(result)}`);
+      }),
+    );
   },
 };
 
