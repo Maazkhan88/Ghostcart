@@ -132,6 +132,10 @@ fun MainNavigation(
     val current = backStack.lastOrNull()
     val showBottomNav = current != null && current !in onboardingDestinations
     var dismissedOrderId by remember { mutableStateOf<String?>(null) }
+    // Full-screen story viewer overlay state - lives here (not inside
+    // GhostHomeScreen) so it renders above the bottom nav/Scaffold entirely,
+    // matching how a real Stories viewer covers the whole screen.
+    var openStoryIndex by remember { mutableStateOf<Int?>(null) }
     val showDeliveryBanner = current != FakeDeliveryTracking &&
         state.deliveryStep in 0..3 &&
         state.lastOrderId.isNotBlank() &&
@@ -301,7 +305,8 @@ fun MainNavigation(
                             },
                             homeBanners = state.homeBanners,
                             ghostCartStories = state.ghostCartStories,
-                            onOpenLeaderboard = { backStack.add(Leaderboard) }
+                            onOpenLeaderboard = { backStack.add(Leaderboard) },
+                            onOpenStory = { index -> openStoryIndex = index }
                         )
                     }
                     entry<CategoryBrowse> { key ->
@@ -523,9 +528,6 @@ fun MainNavigation(
                             onToggleDinner = {
                                 appViewModel.updateWalletConfig { it.copy(dinnerReminderEnabled = !it.dinnerReminderEnabled) }
                             },
-                            onDebugTestReminder = { meal, hourOfDay ->
-                                appViewModel.scheduleDailyGhostReminderForDebugVerification(meal, hourOfDay)
-                            },
                             onOpenLegal = { docId -> backStack.add(LegalDocument(docId)) },
                             onDeleteAccount = {
                                 appViewModel.deleteAccountAndLocalData()
@@ -584,6 +586,14 @@ fun MainNavigation(
                 message = message,
                 onDismiss = { appViewModel.dismissInAppMessage(message.id) },
                 onOpenLink = { url -> openProductSource(context, url) }
+            )
+        }
+
+        openStoryIndex?.let { index ->
+            com.example.ghostcart.ui.community.StoryViewer(
+                stories = state.ghostCartStories,
+                startIndex = index,
+                onClose = { openStoryIndex = null }
             )
         }
     }

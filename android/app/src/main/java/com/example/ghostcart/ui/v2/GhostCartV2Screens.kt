@@ -145,6 +145,7 @@ fun GhostHomeScreen(
     homeBanners: List<com.example.ghostcart.data.ContentBlockItem> = emptyList(),
     ghostCartStories: List<com.example.ghostcart.data.ContentBlockItem> = emptyList(),
     onOpenLeaderboard: () -> Unit = {},
+    onOpenStory: (Int) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val summary = items.progressSummary()
@@ -190,7 +191,7 @@ fun GhostHomeScreen(
             )
         }
 
-        item { GhostCartStoriesSection(stories = ghostCartStories) }
+        item { GhostCartStoriesSection(stories = ghostCartStories, onOpenStory = onOpenStory) }
 
         item { CommunityLeaderboardBanner(onClick = onOpenLeaderboard) }
 
@@ -946,7 +947,7 @@ private fun ProfileCommunitySection(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
-            .background(Color.White)
+            .background(Paper)
             .border(1.dp, FaintBorder, RoundedCornerShape(18.dp))
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -982,11 +983,13 @@ private fun ProfileCommunitySection(
             onValueChange = { displayName = it },
             label = { Text("Display name") },
             singleLine = true,
+            colors = ghostTextFieldColors(),
             modifier = Modifier.fillMaxWidth()
         )
-        androidx.compose.material3.TextButton(
+        TextButton(
             onClick = { onSaveDisplayName(displayName) },
-            enabled = !saving && displayName != (profile?.displayName ?: "")
+            enabled = !saving && displayName != (profile?.displayName ?: ""),
+            colors = ButtonDefaults.textButtonColors(contentColor = GhostGreen, disabledContentColor = MutedText)
         ) { Text(if (saving) "Saving…" else "Save name") }
 
         HorizontalDivider(color = FaintBorder)
@@ -1003,10 +1006,11 @@ private fun ProfileCommunitySection(
                 Column(modifier = Modifier.weight(1f)) {
                     Text("You're on the leaderboard as @${profile.username}", color = Ink, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
-                androidx.compose.material3.TextButton(onClick = onOpenLeaderboard) { Text("View") }
-                androidx.compose.material3.TextButton(
+                TextButton(onClick = onOpenLeaderboard, colors = ButtonDefaults.textButtonColors(contentColor = GhostGreen)) { Text("View") }
+                TextButton(
                     onClick = { onSetCommunityOptIn(null, false) },
-                    enabled = !saving
+                    enabled = !saving,
+                    colors = ButtonDefaults.textButtonColors(contentColor = DangerRed, disabledContentColor = MutedText)
                 ) { Text("Opt out") }
             }
         } else {
@@ -1016,11 +1020,13 @@ private fun ProfileCommunitySection(
                 label = { Text("Username") },
                 placeholder = { Text("e.g. ghost_saver_22") },
                 singleLine = true,
+                colors = ghostTextFieldColors(),
                 modifier = Modifier.fillMaxWidth()
             )
-            androidx.compose.material3.TextButton(
+            TextButton(
                 onClick = { onSetCommunityOptIn(usernameDraft.trim(), true) },
-                enabled = !saving && usernameDraft.trim().length >= 3
+                enabled = !saving && usernameDraft.trim().length >= 3,
+                colors = ButtonDefaults.textButtonColors(contentColor = GhostGreen, disabledContentColor = MutedText)
             ) { Text(if (saving) "Saving…" else "Join the leaderboard") }
         }
 
@@ -1039,7 +1045,6 @@ fun ProfileScreen(
     onToggleCooling: () -> Unit,
     onToggleLunch: () -> Unit,
     onToggleDinner: () -> Unit,
-    onDebugTestReminder: (meal: String, hourOfDay: Int) -> Unit = { _, _ -> },
     onOpenLegal: (docId: String) -> Unit = {},
     onDeleteAccount: () -> Unit,
     onSignOut: () -> Unit,
@@ -1126,24 +1131,6 @@ fun ProfileScreen(
                     onToggleDinner()
                 }
             )
-        }
-        if (BuildConfig.DEBUG) {
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = {
-                        requestNotifications()
-                        onDebugTestReminder("lunch", 13)
-                    }) {
-                        Text("Test lunch reminder (~90s)", fontSize = 11.sp)
-                    }
-                    OutlinedButton(onClick = {
-                        requestNotifications()
-                        onDebugTestReminder("dinner", 20)
-                    }) {
-                        Text("Test dinner reminder (~90s)", fontSize = 11.sp)
-                    }
-                }
-            }
         }
         item { SectionHeader("Legal") }
         item {

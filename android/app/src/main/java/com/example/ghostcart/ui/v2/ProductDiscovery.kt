@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -362,13 +363,14 @@ private val GHOST_CART_STORY_DRAWABLES = listOf(
 @Composable
 fun GhostCartStoriesSection(
     stories: List<com.example.ghostcart.data.ContentBlockItem> = emptyList(),
+    onOpenStory: (Int) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Ghost Cart Stories", color = Ink, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             if (stories.isNotEmpty()) {
-                items(stories) { story ->
+                itemsIndexed(stories) { index, story ->
                     Box(
                         modifier = Modifier
                             .width(188.dp)
@@ -376,6 +378,7 @@ fun GhostCartStoriesSection(
                             .clip(RoundedCornerShape(20.dp))
                             .background(Paper)
                             .border(1.dp, FaintBorder, RoundedCornerShape(20.dp))
+                            .clickable { onOpenStory(index) }
                     ) {
                         coil3.compose.AsyncImage(
                             model = story.imageUrl,

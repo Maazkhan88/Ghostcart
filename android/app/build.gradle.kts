@@ -15,8 +15,8 @@ android {
         applicationId = "com.ghostcart.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 53
-        versionName = "2.7.24"
+        versionCode = 54
+        versionName = "2.7.25"
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
     }
 
