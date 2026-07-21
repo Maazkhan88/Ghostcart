@@ -1,4 +1,5 @@
 import { Brand } from "./components/Brand";
+import { DirhamAmount } from "./components/DirhamAmount";
 import { GhostFlowDemo } from "./components/GhostFlowDemo";
 import { RevealObserver } from "./components/RevealObserver";
 import { SiteNav } from "./components/SiteNav";
@@ -63,8 +64,8 @@ export default function Home() {
             </div>
             <div className="gc-phone-progress"><span style={{ width: "62%" }} /></div>
             <div className="gc-phone-truth">
-              <div><span>Almost spent</span><strong>549</strong></div>
-              <div><span>Money Kept</span><strong>0</strong></div>
+              <div><span>Almost spent</span><strong><DirhamAmount amount="549" /></strong></div>
+              <div><span>Money Kept</span><strong><DirhamAmount amount="0" /></strong></div>
             </div>
             <span className="gc-phone-button">Resolve when ready</span>
             <small>Sample screen · no purchase made</small>
@@ -151,9 +152,9 @@ export default function Home() {
         <div className="gc-progress-editorial">
           <div className="gc-progress-ledger" data-gc-reveal>
             <div className="gc-progress-ledger-head"><span>Sample progress</span><strong>THIS WEEK</strong></div>
-            <article><span className="gc-progress-index">01</span><div><p>Almost spent</p><strong>1,388</strong></div><small>All captured value</small></article>
-            <article><span className="gc-progress-index">02</span><div><p>Cooling now</p><strong>549</strong></div><small>Not yet resolved</small></article>
-            <article className="is-kept"><span className="gc-progress-index">03</span><div><p>Confirmed Money Kept</p><strong>839</strong></div><small>Explicitly skipped</small></article>
+            <article><span className="gc-progress-index">01</span><div><p>Almost spent</p><strong><DirhamAmount amount="1,388" /></strong></div><small>All captured value</small></article>
+            <article><span className="gc-progress-index">02</span><div><p>Cooling now</p><strong><DirhamAmount amount="549" /></strong></div><small>Not yet resolved</small></article>
+            <article className="is-kept"><span className="gc-progress-index">03</span><div><p>Confirmed Money Kept</p><strong><DirhamAmount amount="839" /></strong></div><small>Explicitly skipped</small></article>
             <p>Sample data · not a user claim</p>
           </div>
 
