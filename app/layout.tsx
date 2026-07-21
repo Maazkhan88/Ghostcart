@@ -1,8 +1,12 @@
 import { env } from "cloudflare:workers";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { GoogleAnalytics } from "./components/GoogleAnalytics";
 import "./globals.css";
 import "./site.css";
+
+export const viewport: Viewport = {
+  colorScheme: "dark",
+};
 
 export const metadata: Metadata = {
   title: "Ghost Cart — Before you buy it, Ghost it.",
