@@ -73,6 +73,22 @@ export default function Home() {
         </div>
       </section>
 
+      <section id="download" className="gc-download" aria-labelledby="download-title">
+        <div className="gc-download-card" data-gc-reveal>
+          <img src="/brand/ghost-cart-icon.png" alt="" />
+          <div>
+            <p className="gc-kicker gc-kicker-dark">Try it for real, right now</p>
+            <h2 id="download-title">Download the<br /><em>Android beta.</em></h2>
+            <p>
+              A real, working build — not a mockup. Direct-install APK, updated regularly, Android
+              only for now (not on the Play Store yet). Your phone may ask you to allow installs
+              from this source the first time.
+            </p>
+            <a className="gc-button gc-button-green" href="/download/android">Download for Android</a>
+          </div>
+        </div>
+      </section>
+
       <section id="how-it-works" className="gc-flow-section gc-section-light" aria-labelledby="how-title">
         <header className="gc-section-heading gc-flow-heading-copy" data-gc-reveal>
           <div><p className="gc-kicker gc-kicker-dark">A better interruption</p><h2 id="how-title">One ritual.<br /><em>Five honest moments.</em></h2></div>
@@ -207,7 +223,7 @@ export default function Home() {
         <div className="gc-footer-top"><Brand light /><p>Capture it. Cool it. Decide.<br /><span>Count only what you kept.</span></p><a href="#top">Back to top ↑</a></div>
         <div className="gc-footer-links">
           <div><span>Explore</span><a href="#how-it-works">How it works</a><a href="#try-it">Try it</a><a href="#progress">Progress</a></div>
-          <div><span>Product</span><a href="#faq">FAQ</a><a href="#waitlist">Join waitlist</a><a href="/admin">Catalog admin</a></div>
+          <div><span>Product</span><a href="#download">Download beta</a><a href="#faq">FAQ</a><a href="#waitlist">Join waitlist</a><a href="/admin">Catalog admin</a></div>
           <div><span>Contact</span><a href="mailto:info@theghostcart.com">info@theghostcart.com</a></div>
           <div><span>Follow</span><a href="#waitlist">Instagram · coming soon</a><a href="#waitlist">TikTok · coming soon</a><a href="#waitlist">LinkedIn · coming soon</a></div>
         </div>
