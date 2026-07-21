@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { trackEvent } from "./GoogleAnalytics";
 
 export function WaitlistForm() {
   const [status, setStatus] = useState<"idle" | "success">("idle");
@@ -11,6 +12,7 @@ export function WaitlistForm() {
     const email = String(data.get("email") ?? "").trim();
     if (!email) return;
     window.localStorage.setItem("ghost-cart-waitlist-preview", email);
+    trackEvent("waitlist_submitted");
     setStatus("success");
   }
 

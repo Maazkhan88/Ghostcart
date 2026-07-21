@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Brand } from "./Brand";
+import { trackEvent } from "./GoogleAnalytics";
 
 const LINKS = [
   ["How it works", "#how-it-works"],
@@ -30,7 +31,13 @@ export function SiteNav() {
         <div className="gc-nav-links">
           {LINKS.map(([label, href]) => <a key={href} href={href}>{label}</a>)}
         </div>
-        <a className="gc-button gc-button-small gc-button-paper gc-nav-cta" href={DOWNLOAD_HREF}>Download beta</a>
+        <a
+          className="gc-button gc-button-small gc-button-paper gc-nav-cta"
+          href={DOWNLOAD_HREF}
+          onClick={() => trackEvent("download_clicked", { placement: "nav" })}
+        >
+          Download beta
+        </a>
         <button
           type="button"
           className="gc-menu-button"
@@ -46,7 +53,13 @@ export function SiteNav() {
         {LINKS.map(([label, href]) => (
           <a key={href} href={href} onClick={() => setOpen(false)}>{label}</a>
         ))}
-        <a className="gc-button gc-button-green" href={DOWNLOAD_HREF} onClick={() => setOpen(false)}>Download beta</a>
+        <a
+          className="gc-button gc-button-green"
+          href={DOWNLOAD_HREF}
+          onClick={() => { trackEvent("download_clicked", { placement: "mobile_menu" }); setOpen(false); }}
+        >
+          Download beta
+        </a>
       </div>
     </header>
   );

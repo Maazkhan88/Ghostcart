@@ -2,6 +2,7 @@ import { Brand } from "./components/Brand";
 import { GhostFlowDemo } from "./components/GhostFlowDemo";
 import { RevealObserver } from "./components/RevealObserver";
 import { SiteNav } from "./components/SiteNav";
+import { TrackedLink } from "./components/TrackedLink";
 import { WaitlistForm } from "./components/WaitlistForm";
 
 const FLOW_STEPS = [
@@ -84,7 +85,14 @@ export default function Home() {
               only for now (not on the Play Store yet). Your phone may ask you to allow installs
               from this source the first time.
             </p>
-            <a className="gc-button gc-button-green" href="/download/android">Download for Android</a>
+            <TrackedLink
+              className="gc-button gc-button-green"
+              href="/download/android"
+              event="download_clicked"
+              params={{ placement: "download_section" }}
+            >
+              Download for Android
+            </TrackedLink>
           </div>
         </div>
       </section>
