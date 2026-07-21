@@ -35,3 +35,4 @@ import kotlinx.serialization.Serializable
 @Serializable data object Trends : NavKey
 @Serializable data object GhostCardSettings : NavKey
 @Serializable data class LegalDocument(val docId: String) : NavKey
+@Serializable data object Leaderboard : NavKey

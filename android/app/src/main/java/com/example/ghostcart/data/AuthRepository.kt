@@ -1,5 +1,6 @@
 package com.example.ghostcart.data
 
+import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -7,7 +8,27 @@ import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
 
+private const val AUTH_PREFS_NAME = "ghost_cart_prefs"
+private const val AUTH_TOKEN_KEY = "auth_token"
+
 object AuthRepository {
+    // The backend session token was previously fetched on every sign-in and
+    // then discarded - the app never sent an Authorization header for
+    // anything. Persisted here (same SharedPreferences file the rest of the
+    // app already uses for simple flags) so authenticated-only endpoints
+    // (profile, avatar, leaderboard opt-in) actually work.
+    fun saveToken(context: Context, token: String) {
+        context.getSharedPreferences(AUTH_PREFS_NAME, Context.MODE_PRIVATE)
+            .edit().putString(AUTH_TOKEN_KEY, token).apply()
+    }
+
+    fun getToken(context: Context): String? =
+        context.getSharedPreferences(AUTH_PREFS_NAME, Context.MODE_PRIVATE).getString(AUTH_TOKEN_KEY, null)
+
+    fun clearToken(context: Context) {
+        context.getSharedPreferences(AUTH_PREFS_NAME, Context.MODE_PRIVATE).edit().remove(AUTH_TOKEN_KEY).apply()
+    }
+
     suspend fun signUp(email: String, password: String): Result<String> = withContext(Dispatchers.IO) {
         try {
             val url = URL("${ApiConfig.BASE_URL}/api/auth/signup")

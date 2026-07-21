@@ -15,7 +15,10 @@ import com.example.ghostcart.data.AlmostBuy
 import com.example.ghostcart.data.AlmostBuyDraft
 import com.example.ghostcart.data.AlmostBuyRepository
 import com.example.ghostcart.data.AlmostBuyResolution
+import com.example.ghostcart.data.CommunityProfileRepository
 import com.example.ghostcart.data.ContentBlockItem
+import com.example.ghostcart.data.LeaderboardEntry
+import com.example.ghostcart.data.UserProfile
 import com.example.ghostcart.data.LocalAlmostBuyRepository
 import com.example.ghostcart.data.Marketplace
 import com.example.ghostcart.data.MarketplaceProduct
@@ -87,6 +90,11 @@ data class AppUiState(
     val catalogProducts: List<MarketplaceProduct>? = null,
     val homeBanners: List<ContentBlockItem> = emptyList(),
     val ghostCartStories: List<ContentBlockItem> = emptyList(),
+    val profile: UserProfile? = null,
+    val leaderboard: List<LeaderboardEntry> = emptyList(),
+    val leaderboardLoading: Boolean = false,
+    val profileSaving: Boolean = false,
+    val profileError: String? = null,
     val captureSeed: AlmostBuyDraft? = null,
     val appTheme: String = "System",
     val favoriteProductIds: Set<String> = emptySet(),
@@ -135,6 +143,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         refreshCatalogProducts()
         refreshHomeBanners()
         refreshGhostCartStories()
+        refreshProfile()
+        refreshLeaderboard()
         syncDailyGhostReminder("lunch", 13, _uiState.value.walletConfig.lunchReminderEnabled)
         syncDailyGhostReminder("dinner", 20, _uiState.value.walletConfig.dinnerReminderEnabled)
         if (_uiState.value.deliveryStep in 0..3) beginDeliveryClock()
@@ -352,6 +362,62 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             ProductImportRepository.fetchContentBlocks("story")
                 .onSuccess { stories -> _uiState.update { it.copy(ghostCartStories = stories) } }
+        }
+    }
+
+    fun refreshProfile() {
+        if (_uiState.value.authEmail == null) return
+        viewModelScope.launch {
+            CommunityProfileRepository.fetchProfile(getApplication())
+                .onSuccess { profile -> _uiState.update { it.copy(profile = profile) } }
+        }
+    }
+
+    fun updateDisplayName(name: String) {
+        _uiState.update { it.copy(profileSaving = true, profileError = null) }
+        viewModelScope.launch {
+            CommunityProfileRepository.updateProfile(getApplication(), displayName = name)
+                .onSuccess { profile -> _uiState.update { it.copy(profile = profile, profileSaving = false) } }
+                .onFailure { error ->
+                    _uiState.update { it.copy(profileSaving = false, profileError = error.message ?: "Could not save name.") }
+                }
+        }
+    }
+
+    /** Opting out (consent = false) keeps the username reserved - re-opting in later
+     * keeps the same leaderboard identity rather than forcing a new username. */
+    fun setCommunityLeaderboardOptIn(username: String?, consent: Boolean) {
+        _uiState.update { it.copy(profileSaving = true, profileError = null) }
+        viewModelScope.launch {
+            CommunityProfileRepository.updateProfile(getApplication(), username = username, communityConsent = consent)
+                .onSuccess { profile ->
+                    _uiState.update { it.copy(profile = profile, profileSaving = false) }
+                    if (consent) refreshLeaderboard()
+                }
+                .onFailure { error ->
+                    _uiState.update { it.copy(profileSaving = false, profileError = error.message ?: "Could not update leaderboard settings.") }
+                }
+        }
+    }
+
+    fun uploadAvatar(bytes: ByteArray, mimeType: String) {
+        _uiState.update { it.copy(profileSaving = true, profileError = null) }
+        viewModelScope.launch {
+            CommunityProfileRepository.uploadAvatar(getApplication(), bytes, mimeType)
+                .onSuccess { refreshProfile() }
+                .onFailure { error ->
+                    _uiState.update { it.copy(profileSaving = false, profileError = error.message ?: "Could not upload photo.") }
+                }
+            _uiState.update { it.copy(profileSaving = false) }
+        }
+    }
+
+    fun refreshLeaderboard() {
+        _uiState.update { it.copy(leaderboardLoading = true) }
+        viewModelScope.launch {
+            CommunityProfileRepository.fetchLeaderboard()
+                .onSuccess { entries -> _uiState.update { it.copy(leaderboard = entries, leaderboardLoading = false) } }
+                .onFailure { _uiState.update { it.copy(leaderboardLoading = false) } }
         }
     }
 
@@ -860,11 +926,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         sharedPrefs.edit().putString("auth_email", email).apply()
         _uiState.update { it.copy(authEmail = email) }
         showToast("Signed in as $email")
+        refreshProfile()
     }
 
     fun signOut() {
-        sharedPrefs.edit().remove("auth_email").apply()
-        _uiState.update { it.copy(authEmail = null) }
+        sharedPrefs.edit().remove("auth_email").remove("auth_token").apply()
+        _uiState.update { it.copy(authEmail = null, profile = null) }
         showToast("Signed out successfully")
     }
 

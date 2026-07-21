@@ -300,7 +300,8 @@ fun MainNavigation(
                                 appViewModel.refreshGhostCartStories()
                             },
                             homeBanners = state.homeBanners,
-                            ghostCartStories = state.ghostCartStories
+                            ghostCartStories = state.ghostCartStories,
+                            onOpenLeaderboard = { backStack.add(Leaderboard) }
                         )
                     }
                     entry<CategoryBrowse> { key ->
@@ -535,11 +536,27 @@ fun MainNavigation(
                                 appViewModel.signOut()
                                 backStack.clear()
                                 backStack.add(Splash)
-                            }
+                            },
+                            profile = state.profile,
+                            profileSaving = state.profileSaving,
+                            profileError = state.profileError,
+                            onSaveDisplayName = appViewModel::updateDisplayName,
+                            onUploadAvatar = appViewModel::uploadAvatar,
+                            onSetCommunityOptIn = appViewModel::setCommunityLeaderboardOptIn,
+                            onOpenLeaderboard = { backStack.add(Leaderboard) }
                         )
                     }
                     entry<LegalDocument> { key ->
                         LegalDocumentScreen(docId = key.docId, onBack = { backStack.removeLastOrNull() })
+                    }
+                    entry<Leaderboard> {
+                        LaunchedEffect(Unit) { appViewModel.refreshLeaderboard() }
+                        com.example.ghostcart.ui.community.LeaderboardScreen(
+                            entries = state.leaderboard,
+                            loading = state.leaderboardLoading,
+                            currentUsername = state.profile?.username,
+                            onBack = { backStack.removeLastOrNull() }
+                        )
                     }
                 }
             )

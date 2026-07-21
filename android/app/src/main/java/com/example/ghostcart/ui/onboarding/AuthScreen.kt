@@ -115,10 +115,11 @@ fun AuthScreen(
             val result = AuthRepository.signInWithGoogle(googleIdToken)
             loading = false
             result.onSuccess { response ->
-                val verifiedEmail = runCatching {
-                    JSONObject(response).getJSONObject("user").getString("email")
-                }.getOrDefault("")
+                val body = runCatching { JSONObject(response) }.getOrNull()
+                val verifiedEmail = body?.optJSONObject("user")?.optString("email").orEmpty()
+                val accessToken = body?.optString("accessToken").orEmpty()
                 if (verifiedEmail.isNotBlank()) {
+                    if (accessToken.isNotBlank()) AuthRepository.saveToken(context, accessToken)
                     onAuthSuccess(verifiedEmail)
                 } else {
                     errorMessage = "Google Sign-In succeeded but the response was unexpected."
@@ -350,7 +351,9 @@ fun AuthScreen(
                             AuthRepository.signUp(email, password)
                         }
                         loading = false
-                        result.onSuccess {
+                        result.onSuccess { response ->
+                            val accessToken = runCatching { JSONObject(response).optString("accessToken") }.getOrNull()
+                            if (!accessToken.isNullOrBlank()) AuthRepository.saveToken(context, accessToken)
                             onAuthSuccess(email)
                         }.onFailure {
                             errorMessage = it.message ?: "Authentication failed"

@@ -52,6 +52,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.CircularProgressIndicator
@@ -98,6 +99,7 @@ import com.example.ghostcart.data.MarketplaceProduct
 import com.example.ghostcart.data.ProductImportState
 import com.example.ghostcart.data.WalletConfig
 import com.example.ghostcart.data.progressSummary
+import com.example.ghostcart.theme.DangerRed
 import com.example.ghostcart.theme.FaintBorder
 import com.example.ghostcart.theme.GhostGreen
 import com.example.ghostcart.theme.GreenTint
@@ -142,6 +144,7 @@ fun GhostHomeScreen(
     onRefresh: () -> Unit = {},
     homeBanners: List<com.example.ghostcart.data.ContentBlockItem> = emptyList(),
     ghostCartStories: List<com.example.ghostcart.data.ContentBlockItem> = emptyList(),
+    onOpenLeaderboard: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val summary = items.progressSummary()
@@ -188,6 +191,8 @@ fun GhostHomeScreen(
         }
 
         item { GhostCartStoriesSection(stories = ghostCartStories) }
+
+        item { CommunityLeaderboardBanner(onClick = onOpenLeaderboard) }
 
         item {
             GhostHeroCard(containerColor = Color(0xFF161616)) {
@@ -883,6 +888,148 @@ fun ProgressScreen(
     }
 }
 
+/**
+ * A simple static entry point to the standalone Leaderboard page - the user
+ * asked to keep this to "just a banner", not a new bottom-nav tab or a full
+ * admin-managed content-block type.
+ */
+@Composable
+private fun CommunityLeaderboardBanner(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Ink)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("🏆", fontSize = 22.sp, modifier = Modifier.padding(end = 12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text("Community Leaderboard", color = Paper, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+            Text("See who's kept the most money this month", color = Paper.copy(alpha = 0.65f), fontSize = 10.sp, modifier = Modifier.padding(top = 2.dp))
+        }
+        Text("View →", color = GhostGreen, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+    }
+}
+
+/**
+ * Display name, avatar, and the opt-in Community Leaderboard toggle. Opting
+ * in requires a username (validated server-side: format, reserved names,
+ * a blocklist, uniqueness); opting out hides the user from the leaderboard
+ * immediately without losing the username, in case they opt back in later.
+ * Completely separate from - and never weakens - the existing anonymous
+ * community-products feed's anonymity guarantee.
+ */
+@Composable
+private fun ProfileCommunitySection(
+    profile: com.example.ghostcart.data.UserProfile?,
+    saving: Boolean,
+    error: String?,
+    onSaveDisplayName: (String) -> Unit,
+    onUploadAvatar: (ByteArray, String) -> Unit,
+    onSetCommunityOptIn: (username: String?, consent: Boolean) -> Unit,
+    onOpenLeaderboard: () -> Unit,
+) {
+    val context = LocalContext.current
+    var displayName by remember(profile?.displayName) { mutableStateOf(profile?.displayName ?: "") }
+    var usernameDraft by remember(profile?.username) { mutableStateOf(profile?.username ?: "") }
+
+    val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val mimeType = context.contentResolver.getType(uri)?.takeIf { it == "image/png" || it == "image/jpeg" } ?: "image/jpeg"
+        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+        if (bytes != null) onUploadAvatar(bytes, mimeType)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color.White)
+            .border(1.dp, FaintBorder, RoundedCornerShape(18.dp))
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(GreenTint)
+                    .clickable { avatarPicker.launch("image/*") },
+                contentAlignment = Alignment.Center
+            ) {
+                if (profile?.avatarUrl != null) {
+                    AsyncImage(
+                        model = profile.avatarUrl,
+                        contentDescription = "Your avatar",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().clip(androidx.compose.foundation.shape.CircleShape)
+                    )
+                } else {
+                    Text((displayName.ifBlank { "?" }).take(1).uppercase(), color = Ink, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+                }
+            }
+            Column(modifier = Modifier.padding(start = 12.dp)) {
+                Text("Tap to change photo", color = MutedText, fontSize = 10.sp)
+                Text("Shown on the Community Leaderboard if you opt in.", color = MutedText, fontSize = 9.sp)
+            }
+        }
+
+        OutlinedTextField(
+            value = displayName,
+            onValueChange = { displayName = it },
+            label = { Text("Display name") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+        androidx.compose.material3.TextButton(
+            onClick = { onSaveDisplayName(displayName) },
+            enabled = !saving && displayName != (profile?.displayName ?: "")
+        ) { Text(if (saving) "Saving…" else "Save name") }
+
+        HorizontalDivider(color = FaintBorder)
+
+        Text("Community Leaderboard", color = Ink, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+        Text(
+            "Opt in to show a username on the public leaderboard (ranked by money kept). Your email is never shown.",
+            color = MutedText,
+            fontSize = 10.sp
+        )
+
+        if (profile?.communityConsent == true) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("You're on the leaderboard as @${profile.username}", color = Ink, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+                androidx.compose.material3.TextButton(onClick = onOpenLeaderboard) { Text("View") }
+                androidx.compose.material3.TextButton(
+                    onClick = { onSetCommunityOptIn(null, false) },
+                    enabled = !saving
+                ) { Text("Opt out") }
+            }
+        } else {
+            OutlinedTextField(
+                value = usernameDraft,
+                onValueChange = { usernameDraft = it },
+                label = { Text("Username") },
+                placeholder = { Text("e.g. ghost_saver_22") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            androidx.compose.material3.TextButton(
+                onClick = { onSetCommunityOptIn(usernameDraft.trim(), true) },
+                enabled = !saving && usernameDraft.trim().length >= 3
+            ) { Text(if (saving) "Saving…" else "Join the leaderboard") }
+        }
+
+        if (error != null) {
+            Text(error, color = DangerRed, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
 @Composable
 fun ProfileScreen(
     config: WalletConfig,
@@ -896,6 +1043,13 @@ fun ProfileScreen(
     onOpenLegal: (docId: String) -> Unit = {},
     onDeleteAccount: () -> Unit,
     onSignOut: () -> Unit,
+    profile: com.example.ghostcart.data.UserProfile? = null,
+    profileSaving: Boolean = false,
+    profileError: String? = null,
+    onSaveDisplayName: (String) -> Unit = {},
+    onUploadAvatar: (ByteArray, String) -> Unit = { _, _ -> },
+    onSetCommunityOptIn: (username: String?, consent: Boolean) -> Unit = { _, _ -> },
+    onOpenLeaderboard: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var confirmDelete by remember { mutableStateOf(false) }
@@ -909,6 +1063,19 @@ fun ProfileScreen(
         item {
             Text(stringResource(R.string.profile), color = Ink, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
             Text(authEmail ?: stringResource(R.string.guest_profile), color = MutedText, fontSize = 12.sp)
+        }
+        if (authEmail != null) {
+            item {
+                ProfileCommunitySection(
+                    profile = profile,
+                    saving = profileSaving,
+                    error = profileError,
+                    onSaveDisplayName = onSaveDisplayName,
+                    onUploadAvatar = onUploadAvatar,
+                    onSetCommunityOptIn = onSetCommunityOptIn,
+                    onOpenLeaderboard = onOpenLeaderboard
+                )
+            }
         }
         item {
             Column {
