@@ -1,7 +1,146 @@
 # Current State
 
-Last updated: 2026-07-21, later still (Claude Code — leaderboard flipped to opt-out-by-default per explicit user confirmation; full-screen Stories viewer shipped; a couple of real bugs fixed from user screenshots: dark-mode contrast, stale debug UI). See the "STATUS REPORT" block immediately below — it supersedes everything after it, which is historical (left for provenance).
+Last updated: 2026-07-21, even later still (Claude Code — Firebase Analytics + GA4 shipped; server-triggered FCM push pipeline built from scratch (cooldown sync, device tokens, cron sweep); proactive in-app cooldown prompt; random-story splash screen; MP4 video support for Ghost Cart Stories; real waitlist backend; several real website bugs fixed). See the "STATUS REPORT" block immediately below — it supersedes everything after it, which is historical (left for provenance).
 
+> ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-21, even later still same day)
+>
+> User is now setting up a Google Play Console account to move from ad-hoc APK distribution
+> toward **Play Store open beta testing**. Nothing in this report changes that readiness story:
+> every APK this session, including the latest, is still **debug-signed** (`releases/GhostCart-v2.7.14-debug.apk`,
+> now v2.7.29/versionCode 58) - there is no release keystore, no signed AAB, no Play Console listing,
+> no privacy-policy page, no data-safety form. Play Store submission is unstarted work, not close.
+>
+> ### Analytics: Firebase Analytics (Android) + GA4 (website) - both live
+>
+> - Website: `app/components/GoogleAnalytics.tsx` (`trackEvent` helper) + `TrackedLink.tsx`, wired
+>   dormant-until-configured via `env.GA_MEASUREMENT_ID` (server-read in `layout.tsx`, passed as a
+>   prop - same pattern as the Google Sign-In client ID). Real `GA_MEASUREMENT_ID` (`G-Z9WG5BZZPY`)
+>   is now a live Cloudflare secret.
+> - Android: `data/Analytics.kt` (typed wrapper over `FirebaseAnalytics`), 9 named events (sign_in,
+>   capture_completed, cooldown_resolved, leaderboard_viewed/opt_in, story_viewed, share, notification
+>   received/opened placeholders), wired into `AppViewModel.kt` and `StoryViewer.kt`/`Navigation.kt`.
+>   Real `google-services.json` (project `ghost-cart-14cff`) is committed - project config, not a
+>   secret, same policy as always here.
+>
+> ### Server-triggered FCM push for cooldown expiry - built from nothing, in one pass
+>
+> **The cooldown system was 100% on-device before this** - the backend had zero awareness of when
+> a cooldown expired, so a real server-sent push was impossible without first wiring the app off
+> local-only storage. This was discovered mid-session (user asked for push+email+in-app on cooldown
+> resolution; investigating surfaced the gap), confirmed explicitly with the user before building
+> the full pipeline rather than a shortcut.
+> - Backend: `device_tokens` table (`user_id` FK, unique `token`, `platform`), `push_sent_at` on
+>   `almost_buys` (dedup guard), `POST/DELETE /api/me/device-tokens`. `lib/fcm.ts` signs its own
+>   short-lived OAuth JWT with **Web Crypto** (RSASSA-PKCS1-v1_5/SHA-256) against the
+>   `FCM_SERVICE_ACCOUNT_JSON` Cloudflare secret (Firebase service-account key - user uploaded it,
+>   stored as a secret only, never in the repo) - deliberately not a Node JWT library, since Web
+>   Crypto is what's actually portable in the Workers runtime. **Verified end-to-end against the
+>   real Google OAuth + FCM endpoints before deploying** (token exchange succeeded; a `messages:send`
+>   call with a deliberately-invalid token got back the exact structured `INVALID_ARGUMENT` error the
+>   dead-token-pruning logic expects - both the auth and the request shape are confirmed correct, not
+>   just "looks right").
+> - `lib/cooldown-push-sweep.ts` + a 5-minute Worker cron trigger (`wrangler.ghostcart-app.jsonc`
+>   `triggers.crons`, confirmed live: `schedule: */5 * * * *`) finds newly-expired cooling items,
+>   pushes every registered device for that user, prunes tokens FCM reports dead.
+> - Android: `data/AlmostBuySync.kt` mirrors `createAlmostBuy`/`resolveAlmostBuy` to the real
+>   `/api/almost-buys` endpoints (best-effort, fire-and-forget, silently no-ops when signed out -
+>   push only ever reaches signed-in accounts with a registered device). `AlmostBuy` gained a
+>   `serverId: String?` field to reconcile local/remote records.
+>   `data/GhostFirebaseMessagingService.kt` (new `FirebaseMessagingService` subclass) registers the
+>   token on refresh and builds the notification manually for the foreground case (FCM only
+>   auto-displays while backgrounded). `registerCurrentFcmToken()` called on sign-in and app launch.
+> - **Email notifications were explicitly deferred**, not built - user chose push+in-app now, email
+>   later (no provider/domain set up yet). Don't assume an email channel exists.
+> - Fixed a real, unrelated bug found while in `AndroidManifest.xml`: the verified `/ghost` deep-link
+>   intent-filter still pointed at the retired `workers.dev` host from before the custom-domain
+>   migration, silently breaking app-open verification for every shared link since then. Now
+>   `theghostcart.com`.
+>
+> ### Proactive in-app cooldown prompt (the "in-app message" piece of push+email+in-app)
+>
+> The existing `in_app_messages` system is **pure broadcast** (its `audience` column has a DB CHECK
+> literally restricting it to `'all'` - no per-user targeting exists, and adding it would need a
+> schema change). Rather than bolt a personal notification onto a broadcast system, `Navigation.kt`
+> now watches `state.almostBuys` and - once per process, only on a plain app open (not mid-navigation,
+> not when a notification/share/deep-link already routed somewhere) - auto-navigates to the existing
+> `Cooldowns` resolve screen if any item's cooldown already expired. Reuses 100% existing UI.
+>
+> ### Random-story splash screen
+>
+> Replaced the static wordmark splash with `RandomStorySplashScreen` (`Navigation.kt`): picks one
+> random **image** Story (video excluded - autoplay-with-audio on cold start plus the skip timing
+> below don't mix), Skip button fades in at 3s, auto-advances at 5s regardless. Falls back to the
+> old plain splash (~1.2s) if no story has loaded yet by render time (stories fetch async on launch;
+> not guaranteed to have arrived).
+>
+> ### MP4 video support for Ghost Cart Stories (banners stay image-only)
+>
+> - `content_blocks` gained `media_type` (`image`|`video`, DB CHECK ties `video` to `type='story'`
+>   only). `lib/video-processing.ts`: dependency-free MP4 sniff (`ftyp` box magic bytes), 50MB limit.
+>   **Video is stored as-is, not metadata-stripped** the way images are - real MP4 atom parsing was
+>   out of scope; this is a documented, accepted limitation, not an oversight.
+> - `app/api/content-blocks/route.ts` POST now branches on sniffed type; `AdminCatalog.tsx`'s
+>   Content-tab upload accepts `video/mp4` only when placement is "Ghost Cart Story", renders
+>   `<video>` instead of `<img>` for video rows.
+> - **Caught and fixed a real drizzle-kit bug before it touched production**: the auto-generated
+>   migration's `INSERT...SELECT` referenced the new `media_type` column by name in the SELECT half
+>   too, but that column doesn't exist pre-migration - SQLite's identifier-to-string-literal fallback
+>   silently turned it into the literal text `"media_type"`, which then failed the new CHECK
+>   constraint. Caught by testing against a local D1 replica first (now an established practice for
+>   any migration that adds a CHECK constraint alongside a new column - **do this before running
+>   against remote for any future schema change of this shape**). Fixed by dropping `media_type` from
+>   the copy-over column list so the `DEFAULT 'image'` applies to existing rows instead.
+> - Android: `ContentBlockItem` gained `mediaType`. `StoryViewer.kt` plays video via Media3
+>   `ExoPlayer`/`PlayerView` (classic View-based UI via `AndroidView` interop, not the newer
+>   Compose-native surface - deliberately the more battle-tested API given the Media3 version
+>   couldn't be verified against a live release index). Video advances on actual playback completion
+>   (`Player.STATE_ENDED`), not the fixed 7s image timer; the progress bar is driven by
+>   position/duration polling instead of a fixed increment. `media3 = "1.5.1"` - resolved and
+>   compiled clean on the first real build, not just guessed.
+>
+> ### Website fixes (theghostcart.com), all deployed and verified live
+>
+> - **Waitlist form was fake** - wrote to `localStorage` only, no email ever left the browser.
+>   New `waitlist_signups` table + `POST /api/waitlist` (rate-limited, dedup on email), form now
+>   actually submits. Verified end-to-end against the live remote D1.
+> - **Dirham glyph** (`public/brand/currency-dirham.png`, reused from the Android app's own asset)
+>   now shown next to every price on the site via a new `DirhamAmount` component - previously prices
+>   were plain "AED 1,234" text in some spots and bare numbers in others (the interactive demo, the
+>   static Progress-section sample ledger). All fixed.
+> - **Nav "Download beta" button was invisible on real Android Chrome** (white-on-white) - not a
+>   site CSS bug (verified the deployed CSS bundle directly; `.gc-button-paper` correctly wins the
+>   cascade over `.gc-nav`'s inherited white). Root cause: Chrome's Android "Force dark theme for web
+>   contents" heuristic mis-recolors a light element sitting inside an otherwise near-black page, and
+>   the site never opted out. Fixed two ways: declared `color-scheme: dark` (both `<meta>` via Next's
+>   `viewport` export and CSS `:root`) so Chrome stops applying the heuristic at all, **and** per
+>   direct request switched the button to `gc-button-green` (solid green, near-black text) so it's
+>   never white-on-anything regardless. If a similarly "correct-in-devtools but wrong-on-device" bug
+>   turns up again, check `color-scheme` before assuming the CSS itself is wrong.
+> - **Download-beta card was off-center on mobile** - `.gc-download` added its own horizontal padding
+>   on top of `.gc-download-card`'s self-centering `width:var(--gc-page)`/`margin:auto`, double-
+>   insetting the card; per spec the overflowing auto-margins collapsed to zero, leaving it flush
+>   left and overflowing almost to the true right edge. Fixed by removing the redundant outer padding
+>   (matches how every other `var(--gc-page)` section on the page already does it).
+> - Refreshed `public/brand/ghost-cart-icon.png`/`ghost-cart-icon-white.png` from a cleaner source
+>   image (user-supplied); regenerated the white variant as genuinely transparent (the old one had no
+>   alpha channel and was effectively invisible on the dark nav/footer it's used on).
+>
+> ### Two real gaps found, not yet fixed - flagged, not silently ignored
+>
+> - **Manually-typed cooldown items have no photo, ever.** `CaptureAlmostBuyScreen` (`GhostCartV2Screens.kt`)
+>   has no photo field at all - `imageUrl` only ever gets set via a successful link-import preview.
+>   Anything typed by hand (name/amount only) shows the clock/checkmark fallback icon forever. Not
+>   fixed this session; would need a manual image-picker + reusing the existing upload pipeline.
+> - **Site is long and has a real narrative contradiction**: the Download section says "a real,
+>   working build - not a mockup" while the FAQ still says "currently being shaped and tested" and
+>   the bottom of the page frames everything as "Coming soon / join the waitlist for launch." Full
+>   audit given to the user (cut candidates: the "Ghosted ≠ saved" Truth section, the "No guilt/No
+>   pressure" Principles section, the "Not a marketplace" Moments section, the membership-card block)
+>   - **user has not yet said which cuts to make**. Don't trim sections without that confirmation.
+>
+> Published as v2.7.29 (versionCode 58), same canonical URL
+> (`releases/GhostCart-v2.7.14-debug.apk` on `phase-5/ghost-cart-stories-section`).
+>
 > ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-21, even later same day)
 >
 > ### Leaderboard default flipped: opt-out, not opt-in - confirmed explicitly, not assumed
