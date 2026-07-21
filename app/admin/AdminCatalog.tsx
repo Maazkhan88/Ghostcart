@@ -44,6 +44,7 @@ type ContentBlock = {
   id: number;
   type: "banner" | "story";
   imageKey: string;
+  mediaType: "image" | "video";
   linkType: "none" | "product" | "category";
   linkTargetId: string | null;
   sortOrder: number;
@@ -1233,6 +1234,8 @@ export default function AdminCatalog({
               <label>Placement<select value={contentBlockForm.type} onChange={(event) => setContentBlockForm({ ...contentBlockForm, type: event.target.value as "banner" | "story" })}><option value="banner">Home banner</option><option value="story">Ghost Cart Story</option></select></label>
               {editingContentBlockId ? (
                 <p className="admin-inline-note">To change the image itself, remove this block and add a new one - editing here only updates placement/link/order.</p>
+              ) : contentBlockForm.type === "story" ? (
+                <label>Image or video<input required type="file" accept="image/png,image/jpeg,video/mp4" onChange={(event) => setContentBlockFile(event.target.files?.[0] ?? null)} /><span>PNG/JPEG (max 8MB) or MP4 (max 50MB). Image EXIF/location metadata is stripped automatically; video metadata is not.</span></label>
               ) : (
                 <label>Image<input required type="file" accept="image/png,image/jpeg" onChange={(event) => setContentBlockFile(event.target.files?.[0] ?? null)} /><span>PNG or JPEG only, max 8MB. EXIF/location metadata is stripped automatically.</span></label>
               )}
@@ -1367,7 +1370,13 @@ export default function AdminCatalog({
               {filteredContentBlocks.length === 0 && <div className="admin-empty">No content blocks found. Upload the first banner or story from the editor.</div>}
               {filteredContentBlocks.map((block) => (
                 <article className="admin-record" key={block.id}>
-                  <div className="admin-record-art"><img src={`/api/content-blocks/image/${block.imageKey}`} alt="" /></div>
+                  <div className="admin-record-art">
+                    {block.mediaType === "video" ? (
+                      <video src={`/api/content-blocks/image/${block.imageKey}`} muted playsInline />
+                    ) : (
+                      <img src={`/api/content-blocks/image/${block.imageKey}`} alt="" />
+                    )}
+                  </div>
                   <div className="admin-record-copy"><div><span>{block.type === "banner" ? "Home banner" : "Ghost Cart Story"}</span>{!block.isActive && <b>Inactive</b>}</div><h3>#{block.id}</h3><p>{block.linkType === "none" ? "No link" : `Links to ${block.linkType} ${block.linkTargetId}`} · order {block.sortOrder}</p></div>
                   <div className="admin-record-actions"><button type="button" onClick={() => editContentBlock(block)}>Edit</button><button type="button" className="is-danger" disabled={saving} onClick={() => removeRecord("content-blocks", block.id, `content block #${block.id}`)}>Remove</button></div>
                 </article>

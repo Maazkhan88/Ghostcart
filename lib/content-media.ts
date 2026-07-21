@@ -28,7 +28,7 @@ export function generateContentMediaKey(extension: string): string {
   return `${crypto.randomUUID()}.${extension}`;
 }
 
-const KEY_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg)$/;
+const KEY_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|mp4)$/;
 
 export function isValidContentMediaKey(key: string): boolean {
   return KEY_PATTERN.test(key);

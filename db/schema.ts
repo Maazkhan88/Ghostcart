@@ -472,6 +472,7 @@ export const contentBlocks = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     type: text("type").notNull(),
     imageKey: text("image_key").notNull(),
+    mediaType: text("media_type").notNull().default("image"),
     linkType: text("link_type").notNull().default("none"),
     linkTargetId: text("link_target_id"),
     sortOrder: integer("sort_order").notNull().default(0),
@@ -481,6 +482,11 @@ export const contentBlocks = sqliteTable(
   },
   (table) => [
     check("content_blocks_type_check", sql`${table.type} IN ('banner', 'story')`),
+    check("content_blocks_media_type_check", sql`${table.mediaType} IN ('image', 'video')`),
+    check(
+      "content_blocks_video_only_for_story_check",
+      sql`${table.mediaType} = 'image' OR ${table.type} = 'story'`,
+    ),
     check(
       "content_blocks_link_type_check",
       sql`${table.linkType} IN ('none', 'product', 'category')`,
