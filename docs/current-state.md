@@ -1,7 +1,52 @@
 # Current State
 
-Last updated: 2026-07-21, later same day (Claude Code — opt-in Community Leaderboard (Phase 6) shipped; fixed the Android app never actually sending its session token for anything). See the "STATUS REPORT" block immediately below — it supersedes everything after it, which is historical (left for provenance).
+Last updated: 2026-07-21, later still (Claude Code — leaderboard flipped to opt-out-by-default per explicit user confirmation; full-screen Stories viewer shipped; a couple of real bugs fixed from user screenshots: dark-mode contrast, stale debug UI). See the "STATUS REPORT" block immediately below — it supersedes everything after it, which is historical (left for provenance).
 
+> ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-21, even later same day)
+>
+> ### Leaderboard default flipped: opt-out, not opt-in - confirmed explicitly, not assumed
+>
+> The user asked for "opt-in by default" which actually means the *opposite* of the opt-in design
+> from the report below - every account now defaults to `communityConsent = true` and gets a
+> **lazily auto-generated username** (from their email, same format/reserved/blocklist validation
+> as a real one) the first time `GET /api/me/profile` is fetched. This was confirmed via an
+> explicit yes/no question before implementing, since it reverses a privacy-relevant default the
+> user had picked minutes earlier - not an assumption.
+> - Migration `drizzle/0012_fixed_overlord.sql`: column default flips to `true` **and** backfills
+>   every existing row (both current test accounts already flipped, verified live).
+> - `lib/username-policy.ts`: new `candidateDefaultUsernames(email)`.
+> - Opting out via Profile still works exactly as before (unchanged) - this only changes the
+>   starting state, not the mechanism.
+>
+> ### Full-screen Stories viewer (WhatsApp Status / Instagram Stories pattern)
+>
+> New `ui/community/StoryViewer.kt`: tap right/left third to advance/go back, press-and-hold to
+> pause, pinch-to-zoom + pan, 3-second auto-advance with a segmented progress bar. Rendered as a
+> full-screen overlay in `MainNavigation` (Navigation.kt) - **deliberately not inside
+> `GhostHomeScreen`**, because it needs to cover the bottom nav too, which only the top-level
+> `Box`/`Scaffold` sibling position can do. **Video is not implemented** - the content-blocks
+> upload pipeline (`lib/image-processing.ts`) only accepts PNG/JPEG, so there's no video content
+> to play. The component is structured so a future `isVideo` flag could branch to a player, but
+> don't assume video playback exists anywhere - it doesn't.
+>
+> ### Two real bugs fixed from user screenshots - check these patterns before adding new UI
+>
+> - **Dark mode**: the new Profile community section (previous report) used a hardcoded
+>   `Color.White` card background and default Material3 `OutlinedTextField`/`TextButton` colors.
+>   This codebase does **not** get automatic dark-mode-correct Material3 defaults - every
+>   component needs explicit color overrides via this app's manual tokens (`Paper`/`Ink`/
+>   `MutedText`/`GhostGreen`/`FaintBorder`, plus the existing `ghostTextFieldColors()` helper in
+>   `GhostCartV2Screens.kt` for text fields). **If you add any new Compose UI, check it in dark
+>   mode before considering it done** - the default Material3 look is visibly broken against this
+>   app's manual theme.
+> - Removed the `BuildConfig.DEBUG`-gated "Test lunch/dinner reminder" buttons from Profile - they
+>   always showed because every APK shipped this whole session has been a debug build. If a real
+>   release build type ever gets set up, this is fine to re-add gated the same way; until then, any
+>   `if (BuildConfig.DEBUG)` UI should be assumed **always visible** in what ships.
+>
+> Published as v2.7.25, same canonical URL
+> (`releases/GhostCart-v2.7.14-debug.apk` on `phase-5/ghost-cart-stories-section`).
+>
 > ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-21, later same day)
 >
 > ### Opt-in Community Leaderboard (Phase 6) - shipped, v2.7.24
