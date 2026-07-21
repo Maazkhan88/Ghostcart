@@ -37,6 +37,10 @@ body { background: var(--gc-ink); }
 .gc-brand.is-compact img { width: 30px; height: 30px; border-radius: 8px; }
 .gc-brand.is-compact > span { font-size: 12px; }
 
+.gc-dirham { display: inline-flex; align-items: center; gap: 3px; }
+.gc-dirham img { display: block; width: .78em; height: .78em; filter: brightness(0); }
+.gc-dirham.is-light img { filter: brightness(0) invert(1); }
+
 .gc-nav-shell { position: fixed; z-index: 100; top: 18px; left: 50%; width: min(1180px, calc(100vw - 40px)); transform: translateX(-50%); }
 .gc-nav { display: flex; align-items: center; justify-content: space-between; min-height: 62px; padding: 8px 10px 8px 18px; color: #fff; background: rgba(8,8,8,.82); border: 1px solid rgba(255,255,255,.13); border-radius: 999px; box-shadow: 0 20px 54px rgba(0,0,0,.32); backdrop-filter: blur(24px); }
 .gc-nav-links { display: flex; align-items: center; gap: 28px; color: rgba(255,255,255,.68); font-size: 13px; }

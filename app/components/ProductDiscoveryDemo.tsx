@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { DirhamAmount, formatDirhamAmount } from "./DirhamAmount";
 
 type Product = {
   id: string;
@@ -24,10 +25,6 @@ const CURATED: Product[] = [
   { id: "latte", title: "Spanish latte", category: "Food", imageUrl: "/products/latte.png", priceCents: 3800 },
 ];
 const CATEGORIES = ["All", "Electronics", "Apparel", "Music", "Jewellery", "Gaming", "Beauty", "Home", "Food"];
-
-function money(cents: number) {
-  return cents > 0 ? `AED ${(cents / 100).toLocaleString("en-AE", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}` : "Add price";
-}
 
 export function ProductDiscoveryDemo() {
   const [category, setCategory] = useState("All");
@@ -175,7 +172,7 @@ function ProductCard({ product, onGhost, onCool, editable = false, onChange }: {
     {editable ? <>
       <input aria-label="Product title" value={product.title} onChange={(event) => onChange?.({ ...product, title: event.target.value })} />
       <input aria-label="Price in AED" type="number" min="0" value={product.priceCents ? product.priceCents / 100 : ""} onChange={(event) => onChange?.({ ...product, priceCents: Math.round(Number(event.target.value) * 100) })} />
-    </> : <><small>{product.category}</small><h3 title={product.title}>{product.title}</h3><strong>{money(product.priceCents)}</strong></>}
+    </> : <><small>{product.category}</small><h3 title={product.title}>{product.title}</h3><strong>{product.priceCents > 0 ? <DirhamAmount amount={formatDirhamAmount(product.priceCents)} /> : "Add price"}</strong></>}
     <div><button type="button" onClick={onGhost}>Ghost buy</button><button type="button" onClick={onCool}>Cool it</button></div>
   </article>;
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ensureSharedGhostItemsTable } from "../../lib/shared-ghost-items";
 import { Brand } from "../components/Brand";
+import { DirhamAmount, formatDirhamAmount } from "../components/DirhamAmount";
 import { DeviceHandoffActions } from "./DeviceHandoffActions";
 
 type GhostPageProps = {
@@ -100,10 +101,6 @@ function androidIntentUrl(path: string) {
   return `intent://${webUrl.host}${webUrl.pathname}${webUrl.search}#Intent;scheme=https;package=${ANDROID_PACKAGE};S.browser_fallback_url=${fallback};end`;
 }
 
-function formatPrice(priceCents: number) {
-  if (priceCents <= 0) return "Price not shared";
-  return `${(priceCents / 100).toLocaleString("en-AE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} dirhams`;
-}
 
 export async function generateMetadata({ searchParams }: GhostPageProps): Promise<Metadata> {
   const item = await resolveItem(await searchParams);
@@ -141,7 +138,7 @@ export default async function SharedGhostItemPage({ searchParams }: GhostPagePro
           </div>
           <p>{item.category}</p>
           <h2>{item.title}</h2>
-          <strong>{formatPrice(item.priceCents)}</strong>
+          <strong>{item.priceCents > 0 ? <DirhamAmount amount={formatDirhamAmount(item.priceCents)} /> : "Price not shared"}</strong>
           {item.sourceUrl ? (
             <a href={item.sourceUrl} target="_blank" rel="noreferrer">View original product <span aria-hidden="true">↗</span></a>
           ) : null}
