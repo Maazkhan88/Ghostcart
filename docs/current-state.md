@@ -1,7 +1,41 @@
 # Current State
 
-Last updated: 2026-07-21 (Claude Code — admin panel now has full catalog management: photo upload, CSV bulk import, managed categories; workers.dev fully retired, theghostcart.com is the only live endpoint; product/feature overview doc added for business planning). See the "STATUS REPORT" block immediately below — it supersedes everything after it, which is historical (left for provenance).
+Last updated: 2026-07-21, later same day (Claude Code — opt-in Community Leaderboard (Phase 6) shipped; fixed the Android app never actually sending its session token for anything). See the "STATUS REPORT" block immediately below — it supersedes everything after it, which is historical (left for provenance).
 
+> ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-21, later same day)
+>
+> ### Opt-in Community Leaderboard (Phase 6) - shipped, v2.7.24
+>
+> User scoped this down from the original Phase 6 plan on purpose: a **standalone page** (not a
+> bottom-nav tab), reached via a **static banner card on Home** (not wired through the admin
+> content-blocks CMS - deliberately simple, "just a banner"). Ranked by confirmed money kept.
+>
+> - Backend: `users` gained `username` (unique, nullable), `username_updated_at`, `avatar_key`,
+>   `community_consent` (migration `drizzle/0011_silky_night_nurse.sql`, live). New
+>   `lib/username-policy.ts` (format, reserved-name list, starter profanity/slur blocklist with
+>   leetspeak normalization, 14-day rename cooldown). New routes: `GET/PATCH /api/me/profile`,
+>   `POST /api/me/avatar`, `GET /api/community/leaderboard` (public, only
+>   username/avatar/money-kept/ghosted-count for consenting users - never email).
+> - **Deliberately not built**: a report/moderation UI. User asked to keep this to a leaderboard
+>   behind a banner, not a full social surface - if that changes, the original Phase 6 plan
+>   (further down this doc) has the fuller requirements (reporting path, deletion-on-account-
+>   removal, etc.).
+> - **Real bug found and fixed while building this**: the Android app fetched a session token on
+>   every sign-in (email/password AND Google) and then discarded it - zero `Authorization` headers
+>   were ever sent, for anything, ever. This had been a known-but-unaddressed gap since early in
+>   the project. Fixed: `AuthRepository.saveToken/getToken/clearToken` (same SharedPreferences
+>   file already used for simple flags), called from both sign-in paths in `AuthScreen.kt` and
+>   cleared in `AppViewModel.signOut()`. **If you build anything else that needs an authenticated
+>   request from Android, the token is now available via `AuthRepository.getToken(context)` -
+>   don't rebuild this.**
+> - Android: `data/CommunityProfileRepository.kt` (profile/avatar/leaderboard calls, hand-rolled
+>   multipart upload - no new dependency), `ui/community/LeaderboardScreen.kt`, a new `Leaderboard`
+>   `NavKey`, and a `ProfileCommunitySection` composable in `GhostCartV2Screens.kt`'s
+>   `ProfileScreen` (avatar picker via `ActivityResultContracts.GetContent`).
+> - This is the branch the next APK build should keep coming from:
+>   `phase-5/ghost-cart-stories-section`, same `releases/GhostCart-v2.7.14-debug.apk` file/URL
+>   kept stable across every version bump (now v2.7.24, versionCode 53).
+>
 > ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-21)
 >
 > Short version: the admin-visibility work flagged as "in progress" in the previous report is now
