@@ -1,27 +1,42 @@
 package com.example.ghostcart.ui.community
 
+import android.content.Intent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.rememberTransformableState
-import androidx.compose.foundation.gestures.transformable
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,25 +47,39 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.example.ghostcart.data.ContentBlockItem
 import kotlinx.coroutines.delay
+import kotlin.math.abs
 
-private const val STORY_DURATION_MS = 3000
+private const val STORY_DURATION_MS = 7000
+private const val DISMISS_SWIPE_THRESHOLD_PX = 140f
 
 /**
  * Full-screen story viewer (WhatsApp Status / Instagram/Facebook Stories
- * pattern): each story auto-advances after [STORY_DURATION_MS], tapping the
- * left/right thirds of the screen goes back/forward, a press-and-hold pauses
- * the timer, and the current image supports pinch-to-zoom + pan while held.
+ * pattern): tap the left/right thirds to go back/forward, press-and-hold to
+ * pause, pinch with two fingers to zoom (snaps back to the original position
+ * the moment you let go - it never stays zoomed in), swipe down to close,
+ * swipe up to reveal Like/Share.
  *
- * Video isn't supported yet - the backend's content-blocks upload pipeline
+ * One hand-rolled gesture loop (not several stacked `pointerInput` gesture
+ * detectors) so tap/drag/pinch don't fight over the same touch stream - a
+ * single-finger gesture is classified as tap vs. vertical drag by movement
+ * once it ends; a second finger touching down mid-gesture switches it to
+ * pinch-zoom.
+ *
+ * Video isn't supported - the backend's content-blocks upload pipeline
  * (lib/image-processing.ts) only accepts PNG/JPEG today, so every
- * [ContentBlockItem] is an image. This is written so a future `isVideo`
- * flag could branch to a player without restructuring the viewer, but no
- * video playback is wired up since there's no video content to play.
+ * [ContentBlockItem] is an image; there's no video content anywhere to play.
+ *
+ * Like is a local, per-session toggle only - there's no backend concept of
+ * liking a content block yet, so nothing is persisted or counted server-side.
  */
 @Composable
 fun StoryViewer(
@@ -60,12 +89,25 @@ fun StoryViewer(
     modifier: Modifier = Modifier,
 ) {
     if (stories.isEmpty()) return
+    val context = LocalContext.current
     var index by remember { mutableIntStateOf(startIndex.coerceIn(0, stories.lastIndex)) }
     var paused by remember { mutableStateOf(false) }
-    var progress by remember(index) { mutableFloatStateOf(0f) }
-    var scale by remember(index) { mutableFloatStateOf(1f) }
-    var offsetX by remember(index) { mutableFloatStateOf(0f) }
-    var offsetY by remember(index) { mutableFloatStateOf(0f) }
+    var progress by remember(index) { mutableStateOf(0f) }
+    var scale by remember(index) { mutableStateOf(1f) }
+    var offsetX by remember(index) { mutableStateOf(0f) }
+    var offsetY by remember(index) { mutableStateOf(0f) }
+    var showActions by remember { mutableStateOf(false) }
+    var likedIndices by remember { mutableStateOf(setOf<Int>()) }
+
+    val animatedScale by animateFloatAsState(scale, animationSpec = tween(220), label = "storyScale")
+    val animatedOffsetX by animateFloatAsState(offsetX, animationSpec = tween(220), label = "storyOffsetX")
+    val animatedOffsetY by animateFloatAsState(offsetY, animationSpec = tween(220), label = "storyOffsetY")
+
+    fun resetZoom() {
+        scale = 1f
+        offsetX = 0f
+        offsetY = 0f
+    }
 
     fun goNext() {
         if (index < stories.lastIndex) index += 1 else onClose()
@@ -74,20 +116,14 @@ fun StoryViewer(
         if (index > 0) index -= 1
     }
 
-    LaunchedEffect(index, paused) {
-        if (paused) return@LaunchedEffect
+    LaunchedEffect(index, paused, showActions) {
+        if (paused || showActions) return@LaunchedEffect
         val tickMs = 16L
         while (progress < 1f) {
             delay(tickMs)
-            if (!paused) progress = (progress + tickMs.toFloat() / STORY_DURATION_MS).coerceAtMost(1f)
+            if (!paused && !showActions) progress = (progress + tickMs.toFloat() / STORY_DURATION_MS).coerceAtMost(1f)
         }
         if (progress >= 1f) goNext()
-    }
-
-    val transformState = rememberTransformableState { zoomChange, panChange, _ ->
-        scale = (scale * zoomChange).coerceIn(1f, 4f)
-        offsetX += panChange.x
-        offsetY += panChange.y
     }
 
     Box(
@@ -100,16 +136,62 @@ fun StoryViewer(
             modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(index) {
-                    detectTapGestures(
-                        onPress = {
-                            paused = true
-                            tryAwaitRelease()
-                            paused = false
-                        },
-                        onTap = { tapOffset ->
-                            if (tapOffset.x < size.width / 3f) goPrevious() else goNext()
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        paused = true
+                        val startTime = System.currentTimeMillis()
+                        var totalDx = 0f
+                        var totalDy = 0f
+                        var pinched = false
+                        var lastDistance = 0f
+                        var lastCentroid = down.position
+
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val pressed = event.changes.filter { it.pressed }
+                            if (pressed.isEmpty()) break
+
+                            if (pressed.size >= 2) {
+                                pinched = true
+                                val p1 = pressed[0].position
+                                val p2 = pressed[1].position
+                                val centroid = androidx.compose.ui.geometry.Offset((p1.x + p2.x) / 2f, (p1.y + p2.y) / 2f)
+                                val distance = kotlin.math.hypot((p1.x - p2.x).toDouble(), (p1.y - p2.y).toDouble()).toFloat()
+                                if (lastDistance > 0f) {
+                                    val zoomDelta = distance / lastDistance
+                                    scale = (scale * zoomDelta).coerceIn(1f, 4f)
+                                    offsetX += centroid.x - lastCentroid.x
+                                    offsetY += centroid.y - lastCentroid.y
+                                }
+                                lastCentroid = centroid
+                                lastDistance = distance
+                                event.changes.forEach { it.consume() }
+                            } else {
+                                val change = pressed[0]
+                                val delta = change.positionChange()
+                                totalDx += delta.x
+                                totalDy += delta.y
+                                if (scale > 1f) {
+                                    offsetX += delta.x
+                                    offsetY += delta.y
+                                    change.consume()
+                                }
+                            }
                         }
-                    )
+
+                        paused = false
+                        val elapsed = System.currentTimeMillis() - startTime
+
+                        when {
+                            pinched -> resetZoom()
+                            scale > 1f -> Unit
+                            totalDy > DISMISS_SWIPE_THRESHOLD_PX && abs(totalDy) > abs(totalDx) -> onClose()
+                            totalDy < -DISMISS_SWIPE_THRESHOLD_PX && abs(totalDy) > abs(totalDx) -> showActions = true
+                            elapsed < 250 && abs(totalDx) < 24 && abs(totalDy) < 24 -> {
+                                if (down.position.x < size.width / 3f) goPrevious() else goNext()
+                            }
+                        }
+                    }
                 }
         ) {
             AsyncImage(
@@ -119,12 +201,11 @@ fun StoryViewer(
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer(
-                        scaleX = scale,
-                        scaleY = scale,
-                        translationX = offsetX,
-                        translationY = offsetY
+                        scaleX = animatedScale,
+                        scaleY = animatedScale,
+                        translationX = animatedOffsetX,
+                        translationY = animatedOffsetY
                     )
-                    .transformable(transformState)
             )
         }
 
@@ -168,5 +249,75 @@ fun StoryViewer(
         ) {
             Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color.White)
         }
+
+        AnimatedVisibility(
+            visible = showActions,
+            enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
+            exit = fadeOut() + slideOutVertically(targetOffsetY = { it }),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.Black.copy(alpha = 0.85f))
+                    .clickable(enabled = false) {}
+                    .navigationBarsPadding()
+                    .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(28.dp)) {
+                    val liked = index in likedIndices
+                    StoryActionButton(
+                        icon = if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        tint = if (liked) Color(0xFFFF4D67) else Color.White,
+                        label = "Like",
+                        onClick = {
+                            likedIndices = if (liked) likedIndices - index else likedIndices + index
+                        }
+                    )
+                    StoryActionButton(
+                        icon = Icons.Filled.Share,
+                        tint = Color.White,
+                        label = "Share",
+                        onClick = {
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_SUBJECT, "Ghost Cart Story")
+                                putExtra(Intent.EXTRA_TEXT, "Check this out on Ghost Cart:\n${story.imageUrl}")
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, "Share this story"))
+                        }
+                    )
+                }
+                Text(
+                    text = "Tap to close",
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 11.sp,
+                    modifier = Modifier.padding(top = 14.dp).clickable { showActions = false }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StoryActionButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    tint: Color,
+    label: String,
+    onClick: () -> Unit,
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(52.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.12f))
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(26.dp))
+        }
+        Text(label, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
     }
 }
