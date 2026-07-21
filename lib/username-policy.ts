@@ -47,6 +47,24 @@ export function validateUsernameFormat(username: string): string | null {
   return null;
 }
 
+// Auto-enrollment is opt-out (see db/schema.ts), so a real user-chosen
+// username may not exist yet the first time a profile is fetched - this
+// generates one deterministically from the email so it reads as "theirs"
+// rather than a random ID, still passing the exact same format/reserved/
+// blocklist checks, with a random numeric suffix to resolve collisions.
+export function candidateDefaultUsernames(seedEmail: string): string[] {
+  const local = seedEmail.split("@")[0] ?? "ghost";
+  const base = local.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 14) || "ghost";
+  const padded = base.length >= 3 ? base : `${base}user`.slice(0, 14);
+  const candidates = [padded];
+  for (let i = 0; i < 4; i++) {
+    const suffix = Math.floor(1000 + Math.random() * 9000);
+    candidates.push(`${padded}_${suffix}`.slice(0, 20));
+  }
+  candidates.push(`ghost_${Math.random().toString(36).slice(2, 10)}`);
+  return candidates;
+}
+
 export function canRenameUsername(usernameUpdatedAt: string | null): { allowed: boolean; retryAt?: string } {
   if (!usernameUpdatedAt) return { allowed: true };
   const last = new Date(usernameUpdatedAt).getTime();

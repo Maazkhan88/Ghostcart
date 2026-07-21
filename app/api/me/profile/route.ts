@@ -4,7 +4,52 @@ import { users } from "../../../../db/schema";
 import { jsonNoStore } from "../../../../lib/almost-buy-api";
 import { sanitizeShortText } from "../../../../lib/backend-contract";
 import { requireApiSession } from "../../../../lib/session-auth";
-import { canRenameUsername, validateUsernameFormat } from "../../../../lib/username-policy";
+import {
+  candidateDefaultUsernames,
+  canRenameUsername,
+  validateUsernameFormat,
+} from "../../../../lib/username-policy";
+
+type ProfileRow = {
+  email: string;
+  displayName: string | null;
+  username: string | null;
+  avatarKey: string | null;
+  communityConsent: boolean;
+};
+
+// Auto-enrollment is opt-out: an account can have communityConsent = true
+// with no username yet (existing accounts backfilled by migration 0012, or
+// a user who never opened Profile). Assigns one, lazily, the first time
+// it's actually needed, rather than a bulk migration guessing usernames for
+// accounts that may never be fetched again.
+async function ensureUsername(row: ProfileRow, userId: number): Promise<ProfileRow> {
+  if (!row.communityConsent || row.username) return row;
+
+  const db = getDb();
+  for (const candidate of candidateDefaultUsernames(row.email)) {
+    if (validateUsernameFormat(candidate)) continue;
+    try {
+      const [updated] = await db
+        .update(users)
+        .set({ username: candidate, usernameUpdatedAt: new Date().toISOString() })
+        .where(eq(users.id, userId))
+        .returning({
+          email: users.email,
+          displayName: users.displayName,
+          username: users.username,
+          avatarKey: users.avatarKey,
+          communityConsent: users.communityConsent,
+        });
+      return updated;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (!message.includes("UNIQUE constraint failed")) throw error;
+      // Taken - try the next candidate.
+    }
+  }
+  return row;
+}
 
 function serialize(user: {
   email: string;
@@ -40,7 +85,8 @@ export async function GET(request: Request) {
     .limit(1);
 
   if (!user) return jsonNoStore({ error: "account not found" }, { status: 404 });
-  return jsonNoStore({ profile: serialize(user) });
+  const withUsername = await ensureUsername(user, session.userId);
+  return jsonNoStore({ profile: serialize(withUsername) });
 }
 
 // Two independent things can be updated here: displayName (always allowed),

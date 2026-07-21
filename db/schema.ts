@@ -123,17 +123,20 @@ export const users = sqliteTable("users", {
   // Grants access to /admin and its APIs. Never settable via any user-facing
   // API - only flipped directly in D1 by whoever operates the deployment.
   isAdmin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
-  // Opt-in public leaderboard identity - all three are null/false until the
-  // user explicitly opts in via PATCH /api/me/profile. Withdrawing consent
-  // (communityConsent -> false) removes them from GET /api/community/leaderboard
-  // immediately without deleting the username, so re-opting back in keeps it.
-  // This is a separate, visibly opt-in surface from the anonymous community
-  // product feed (community_products) and must never weaken that feed's
-  // anonymity guarantee.
+  // Public leaderboard identity - opt-out (user's explicit choice): every
+  // account defaults to communityConsent = true with a lazily auto-generated
+  // username (see GET /api/me/profile) the first time their profile is
+  // fetched, rather than requiring an explicit opt-in action. Withdrawing
+  // consent (communityConsent -> false) removes them from
+  // GET /api/community/leaderboard immediately without deleting the
+  // username, so re-opting back in keeps the same identity. This is a
+  // separate, visibly distinct surface from the anonymous community product
+  // feed (community_products) and must never weaken that feed's anonymity
+  // guarantee.
   username: text("username").unique(),
   usernameUpdatedAt: text("username_updated_at"),
   avatarKey: text("avatar_key"),
-  communityConsent: integer("community_consent", { mode: "boolean" }).notNull().default(false),
+  communityConsent: integer("community_consent", { mode: "boolean" }).notNull().default(true),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
