@@ -486,3 +486,9 @@ export const contentBlocks = sqliteTable(
     ),
   ],
 );
+
+export const waitlistSignups = sqliteTable("waitlist_signups", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  email: text("email").notNull().unique(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});

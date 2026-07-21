@@ -32,7 +32,7 @@ export function SiteNav() {
           {LINKS.map(([label, href]) => <a key={href} href={href}>{label}</a>)}
         </div>
         <a
-          className="gc-button gc-button-small gc-button-paper gc-nav-cta"
+          className="gc-button gc-button-small gc-button-green gc-nav-cta"
           href={DOWNLOAD_HREF}
           onClick={() => trackEvent("download_clicked", { placement: "nav" })}
         >
