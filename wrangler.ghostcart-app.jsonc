@@ -60,5 +60,12 @@
   // case (nobody needs sub-minute precision on "you can decide now").
   "triggers": {
     "crons": ["*/5 * * * *"]
-  }
+  },
+  // Cooldown-resolved email (lib/email.ts), same trigger as the FCM push
+  // above. No API key needed - but theghostcart.com must be onboarded onto
+  // Email Sending first (Cloudflare dashboard -> Compute & AI -> Email
+  // Service -> Email Sending -> Onboard Domain), which provisions the
+  // required SPF/DKIM records. Sends silently no-op (logged, not thrown)
+  // until that's done - see lib/email.ts.
+  "send_email": [{ "name": "EMAIL" }]
 }

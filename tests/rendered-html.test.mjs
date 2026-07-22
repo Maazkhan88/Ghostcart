@@ -84,7 +84,7 @@ test("keeps decision accounting, accessibility, and brand safety rules in produc
   assert.match(demo, /A decision record.*not proof of purchase/i);
   assert.match(page, /Money Kept increases only after you confirm/i);
   assert.match(demo, /localStorage\.setItem/);
-  assert.match(waitlist, /localStorage\.setItem/);
+  assert.match(waitlist, /\/api\/waitlist/);
   assert.match(demo, /aria-live="polite"/);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
   assert.match(layout, /cooling-off app|cool the urge/i);
