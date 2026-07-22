@@ -162,6 +162,17 @@ fun MainNavigation(
         }
     }
 
+    // Cooling/ghosting/add-to-cart are gated to signed-in accounts
+    // (AppViewModel.requireSignIn) - this pushes the sign-in screen the
+    // moment one of those actions is attempted while signed out, mirroring
+    // the existing checkout sign-in gate.
+    LaunchedEffect(state.authRequiredPrompt) {
+        if (state.authRequiredPrompt) {
+            if (backStack.lastOrNull() != Auth) backStack.add(Auth)
+            appViewModel.consumeAuthRequiredPrompt()
+        }
+    }
+
     // In-app nudge for a cooldown that already expired before the user
     // opened the app (the local WorkManager notification already fired, but
     // people miss/dismiss notifications) - surfaces the same Cooldowns

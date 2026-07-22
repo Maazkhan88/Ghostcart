@@ -22,18 +22,7 @@ object AlmostBuySync {
     suspend fun syncCreate(context: Context, item: AlmostBuy): String? = withContext(Dispatchers.IO) {
         runCatching {
             val token = AuthRepository.getToken(context) ?: return@withContext null
-            val payload = JSONObject().apply {
-                put("title", item.name)
-                put("category", item.category)
-                if (item.trigger.isNotBlank()) put("trigger", item.trigger)
-                put("almostSpentCents", item.amountCents)
-                put("sourceKind", if (item.sourceUrl != null) "share" else "manual")
-                item.sourceUrl?.let { put("sourceUrl", it) }
-                item.imageUrl?.let { put("imageUrl", it) }
-                put("coolOffUntil", epochMillisToIso(item.coolingUntilMillis))
-            }
-            val response = authorizedRequest("/api/almost-buys", "POST", token, payload)
-            response.optJSONObject("almostBuy")?.optString("id")?.takeIf { it.isNotBlank() }
+            createRemote(token, item, coolOffUntilMillis = item.coolingUntilMillis)
         }.getOrNull()
     }
 
@@ -41,14 +30,58 @@ object AlmostBuySync {
         withContext(Dispatchers.IO) {
             runCatching {
                 val token = AuthRepository.getToken(context) ?: return@withContext false
-                val outcome = when (resolution) {
-                    AlmostBuyResolution.SKIPPED -> "skipped"
-                    AlmostBuyResolution.BOUGHT_INTENTIONALLY -> "bought"
-                }
-                authorizedRequest("/api/almost-buys/$serverId/resolve", "POST", token, JSONObject().put("outcome", outcome))
+                resolveRemote(token, serverId, resolution)
                 true
             }.getOrDefault(false)
         }
+
+    // One-time backfill for items resolved locally before this account ever
+    // had a working auth token (or before sync existed at all) - without
+    // this, real ghost/skip history a user built up on-device would never
+    // show up server-side, and the Community Leaderboard would show 0 for
+    // someone who has genuinely ghosted many items. Recreates the item then
+    // immediately resolves it with the same outcome it already has locally;
+    // never invents or guesses an outcome.
+    suspend fun syncResolvedBackfill(context: Context, item: AlmostBuy): String? = withContext(Dispatchers.IO) {
+        val outcome = when (item.status) {
+            AlmostBuyStatus.SKIPPED -> AlmostBuyResolution.SKIPPED
+            AlmostBuyStatus.BOUGHT_INTENTIONALLY -> AlmostBuyResolution.BOUGHT_INTENTIONALLY
+            AlmostBuyStatus.COOLING -> return@withContext null
+        }
+        runCatching {
+            val token = AuthRepository.getToken(context) ?: return@withContext null
+            // No coolOffUntil here: the backend requires it to be in the
+            // future when present, but this item's cooling window is long
+            // over - omitting it just creates as "captured", which resolve
+            // accepts exactly the same as "cooling".
+            val serverId = createRemote(token, item, coolOffUntilMillis = null) ?: return@withContext null
+            resolveRemote(token, serverId, outcome)
+            serverId
+        }.getOrNull()
+    }
+
+    private fun createRemote(token: String, item: AlmostBuy, coolOffUntilMillis: Long?): String? {
+        val payload = JSONObject().apply {
+            put("title", item.name)
+            put("category", item.category)
+            if (item.trigger.isNotBlank()) put("trigger", item.trigger)
+            put("almostSpentCents", item.amountCents)
+            put("sourceKind", if (item.sourceUrl != null) "share" else "manual")
+            item.sourceUrl?.let { put("sourceUrl", it) }
+            item.imageUrl?.let { put("imageUrl", it) }
+            coolOffUntilMillis?.let { put("coolOffUntil", epochMillisToIso(it)) }
+        }
+        val response = authorizedRequest("/api/almost-buys", "POST", token, payload)
+        return response.optJSONObject("almostBuy")?.optString("id")?.takeIf { it.isNotBlank() }
+    }
+
+    private fun resolveRemote(token: String, serverId: String, resolution: AlmostBuyResolution) {
+        val outcome = when (resolution) {
+            AlmostBuyResolution.SKIPPED -> "skipped"
+            AlmostBuyResolution.BOUGHT_INTENTIONALLY -> "bought"
+        }
+        authorizedRequest("/api/almost-buys/$serverId/resolve", "POST", token, JSONObject().put("outcome", outcome))
+    }
 
     suspend fun registerDeviceToken(context: Context, fcmToken: String): Boolean = withContext(Dispatchers.IO) {
         runCatching {

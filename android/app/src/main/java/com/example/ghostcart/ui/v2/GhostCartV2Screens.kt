@@ -1001,12 +1001,17 @@ private fun ProfileCommunitySection(
             fontSize = 10.sp
         )
 
-        if (profile?.communityConsent == true) {
+        var editingUsername by remember { mutableStateOf(false) }
+        if (profile?.communityConsent == true && !editingUsername) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text("You're on the leaderboard as @${profile.username}", color = Ink, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
                 TextButton(onClick = onOpenLeaderboard, colors = ButtonDefaults.textButtonColors(contentColor = GhostGreen)) { Text("View") }
+                TextButton(
+                    onClick = { usernameDraft = profile.username ?: ""; editingUsername = true },
+                    colors = ButtonDefaults.textButtonColors(contentColor = GhostGreen)
+                ) { Text("Edit") }
                 TextButton(
                     onClick = { onSetCommunityOptIn(null, false) },
                     enabled = !saving,
@@ -1014,6 +1019,9 @@ private fun ProfileCommunitySection(
                 ) { Text("Opt out") }
             }
         } else {
+            LaunchedEffect(profile?.username) {
+                if (editingUsername && profile?.username == usernameDraft.trim()) editingUsername = false
+            }
             OutlinedTextField(
                 value = usernameDraft,
                 onValueChange = { usernameDraft = it },
@@ -1023,11 +1031,20 @@ private fun ProfileCommunitySection(
                 colors = ghostTextFieldColors(),
                 modifier = Modifier.fillMaxWidth()
             )
-            TextButton(
-                onClick = { onSetCommunityOptIn(usernameDraft.trim(), true) },
-                enabled = !saving && usernameDraft.trim().length >= 3,
-                colors = ButtonDefaults.textButtonColors(contentColor = GhostGreen, disabledContentColor = MutedText)
-            ) { Text(if (saving) "Saving…" else "Join the leaderboard") }
+            Row {
+                TextButton(
+                    onClick = { onSetCommunityOptIn(usernameDraft.trim(), true) },
+                    enabled = !saving && usernameDraft.trim().length >= 3,
+                    colors = ButtonDefaults.textButtonColors(contentColor = GhostGreen, disabledContentColor = MutedText)
+                ) { Text(if (saving) "Saving…" else if (editingUsername) "Save username" else "Join the leaderboard") }
+                if (editingUsername) {
+                    TextButton(
+                        onClick = { editingUsername = false },
+                        enabled = !saving,
+                        colors = ButtonDefaults.textButtonColors(contentColor = MutedText)
+                    ) { Text("Cancel") }
+                }
+            }
         }
 
         if (error != null) {

@@ -13,6 +13,7 @@ import com.example.ghostcart.data.CoolingReminderWorker
 import com.example.ghostcart.data.DailyGhostReminderWorker
 import com.example.ghostcart.data.AlmostBuy
 import com.example.ghostcart.data.AlmostBuyDraft
+import com.example.ghostcart.data.AlmostBuyStatus
 import com.example.ghostcart.data.AlmostBuyRepository
 import com.example.ghostcart.data.AlmostBuyResolution
 import com.example.ghostcart.data.AlmostBuySync
@@ -50,6 +51,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
@@ -77,6 +79,7 @@ data class AppUiState(
     val deliveryStep: Int = -1,
     val promoApplied: Boolean = true,
     val authEmail: String? = null,
+    val authRequiredPrompt: Boolean = false,
     val simulationIntervalMinutes: Int = 5,
     val hasAppliedForCard: Boolean = false,
     val isApplying: Boolean = false,
@@ -137,6 +140,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         coolingUntilByProductId = loadCoolingPeriods(),
         appTheme = sharedPrefs.getString("app_theme", "System") ?: "System",
         favoriteProductIds = loadFavoriteProductIds(),
+        cartQuantities = loadCartQuantities(),
+        cartProductIds = loadCartQuantities().keys.toList(),
         shareQueue = loadShareQueue(),
         lastOrderId = sharedPrefs.getString("last_order_id", "") ?: "",
         lastOrderTotal = sharedPrefs.getInt("last_order_total", 0),
@@ -174,6 +179,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         refreshInAppMessages()
         if (_uiState.value.authEmail != null) {
             viewModelScope.launch { registerCurrentFcmToken(getApplication()) }
+            backfillUnsyncedHistory()
         }
     }
 
@@ -271,6 +277,24 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun loadCartQuantities(): Map<String, Int> =
+        sharedPrefs.getString("cart_quantities_v1", "")
+            .orEmpty()
+            .lineSequence()
+            .mapNotNull { line ->
+                val separator = line.lastIndexOf('|')
+                if (separator <= 0) return@mapNotNull null
+                val qty = line.substring(separator + 1).toIntOrNull() ?: return@mapNotNull null
+                line.substring(0, separator) to qty
+            }
+            .toMap()
+
+    private fun persistCartQuantities(quantities: Map<String, Int>) {
+        sharedPrefs.edit()
+            .putString("cart_quantities_v1", quantities.entries.joinToString("\n") { "${it.key}|${it.value}" })
+            .apply()
+    }
+
     private fun loadFavoriteProductIds(): Set<String> {
         val legacy = sharedPrefs.getStringSet("favorite_product_ids", emptySet()).orEmpty().toSet()
         val stable = sharedPrefs.getString("favorite_product_ids_v2", "")
@@ -333,7 +357,25 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             .sortedByDescending { it.isUserGhosted }
     }
 
+    // Cooling, ghosting, and adding to cart all require an account - anonymous
+    // users can browse, but every action that creates something (an
+    // almost-buy, a cart entry) needs somewhere real to belong to. Sets a
+    // one-shot flag Navigation.kt observes to push the sign-in screen,
+    // mirroring the existing checkout sign-in gate rather than introducing a
+    // second pattern.
+    private fun requireSignIn(): Boolean {
+        if (_uiState.value.authEmail != null) return true
+        _uiState.update { it.copy(authRequiredPrompt = true) }
+        showToast("Sign in to cool, ghost, or add products")
+        return false
+    }
+
+    fun consumeAuthRequiredPrompt() {
+        _uiState.update { it.copy(authRequiredPrompt = false) }
+    }
+
     fun addDraftToCart(draft: AlmostBuyDraft) {
+        if (!requireSignIn()) return
         val id = "shared_${UUID.randomUUID()}"
         val product = MarketplaceProduct(
             id = id,
@@ -391,6 +433,29 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             CommunityProfileRepository.fetchProfile(getApplication())
                 .onSuccess { profile -> _uiState.update { it.copy(profile = profile) } }
+        }
+    }
+
+    // One-time catch-up for accounts whose real ghost/skip history exists
+    // only on-device (captured before this account ever had a working auth
+    // token, or before server sync existed at all) - without this, someone
+    // who has genuinely ghosted many items would show 0 on the Community
+    // Leaderboard, since it's computed purely from server-side almost_buys.
+    // Reads straight from the repository Flow rather than _uiState.almostBuys
+    // to avoid racing the separate collector that populates it.
+    private fun backfillUnsyncedHistory() {
+        viewModelScope.launch {
+            val unsynced = almostBuyRepository.items.first().filter {
+                it.status != AlmostBuyStatus.COOLING && it.serverId == null
+            }
+            var backfilled = false
+            for (item in unsynced) {
+                AlmostBuySync.syncResolvedBackfill(getApplication(), item)?.let { serverId ->
+                    almostBuyRepository.attachServerId(item.id, serverId)
+                    backfilled = true
+                }
+            }
+            if (backfilled) refreshLeaderboard()
         }
     }
 
@@ -672,13 +737,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addToCart(productId: String) {
+        if (!requireSignIn()) return
         _uiState.update { current ->
             val nextQty = (current.cartQuantities[productId] ?: 0) + 1
             val nextMap = current.cartQuantities + (productId to nextQty)
-            val nextList = nextMap.keys.toList()
+            persistCartQuantities(nextMap)
             current.copy(
                 cartQuantities = nextMap,
-                cartProductIds = nextList
+                cartProductIds = nextMap.keys.toList()
             )
         }
         val name = findProduct(productId)?.name ?: "item"
@@ -693,10 +759,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             } else {
                 current.cartQuantities + (productId to nextQty)
             }
-            val nextList = nextMap.keys.toList()
+            persistCartQuantities(nextMap)
             current.copy(
                 cartQuantities = nextMap,
-                cartProductIds = nextList
+                cartProductIds = nextMap.keys.toList()
             )
         }
         val name = findProduct(productId)?.name ?: "item"
@@ -710,15 +776,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             } else {
                 current.cartQuantities + (productId to quantity)
             }
-            val nextList = nextMap.keys.toList()
+            persistCartQuantities(nextMap)
             current.copy(
                 cartQuantities = nextMap,
-                cartProductIds = nextList
+                cartProductIds = nextMap.keys.toList()
             )
         }
     }
 
     fun clearCart() {
+        persistCartQuantities(emptyMap())
         _uiState.update { it.copy(cartProductIds = emptyList(), cartQuantities = emptyMap()) }
     }
 
@@ -782,6 +849,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     /** [durationLabel] (e.g. "24 hours") is only used for the confirmation toast copy. */
     fun startCoolingPeriod(productId: String, durationMillis: Long, durationLabel: String) {
+        if (!requireSignIn()) return
         val product = findProduct(productId) ?: return
         val coolingUntil = System.currentTimeMillis() + durationMillis
         val updatedPeriods = _uiState.value.coolingUntilByProductId + (productId to coolingUntil)
@@ -951,6 +1019,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         Analytics.logSignIn(getApplication(), "app")
         refreshProfile()
         viewModelScope.launch { registerCurrentFcmToken(getApplication()) }
+        backfillUnsyncedHistory()
     }
 
     fun signOut() {
@@ -979,6 +1048,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun createAlmostBuy(draft: AlmostBuyDraft, onCreated: (AlmostBuy) -> Unit = {}) {
+        if (!requireSignIn()) return
         viewModelScope.launch {
             val item = almostBuyRepository.create(draft)
             scheduleCoolingNotification(item)
@@ -1060,6 +1130,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val activityCheckoutId = UUID.randomUUID().toString()
         val ghostedProducts = cartProductsWithQuantities().map { it.first }.distinctBy { it.id }
         val ghostedProductIds = ghostedProducts.map { it.id }
+        persistCartQuantities(emptyMap())
         _uiState.update {
             it.copy(
                 lastOrderId = orderId,
@@ -1403,6 +1474,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     /** [coolingDurationMillis] is always a user choice (see CoolingDurationDialog) - never a
      * silent fixed default, even when bulk-cooling every queued item at once. */
     fun bulkCoolShareQueue(shareWithCommunity: Boolean, coolingDurationMillis: Long) {
+        if (!requireSignIn()) return
         val queue = _uiState.value.shareQueue
         val activeItems = queue.filter { it.duplicateAction != "remove" }
 
