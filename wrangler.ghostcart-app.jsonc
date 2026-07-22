@@ -24,11 +24,41 @@
   "assets": {
     "directory": "dist/client"
   },
+  // The workers.dev URL was kept alive temporarily while every client
+  // migrated to the theghostcart.com custom domain (Android's ApiConfig.BASE_URL
+  // switched in v2.7.23). User explicitly asked to retire it now - any
+  // device still on a pre-v2.7.23 APK build loses connectivity until it
+  // updates; that trade-off was confirmed, not accidental.
+  "workers_dev": false,
+  // Custom domain, purchased through Cloudflare on the same account as this
+  // Worker/zone - wrangler provisions the DNS record + SSL cert for these
+  // automatically on deploy since the zone is already on this account.
+  "routes": [
+    { "pattern": "theghostcart.com", "custom_domain": true },
+    { "pattern": "www.theghostcart.com", "custom_domain": true }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "ghostcart-v2-db",
       "database_id": "325c0966-2b01-4a60-97a9-1a6d974d8039"
     }
-  ]
+  ],
+  // Requires the bucket to exist before deploy:
+  //   npx wrangler r2 bucket create ghostcart-content-media
+  // Not created automatically by this config - see Phase 4 rollout notes.
+  "r2_buckets": [
+    {
+      "binding": "CONTENT_MEDIA",
+      "bucket_name": "ghostcart-content-media"
+    }
+  ],
+  // Sweeps expired cooldowns and sends the FCM push (see
+  // lib/cooldown-push-sweep.ts / worker/index.ts `scheduled`). Every 5
+  // minutes balances promptness against D1/FCM load - a cooldown can sit
+  // resolved-but-unpushed for up to ~5 minutes, which is fine for this use
+  // case (nobody needs sub-minute precision on "you can decide now").
+  "triggers": {
+    "crons": ["*/5 * * * *"]
+  }
 }

@@ -5,6 +5,10 @@ import { userSessions, users } from "../db/schema";
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_CLIENT_LABEL_LENGTH = 120;
 
+// Cookie used only by the web admin panel; the Android/iOS clients use the
+// Authorization: Bearer flow above and never see or set this cookie.
+export const ADMIN_SESSION_COOKIE = "ghost_cart_admin_session";
+
 export type ApiSession = {
   sessionId: string;
   userId: number;
@@ -65,11 +69,7 @@ export async function createApiSession(userId: number, request: Request) {
   return { accessToken: token, tokenType: "Bearer" as const, expiresAt };
 }
 
-export async function authenticateApiRequest(
-  request: Request,
-): Promise<ApiSession | null> {
-  const token = bearerToken(request);
-  if (!token) return null;
+export async function resolveSessionByToken(token: string): Promise<ApiSession | null> {
   const tokenHash = await hashSessionToken(token);
   const now = new Date().toISOString();
   const db = getDb();
@@ -94,6 +94,14 @@ export async function authenticateApiRequest(
     .limit(1);
 
   return row ?? null;
+}
+
+export async function authenticateApiRequest(
+  request: Request,
+): Promise<ApiSession | null> {
+  const token = bearerToken(request);
+  if (!token) return null;
+  return resolveSessionByToken(token);
 }
 
 export async function requireApiSession(

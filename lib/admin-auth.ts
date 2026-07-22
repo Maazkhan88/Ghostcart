@@ -1,41 +1,49 @@
-import { getChatGPTUser, type ChatGPTUser } from "../app/chatgpt-auth";
+import { cookies } from "next/headers";
+import { eq } from "drizzle-orm";
+import { getDb } from "../db";
+import { users } from "../db/schema";
+import { ADMIN_SESSION_COOKIE, resolveSessionByToken } from "./session-auth";
 
-function allowedAdminEmails(): Set<string> {
-  return new Set(
-    (process.env.GHOST_CART_ADMIN_EMAILS ?? "")
-      .split(",")
-      .map((email) => email.trim().toLowerCase())
-      .filter(Boolean),
-  );
-}
+export type AdminUser = {
+  id: number;
+  email: string;
+  displayName: string | null;
+};
 
-export async function getGhostCartAdminUser(): Promise<ChatGPTUser | null> {
-  const user = await getChatGPTUser();
-  if (!user) return null;
+// Reuses Ghost Cart's own user accounts/sessions (the same ones the Android/
+// iOS apps sign into) rather than a separate admin identity system. Access
+// is gated on the `users.is_admin` flag, which is never settable through any
+// user-facing API - it's flipped directly in D1 by whoever operates the
+// deployment.
+export async function getGhostCartAdminUser(): Promise<AdminUser | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
+  if (!token) return null;
 
-  const allowed = allowedAdminEmails();
-  return allowed.has(user.email.toLowerCase()) ? user : null;
+  const session = await resolveSessionByToken(token);
+  if (!session) return null;
+
+  const db = getDb();
+  const [row] = await db
+    .select({ isAdmin: users.isAdmin })
+    .from(users)
+    .where(eq(users.id, session.userId))
+    .limit(1);
+  if (!row?.isAdmin) return null;
+
+  return { id: session.userId, email: session.email, displayName: session.displayName };
 }
 
 export async function requireAdminApiUser(): Promise<Response | null> {
-  const user = await getChatGPTUser();
-
+  const user = await getGhostCartAdminUser();
   if (!user) {
     return Response.json(
       {
-        error: "Sign in with ChatGPT to manage the Ghost Cart catalog.",
-        signInPath: "/signin-with-chatgpt?return_to=%2Fadmin",
+        error: "Admin sign-in required.",
+        signInPath: "/admin/login",
       },
       { status: 401 },
     );
   }
-
-  if (!allowedAdminEmails().has(user.email.toLowerCase())) {
-    return Response.json(
-      { error: "This account does not have Ghost Cart catalog access." },
-      { status: 403 },
-    );
-  }
-
   return null;
 }

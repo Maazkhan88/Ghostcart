@@ -1,6 +1,12 @@
-import type { Metadata } from "next";
+import { env } from "cloudflare:workers";
+import type { Metadata, Viewport } from "next";
+import { GoogleAnalytics } from "./components/GoogleAnalytics";
 import "./globals.css";
 import "./site.css";
+
+export const viewport: Viewport = {
+  colorScheme: "dark",
+};
 
 export const metadata: Metadata = {
   title: "Ghost Cart — Before you buy it, Ghost it.",
@@ -19,9 +25,13 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const gaMeasurementId = (env.GA_MEASUREMENT_ID as string | undefined) ?? null;
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <GoogleAnalytics measurementId={gaMeasurementId} />
+        {children}
+      </body>
     </html>
   );
 }

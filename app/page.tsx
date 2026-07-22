@@ -1,7 +1,9 @@
 import { Brand } from "./components/Brand";
+import { DirhamAmount } from "./components/DirhamAmount";
 import { GhostFlowDemo } from "./components/GhostFlowDemo";
 import { RevealObserver } from "./components/RevealObserver";
 import { SiteNav } from "./components/SiteNav";
+import { TrackedLink } from "./components/TrackedLink";
 import { WaitlistForm } from "./components/WaitlistForm";
 
 const FLOW_STEPS = [
@@ -21,6 +23,7 @@ const FAQS = [
   ["Will Ghost Cart remind me?", "The planned app can notify you when a cooling period ends. Meal and habit reminders are optional, individually controlled and easy to pause."],
   ["Is anything delivered?", "No. Any checkout or delivery-style moment is playful and imaginary. No real payment, purchase or delivery ever takes place."],
   ["When is Ghost Cart launching?", "Ghost Cart is currently being shaped and tested. Join the waitlist for launch updates without a promised date."],
+  ["How do I get support or ask a question?", "Email info@theghostcart.com and we'll get back to you."],
 ] as const;
 
 export default function Home() {
@@ -61,14 +64,37 @@ export default function Home() {
             </div>
             <div className="gc-phone-progress"><span style={{ width: "62%" }} /></div>
             <div className="gc-phone-truth">
-              <div><span>Almost spent</span><strong>549</strong></div>
-              <div><span>Money Kept</span><strong>0</strong></div>
+              <div><span>Almost spent</span><strong><DirhamAmount amount="549" /></strong></div>
+              <div><span>Money Kept</span><strong><DirhamAmount amount="0" /></strong></div>
             </div>
             <span className="gc-phone-button">Resolve when ready</span>
             <small>Sample screen · no purchase made</small>
           </div>
           <img className="gc-hero-mascot" src="/mascot/mascot-cooldown.png" alt="Friendly Ghost Cart mascot waiting beside a timer" />
           <aside className="gc-hero-note"><span aria-hidden="true">✓</span><div><strong>Clarity over theatre.</strong><p>Nothing counts until you decide.</p></div></aside>
+        </div>
+      </section>
+
+      <section id="download" className="gc-download" aria-labelledby="download-title">
+        <div className="gc-download-card" data-gc-reveal>
+          <img src="/brand/ghost-cart-icon.png" alt="" />
+          <div>
+            <p className="gc-kicker gc-kicker-dark">Try it for real, right now</p>
+            <h2 id="download-title">Download the<br /><em>Android beta.</em></h2>
+            <p>
+              A real, working build — not a mockup. Direct-install APK, updated regularly, Android
+              only for now (not on the Play Store yet). Your phone may ask you to allow installs
+              from this source the first time.
+            </p>
+            <TrackedLink
+              className="gc-button gc-button-green"
+              href="/download/android"
+              event="download_clicked"
+              params={{ placement: "download_section" }}
+            >
+              Download for Android
+            </TrackedLink>
+          </div>
         </div>
       </section>
 
@@ -126,9 +152,9 @@ export default function Home() {
         <div className="gc-progress-editorial">
           <div className="gc-progress-ledger" data-gc-reveal>
             <div className="gc-progress-ledger-head"><span>Sample progress</span><strong>THIS WEEK</strong></div>
-            <article><span className="gc-progress-index">01</span><div><p>Almost spent</p><strong>1,388</strong></div><small>All captured value</small></article>
-            <article><span className="gc-progress-index">02</span><div><p>Cooling now</p><strong>549</strong></div><small>Not yet resolved</small></article>
-            <article className="is-kept"><span className="gc-progress-index">03</span><div><p>Confirmed Money Kept</p><strong>839</strong></div><small>Explicitly skipped</small></article>
+            <article><span className="gc-progress-index">01</span><div><p>Almost spent</p><strong><DirhamAmount amount="1,388" /></strong></div><small>All captured value</small></article>
+            <article><span className="gc-progress-index">02</span><div><p>Cooling now</p><strong><DirhamAmount amount="549" /></strong></div><small>Not yet resolved</small></article>
+            <article className="is-kept"><span className="gc-progress-index">03</span><div><p>Confirmed Money Kept</p><strong><DirhamAmount amount="839" /></strong></div><small>Explicitly skipped</small></article>
             <p>Sample data · not a user claim</p>
           </div>
 
@@ -206,10 +232,11 @@ export default function Home() {
         <div className="gc-footer-top"><Brand light /><p>Capture it. Cool it. Decide.<br /><span>Count only what you kept.</span></p><a href="#top">Back to top ↑</a></div>
         <div className="gc-footer-links">
           <div><span>Explore</span><a href="#how-it-works">How it works</a><a href="#try-it">Try it</a><a href="#progress">Progress</a></div>
-          <div><span>Product</span><a href="#faq">FAQ</a><a href="#waitlist">Join waitlist</a><a href="/admin">Catalog admin</a></div>
+          <div><span>Product</span><a href="#download">Download beta</a><a href="#faq">FAQ</a><a href="#waitlist">Join waitlist</a><a href="/admin">Catalog admin</a></div>
+          <div><span>Contact</span><a href="mailto:info@theghostcart.com">info@theghostcart.com</a></div>
           <div><span>Follow</span><a href="#waitlist">Instagram · coming soon</a><a href="#waitlist">TikTok · coming soon</a><a href="#waitlist">LinkedIn · coming soon</a></div>
         </div>
-        <div className="gc-footer-bottom"><p>Simulation only. No real payment. No real delivery.</p><p>Ghost Cart is not a bank, wallet or payment instrument.</p><span>© Ghost Cart</span></div>
+        <div className="gc-footer-bottom"><p>Simulation only. No real payment. No real delivery.</p><p>Ghost Cart is not a bank, wallet or payment instrument.</p><span>© Ghost Cart · <a href="mailto:info@theghostcart.com">info@theghostcart.com</a></span></div>
       </footer>
     </main>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { DirhamAmount } from "./DirhamAmount";
 
 type DemoStage = "captured" | "choosing" | "cooling" | "decision" | "resolved";
 type DemoResolution = "skipped" | "bought" | null;
@@ -214,7 +215,7 @@ export function GhostFlowDemo() {
                 <span className="gc-item-thumb">
                   {item.image ? <img src={item.image} alt="" /> : <span aria-hidden="true">{item.name.charAt(0).toUpperCase()}</span>}
                 </span>
-                <span><strong>{item.name}</strong><small>{STAGE_LABELS[item.stage]} · {displayValue(item.value)}</small></span>
+                <span><strong>{item.name}</strong><small>{STAGE_LABELS[item.stage]} · <DirhamAmount amount={displayValue(item.value)} /></small></span>
               </button>
             ))}
           </div>
@@ -229,7 +230,7 @@ export function GhostFlowDemo() {
                 <div className="gc-selected-copy">
                   <p className="gc-kicker gc-kicker-dark">{selected.category} · {selected.source}</p>
                   <h4>{selected.name}</h4>
-                  <dl><div><dt>Almost spent</dt><dd>{displayValue(selected.value)}</dd></div><div><dt>Trigger</dt><dd>{selected.trigger}</dd></div></dl>
+                  <dl><div><dt>Almost spent</dt><dd><DirhamAmount amount={displayValue(selected.value)} /></dd></div><div><dt>Trigger</dt><dd>{selected.trigger}</dd></div></dl>
                 </div>
               </div>
 
@@ -285,9 +286,9 @@ export function GhostFlowDemo() {
       </div>
 
       <div className="gc-session-ledger" aria-label="Sample session progress">
-        <article><span>Almost spent</span><strong>{displayValue(almostSpent)}</strong><p>Everything captured in this sample session.</p></article>
-        <article><span>Cooling now</span><strong>{displayValue(coolingNow)}</strong><p>Still waiting for an honest outcome.</p></article>
-        <article className="is-kept"><span>Confirmed Money Kept</span><strong>{displayValue(confirmedKept)}</strong><p>Only items explicitly marked as skipped.</p></article>
+        <article><span>Almost spent</span><strong><DirhamAmount amount={displayValue(almostSpent)} /></strong><p>Everything captured in this sample session.</p></article>
+        <article><span>Cooling now</span><strong><DirhamAmount amount={displayValue(coolingNow)} /></strong><p>Still waiting for an honest outcome.</p></article>
+        <article className="is-kept"><span>Confirmed Money Kept</span><strong><DirhamAmount amount={displayValue(confirmedKept)} /></strong><p>Only items explicitly marked as skipped.</p></article>
       </div>
 
       {receipt && (
@@ -296,7 +297,7 @@ export function GhostFlowDemo() {
           <dl>
             <div><dt>Almost-buy</dt><dd>{receipt.name}</dd></div>
             <div><dt>Outcome</dt><dd>{receipt.resolution === "skipped" ? "Skipped" : "Bought intentionally"}</dd></div>
-            <div><dt>Confirmed kept</dt><dd>{receipt.resolution === "skipped" ? displayValue(receipt.value) : "0"}</dd></div>
+            <div><dt>Confirmed kept</dt><dd><DirhamAmount amount={receipt.resolution === "skipped" ? displayValue(receipt.value) : "0"} /></dd></div>
             <div><dt>Cooling choice</dt><dd>{receipt.cooldown ?? "None"}</dd></div>
           </dl>
           <p>Simulation only. This Ghost Receipt is not an invoice, payment record or proof of purchase.</p>

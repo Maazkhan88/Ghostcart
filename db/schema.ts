@@ -12,6 +12,18 @@ import {
 // integer minor units used to describe an almost-buy; no row represents money
 // held, transferred, charged, or deposited.
 
+// Managed category list for the Products/Community tabs' dropdowns, so admin
+// picks from an existing name instead of free-typing a near-duplicate
+// ("Coffee" vs "Coffee & Drinks"). Products/community products still store
+// category as plain text (unchanged, no FK) - this table is a picklist, not
+// a hard constraint, so existing rows and any future one-off value never
+// become invalid just because they're not in this list.
+export const categories = sqliteTable("categories", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull().unique(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const merchants = sqliteTable("merchants", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
@@ -108,6 +120,23 @@ export const users = sqliteTable("users", {
   passwordHash: text("password_hash").notNull(),
   passwordSalt: text("password_salt").notNull(),
   displayName: text("display_name"),
+  // Grants access to /admin and its APIs. Never settable via any user-facing
+  // API - only flipped directly in D1 by whoever operates the deployment.
+  isAdmin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
+  // Public leaderboard identity - opt-out (user's explicit choice): every
+  // account defaults to communityConsent = true with a lazily auto-generated
+  // username (see GET /api/me/profile) the first time their profile is
+  // fetched, rather than requiring an explicit opt-in action. Withdrawing
+  // consent (communityConsent -> false) removes them from
+  // GET /api/community/leaderboard immediately without deleting the
+  // username, so re-opting back in keeps the same identity. This is a
+  // separate, visibly distinct surface from the anonymous community product
+  // feed (community_products) and must never weaken that feed's anonymity
+  // guarantee.
+  username: text("username").unique(),
+  usernameUpdatedAt: text("username_updated_at"),
+  avatarKey: text("avatar_key"),
+  communityConsent: integer("community_consent", { mode: "boolean" }).notNull().default(true),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
@@ -185,6 +214,7 @@ export const almostBuys = sqliteTable(
     coolOffUntil: text("cool_off_until"),
     snoozedUntil: text("snoozed_until"),
     resolvedAt: text("resolved_at"),
+    pushSentAt: text("push_sent_at"),
     capturedAt: text("captured_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     version: integer("version").notNull().default(1),
@@ -208,6 +238,11 @@ export const almostBuys = sqliteTable(
       table.updatedAt,
     ),
     index("almost_buys_user_cooling_idx").on(table.userId, table.coolOffUntil),
+    index("almost_buys_state_cool_off_push_idx").on(
+      table.state,
+      table.coolOffUntil,
+      table.pushSentAt,
+    ),
   ],
 );
 
@@ -424,5 +459,69 @@ export const simulationConsentAcceptances = sqliteTable(
   (table) => [
     uniqueIndex("simulation_consent_actor_version_unique").on(table.actorKey, table.version),
     index("simulation_consent_actor_idx").on(table.actorKey),
+  ],
+);
+
+// Admin-managed editorial media (home banners, "Ghost Cart Stories" cards).
+// image_key is a server-generated R2 object key - never a user-supplied
+// filename - and is the only thing deleteRecord()-style handlers need to also
+// remove from R2 so no dangling reference or orphaned object is left behind.
+export const contentBlocks = sqliteTable(
+  "content_blocks",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    type: text("type").notNull(),
+    imageKey: text("image_key").notNull(),
+    mediaType: text("media_type").notNull().default("image"),
+    linkType: text("link_type").notNull().default("none"),
+    linkTargetId: text("link_target_id"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    check("content_blocks_type_check", sql`${table.type} IN ('banner', 'story')`),
+    check("content_blocks_media_type_check", sql`${table.mediaType} IN ('image', 'video')`),
+    check(
+      "content_blocks_video_only_for_story_check",
+      sql`${table.mediaType} = 'image' OR ${table.type} = 'story'`,
+    ),
+    check(
+      "content_blocks_link_type_check",
+      sql`${table.linkType} IN ('none', 'product', 'category')`,
+    ),
+    index("content_blocks_type_active_sort_idx").on(
+      table.type,
+      table.isActive,
+      table.sortOrder,
+    ),
+  ],
+);
+
+export const waitlistSignups = sqliteTable("waitlist_signups", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  email: text("email").notNull().unique(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+// FCM registration tokens for signed-in users. A push can only be sent to an
+// account that's both signed in and has registered a token from this device;
+// anonymous/offline almost-buys are never pushed to.
+export const deviceTokens = sqliteTable(
+  "device_tokens",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
+    platform: text("platform").notNull().default("android"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    check("device_tokens_platform_check", sql`${table.platform} IN ('android', 'ios')`),
+    index("device_tokens_user_idx").on(table.userId),
   ],
 );

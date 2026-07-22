@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { requireChatGPTUser } from "../chatgpt-auth";
+import { redirect } from "next/navigation";
 import AdminCatalog from "./AdminCatalog";
 import { getGhostCartAdminUser } from "../../lib/admin-auth";
-import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -12,9 +11,8 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminPage() {
-  await requireChatGPTUser("/admin");
   const user = await getGhostCartAdminUser();
-  if (!user) redirect("/?admin=forbidden");
+  if (!user) redirect("/admin/login");
 
-  return <AdminCatalog userName={user.displayName} userEmail={user.email} />;
+  return <AdminCatalog userName={user.displayName ?? user.email} userEmail={user.email} />;
 }

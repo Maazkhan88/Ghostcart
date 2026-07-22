@@ -633,6 +633,10 @@ em { color: var(--green); font-family: Georgia, "Times New Roman", serif; font-w
 .admin-form textarea { min-height: 92px; padding-block: 13px; resize: vertical; }
 .admin-form select { appearance: auto; }
 .admin-form input::placeholder, .admin-form textarea::placeholder, .admin-records-head input::placeholder { color: #a3a39d; }
+.admin-dropzone { display: grid; place-items: center; gap: 8px; min-height: 88px; padding: 16px; text-align: center; color: #999992; font-size: 10px; font-weight: 700; background: #f7f7f4; border: 1.5px dashed #ddddD7; border-radius: 13px; cursor: pointer; transition: border-color .15s, background .15s; }
+.admin-dropzone[data-active] { border-color: var(--green); background: var(--green-soft); color: var(--ink); }
+.admin-dropzone[data-disabled] { cursor: not-allowed; opacity: .55; }
+.admin-dropzone input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .admin-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .admin-check-grid { display: grid; gap: 8px; }
 .admin-form .admin-check { display: grid; grid-template-columns: 20px 1fr; gap: 11px; align-items: start; padding: 13px; background: #f7f7f4; border: 1px solid #e5e5df; border-radius: 14px; cursor: pointer; }

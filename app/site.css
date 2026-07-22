@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark;
   --gc-ink: #050505;
   --gc-paper: #fff;
   --gc-soft: #f4f4f2;
@@ -36,6 +37,10 @@ body { background: var(--gc-ink); }
 .gc-brand.is-light > span { color: #fff; }
 .gc-brand.is-compact img { width: 30px; height: 30px; border-radius: 8px; }
 .gc-brand.is-compact > span { font-size: 12px; }
+
+.gc-dirham { display: inline-flex; align-items: center; gap: 3px; }
+.gc-dirham img { display: block; width: .78em; height: .78em; filter: brightness(0); }
+.gc-dirham.is-light img { filter: brightness(0) invert(1); }
 
 .gc-nav-shell { position: fixed; z-index: 100; top: 18px; left: 50%; width: min(1180px, calc(100vw - 40px)); transform: translateX(-50%); }
 .gc-nav { display: flex; align-items: center; justify-content: space-between; min-height: 62px; padding: 8px 10px 8px 18px; color: #fff; background: rgba(8,8,8,.82); border: 1px solid rgba(255,255,255,.13); border-radius: 999px; box-shadow: 0 20px 54px rgba(0,0,0,.32); backdrop-filter: blur(24px); }
@@ -261,6 +266,17 @@ body { background: var(--gc-ink); }
 .gc-membership-card > small { display: block; margin-top: 18px; color: rgba(255,255,255,.4); font-size: 8px; }
 .gc-membership-copy h3 { margin: 0; font-size: clamp(42px,4vw,68px); line-height: .98; letter-spacing: -.065em; }
 .gc-membership-copy > p:last-child { max-width: 600px; margin: 26px 0 0; color: var(--gc-muted); font-size: 15px; line-height: 1.7; }
+
+.gc-download { padding: 90px 0 0; }
+.gc-download-card { display: grid; grid-template-columns: minmax(0,.55fr) 1.45fr; gap: 56px; align-items: center; width: var(--gc-page); margin: 0 auto; padding: clamp(30px,5vw,64px); background: var(--gc-ink); border-radius: var(--gc-radius-xl); }
+.gc-download-card > img { justify-self: center; width: min(180px,60%); filter: drop-shadow(0 25px 40px rgba(0,0,0,.4)); }
+.gc-download-card h2 { margin: 12px 0 0; color: #fff; font-size: clamp(40px,4.4vw,68px); line-height: .98; letter-spacing: -.065em; }
+.gc-download-card > div > p:not(.gc-kicker) { max-width: 560px; margin: 22px 0 30px; color: rgba(255,255,255,.6); font-size: 15px; line-height: 1.7; }
+@media (max-width: 860px) {
+  .gc-download { padding-top: 60px; }
+  .gc-download-card { grid-template-columns: 1fr; gap: 26px; padding: 32px; text-align: center; }
+  .gc-download-card > div > p:not(.gc-kicker) { margin-inline: auto; }
+}
 
 .gc-principles { display: grid; grid-template-columns: .8fr 1.2fr; gap: 80px; padding: 150px max(32px, calc((100vw - 1320px) / 2)); color: #fff; background: var(--gc-ink); }
 .gc-principles-intro { position: sticky; top: 130px; align-self: start; }
