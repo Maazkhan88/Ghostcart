@@ -25,8 +25,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.example.ghostcart.data.LeaderboardEntry
-import com.example.ghostcart.data.Marketplace
+import com.example.ghostcart.ui.DirhamAmount
 import com.example.ghostcart.ui.common.GhostTopBar
+import com.example.ghostcart.ui.formatDirhamAmount
 import com.example.ghostcart.theme.FaintBorder
 import com.example.ghostcart.theme.GhostGreen
 import com.example.ghostcart.theme.GreenTint
@@ -34,17 +35,14 @@ import com.example.ghostcart.theme.Ink
 import com.example.ghostcart.theme.MutedText
 import com.example.ghostcart.theme.Paper
 
-private fun formatKeptAmount(cents: Long): String = if (cents > 0) {
-    "${Marketplace.currency} " + "%,.2f".format(java.util.Locale.US, cents / 100.0)
-} else {
-    "${Marketplace.currency} 0.00"
-}
-
 @Composable
-private fun LeaderboardStat(label: String, value: String, valueColor: androidx.compose.ui.graphics.Color, modifier: Modifier = Modifier) {
+private fun LeaderboardStat(label: String, count: Int, amountCents: Long, valueColor: androidx.compose.ui.graphics.Color, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
         Text(label, color = MutedText, fontSize = 9.sp)
-        Text(value, color = valueColor, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 1.dp)) {
+            Text("$count · ", color = valueColor, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+            DirhamAmount(formatDirhamAmount(amountCents), tint = valueColor, fontSize = 12.sp, glyphSize = 10.dp)
+        }
     }
 }
 
@@ -143,13 +141,15 @@ fun LeaderboardScreen(
                         ) {
                             LeaderboardStat(
                                 label = "Cooled & saved",
-                                value = "${entry.savedCount} · ${formatKeptAmount(entry.moneyKeptCents)}",
+                                count = entry.savedCount,
+                                amountCents = entry.moneyKeptCents,
                                 valueColor = GhostGreen,
                                 modifier = Modifier.weight(1f)
                             )
                             LeaderboardStat(
                                 label = "Ghosted",
-                                value = "${entry.ghostedCount} · ${formatKeptAmount(entry.ghostedAmountCents)}",
+                                count = entry.ghostedCount,
+                                amountCents = entry.ghostedAmountCents,
                                 valueColor = Ink,
                                 modifier = Modifier.weight(1f)
                             )
