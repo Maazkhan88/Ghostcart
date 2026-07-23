@@ -18,6 +18,23 @@ type ProfileRow = {
   communityConsent: boolean;
 };
 
+// The username-rename-cooldown error previously interpolated the raw
+// Date.toISOString() value (e.g. "2026-08-06T16:00:51.382Z") directly into
+// a user-facing message - correct but unreadable. Format it as a plain
+// date in this app's UAE timezone instead; nobody needs cooldown precision
+// down to the millisecond for a 14-day wait.
+function formatRetryDate(isoDate: string | undefined): string {
+  if (!isoDate) return "later";
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return "later";
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Asia/Dubai",
+  }).format(date);
+}
+
 // Auto-enrollment is opt-out: an account can have communityConsent = true
 // with no username yet (existing accounts backfilled by migration 0012, or
 // a user who never opened Profile). Assigns one, lazily, the first time
@@ -146,7 +163,7 @@ export async function PATCH(request: Request) {
       const rename = canRenameUsername(current?.usernameUpdatedAt ?? null);
       if (!rename.allowed) {
         return jsonNoStore(
-          { error: `You can change your username again after ${rename.retryAt}.` },
+          { error: `You can change your username again after ${formatRetryDate(rename.retryAt)}.` },
           { status: 429 },
         );
       }
