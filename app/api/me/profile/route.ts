@@ -27,7 +27,7 @@ async function ensureUsername(row: ProfileRow, userId: number): Promise<ProfileR
   if (!row.communityConsent || row.username) return row;
 
   const db = getDb();
-  for (const candidate of candidateDefaultUsernames(row.email)) {
+  for (const candidate of candidateDefaultUsernames()) {
     if (validateUsernameFormat(candidate)) continue;
     try {
       const [updated] = await db

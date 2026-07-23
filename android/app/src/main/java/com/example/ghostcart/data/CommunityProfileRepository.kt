@@ -17,11 +17,17 @@ data class UserProfile(
     val communityConsent: Boolean
 )
 
+// "Cooled & saved" = an almost-buy explicitly resolved "skipped" after
+// cooling off (the impulse-resistance win this board ranks by). "Ghosted" =
+// the separate, unrelated case of actually finishing checkout on an
+// almost-buy (resolved_bought) - do not conflate the two.
 data class LeaderboardEntry(
     val username: String,
     val avatarUrl: String?,
     val moneyKeptCents: Long,
-    val ghostedCount: Int
+    val savedCount: Int,
+    val ghostedCount: Int,
+    val ghostedAmountCents: Long
 )
 
 private fun JSONObject.nullableStringOrNull(key: String): String? =
@@ -121,7 +127,9 @@ object CommunityProfileRepository {
                             username = item.getString("username"),
                             avatarUrl = item.nullableStringOrNull("avatarUrl")?.let { "${ApiConfig.BASE_URL}$it" },
                             moneyKeptCents = item.optLong("moneyKeptCents", 0),
-                            ghostedCount = item.optInt("ghostedCount", 0)
+                            savedCount = item.optInt("savedCount", 0),
+                            ghostedCount = item.optInt("ghostedCount", 0),
+                            ghostedAmountCents = item.optLong("ghostedAmountCents", 0)
                         )
                     )
                 }

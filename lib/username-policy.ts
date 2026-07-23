@@ -48,20 +48,36 @@ export function validateUsernameFormat(username: string): string | null {
 }
 
 // Auto-enrollment is opt-out (see db/schema.ts), so a real user-chosen
-// username may not exist yet the first time a profile is fetched - this
-// generates one deterministically from the email so it reads as "theirs"
-// rather than a random ID, still passing the exact same format/reserved/
-// blocklist checks, with a random numeric suffix to resolve collisions.
-export function candidateDefaultUsernames(seedEmail: string): string[] {
-  const local = seedEmail.split("@")[0] ?? "ghost";
-  const base = local.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 14) || "ghost";
-  const padded = base.length >= 3 ? base : `${base}user`.slice(0, 14);
-  const candidates = [padded];
-  for (let i = 0; i < 4; i++) {
-    const suffix = Math.floor(1000 + Math.random() * 9000);
-    candidates.push(`${padded}_${suffix}`.slice(0, 20));
+// username may not exist yet the first time a profile is fetched. Never
+// derived from the email (that leaked the account's real identity onto a
+// public leaderboard) - instead a Reddit-style random Adjective+Noun+number
+// combo, still passing the exact same format/reserved/blocklist checks.
+// Several candidates are generated so ensureUsername (app/api/me/profile)
+// can fall through to the next one on a UNIQUE-constraint collision.
+const USERNAME_ADJECTIVES = [
+  "Quiet", "Sneaky", "Frosty", "Lucky", "Clever", "Swift", "Silent", "Mellow",
+  "Cozy", "Breezy", "Nimble", "Chill", "Bold", "Calm", "Sly", "Wandering",
+  "Curious", "Gentle", "Sunny", "Misty",
+];
+
+const USERNAME_NOUNS = [
+  "Ghost", "Panda", "Otter", "Falcon", "Comet", "Wolf", "Fox", "Wisp",
+  "Raccoon", "Phantom", "Sparrow", "Lynx", "Ember", "Nomad", "Drifter",
+  "Koala", "Heron", "Badger", "Specter", "Cart",
+];
+
+function randomFrom<T>(list: T[]): T {
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+export function candidateDefaultUsernames(): string[] {
+  const candidates: string[] = [];
+  for (let i = 0; i < 6; i++) {
+    const adjective = randomFrom(USERNAME_ADJECTIVES);
+    const noun = randomFrom(USERNAME_NOUNS);
+    const number = Math.floor(10 + Math.random() * 90);
+    candidates.push(`${adjective}${noun}${number}`.slice(0, 20));
   }
-  candidates.push(`ghost_${Math.random().toString(36).slice(2, 10)}`);
   return candidates;
 }
 

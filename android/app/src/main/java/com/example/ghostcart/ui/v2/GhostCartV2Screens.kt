@@ -1223,40 +1223,127 @@ private val LEGAL_DOCUMENT_TITLES = mapOf(
     "data-security" to "Data Security",
 )
 
+// Last-updated stamp shown on every legal doc so a support conversation can
+// reference exactly which version a user saw. Bump this whenever any of the
+// three bodies below change materially.
+private const val LEGAL_DOCUMENTS_LAST_UPDATED = "23 July 2026"
+
 private val LEGAL_DOCUMENT_BODIES = mapOf(
-    "privacy" to "This will describe what data Ghost Cart collects, why, and how it's used - covering the anonymous community feed, simulated wallet activity, and any account information you provide.",
-    "terms" to "This will describe the terms of using Ghost Cart, including that all purchases, deliveries, and payments shown in the app are simulated and do not involve real transactions.",
-    "data-security" to "This will describe how Ghost Cart stores and protects your data, including what is anonymized, what is encrypted, and how long records are retained.",
+    "privacy" to """
+        Ghost Cart ("we", "us", "our") respects your privacy. This policy explains what information we collect, why, and how it is used, consistent with UAE Federal Decree-Law No. 45 of 2021 on the Protection of Personal Data ("PDPL").
+
+        What we collect
+        • Account information: your email address and a securely hashed password - we never store your actual password.
+        • Profile information you choose to provide: display name, leaderboard username, and profile photo.
+        • Simulated activity: items you capture, cool off, or resolve in the app (Ghost Cart items, cooldowns, "Money Kept" records). None of this reflects a real purchase, payment, or bank transaction.
+        • Device and usage information: push-notification device tokens, and aggregate analytics via Firebase Analytics (Android) and Google Analytics (website) - feature usage and crash diagnostics only.
+        • Anonymous community content: if you opt in, your leaderboard username, avatar, and activity counts (never your email or real name) become visible to other users. You can withdraw this consent at any time from Profile.
+
+        Why we use it
+        To operate and secure the app and website, personalize your experience, respond to support requests, and improve the product. We do not sell your personal data.
+
+        Who we share it with
+        We use trusted service providers to run Ghost Cart: Cloudflare (hosting, database, and email delivery) and Google Firebase / Google Analytics (sign-in, push notifications, analytics). These providers process data on our behalf and may store it outside the UAE; we take reasonable steps to ensure they provide an adequate level of protection.
+
+        Your rights
+        Under the PDPL you may access, correct, or request deletion of your personal data. Delete your account and all associated data at any time from Profile → Delete Account. For any other request, contact info@theghostcart.com.
+
+        Data retention
+        We retain your data while your account is active, or as needed to meet legal obligations. Deleting your account permanently removes your profile, cooldown history, favorites, and simulated wallet data.
+
+        Children's privacy
+        Ghost Cart is not directed at, and should not be used by, anyone under 18.
+
+        Changes to this policy
+        We may update this policy from time to time; continued use of the app after a change means you accept the update.
+
+        Contact: info@theghostcart.com
+    """,
+    "terms" to """
+        By using the Ghost Cart app (the "App") or theghostcart.com (the "Site"), you agree to these Terms & Conditions, governed by the laws of the United Arab Emirates.
+
+        1. What Ghost Cart is
+        Ghost Cart is a simulation-only cooling-off tool that helps you pause before an impulse purchase. Every "purchase," "checkout," "delivery," and "payment" shown in the App is simulated for behavioral/educational purposes only. No real money moves through the App, no real goods are ordered or delivered, and Ghost Cart is not a bank, e-wallet, payment service provider, or licensed financial institution. The "Ghost Card" is a non-financial achievement/membership card only - it is not a payment card and carries no CVV, expiry date, or real card number.
+
+        2. Eligibility
+        You must be at least 18 years old to create an account.
+
+        3. Your account
+        You are responsible for keeping your login credentials secure and for all activity under your account. Notify us immediately at info@theghostcart.com if you suspect unauthorized access.
+
+        4. Community features
+        The Community Leaderboard and community product feed let opted-in users share a chosen username, avatar, and activity - never your email or real name. Do not impersonate others or post unlawful, defamatory, or offensive content. We may remove content or suspend accounts that violate this, consistent with UAE Federal Decree-Law No. 34 of 2021 on Combating Rumours and Cybercrimes.
+
+        5. No real transactions
+        Nothing in the App constitutes an offer to sell, a real order, a real payment instrument, or a real delivery service. "Money Kept" and similar figures are personal tracking metrics only - not a financial product, investment, or guarantee of savings.
+
+        6. Intellectual property
+        The Ghost Cart name, logo, mascot, and app/site design belong to us. Do not copy, reproduce, or reuse them without permission.
+
+        7. Termination
+        We may suspend or terminate accounts that violate these Terms. You may delete your own account at any time from Profile.
+
+        8. Disclaimer and limitation of liability
+        The App and Site are provided "as is," without warranties of any kind. To the fullest extent permitted by UAE law, we are not liable for indirect, incidental, or consequential damages arising from your use of the App or Site.
+
+        9. Governing law
+        These Terms are governed by the laws of the United Arab Emirates. Any dispute is subject to the exclusive jurisdiction of the competent courts of the UAE.
+
+        10. Contact: info@theghostcart.com
+    """,
+    "data-security" to """
+        We take reasonable technical and organizational measures to protect your data, consistent with UAE Federal Decree-Law No. 45 of 2021 on the Protection of Personal Data.
+
+        • Encryption in transit: all traffic between the App/Site and our servers uses HTTPS/TLS.
+        • Password security: passwords are never stored in plain text. We store a salted, one-way cryptographic hash and cannot see or recover your actual password.
+        • Session security: sign-in sessions use httpOnly, secure tokens; admin access is separately gated and audited.
+        • Data minimization: the anonymous community feed and leaderboard never expose your email, password, or real name to other users.
+        • Infrastructure: our backend runs on Cloudflare's Workers/D1 platform; sign-in and push notifications use Google Firebase. These providers maintain their own independent security certifications.
+        • Retention and deletion: deleting your account (Profile → Delete Account) permanently removes your stored profile, cooldown history, favorites, and simulated wallet data from our production database.
+        • Incident response: if we become aware of a data breach affecting your personal data, we will take reasonable steps to notify affected users and the relevant UAE authority without undue delay, as required by law.
+
+        This page is a good-faith summary of our practices, not an exhaustive security audit. Questions: info@theghostcart.com
+    """,
 )
 
 /**
- * Static placeholder legal screens (Privacy Policy, Terms & Conditions, Data Security), reached
- * from Profile. Deliberately visible as draft - real legal copy has not been supplied yet, and
- * this must never look production-final in the meantime.
+ * Legal screens (Privacy Policy, Terms & Conditions, Data Security), reached from Profile.
+ * The bodies above are a substantive first draft written for this app's actual behavior
+ * (simulation-only, UAE-based) - not yet reviewed by a licensed UAE lawyer, so the draft
+ * banner below must stay visible until that review happens, especially before Play Store
+ * submission.
  */
 @Composable
 fun LegalDocumentScreen(docId: String, onBack: () -> Unit, modifier: Modifier = Modifier) {
     val title = LEGAL_DOCUMENT_TITLES[docId] ?: "Legal"
-    val body = LEGAL_DOCUMENT_BODIES[docId] ?: "Legal copy for this document has not been supplied yet."
+    val body = (LEGAL_DOCUMENT_BODIES[docId] ?: "Legal copy for this document has not been supplied yet.")
+        .trimIndent()
 
-    Column(modifier = modifier.fillMaxSize().background(Paper).padding(20.dp)) {
-        GhostTopBar(title = title, onBack = onBack)
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 18.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(Color(0xFFFEF3C7))
-                .padding(14.dp)
-        ) {
-            Icon(Icons.Filled.Warning, contentDescription = null, tint = Color(0xFFD97706), modifier = Modifier.size(20.dp))
-            Column(modifier = Modifier.padding(start = 10.dp)) {
-                Text("DRAFT — pending legal review", color = Color(0xFF92400E), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
-                Text("This is placeholder copy, not real legal text. Do not rely on it.", color = Color(0xFFB45309), fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+    Column(modifier = modifier.fillMaxSize().background(Paper)) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            GhostTopBar(title = title, onBack = onBack)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 18.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color(0xFFFEF3C7))
+                    .padding(14.dp)
+            ) {
+                Icon(Icons.Filled.Warning, contentDescription = null, tint = Color(0xFFD97706), modifier = Modifier.size(20.dp))
+                Column(modifier = Modifier.padding(start = 10.dp)) {
+                    Text("DRAFT — pending legal review", color = Color(0xFF92400E), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("Written for this app, not yet reviewed by a licensed UAE lawyer. Do not treat as final.", color = Color(0xFFB45309), fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+                }
+            }
+            Text("Last updated: $LEGAL_DOCUMENTS_LAST_UPDATED", color = MutedText, fontSize = 10.sp, modifier = Modifier.padding(top = 12.dp))
+        }
+        androidx.compose.foundation.lazy.LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 20.dp)) {
+            item {
+                Text(body, color = MutedText, fontSize = 13.sp, lineHeight = 19.sp, modifier = Modifier.padding(bottom = 32.dp))
             }
         }
-        Text(body, color = MutedText, fontSize = 13.sp, lineHeight = 19.sp, modifier = Modifier.padding(top = 20.dp))
     }
 }
 

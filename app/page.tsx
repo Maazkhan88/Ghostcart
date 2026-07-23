@@ -234,6 +234,7 @@ export default function Home() {
           <div><span>Explore</span><a href="#how-it-works">How it works</a><a href="#try-it">Try it</a><a href="#progress">Progress</a></div>
           <div><span>Product</span><a href="#download">Download beta</a><a href="#faq">FAQ</a><a href="#waitlist">Join waitlist</a><a href="/admin">Catalog admin</a></div>
           <div><span>Contact</span><a href="mailto:info@theghostcart.com">info@theghostcart.com</a></div>
+          <div><span>Legal</span><a href="/privacy">Privacy Policy</a><a href="/terms">Terms &amp; Conditions</a><a href="/data-security">Data Security</a></div>
           <div><span>Follow</span><a href="#waitlist">Instagram · coming soon</a><a href="#waitlist">TikTok · coming soon</a><a href="#waitlist">LinkedIn · coming soon</a></div>
         </div>
         <div className="gc-footer-bottom"><p>Simulation only. No real payment. No real delivery.</p><p>Ghost Cart is not a bank, wallet or payment instrument.</p><span>© Ghost Cart · <a href="mailto:info@theghostcart.com">info@theghostcart.com</a></span></div>
