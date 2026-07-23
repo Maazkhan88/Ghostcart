@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.compose.compiler)
@@ -9,6 +11,17 @@ val googleWebClientId = providers.gradleProperty("GHOST_CART_GOOGLE_WEB_CLIENT_I
     .orElse(providers.environmentVariable("GHOST_CART_GOOGLE_WEB_CLIENT_ID"))
     .getOrElse("")
 
+// Release signing reads from keystore.properties (gitignored, never
+// committed - see android/.gitignore). Absent on any machine that doesn't
+// have the real keystore, so a release build only works where the keystore
+// actually lives; debug builds are unaffected either way.
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
+}
+
 android {
     namespace = "com.ghostcart.app"
     compileSdk = 36
@@ -16,9 +29,20 @@ android {
         applicationId = "com.ghostcart.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 60
-        versionName = "2.7.31"
+        versionCode = 61
+        versionName = "2.7.32"
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
+    }
+
+    signingConfigs {
+        if (keystorePropertiesFile.exists()) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
@@ -26,6 +50,9 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     compileOptions {

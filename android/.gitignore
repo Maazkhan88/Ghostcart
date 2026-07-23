@@ -13,3 +13,9 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Release signing - never commit the keystore or its passwords. Losing this
+# file means Ghost Cart can never be updated on Play Store again under the
+# same app identity - it must be backed up outside this repo.
+/keystore/
+keystore.properties

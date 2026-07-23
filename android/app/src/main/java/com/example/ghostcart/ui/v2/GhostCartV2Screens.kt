@@ -1174,6 +1174,17 @@ fun ProfileScreen(
                 Text("Delete account", color = com.example.ghostcart.theme.DangerRed)
             }
         }
+        item {
+            // Shown until Play Store release, so beta testers can tell Claude/support
+            // exactly which build a bug report came from without digging through Settings.
+            Text(
+                "Ghost Cart v${BuildConfig.VERSION_NAME}",
+                color = MutedText,
+                fontSize = 10.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+            )
+        }
     }
 
     if (confirmDelete) {
