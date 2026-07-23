@@ -1308,10 +1308,6 @@ private val LEGAL_DOCUMENT_BODIES = mapOf(
 
 /**
  * Legal screens (Privacy Policy, Terms & Conditions, Data Security), reached from Profile.
- * The bodies above are a substantive first draft written for this app's actual behavior
- * (simulation-only, UAE-based) - not yet reviewed by a licensed UAE lawyer, so the draft
- * banner below must stay visible until that review happens, especially before Play Store
- * submission.
  */
 @Composable
 fun LegalDocumentScreen(docId: String, onBack: () -> Unit, modifier: Modifier = Modifier) {
@@ -1322,21 +1318,6 @@ fun LegalDocumentScreen(docId: String, onBack: () -> Unit, modifier: Modifier = 
     Column(modifier = modifier.fillMaxSize().background(Paper)) {
         Column(modifier = Modifier.padding(20.dp)) {
             GhostTopBar(title = title, onBack = onBack)
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 18.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Color(0xFFFEF3C7))
-                    .padding(14.dp)
-            ) {
-                Icon(Icons.Filled.Warning, contentDescription = null, tint = Color(0xFFD97706), modifier = Modifier.size(20.dp))
-                Column(modifier = Modifier.padding(start = 10.dp)) {
-                    Text("DRAFT — pending legal review", color = Color(0xFF92400E), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("Written for this app, not yet reviewed by a licensed UAE lawyer. Do not treat as final.", color = Color(0xFFB45309), fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
-                }
-            }
             Text("Last updated: $LEGAL_DOCUMENTS_LAST_UPDATED", color = MutedText, fontSize = 10.sp, modifier = Modifier.padding(top = 12.dp))
         }
         androidx.compose.foundation.lazy.LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 20.dp)) {
