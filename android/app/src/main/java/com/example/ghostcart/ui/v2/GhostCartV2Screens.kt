@@ -151,17 +151,16 @@ fun GhostHomeScreen(
     val summary = items.progressSummary()
     val active = items.filter { it.status == AlmostBuyStatus.COOLING }.sortedBy { it.coolingUntilMillis }
 
-    // Ask for notification permission once, the first time the user reaches Home (covers both
-    // the guest and signed-up onboarding paths), rather than only when a specific reminder
-    // toggle is switched on - otherwise a user who never visits Profile never gets asked at all.
-    val context = LocalContext.current
+    // Ask for notification permission every time Home is reached while it's still not granted
+    // (covers both the guest and signed-up onboarding paths, and anyone who dismissed/denied it
+    // before) - rememberNotificationPermissionRequest() already no-ops if permission is already
+    // granted or the OS is below API 33, so this never nags someone who already said yes. A
+    // previous version only asked once ever, tracked via a persisted SharedPreferences flag -
+    // that flag could get stuck `true` from an old build/denial and then silently never ask
+    // again for the lifetime of the install. Don't reintroduce that pattern.
     val requestNotificationsOnFirstRun = rememberNotificationPermissionRequest()
     LaunchedEffect(Unit) {
-        val prefs = context.getSharedPreferences("ghost_cart_prefs", Context.MODE_PRIVATE)
-        if (!prefs.getBoolean("notification_permission_prompted", false)) {
-            requestNotificationsOnFirstRun()
-            prefs.edit().putBoolean("notification_permission_prompted", true).apply()
-        }
+        requestNotificationsOnFirstRun()
     }
 
     PullToRefreshBox(

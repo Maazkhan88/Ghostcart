@@ -23,6 +23,13 @@ type ProfileRow = {
 // a user who never opened Profile). Assigns one, lazily, the first time
 // it's actually needed, rather than a bulk migration guessing usernames for
 // accounts that may never be fetched again.
+//
+// Deliberately leaves usernameUpdatedAt untouched (null) here - this is a
+// system fallback, not a user-chosen rename, so it must not start the
+// 14-day rename cooldown (lib/username-policy.ts's canRenameUsername treats
+// a null usernameUpdatedAt as "never renamed, free to change"). Setting it
+// here once locked a real account out of editing its own just-auto-assigned
+// name for 14 days.
 async function ensureUsername(row: ProfileRow, userId: number): Promise<ProfileRow> {
   if (!row.communityConsent || row.username) return row;
 
@@ -32,7 +39,7 @@ async function ensureUsername(row: ProfileRow, userId: number): Promise<ProfileR
     try {
       const [updated] = await db
         .update(users)
-        .set({ username: candidate, usernameUpdatedAt: new Date().toISOString() })
+        .set({ username: candidate })
         .where(eq(users.id, userId))
         .returning({
           email: users.email,
