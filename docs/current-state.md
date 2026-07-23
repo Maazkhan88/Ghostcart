@@ -1,6 +1,180 @@
 # Current State
 
-Last updated: 2026-07-21, even later still (Claude Code — Firebase Analytics + GA4 shipped; server-triggered FCM push pipeline built from scratch (cooldown sync, device tokens, cron sweep); proactive in-app cooldown prompt; random-story splash screen; MP4 video support for Ghost Cart Stories; real waitlist backend; several real website bugs fixed). See the "STATUS REPORT" block immediately below — it supersedes everything after it, which is historical (left for provenance).
+Last updated: 2026-07-24 (Claude Code — email notifications shipped; leaderboard's "ghosted" metric fixed to mean real checkouts, not skip-count; random Reddit-style usernames; real legal pages; notification-permission and Dirham-glyph bugs fixed; **first-ever Play Store release build shipped**, including a crash-on-launch fix, three rounds of Google Sign-In OAuth cert wrangling, and a real production AAB now in Play Console). See the "STATUS REPORT" block immediately below — it supersedes everything after it, which is historical (left for provenance).
+
+> ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-24)
+>
+> Long session, mostly the first real Play Store launch attempt. Read the "Play Store release" section
+> before touching `android/app/build.gradle.kts`'s `release` buildType or any Google Cloud OAuth
+> client - there's a genuinely non-obvious gotcha in there that cost a lot of back-and-forth.
+>
+> ### Email notifications (push+email+in-app, the "email" leg)
+>
+> - `lib/email.ts` sends via the Cloudflare Workers `send_email` binding (`wrangler.ghostcart-app.jsonc`),
+>   wired into the existing `lib/cooldown-push-sweep.ts` cron sweep alongside the FCM push - same
+>   best-effort semantics, a failed/unconfigured send never throws or blocks the sweep.
+> - **Not actually sending yet** - Cloudflare Email Sending requires the Workers Paid plan ($5/mo
+>   minimum), which the user hasn't purchased. Every API/CLI attempt I made to onboard the domain
+>   failed with `Unauthorized [code: 2036]` regardless of token scope - that error *was* the paid-plan
+>   gate, not a bug. User explicitly chose to defer this ("let's do the email later") rather than
+>   switch to a free provider (Resend/Brevo were offered). `EMAIL` binding is deployed and ready the
+>   moment the plan is purchased and the domain is onboarded (Cloudflare dashboard, Compute & AI >
+>   Email Service > Email Sending > Onboard Domain) - nothing else needs to change.
+> - Along the way, merged `fix/admin-auth-standalone`'s entire backend (Phase 4 media, Phase 6
+>   leaderboard, FCM pipeline, MP4 stories, admin panel, website fixes) into this branch - it only
+>   existed there before, while this branch had the matching Android code with nothing to talk to.
+>   Same branch-split failure mode that killed Phase 7 messaging once already; don't let it recur.
+>
+> ### Leaderboard: "ghosted" was measuring the wrong thing, twice
+>
+> - First bug: `/api/community/leaderboard` labeled the skip-count (`resolved_skipped`) as
+>   `ghostedCount` - backwards. Fixed to report both, correctly separated: **cooled & saved**
+>   (`savedCount`/`moneyKeptCents`, ranks the board) and **ghosted** (`ghostedCount`/`ghostedAmountCents`,
+>   shown but doesn't rank).
+> - Second bug, caught by the user testing the real checkout flow: "ghosted" in this app's vocabulary
+>   means *finishing checkout* (the "Fake Delivery Tracking" flow), not `resolved_bought` on an
+>   almost-buy. The marketplace-cart checkout (`AppViewModel.placeSimulatedOrder`) only ever recorded
+>   an **anonymous**, hashed-actor `ghost_events` row (for the privacy-gated "Most Ghosted Today"
+>   trend) - never anything attributable to the signed-in account. New `simulated_orders` table
+>   (migration `0016`, applied to prod) + `POST /api/me/simulated-orders`, called from
+>   `placeSimulatedOrder` alongside the existing anonymous event, purely so a user's own checkouts
+>   show up on their own leaderboard entry. `ghostedCount`/`ghostedAmountCents` now sum both
+>   `almost_buys.resolved_bought` and `simulated_orders` via correlated subqueries (not a join - two
+>   one-to-many joins on the same query would have fanned out and inflated every sum/count).
+> - Home screen's "Almost spent / Cooling / Money kept" strip is still **local-device-only, never
+>   synced from server** - a fresh install (or a reinstall under a different signing cert, which is
+>   effectively what happened moving from debug to the release build) shows 0.00 there even for an
+>   account with real server-side history. User asked to ship without fixing this. If picked up:
+>   needs a real "pull my history down on sign-in" feature (`GET /api/almost-buys` exists server-side
+>   already), there's currently only push (device -> server via `AlmostBuySync`/`backfillUnsyncedHistory`),
+>   never pull.
+>
+> ### Usernames: no longer leak the account's email
+>
+> - `candidateDefaultUsernames()` (`lib/username-policy.ts`) generates Reddit-style random
+>   Adjective+Noun+number combos now (e.g. `MistyKoala87`), not derived from the email local-part.
+> - Real bug this caused: `ensureUsername()` was setting `usernameUpdatedAt` on its own
+>   system-assigned fallback name, which the 14-day rename cooldown treats identically to a real
+>   user-chosen rename - so a freshly auto-assigned account was immediately locked out of editing
+>   its own name for 14 days. Fixed: auto-assignment leaves `usernameUpdatedAt` untouched; the
+>   cooldown only starts on an actual user-driven `PATCH`.
+> - Existing accounts keep whatever username they already had until manually cleared - two known
+>   test accounts (`maaznkhan`, `nehanavaidnk`) were cleared via a direct prod `UPDATE` at the user's
+>   explicit request (auto mode's classifier blocks this by default; it was a deliberate exception).
+>
+> ### Legal pages - real draft content, banner removed at user's request
+>
+> - Privacy Policy / Terms & Conditions / Data Security written for this app's actual behavior
+>   (simulation-only, UAE-based: PDPL, the Cybercrime law, 18+ gate) on both the Android app
+>   (`LegalDocumentScreen`, Profile > Legal) and the website (new `/privacy`, `/terms`,
+>   `/data-security` pages, linked from the footer).
+> - **The "DRAFT - pending legal review" banner was removed at the user's explicit request.** The
+>   content itself was never reviewed by a licensed UAE lawyer - removing the banner doesn't change
+>   that, it was the user's call to make on their own product, not a claim that review happened.
+>   If anyone asks "has this been legally reviewed," the honest answer is still no.
+>
+> ### Two real bugs found from live user reports
+>
+> - **Notification permission silently stopped asking forever.** Was gated behind a persisted
+>   SharedPreferences "already prompted once" flag - on a device that had any earlier build installed
+>   (this device, all session), that flag was already true, so permission was never actually granted
+>   but the app never asked again. Removed the flag entirely; `rememberNotificationPermissionRequest()`
+>   already no-ops once permission is actually granted (or on API <33), so asking on every Home
+>   launch is safe and doesn't nag anyone who already said yes.
+> - **Leaderboard showed literal "AED" text instead of the Dirham glyph** - it was built (Phase 6)
+>   after the Dirham-glyph rollout and never got updated to use the shared `DirhamAmount` composable
+>   like every other money display in the app. Fixed.
+>
+> ### Play Store release - the big one, first real launch attempt
+>
+> A real release keystore (`android/keystore/ghostcart-release.jks` + `keystore.properties`, both
+> gitignored, correctly never committed) already existed from an earlier session's work that got
+> interrupted by a disk-full crisis. This session took it the rest of the way to an actual Play
+> Console submission:
+>
+> 1. **First-ever minified release build crashed on launch, before any UI showed**, both via Play
+>    Store internal-testing install and a directly sideloaded APK - confirmed it was a real build
+>    issue, not distribution. No device/emulator was available to pull a real crash log (no hardware
+>    acceleration for the emulator, no USB-connected device), so this was fixed by elimination:
+>    `isMinifyEnabled` and `isShrinkResources` are both **disabled** in the release buildType right
+>    now (see the comment there). Prime suspect was `isShrinkResources` stripping
+>    Firebase's runtime-read config resources (`google_app_id` etc, read by name, not a static
+>    `R.string` reference the shrinker can see) - never confirmed with a real stack trace, just
+>    inferred from the symptom (crash before any UI) and shipped the safe fix under time pressure.
+>    **Re-enabling either flag needs a real device test first, not just flipping them back on.**
+> 2. **Google Sign-In needed its web OAuth client ID baked in** - `GHOST_CART_GOOGLE_WEB_CLIENT_ID`
+>    now lives in `android/gradle.properties` (committed - it's a public "Web application" OAuth
+>    client ID, no client secret involved in this native flow, same non-sensitive status as the
+>    already-committed `google-services.json` api_key).
+> 3. **Three separate Android-type OAuth clients now exist in Google Cloud Console, one per signing
+>    certificate that could present itself**, because each Android OAuth client holds exactly one
+>    SHA-1 (no multi-value field in that particular Google Cloud Console UI, unlike Firebase's own
+>    console):
+>    - `Android client 1` - debug keystore (pre-existing)
+>    - `Android client 2` - the release **upload key** (`keystore/ghostcart-release.jks`'s own SHA-1,
+>      `F1:94:A8:BA:0D:B1:A9:CA:4B:F3:2C:0D:BB:86:C5:99:3C:1E:CF:BA`) - what a *sideloaded* release
+>      APK/AAB-derived APK presents.
+>    - `Android client 3` - **the real Play App Signing certificate** - what actually ships to every
+>      real Play Store install, since Play re-signs every uploaded AAB with its own key, separate
+>      from the upload key. **This one went through two wrong values before landing on the right one**
+>      - Play Console's "App signing key" section now shows a "Quantum-ready (beta)" hybrid scheme
+>      with a "Classical key" and a "Post-quantum cryptography key," each with their own SHA-1/SHA-256
+>      - and *neither one* is the certificate real devices actually see. That's a separate
+>      `deployment_cert.der`, only obtainable via the "Download certificates" zip on that page. Final
+>      correct value: `F7:9C:6C:A7:9C:01:DF:A3:DA:4C:93:5C:1D:28:AB:29:49:3A:3D:75`. **If this ever
+>      needs re-deriving (e.g. after a `Change key` on Play Console), download the certificate zip
+>      and extract `deployment_cert.der` directly - do not read the SHA-1/SHA-256 off the "Classical
+>      key" button on that page, it is not the same certificate despite the confusing UI.**
+>    - The OAuth consent screen (now called "Google Auth Platform" in Cloud Console) was also still
+>      in `Testing` publishing status with zero test users, which independently blocks every account
+>      universally - had to be moved to `Published`/production separately from the cert issue above.
+>      Both problems were stacked on top of each other, which is why isolating the actual cause took
+>      several rounds.
+> 4. **`public/.well-known/assetlinks.json`** updated to also list the real Play App Signing
+>    certificate's SHA-256 (`DC:CC:42:10:C1:C0:41:8C:90:AE:C5:BE:0B:1D:6C:7A:14:68:EE:DE:99:56:DC:BE:3C:94:E3:CA:C0:68:DE:77`,
+>    same cert as `deployment_cert.der` above - SHA-256 here, SHA-1 for the OAuth client, both from
+>    the same certificate) alongside the pre-existing debug fingerprint, so verified App Links
+>    (`theghostcart.com/ghost/...` opening directly in the app) work for real Play Store installs too.
+> 5. Shipped as **versionCode 62 / versionName 2.7.33** (61 was burned by the crashing build - Play
+>    Console permanently rejects re-uploading a versionCode once used, even a broken one). AAB
+>    delivered to the user directly; they've uploaded it to Play Console and are currently working
+>    through Internal testing tester invites (some "Item not found"/account-mismatch friction, see
+>    below) before deciding on Production.
+>
+> ### Store listing - in progress, not finished
+>
+> User is filling out Play Console's app content forms live, asking for review as they go:
+> - **Category**: recommended Finance (not Shopping - the app explicitly never facilitates real
+>   transactions, "Shopping" would be a misleading category for what it actually does).
+> - **Content ratings questionnaire**: flagged two answers that looked wrong against the app's real
+>   feature set - "Online Content" (dynamic catalog/community-feed/leaderboard content fetched at
+>   runtime, not bundled) and "User Content Sharing" (public leaderboard avatars/usernames) were both
+>   answered "No" by the user; recommended "Yes" for at least the first. **Not confirmed fixed** -
+>   don't assume this got corrected without checking.
+> - **Data safety form**: recommended `https://theghostcart.com/privacy` as the account-deletion URL
+>   (it already documents the in-app deletion steps and what gets removed) rather than building a
+>   dedicated page. "Partial data deletion without full account deletion" answered No (no such
+>   feature exists).
+> - **Reviewer sign-in credentials** (separate from the tester list - this is for Google's own app
+>   reviewers): recommended a dedicated `reviewer@theghostcart.com` test account created through the
+>   app's own signup, rather than sharing the user's real credentials. **Not confirmed created.**
+> - App ownership verification for `Android client 2`/`3` flagged as unverified by Google Cloud's own
+>   "Project Checkup" - optional, doesn't block sign-in, not yet done.
+>
+> ### Still open
+>
+> - Purchase Workers Paid plan + onboard Email Sending, whenever the user gets to it - nothing on
+>   the code/deploy side is blocking this anymore.
+> - Re-enable `isMinifyEnabled`/`isShrinkResources` on a real device test, ideally with a proper
+>   crash-log path this time (a connected device or a working emulator - this sandbox has neither).
+> - Home screen local progress metrics still don't survive a reinstall/new device (see leaderboard
+>   section above) - known, deferred at the user's choice, not fixed.
+> - Content ratings + data safety form completion status unconfirmed - verify before submitting for
+>   review, don't assume.
+> - "Fake delivery complete" notification image/copy flagged by the user as "looks weird... fix later,
+>   not now" - genuinely deferred, not forgotten.
+> - Welcome / how-to-use-the-app / delivery-tracking email templates the user asked for early this
+>   session were never built (got fully absorbed by the Play Store push instead) - still queued.
 
 > ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-21, even later still same day)
 >
