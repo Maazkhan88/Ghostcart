@@ -1,39 +1,58 @@
-import { desc, eq, sql } from "drizzle-orm";
-import { getDb } from "../../../../db";
-import { almostBuys, users } from "../../../../db/schema";
+import { getD1 } from "../../../../db";
 import { jsonNoStore } from "../../../../lib/almost-buy-api";
 
 const MAX_ENTRIES = 50;
+
+type LeaderboardRow = {
+  username: string;
+  avatarKey: string | null;
+  moneyKeptCents: number;
+  savedCount: number;
+  ghostedCount: number;
+  ghostedAmountCents: number;
+};
 
 // Public, unauthenticated: only users who explicitly opted in
 // (communityConsent = true) appear here, and only their username/avatar -
 // never email or any other account field. Withdrawing consent removes a
 // user from this list immediately (see PATCH /api/me/profile).
+//
+// Ghost Cart's own vocabulary: "cooled & saved" = an almost-buy explicitly
+// resolved "skipped" after cooling off (this is what ranks the board - it's
+// the impulse-resistance achievement). "Ghosted" = actually finishing a
+// purchase - from two independent sources that must both count: (a)
+// resolving an almost-buy as "bought intentionally" after cooling, and (b)
+// completing a marketplace-cart simulated checkout (simulated_orders,
+// recorded by POST /api/me/simulated-orders). Correlated subqueries, not
+// joins, because joining both one-to-many tables at once would fan out and
+// inflate every sum/count.
 export async function GET() {
   try {
-    const db = getDb();
-    // Ghost Cart's own vocabulary: "cooled & saved" = an almost-buy explicitly
-    // resolved "skipped" after cooling off (this is what ranks the board -
-    // it's the impulse-resistance achievement). "Ghosted" = the separate,
-    // unrelated case of actually finishing checkout on an almost-buy
-    // (resolved_bought) - completing the purchase, not resisting it. Do not
-    // conflate the two; a prior version of this endpoint incorrectly labeled
-    // the skip-count as "ghostedCount".
-    const rows = await db
-      .select({
-        username: users.username,
-        avatarKey: users.avatarKey,
-        moneyKeptCents: sql<number>`coalesce(sum(${almostBuys.confirmedMoneyKeptCents}), 0)`,
-        savedCount: sql<number>`count(case when ${almostBuys.state} = 'resolved_skipped' then 1 end)`,
-        ghostedCount: sql<number>`count(case when ${almostBuys.state} = 'resolved_bought' then 1 end)`,
-        ghostedAmountCents: sql<number>`coalesce(sum(case when ${almostBuys.state} = 'resolved_bought' then ${almostBuys.almostSpentCents} else 0 end), 0)`,
-      })
-      .from(users)
-      .leftJoin(almostBuys, eq(almostBuys.userId, users.id))
-      .where(sql`${users.communityConsent} = 1 and ${users.username} is not null`)
-      .groupBy(users.id)
-      .orderBy(desc(sql`coalesce(sum(${almostBuys.confirmedMoneyKeptCents}), 0)`))
-      .limit(MAX_ENTRIES);
+    const db = getD1();
+    const result = await db
+      .prepare(
+        `SELECT
+           u.username AS username,
+           u.avatar_key AS avatarKey,
+           (SELECT COALESCE(SUM(confirmed_money_kept_cents), 0) FROM almost_buys WHERE user_id = u.id) AS moneyKeptCents,
+           (SELECT COUNT(*) FROM almost_buys WHERE user_id = u.id AND state = 'resolved_skipped') AS savedCount,
+           (
+             (SELECT COUNT(*) FROM almost_buys WHERE user_id = u.id AND state = 'resolved_bought')
+             + (SELECT COUNT(*) FROM simulated_orders WHERE user_id = u.id)
+           ) AS ghostedCount,
+           (
+             (SELECT COALESCE(SUM(almost_spent_cents), 0) FROM almost_buys WHERE user_id = u.id AND state = 'resolved_bought')
+             + (SELECT COALESCE(SUM(total_cents), 0) FROM simulated_orders WHERE user_id = u.id)
+           ) AS ghostedAmountCents
+         FROM users u
+         WHERE u.community_consent = 1 AND u.username IS NOT NULL
+         ORDER BY moneyKeptCents DESC
+         LIMIT ?`,
+      )
+      .bind(MAX_ENTRIES)
+      .all<LeaderboardRow>();
+
+    const rows = result.results ?? [];
 
     return jsonNoStore({
       leaderboard: rows.map((row) => ({

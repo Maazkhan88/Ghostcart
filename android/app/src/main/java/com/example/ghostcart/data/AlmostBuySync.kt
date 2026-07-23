@@ -95,6 +95,26 @@ object AlmostBuySync {
         }.getOrDefault(false)
     }
 
+    // Records a completed marketplace-cart simulated checkout against the
+    // signed-in account so it counts toward "Ghosted" on the Community
+    // Leaderboard. Anonymous/signed-out checkouts are never synced here -
+    // they're already covered separately (and anonymously) by
+    // GhostActivityRepository.recordCheckout for the "Most Ghosted Today"
+    // trend, which must stay unattributable to any account.
+    suspend fun syncSimulatedOrder(context: Context, orderId: String, totalCents: Int, itemCount: Int): Boolean =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val token = AuthRepository.getToken(context) ?: return@withContext false
+                val payload = JSONObject().apply {
+                    put("orderId", orderId)
+                    put("totalCents", totalCents)
+                    put("itemCount", itemCount)
+                }
+                authorizedRequest("/api/me/simulated-orders", "POST", token, payload)
+                true
+            }.getOrDefault(false)
+        }
+
     private fun authorizedRequest(path: String, method: String, token: String, body: JSONObject?): JSONObject {
         val conn = (URL("${ApiConfig.BASE_URL}$path").openConnection() as HttpURLConnection).apply {
             requestMethod = method

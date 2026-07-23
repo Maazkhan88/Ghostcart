@@ -525,3 +525,30 @@ export const deviceTokens = sqliteTable(
     index("device_tokens_user_idx").on(table.userId),
   ],
 );
+
+// A completed marketplace-cart simulated checkout ("ghosted" it, in this
+// app's vocabulary - finished the process, as opposed to cooling off and
+// keeping the money). Deliberately separate from the anonymous, hashed-actor
+// ghost_events table above (which exists only for the privacy-gated "Most
+// Ghosted Today" trend and must never be attributable to a real account) -
+// this table exists specifically to let a signed-in user's own checkouts
+// count on their own Community Leaderboard entry.
+export const simulatedOrders = sqliteTable(
+  "simulated_orders",
+  {
+    id: text("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    orderId: text("order_id").notNull(),
+    totalCents: integer("total_cents").notNull().default(0),
+    itemCount: integer("item_count").notNull().default(1),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    check("simulated_orders_total_cents_check", sql`${table.totalCents} >= 0`),
+    check("simulated_orders_item_count_check", sql`${table.itemCount} >= 1`),
+    uniqueIndex("simulated_orders_user_order_unique").on(table.userId, table.orderId),
+    index("simulated_orders_user_idx").on(table.userId),
+  ],
+);

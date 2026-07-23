@@ -1130,6 +1130,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val activityCheckoutId = UUID.randomUUID().toString()
         val ghostedProducts = cartProductsWithQuantities().map { it.first }.distinctBy { it.id }
         val ghostedProductIds = ghostedProducts.map { it.id }
+        val ghostedItemCount = cartProductsWithQuantities().sumOf { it.second }
         persistCartQuantities(emptyMap())
         _uiState.update {
             it.copy(
@@ -1165,6 +1166,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     refreshMostGhostedToday()
         refreshCommunityProducts()
                 }
+            }
+        }
+        if (_uiState.value.authEmail != null) {
+            viewModelScope.launch {
+                // total is whole AED (see cartSubtotal()); the backend's
+                // totalCents, like every other money field, is minor units.
+                AlmostBuySync.syncSimulatedOrder(getApplication(), orderId, total * 100, ghostedItemCount)
+                    .let { if (it) refreshLeaderboard() }
             }
         }
         return true
