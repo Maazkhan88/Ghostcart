@@ -52,6 +52,24 @@ export function isAllowedProductImageUrl(value: string): boolean {
   }
 }
 
+// Noon's CDN (and some other retailer CDNs) serve AVIF by default via a
+// `format=avif` query param - not all Android devices/versions can decode
+// AVIF (inconsistent platform codec support, especially pre-Android 12 or on
+// some OEM builds), so the image silently renders blank on those devices
+// with no visible error. Force a universally-supported format instead of
+// trusting whatever format the source URL happens to request.
+function normalizeImageFormat(value: string): string {
+  try {
+    const url = new URL(value);
+    if (url.searchParams.has("format")) {
+      url.searchParams.set("format", "jpg");
+    }
+    return url.toString();
+  } catch {
+    return value;
+  }
+}
+
 export function canonicalizeRetailerUrl(value: string): URL {
   const url = new URL(value.trim());
   if (url.protocol !== "https:" || url.username || url.password) {
@@ -305,7 +323,7 @@ export function extractRetailerProduct(html: string, finalUrl: URL): RetailerPro
   if (rawImage) {
     try {
       const candidate = new URL(rawImage, finalUrl).toString();
-      imageUrl = isAllowedProductImageUrl(candidate) ? candidate : null;
+      imageUrl = isAllowedProductImageUrl(candidate) ? normalizeImageFormat(candidate) : null;
     } catch { imageUrl = null; }
   }
   const priceCents = parsePrice(
@@ -343,7 +361,7 @@ function listingItemFromJsonLdProduct(product: Record<string, unknown>, finalUrl
   if (rawImage) {
     try {
       const candidate = new URL(rawImage, finalUrl).toString();
-      imageUrl = isAllowedProductImageUrl(candidate) ? candidate : null;
+      imageUrl = isAllowedProductImageUrl(candidate) ? normalizeImageFormat(candidate) : null;
     } catch { imageUrl = null; }
   }
   const priceCents = parsePrice(offers.price ?? offers.lowPrice);
@@ -524,7 +542,7 @@ async function previewNoonCatalog(url: URL): Promise<RetailerProductPreview | nu
     const title = firstString(product.product_title) ?? firstString(product.name);
     const image = firstString(product.image_urls) ?? firstString(product.image_url);
     if (!title && !image) return null;
-    const imageUrl = image && isAllowedProductImageUrl(image) ? image : null;
+    const imageUrl = image && isAllowedProductImageUrl(image) ? normalizeImageFormat(image) : null;
     return buildPreview({
       finalUrl: url,
       title: title ?? fallbackTitle(url),
