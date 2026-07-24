@@ -172,6 +172,13 @@ export const userPreferences = sqliteTable("user_preferences", {
   coolingNotifications: integer("cooling_notifications", { mode: "boolean" })
     .notNull()
     .default(true),
+  // Separate from coolingNotifications (which gates the Android push
+  // permission/toggle) - this specifically gates the cooldown-resolved
+  // email, so a one-click email unsubscribe never silently also turns off
+  // in-app push. See POST /api/email/unsubscribe.
+  emailNotifications: integer("email_notifications", { mode: "boolean" })
+    .notNull()
+    .default(true),
   lunchReminder: integer("lunch_reminder", { mode: "boolean" })
     .notNull()
     .default(false),

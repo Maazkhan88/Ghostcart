@@ -18,21 +18,50 @@ export interface EmailBinding {
 }
 
 const FROM = { email: "notifications@theghostcart.com", name: "Ghost Cart" };
+const LOGO_URL = "https://theghostcart.com/brand/ghost-cart-icon-white.png";
+
+// One-click unsubscribe, no login required (standard for transactional
+// email) - a per-user HMAC token, not a guessable sequential id. Verified by
+// GET /api/email/unsubscribe against the same secret. Deliberately does not
+// use the session/auth system at all: someone reading this email on a
+// device where they've never signed into the app must still be able to
+// unsubscribe with one tap.
+async function signUnsubscribeToken(userId: number, secret: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`unsubscribe:${userId}`));
+  return Array.from(new Uint8Array(signature))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
 
 export async function sendCooldownResolvedEmail(
   email: EmailBinding | undefined,
   to: string,
   itemTitle: string,
+  userId: number,
+  almostBuyId: string,
+  unsubscribeSecret: string | undefined,
 ): Promise<{ ok: boolean }> {
   if (!email) return { ok: false };
 
   try {
+    const openUrl = `https://theghostcart.com/app/cooldown/${encodeURIComponent(almostBuyId)}`;
+    const unsubscribeUrl = unsubscribeSecret
+      ? `https://theghostcart.com/api/email/unsubscribe?u=${userId}&t=${await signUnsubscribeToken(userId, unsubscribeSecret)}`
+      : null;
     await email.send({
       to,
       from: FROM,
       subject: `Cooling complete: ${itemTitle}`,
-      html: cooldownResolvedHtml(itemTitle),
-      text: `${itemTitle} has finished cooling off. Open the Ghost Cart app to decide if you still want it.\n\nhttps://theghostcart.com/download/android`,
+      html: cooldownResolvedHtml(itemTitle, openUrl, unsubscribeUrl),
+      text: `${itemTitle} has finished cooling off. Open Ghost Cart to decide if you still want it.\n\n${openUrl}` +
+        (unsubscribeUrl ? `\n\nUnsubscribe from these emails: ${unsubscribeUrl}` : ""),
     });
     return { ok: true };
   } catch (err) {
@@ -41,7 +70,7 @@ export async function sendCooldownResolvedEmail(
   }
 }
 
-function cooldownResolvedHtml(itemTitle: string): string {
+function cooldownResolvedHtml(itemTitle: string, openUrl: string, unsubscribeUrl: string | null): string {
   return `<!doctype html>
 <html>
   <body style="margin:0;padding:0;background:#f4f4f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
@@ -50,8 +79,9 @@ function cooldownResolvedHtml(itemTitle: string): string {
         <td align="center">
           <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;">
             <tr>
-              <td style="background:#050505;padding:24px 32px;">
-                <span style="color:#64d64a;font-size:20px;font-weight:800;">&#128123; Ghost Cart</span>
+              <td style="background:#050505;padding:20px 32px;">
+                <img src="${LOGO_URL}" width="28" height="28" alt="" style="vertical-align:middle;display:inline-block;" />
+                <span style="color:#64d64a;font-size:20px;font-weight:800;vertical-align:middle;padding-left:8px;">Ghost Cart</span>
               </td>
             </tr>
             <tr>
@@ -60,16 +90,19 @@ function cooldownResolvedHtml(itemTitle: string): string {
                 <p style="margin:0 0 24px;font-size:15px;line-height:1.5;color:#3a3a3a;">
                   <strong>${escapeHtml(itemTitle)}</strong> has finished cooling off. Decide now while it's fresh in mind.
                 </p>
-                <a href="https://theghostcart.com/download/android" style="display:inline-block;background:#64d64a;color:#050505;font-weight:700;font-size:14px;text-decoration:none;padding:12px 24px;border-radius:999px;">
+                <a href="${openUrl}" style="display:inline-block;background:#64d64a;color:#050505;font-weight:700;font-size:14px;text-decoration:none;padding:12px 24px;border-radius:999px;">
                   Open Ghost Cart
                 </a>
               </td>
             </tr>
             <tr>
               <td style="padding:16px 32px 28px;border-top:1px solid #eee;">
-                <p style="margin:0;font-size:11px;color:#9a9a94;">
+                <p style="margin:0 0 10px;font-size:11px;color:#9a9a94;">
                   Ghost Cart is a simulation-only cooling-off tool. This email is not a purchase confirmation or a real transaction.
                 </p>
+                ${unsubscribeUrl
+                  ? `<p style="margin:0;font-size:11px;color:#9a9a94;"><a href="${unsubscribeUrl}" style="color:#767670;">Unsubscribe from these emails</a></p>`
+                  : ""}
               </td>
             </tr>
           </table>

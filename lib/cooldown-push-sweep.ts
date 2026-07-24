@@ -17,21 +17,24 @@ export async function sweepExpiredCooldowns(
   db: D1Database,
   fcmServiceAccountJson: string | undefined,
   email: EmailBinding | undefined,
+  emailUnsubscribeSecret: string | undefined,
 ): Promise<{ swept: number; pushed: number; prunedTokens: number; emailed: number }> {
   const now = new Date().toISOString();
   const expired = await db
     .prepare(
       `SELECT almost_buys.id AS id, almost_buys.user_id AS userId, almost_buys.title AS title,
-              users.email AS userEmail
+              users.email AS userEmail,
+              COALESCE(user_preferences.email_notifications, 1) AS emailNotifications
        FROM almost_buys
        JOIN users ON users.id = almost_buys.user_id
+       LEFT JOIN user_preferences ON user_preferences.user_id = almost_buys.user_id
        WHERE almost_buys.state = 'cooling' AND almost_buys.cool_off_until <= ?
          AND almost_buys.push_sent_at IS NULL
        ORDER BY almost_buys.cool_off_until ASC
        LIMIT ?`,
     )
     .bind(now, BATCH_LIMIT)
-    .all<ExpiredCooldown>();
+    .all<ExpiredCooldown & { emailNotifications: number }>();
 
   const rows = expired.results ?? [];
   let pushed = 0;
@@ -58,8 +61,17 @@ export async function sweepExpiredCooldowns(
       }
     }
 
-    const emailResult = await sendCooldownResolvedEmail(email, row.userEmail, row.title);
-    if (emailResult.ok) emailed += 1;
+    if (row.emailNotifications) {
+      const emailResult = await sendCooldownResolvedEmail(
+        email,
+        row.userEmail,
+        row.title,
+        row.userId,
+        row.id,
+        emailUnsubscribeSecret,
+      );
+      if (emailResult.ok) emailed += 1;
+    }
 
     await db
       .prepare(`UPDATE almost_buys SET push_sent_at = ? WHERE id = ?`)

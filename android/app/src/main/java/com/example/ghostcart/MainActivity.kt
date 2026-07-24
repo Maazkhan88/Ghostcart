@@ -79,13 +79,30 @@ class MainActivity : ComponentActivity() {
   }
 
   private fun captureIncomingIntent(intent: Intent) {
-    if (intent.action == Intent.ACTION_VIEW && captureGhostShareLink(intent.data)) return
+    if (intent.action == Intent.ACTION_VIEW) {
+      if (captureCooldownDeepLink(intent.data)) return
+      if (captureGhostShareLink(intent.data)) return
+    }
     captureSharedProduct(intent)
+  }
+
+  // From the cooldown-resolved email's "Open Ghost Cart" link
+  // (theghostcart.com/app/cooldown/{id}) - reuses the exact same
+  // notificationCooldownId path the FCM push notification tap already uses
+  // to land on Cooldowns, rather than dumping the user on the APK download
+  // page the way this link used to.
+  private fun captureCooldownDeepLink(uri: Uri?): Boolean {
+    if (uri == null || !uri.scheme.equals("https", true)) return false
+    if (!uri.host.equals("theghostcart.com", true)) return false
+    val segments = uri.pathSegments
+    if (segments.size < 2 || segments[0] != "app" || segments[1] != "cooldown") return false
+    notificationCooldownId.value = segments.getOrNull(2) ?: "unknown"
+    return true
   }
 
   private fun captureGhostShareLink(uri: Uri?): Boolean {
     if (uri == null || !uri.scheme.equals("https", true)) return false
-    if (!uri.host.equals("ghostcart-app.maaz-n-khan.workers.dev", true)) return false
+    if (!uri.host.equals("theghostcart.com", true)) return false
     if (uri.path?.trimEnd('/') != "/ghost") return false
     val shareId = uri.getQueryParameter("s")?.trim()?.takeIf {
       it.matches(Regex("^[23456789A-HJ-NP-Za-km-z]{8}$"))

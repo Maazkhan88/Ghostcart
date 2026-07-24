@@ -57,6 +57,21 @@
                     android:host="theghostcart.com"
                     android:pathPrefix="/ghost" />
             </intent-filter>
+            <!-- theghostcart.com/app/... - in-app deep links (currently just
+                 /app/cooldown/{id} from the cooldown-resolved email's "Open
+                 Ghost Cart" button; see MainActivity.captureCooldownDeepLink).
+                 Separate intent-filter from /ghost above since they serve
+                 different purposes (a shared item vs the signed-in user's own
+                 content) and may grow independently. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="theghostcart.com"
+                    android:pathPrefix="/app" />
+            </intent-filter>
         </activity>
 
         <service
