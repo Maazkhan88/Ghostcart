@@ -1389,7 +1389,22 @@ private fun CooldownDecisionCard(
     ) {
         Column(Modifier.padding(18.dp)) {
             Row(verticalAlignment = Alignment.Top) {
-                Column(Modifier.weight(1f)) {
+                Box(
+                    Modifier.size(56.dp).clip(RoundedCornerShape(14.dp)).background(Color.White),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (!item.imageUrl.isNullOrBlank()) {
+                        AsyncImage(
+                            model = item.imageUrl,
+                            contentDescription = item.name,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.fillMaxSize().padding(5.dp)
+                        )
+                    } else {
+                        Icon(Icons.Filled.ShoppingBag, contentDescription = null, tint = MutedText, modifier = Modifier.size(22.dp))
+                    }
+                }
+                Column(Modifier.weight(1f).padding(start = 12.dp)) {
                     Text(item.name, color = Ink, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
                     Text("${item.category} · ${item.trigger}", color = MutedText, fontSize = 11.sp)
                 }
@@ -1442,11 +1457,26 @@ private fun ResolvedRow(
     onOpenSource: (String) -> Unit
 ) {
     Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(Color.White),
+            contentAlignment = Alignment.Center
+        ) {
+            if (!item.imageUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = item.imageUrl,
+                    contentDescription = item.name,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize().padding(4.dp)
+                )
+            } else {
+                Icon(Icons.Filled.ShoppingBag, contentDescription = null, tint = MutedText, modifier = Modifier.size(16.dp))
+            }
+        }
         Icon(
             if (item.status == AlmostBuyStatus.SKIPPED) Icons.Filled.CheckCircle else Icons.Filled.ShoppingBag,
             contentDescription = null,
             tint = if (item.status == AlmostBuyStatus.SKIPPED) GhostGreen else MutedText,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(16.dp).padding(start = 6.dp)
         )
         Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
             Text(item.name, color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
