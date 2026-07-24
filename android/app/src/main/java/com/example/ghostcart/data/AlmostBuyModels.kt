@@ -97,6 +97,17 @@ interface AlmostBuyRepository {
     suspend fun extendCooling(id: String, durationMillis: Long): AlmostBuy?
     suspend fun clearAll()
     suspend fun attachServerId(id: String, serverId: String)
+    /**
+     * Merges the account's real server-side history into local state -
+     * updates any local item whose serverId matches (server wins once an
+     * item is synced, so a resolution made on another device shows up here
+     * too), and adds any server item with no local counterpart at all (a
+     * fresh install, a new device, or a differently-signed build that lost
+     * local storage). Never touches or removes a local item that has no
+     * serverId yet - that just means it hasn't been pushed up yet, not that
+     * it doesn't belong.
+     */
+    suspend fun mergeFromServer(remoteItems: List<AlmostBuy>)
 }
 
 class LocalAlmostBuyRepository(context: Context) : AlmostBuyRepository {
@@ -162,6 +173,20 @@ coolingUntilMillis = now + draft.coolingDurationMillis.coerceAtLeast(60_000L),
     override suspend fun attachServerId(id: String, serverId: String) {
         val next = state.value.map { item -> if (item.id == id) item.copy(serverId = serverId) else item }
         update(next)
+    }
+
+    override suspend fun mergeFromServer(remoteItems: List<AlmostBuy>) {
+        val byServerId = state.value.associateBy { it.serverId }
+        val untouched = state.value.filter { it.serverId == null }
+        val merged = remoteItems.map { remote ->
+            val local = byServerId[remote.serverId]
+            // Keep the local item's own id (its identity for notifications/
+            // WorkManager tags) even when refreshing its fields from the
+            // server; a brand-new item (no local counterpart) uses the
+            // server's id directly since nothing local references it yet.
+            if (local != null) remote.copy(id = local.id) else remote
+        }
+        update(untouched + merged)
     }
 
     private fun update(items: List<AlmostBuy>) {

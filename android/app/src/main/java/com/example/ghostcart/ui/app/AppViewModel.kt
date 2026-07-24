@@ -180,6 +180,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (_uiState.value.authEmail != null) {
             viewModelScope.launch { registerCurrentFcmToken(getApplication()) }
             backfillUnsyncedHistory()
+            hydrateFromServer()
         }
     }
 
@@ -456,6 +457,20 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
             if (backfilled) refreshLeaderboard()
+        }
+    }
+
+    // Pulls this account's real cooldown/ghost history down from the server -
+    // without this, local SharedPreferences storage (tied to this exact app
+    // install) was the *only* place that history ever lived, so a reinstall,
+    // a new device, or switching between differently-signed builds silently
+    // lost everything even though the account itself never changed. Runs
+    // after backfillUnsyncedHistory() (push first, so nothing local-only is
+    // at risk, then pull the now-complete picture).
+    private fun hydrateFromServer() {
+        viewModelScope.launch {
+            val remote = AlmostBuySync.fetchRemote(getApplication()) ?: return@launch
+            if (remote.isNotEmpty()) almostBuyRepository.mergeFromServer(remote)
         }
     }
 
@@ -847,8 +862,23 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** [durationLabel] (e.g. "24 hours") is only used for the confirmation toast copy. */
-    fun startCoolingPeriod(productId: String, durationMillis: Long, durationLabel: String) {
+    /**
+     * [durationLabel] is currently unused for messaging (createAlmostBuy owns the
+     * confirmation toast) but kept in the signature since every call site already
+     * passes it and it documents intent at the call site.
+     *
+     * Was previously a completely separate, parallel system from
+     * AlmostBuyRepository: it only ever wrote to coolingUntilByProductId (a
+     * per-product "already cooling" map read by ProductDetailScreen/product
+     * cards) and never created a real AlmostBuy - so nothing cooled this way
+     * ever showed up on the Cooldowns page, synced to the server, or counted
+     * toward the leaderboard, even though every call site immediately
+     * navigates to Cooldowns right after calling this expecting exactly that.
+     * Now does both: keeps the per-product map (still needed for the
+     * product-card "cooling until" badge) and creates a real AlmostBuy via
+     * the same path manual capture uses.
+     */
+    fun startCoolingPeriod(productId: String, durationMillis: Long, @Suppress("UNUSED_PARAMETER") durationLabel: String) {
         if (!requireSignIn()) return
         val product = findProduct(productId) ?: return
         val coolingUntil = System.currentTimeMillis() + durationMillis
@@ -856,17 +886,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         persistCoolingPeriods(updatedPeriods)
         _uiState.update { it.copy(coolingUntilByProductId = updatedPeriods) }
 
-        val request = OneTimeWorkRequestBuilder<CoolingReminderWorker>()
-            .setInitialDelay(durationMillis, TimeUnit.MILLISECONDS)
-            .setInputData(workDataOf("productName" to product.name, "productId" to product.id))
-            .addTag("ghost_cooling_reminder")
-            .build()
-        WorkManager.getInstance(getApplication<Application>()).enqueueUniqueWork(
-            "ghost_cooling_${product.id}",
-            ExistingWorkPolicy.REPLACE,
-            request
+        createAlmostBuy(
+            AlmostBuyDraft(
+                name = product.name,
+                amountCents = product.price.toLong() * 100,
+                category = product.category,
+                trigger = "",
+                coolingDurationMillis = durationMillis,
+                sourceUrl = product.sourceUrl,
+                imageUrl = product.imageUrl,
+                sourceKind = "catalog"
+            )
         )
-        showToast("$durationLabel cooling started for ${product.name}")
     }
 
     private fun loadCoolingPeriods(): Map<String, Long> =
@@ -1020,6 +1051,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         refreshProfile()
         viewModelScope.launch { registerCurrentFcmToken(getApplication()) }
         backfillUnsyncedHistory()
+        hydrateFromServer()
     }
 
     fun signOut() {

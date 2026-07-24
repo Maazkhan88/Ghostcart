@@ -12,6 +12,21 @@ private fun epochMillisToIso(millis: Long): String =
         timeZone = java.util.TimeZone.getTimeZone("UTC")
     }.format(java.util.Date(millis))
 
+// org.json.JSONObject.optString(key) returns the literal string "null" for a
+// JSON null value (as opposed to a missing key, which returns "") - callers
+// that need a real nullable string must filter that out explicitly.
+private fun jsonNullableString(value: JSONObject, key: String): String? =
+    value.optString(key).takeIf { it.isNotBlank() && it != "null" }
+
+private fun isoToEpochMillis(iso: String?): Long? {
+    if (iso.isNullOrBlank()) return null
+    return runCatching {
+        java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }.parse(iso)?.time
+    }.getOrNull()
+}
+
 // Best-effort background sync of on-device AlmostBuy items to the real
 // backend, purely so the server-side cooldown-expiry cron (which sends the
 // FCM push) has something to find. The local SharedPreferences copy stays
@@ -81,6 +96,55 @@ object AlmostBuySync {
             AlmostBuyResolution.BOUGHT_INTENTIONALLY -> "bought"
         }
         authorizedRequest("/api/almost-buys/$serverId/resolve", "POST", token, JSONObject().put("outcome", outcome))
+    }
+
+    // Pulls this account's real history down from the server - the counterpart
+    // to syncCreate/syncResolve/syncResolvedBackfill, which only ever push
+    // local state up. Without this, local storage (SharedPreferences, tied to
+    // this specific app install) is the only place cooldown/ghost history
+    // ever lives, so a reinstall, a new device, or - as happened this session -
+    // switching between differently-signed builds (each one a distinct
+    // install to Android) silently loses everything even though the account
+    // itself is unchanged. Returns null on any failure (offline, signed out,
+    // server error) so callers can treat this as best-effort, same as every
+    // other sync method here - local state is never blocked or cleared by a
+    // failed pull.
+    suspend fun fetchRemote(context: Context): List<AlmostBuy>? = withContext(Dispatchers.IO) {
+        runCatching {
+            val token = AuthRepository.getToken(context) ?: return@withContext null
+            val response = authorizedRequest("/api/almost-buys?limit=100", "GET", token, null)
+            val items = response.optJSONArray("almostBuys") ?: return@withContext emptyList()
+            buildList {
+                for (index in 0 until items.length()) {
+                    val value = items.getJSONObject(index)
+                    val status = when (value.optString("state")) {
+                        "resolved_skipped" -> AlmostBuyStatus.SKIPPED
+                        "resolved_bought" -> AlmostBuyStatus.BOUGHT_INTENTIONALLY
+                        else -> AlmostBuyStatus.COOLING // captured, cooling, snoozed, expired
+                    }
+                    val coolOffMillis = isoToEpochMillis(jsonNullableString(value, "coolOffUntil"))
+                    val capturedAtMillis = isoToEpochMillis(jsonNullableString(value, "capturedAt"))
+                        ?: System.currentTimeMillis()
+                    add(
+                        AlmostBuy(
+                            id = value.getString("id"),
+                            name = value.getString("title"),
+                            amountCents = value.optLong("almostSpentCents", 0),
+                            category = value.optString("category", "Other"),
+                            trigger = value.optString("trigger", ""),
+                            createdAtMillis = capturedAtMillis,
+                            coolingUntilMillis = coolOffMillis ?: capturedAtMillis,
+                            status = status,
+                            resolvedAtMillis = isoToEpochMillis(jsonNullableString(value, "resolvedAt")),
+                            sourceUrl = value.optString("sourceUrl").takeIf { it.isNotBlank() },
+                            imageUrl = value.optString("imageUrl").takeIf { it.isNotBlank() },
+                            sourceKind = value.optString("sourceKind", "manual"),
+                            serverId = value.getString("id")
+                        )
+                    )
+                }
+            }
+        }.getOrNull()
     }
 
     suspend fun registerDeviceToken(context: Context, fcmToken: String): Boolean = withContext(Dispatchers.IO) {
