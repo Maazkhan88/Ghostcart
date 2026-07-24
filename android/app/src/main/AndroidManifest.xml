@@ -81,6 +81,13 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+        <!-- Handles the "I skipped it"/"Bought it"/"More time" action buttons on a
+             cooling-complete notification, without needing to open the app. Not
+             exported: only reachable via the PendingIntents this app itself creates. -->
+        <receiver
+            android:name="com.example.ghostcart.data.CooldownNotificationActionReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

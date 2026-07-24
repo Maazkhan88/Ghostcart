@@ -126,7 +126,7 @@ object GhostNotificationPublisher {
             intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-        val notification = NotificationCompat.Builder(context, channelId)
+        val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ghost_cart_icon)
             .setContentTitle(title)
             .setContentText(text)
@@ -134,12 +134,49 @@ object GhostNotificationPublisher {
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
-            .build()
+
+        // Same three outcomes as the Cooldowns screen's resolve buttons,
+        // available right from the notification - only makes sense when this
+        // notification is actually about a specific cooldown.
+        if (cooldownId != null) {
+            builder.addAction(actionFor(context, notificationId, cooldownId, CooldownNotificationActionReceiver.ACTION_SKIPPED, "I skipped it"))
+            builder.addAction(actionFor(context, notificationId, cooldownId, CooldownNotificationActionReceiver.ACTION_BOUGHT, "Bought it"))
+            builder.addAction(actionFor(context, notificationId, cooldownId, CooldownNotificationActionReceiver.ACTION_MORE_TIME, "More time"))
+        }
+        val notification = builder.build()
 
         try {
             NotificationManagerCompat.from(context).notify(notificationId, notification)
         } catch (_: SecurityException) {
             // Android 13+ notification permission has not been granted.
         }
+    }
+
+    private fun actionFor(
+        context: Context,
+        notificationId: Int,
+        cooldownId: String,
+        action: String,
+        label: String
+    ): NotificationCompat.Action {
+        val intent = Intent(context, CooldownNotificationActionReceiver::class.java).apply {
+            this.action = action
+            putExtra(CooldownNotificationActionReceiver.EXTRA_COOLDOWN_ID, cooldownId)
+            putExtra(CooldownNotificationActionReceiver.EXTRA_NOTIFICATION_ID, notificationId)
+        }
+        // Request code mixes the action into the notification id so all three
+        // buttons on the same notification get distinct PendingIntents rather
+        // than overwriting each other (FLAG_UPDATE_CURRENT keys off it).
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            notificationId * 10 + when (action) {
+                CooldownNotificationActionReceiver.ACTION_SKIPPED -> 1
+                CooldownNotificationActionReceiver.ACTION_BOUGHT -> 2
+                else -> 3
+            },
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        return NotificationCompat.Action.Builder(0, label, pendingIntent).build()
     }
 }
