@@ -1,6 +1,101 @@
 # Current State
 
-Last updated: 2026-07-24 (Claude Code — email notifications shipped; leaderboard's "ghosted" metric fixed to mean real checkouts, not skip-count; random Reddit-style usernames; real legal pages; notification-permission and Dirham-glyph bugs fixed; **first-ever Play Store release build shipped**, including a crash-on-launch fix, three rounds of Google Sign-In OAuth cert wrangling, and a real production AAB now in Play Console). See the "STATUS REPORT" block immediately below — it supersedes everything after it, which is historical (left for provenance).
+Last updated: 2026-07-24, later same day (Claude Code — found and fixed a real "cool it does nothing" bug affecting most of the app's cooldown entry points; cooldown/ghost history now syncs down from the server, not just up; leaderboard re-ranked by items ghosted; Firebase In-App Messaging SDK added (inert, no campaigns yet); sign-up/sign-in rate limited after a batch of bot-pattern accounts appeared; an AVIF product-image bug fixed; app now on Closed testing in Play Console, moving off the allow-list-only Internal track). See the "STATUS REPORT" block immediately below — it supersedes everything after it, which is historical (left for provenance).
+
+> ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-24, later same day)
+>
+> Continuation of the same-day Play Store push. The big one: a real, longstanding
+> functional bug in the core cooldown loop, found from a live user report ("I cooled
+> something, it's not showing anywhere" / "same 4 cooldowns for days regardless of what I do").
+>
+> ### The cooldown loop was broken for almost everyone except manual capture
+>
+> `AppViewModel.startCoolingPeriod()` - called from `ProductDetail`'s "Start cooling",
+> the Cart's "Cool it", and the marketplace catalog - only ever wrote to
+> `coolingUntilByProductId` (a lightweight per-product map that just drives the
+> "already cooling" badge on product cards). **It never created a real `AlmostBuy`.**
+> Nothing cooled this way ever reached the Cooldowns page, synced to the server, or
+> counted toward the leaderboard - despite every one of those call sites immediately
+> navigating to `Cooldowns` right after, clearly expecting the item to be there. Only
+> the manual capture screen (`CaptureAlmostBuyScreen` -> `createAlmostBuy`) ever
+> actually worked correctly. This has presumably been broken since Phase 2/3 - it's
+> not something introduced this session, just never caught until a live user hit it
+> repeatedly and reported it precisely enough to trace. Fixed: `startCoolingPeriod()`
+> now builds an `AlmostBuyDraft` and calls `createAlmostBuy()`, the same real path
+> manual capture uses, while still updating `coolingUntilByProductId` for the badge.
+>
+> **If you find any other "cool" / "ghost" / "add" entry point that doesn't route
+> through `createAlmostBuy()`, assume it has this exact same bug until proven
+> otherwise.**
+>
+> ### Cooldown/ghost history now actually syncs down, not just up
+>
+> The user asked directly for this after the bug above made local-only storage's
+> fragility obvious. `AlmostBuySync.fetchRemote()` (`GET /api/almost-buys`) +
+> `AlmostBuyRepository.mergeFromServer()` now hydrate local state from the server on
+> app launch and on sign-in, right after the existing push-only backfill. Merge rule:
+> local items with no `serverId` yet (not pushed up) are left untouched; items with a
+> matching `serverId` get refreshed from the server's current state (server wins once
+> synced); server items with no local counterpart get added. This is what was missing
+> for cooldown history to survive a reinstall, a new device, or - as happened
+> repeatedly this exact session - switching between differently-signed builds, which
+> Android treats as entirely separate installs with separate local storage even though
+> the account is unchanged. Home's "Almost spent/Cooling/Money kept" strip is still
+> computed from local state only (not a separate fetch), so it benefits from this
+> automatically now too.
+>
+> ### Smaller fixes and additions, same session
+>
+> - **Leaderboard re-ranked by items ghosted** (checkouts), not money cooled & saved -
+>   user's explicit choice. Cooled & saved is still shown per entry, just doesn't rank.
+>   Swapped which stat gets the green accent color to match.
+> - **Firebase In-App Messaging SDK added**, deliberately shipped with zero campaigns
+>   configured in Firebase Console - it initializes and sits idle with nothing to
+>   display until a real campaign exists there. User confirmed intent to create a test
+>   campaign next; it should work automatically (default Firebase display UI, not
+>   custom/programmatic) with no further app changes needed for a basic campaign to
+>   render - only custom-branded display would need more code.
+> - **Sign-up and sign-in rate limited** (5/hour and 20/15min per IP) after a batch of
+>   obviously-fake accounts (generic name + `name.XXXXX@gmail.com` pattern, same-day,
+>   zero activity) showed up in the admin panel - `/api/auth/signup` had zero bot
+>   protection before this. Cause unconfirmed (possibly Google's own pre-launch review
+>   crawler, possibly generic bot traffic) - the accounts themselves were left alone,
+>   only the endpoint got hardened.
+> - **AVIF product-image bug**: a community-submitted product's image (sourced from
+>   Noon.com) rendered blank on some Android devices but fine on others - Noon's CDN
+>   serves `?format=avif` by default, and AVIF decode support is inconsistent across
+>   Android versions/OEMs. Silent failure, no visible error, which is why it looked
+>   device-specific. `normalizeImageFormat()` now forces `jpg` on every imported
+>   product-image URL (Noon catalog API, Amazon/generic JSON-LD, Open Graph).
+> - **Catalog page's "Simulation only" banner removed** and **Cooldowns' "+" button
+>   now opens the product catalog instead of the manual-entry form** - both user
+>   requests; the second one is what originally surfaced the `startCoolingPeriod` bug
+>   above, since it made the broken catalog "Cool it" path suddenly reachable from
+>   where a user would immediately notice the item never showing up.
+> - **`android.permission.AD_ID` decision**: initially removed (app runs no ads), then
+>   explicitly restored at the user's request - ads are planned for a future release,
+>   and they didn't want to repeat the manifest-change-plus-rebuild cycle when that
+>   happens. Currently present; Play Console's Advertising ID declaration should be
+>   answered "Yes".
+> - **Play Console track**: moved from Internal testing (hit a hard wall - it's a
+>   strict manual allow-list, "Item not found" for anyone not individually added) to
+>   **Closed testing**, partly to fix that and partly because Google requires a closed
+>   test with 12+ testers for 14 continuous days before a new developer account gets
+>   Production access for its first app - that clock needs to be running regardless.
+>
+> ### Still open
+>
+> - Everything listed as open in the previous report (Workers Paid plan for email,
+>   safely re-enabling R8 minification with a real device test, content ratings/data
+>   safety form completion, the deferred delivery-notification image/copy, and the
+>   welcome/onboarding email templates) is still open - none of it got picked up this
+>   round, it was entirely consumed by the cooldown-sync bug and the smaller fixes above.
+> - Firebase IAM: only the SDK is in; no campaign has been created/tested yet as of
+>   this report. Default display mode only - matching Ghost Cart's branding exactly
+>   would need programmatic-mode work, not started.
+> - Closed testing's 14-day/12-tester clock: confirm it's actually been started
+>   (don't assume - verify in Play Console) before counting on Production access being
+>   available when expected.
 
 > ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-24)
 >
