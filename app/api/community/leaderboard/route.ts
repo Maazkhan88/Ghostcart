@@ -18,14 +18,14 @@ type LeaderboardRow = {
 // user from this list immediately (see PATCH /api/me/profile).
 //
 // Ghost Cart's own vocabulary: "cooled & saved" = an almost-buy explicitly
-// resolved "skipped" after cooling off (this is what ranks the board - it's
-// the impulse-resistance achievement). "Ghosted" = actually finishing a
+// resolved "skipped" after cooling off. "Ghosted" = actually finishing a
 // purchase - from two independent sources that must both count: (a)
 // resolving an almost-buy as "bought intentionally" after cooling, and (b)
 // completing a marketplace-cart simulated checkout (simulated_orders,
 // recorded by POST /api/me/simulated-orders). Correlated subqueries, not
 // joins, because joining both one-to-many tables at once would fan out and
-// inflate every sum/count.
+// inflate every sum/count. Ranked by ghostedCount (items ghosted), per the
+// user's explicit choice - cooled & saved is still shown, just doesn't rank.
 export async function GET() {
   try {
     const db = getD1();
@@ -46,7 +46,7 @@ export async function GET() {
            ) AS ghostedAmountCents
          FROM users u
          WHERE u.community_consent = 1 AND u.username IS NOT NULL
-         ORDER BY moneyKeptCents DESC
+         ORDER BY ghostedCount DESC, moneyKeptCents DESC
          LIMIT ?`,
       )
       .bind(MAX_ENTRIES)
