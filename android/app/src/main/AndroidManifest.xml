@@ -6,14 +6,11 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 
-    <!-- Ghost Cart runs no ads and does no ad-attribution measurement - these get
-         auto-merged in by the Firebase Analytics SDK regardless, so they're explicitly
-         removed here to keep the manifest (and the Play Console "Advertising ID"
-         declaration) honest about what the app actually does. Firebase Analytics still
-         works fully for its own event/crash measurement without these. -->
-    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove" />
-    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION" tools:node="remove" />
-    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_AD_ID" tools:node="remove" />
+    <!-- Ghost Cart doesn't show ads yet, but the user has confirmed ads are planned for a
+         future release - kept in (not removed via tools:node="remove") so that decision
+         doesn't require another manifest change + rebuild + re-declaration cycle later.
+         The Play Console "Advertising ID" declaration should be answered "Yes" to match. -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
 
     <application
         android:allowBackup="true"
