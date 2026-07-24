@@ -29,6 +29,7 @@ class GhostFirebaseMessagingService : FirebaseMessagingService() {
         val title = message.notification?.title ?: return
         val body = message.notification?.body ?: return
         val cooldownId = message.data["cooldownId"]
+        Analytics.logNotificationReceived(applicationContext, message.data["type"] ?: "cooldown_resolved")
         GhostNotificationPublisher.show(
             context = applicationContext,
             channelId = "ghost_cooling_reminders",

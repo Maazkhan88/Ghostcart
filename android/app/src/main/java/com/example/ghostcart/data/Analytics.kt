@@ -68,4 +68,56 @@ object Analytics {
             putString(FirebaseAnalytics.Param.CONTENT_TYPE, contentType)
         })
     }
+
+    /**
+     * Fired on every navigation-destination change (see Navigation.kt) using
+     * the standard SCREEN_VIEW event/params - this is what unlocks Firebase's
+     * built-in "time on screen" engagement reporting. A single-Activity Compose
+     * app doesn't get this for free the way multi-Activity apps do, since
+     * Firebase's automatic screen tracking is Activity-lifecycle-based and
+     * every in-app destination shares the one Activity.
+     */
+    fun logScreenView(context: Context, screenName: String) {
+        analytics(context).logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, Bundle().apply {
+            putString(FirebaseAnalytics.Param.SCREEN_NAME, screenName)
+            putString(FirebaseAnalytics.Param.SCREEN_CLASS, screenName)
+        })
+    }
+
+    // Fired from AppViewModel.createAlmostBuy() - the single funnel every
+    // "Cool it"/"Start cooling" button in the app goes through (product
+    // cards, product detail, cart, manual capture), so this one call site
+    // covers all of them consistently.
+    fun logCoolingStarted(context: Context, sourceKind: String, category: String) {
+        analytics(context).logEvent("cooling_started", Bundle().apply {
+            putString("source_kind", sourceKind)
+            putString("category", category)
+        })
+    }
+
+    // Fired from AppViewModel.addToCart() - the single funnel every "Add to
+    // cart"/"Cool it instead" cart-add action goes through.
+    fun logAddToCart(context: Context, productId: String, category: String) {
+        analytics(context).logEvent(FirebaseAnalytics.Event.ADD_TO_CART, Bundle().apply {
+            putString(FirebaseAnalytics.Param.ITEM_ID, productId)
+            putString(FirebaseAnalytics.Param.ITEM_CATEGORY, category)
+        })
+    }
+
+    // Deliberately not FirebaseAnalytics.Event.PURCHASE - this is a simulated
+    // checkout with no real money or IAP involved, and the PURCHASE event
+    // carries revenue-reporting semantics in GA4/Play Console that would
+    // misrepresent it.
+    fun logCheckoutCompleted(context: Context, itemCount: Int, totalCents: Int) {
+        analytics(context).logEvent("simulated_checkout_completed", Bundle().apply {
+            putInt("item_count", itemCount)
+            putInt("total_cents", totalCents)
+        })
+    }
+
+    fun logNotificationActionTapped(context: Context, action: String) {
+        analytics(context).logEvent("notification_action_tapped", Bundle().apply {
+            putString("action", action)
+        })
+    }
 }

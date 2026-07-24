@@ -158,8 +158,18 @@ fun MainNavigation(
 
     LaunchedEffect(initialCooldownId) {
         if (initialCooldownId != null && backStack.lastOrNull() != Cooldowns) {
+            com.example.ghostcart.data.Analytics.logNotificationOpened(context, "cooldown_resolved")
             backStack.add(Cooldowns)
         }
+    }
+
+    // Firebase's automatic screen tracking is Activity-lifecycle-based, and
+    // this whole app is one Activity - without this, every in-app
+    // destination would be invisible to Firebase's engagement/time-on-screen
+    // reporting. class simpleName is stable and readable enough to use
+    // directly as the screen name (e.g. "Home", "ProductDetail").
+    LaunchedEffect(current) {
+        current?.let { com.example.ghostcart.data.Analytics.logScreenView(context, it::class.simpleName ?: "Unknown") }
     }
 
     // Cooling/ghosting/add-to-cart are gated to signed-in accounts

@@ -38,6 +38,7 @@ class CooldownNotificationActionReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
             try {
+                Analytics.logNotificationActionTapped(appContext, action)
                 val repository = LocalAlmostBuyRepository(appContext)
                 val localId = repository.items.first()
                     .firstOrNull { it.id == cooldownId || it.serverId == cooldownId }

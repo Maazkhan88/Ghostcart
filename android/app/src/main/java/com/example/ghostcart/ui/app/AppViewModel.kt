@@ -762,8 +762,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 cartProductIds = nextMap.keys.toList()
             )
         }
-        val name = findProduct(productId)?.name ?: "item"
-        showToast("Added $name to Ghost Cart")
+        val product = findProduct(productId)
+        Analytics.logAddToCart(getApplication(), productId, product?.category ?: "Other")
+        showToast("Added ${product?.name ?: "item"} to Ghost Cart")
     }
 
     fun removeFromCart(productId: String) {
@@ -1083,6 +1084,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (!requireSignIn()) return
         viewModelScope.launch {
             val item = almostBuyRepository.create(draft)
+            Analytics.logCoolingStarted(getApplication(), draft.sourceKind, draft.category)
             scheduleCoolingNotification(item)
             if (draft.shareWithCommunity) {
                 ProductImportRepository.publish(draft)
@@ -1187,6 +1189,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             productImageUrl = ghostedProducts.firstOrNull()?.imageUrl
         )
         beginDeliveryClock()
+        Analytics.logCheckoutCompleted(getApplication(), ghostedItemCount, total * 100)
         showToast("Ghost Order Placed Successfully!")
 
         if (ghostedProductIds.isNotEmpty()) {
