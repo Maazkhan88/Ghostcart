@@ -4,11 +4,34 @@ import { userPreferences, users } from "../../../../db/schema";
 import { sanitizeShortText } from "../../../../lib/backend-contract";
 import { generateSalt, hashPassword } from "../../../../lib/password";
 import { createApiSession } from "../../../../lib/session-auth";
+import { consumeRateLimit, requestActorHash } from "../../../../lib/rate-limit";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_SIGNUPS_PER_HOUR = 5;
 
 export async function POST(request: Request) {
   try {
+    const actorHash = await requestActorHash(request);
+    const rateLimit = await consumeRateLimit({
+      namespace: "auth-signup",
+      actorHash,
+      cost: 1,
+      limit: MAX_SIGNUPS_PER_HOUR,
+      windowSeconds: 60 * 60,
+    });
+    if (!rateLimit.allowed) {
+      return Response.json(
+        { error: "Too many accounts created from this network; try again later" },
+        {
+          status: 429,
+          headers: {
+            "Cache-Control": "no-store",
+            "Retry-After": String(rateLimit.retryAfterSeconds),
+          },
+        },
+      );
+    }
+
     const payload = (await request.json()) as {
       email?: unknown;
       password?: unknown;

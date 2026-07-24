@@ -3,9 +3,33 @@ import { getDb } from "../../../../db";
 import { users } from "../../../../db/schema";
 import { constantTimeHexEqual, hashPassword } from "../../../../lib/password";
 import { createApiSession } from "../../../../lib/session-auth";
+import { consumeRateLimit, requestActorHash } from "../../../../lib/rate-limit";
+
+const MAX_ATTEMPTS_PER_WINDOW = 20;
 
 export async function POST(request: Request) {
   try {
+    const actorHash = await requestActorHash(request);
+    const rateLimit = await consumeRateLimit({
+      namespace: "auth-signin",
+      actorHash,
+      cost: 1,
+      limit: MAX_ATTEMPTS_PER_WINDOW,
+      windowSeconds: 15 * 60,
+    });
+    if (!rateLimit.allowed) {
+      return Response.json(
+        { error: "Too many sign-in attempts from this network; try again later" },
+        {
+          status: 429,
+          headers: {
+            "Cache-Control": "no-store",
+            "Retry-After": String(rateLimit.retryAfterSeconds),
+          },
+        },
+      );
+    }
+
     const payload = (await request.json()) as {
       email?: unknown;
       password?: unknown;
