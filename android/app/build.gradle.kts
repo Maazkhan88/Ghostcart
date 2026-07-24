@@ -29,8 +29,8 @@ android {
         applicationId = "com.ghostcart.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 64
-        versionName = "2.7.35"
+        versionCode = 65
+        versionName = "2.7.36"
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
     }
 
@@ -143,6 +143,13 @@ dependencies {
   implementation(platform(libs.firebase.bom))
   implementation(libs.firebase.analytics)
   implementation(libs.firebase.messaging)
+  // Firebase In-App Messaging - added with zero campaigns configured in
+  // Firebase Console on purpose. With nothing to display, this SDK just
+  // initializes and sits idle; it will not show anything until a real
+  // campaign is created there. Deliberately shipped inert first so this
+  // version can be verified stable before any actual message content goes
+  // live - do not create a Firebase Console campaign until that's confirmed.
+  implementation(libs.firebase.inappmessaging.display)
 
   // Video playback for Ghost Cart Stories (admin can now upload MP4s, not
   // just images)

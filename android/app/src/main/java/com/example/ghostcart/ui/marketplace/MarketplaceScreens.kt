@@ -627,24 +627,6 @@ fun CategoryBrowseScreen(
             }
         }
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(GreenTint)
-                .padding(14.dp)
-        ) {
-            Text(
-                text = "Simulation only. No real payment. No real delivery.",
-                color = Ink,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                modifier = Modifier.weight(1f)
-            )
-        }
-
         if (visibleProducts.isEmpty()) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,

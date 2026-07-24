@@ -439,7 +439,7 @@ fun MainNavigation(
                     entry<Cooldowns> {
                         CooldownsScreen(
                             almostBuys = state.almostBuys,
-                            onGhostSomething = { backStack.add(CaptureAlmostBuy) },
+                            onGhostSomething = { backStack.add(CategoryBrowse("all")) },
                             onResolve = { id, resolution -> appViewModel.resolveAlmostBuy(id, resolution) },
                             onMoreTime = appViewModel::extendAlmostBuy,
                             onShare = { item -> shareGhostItem(context, item.toGhostShareItem()) },
