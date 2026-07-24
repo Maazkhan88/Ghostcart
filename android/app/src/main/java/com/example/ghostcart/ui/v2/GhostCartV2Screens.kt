@@ -1361,7 +1361,16 @@ private fun CooldownSummaryCard(item: AlmostBuy, onClick: () -> Unit) {
     ) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(GreenTint), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.AccessTime, null, tint = GhostGreen)
+                if (!item.imageUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = item.imageUrl,
+                        contentDescription = item.name,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize().padding(4.dp)
+                    )
+                } else {
+                    Icon(Icons.Filled.AccessTime, null, tint = GhostGreen)
+                }
             }
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                 Text(item.name, color = Ink, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
