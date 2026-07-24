@@ -1,8 +1,75 @@
 # Current State
 
-Last updated: 2026-07-24, later same day (Claude Code — found and fixed a real "cool it does nothing" bug affecting most of the app's cooldown entry points; cooldown/ghost history now syncs down from the server, not just up; leaderboard re-ranked by items ghosted; Firebase In-App Messaging SDK added (inert, no campaigns yet); sign-up/sign-in rate limited after a batch of bot-pattern accounts appeared; an AVIF product-image bug fixed; app now on Closed testing in Play Console, moving off the allow-list-only Internal track). See the "STATUS REPORT" block immediately below — it supersedes everything after it, which is historical (left for provenance).
+Last updated: 2026-07-24, evening (Claude Code — fixed the cooldown-resolved email per a real user screenshot: real logo instead of emoji, one-click unsubscribe, and the "Open Ghost Cart" button now deep-links to the specific cooldown item instead of the generic APK download page; found and fixed a second dead link in the same file (`/ghost` share links were still checking the retired `workers.dev` host); added product thumbnails to the Cooldowns tab and Home screen's Active cooldowns preview, which had never rendered `AlmostBuy.imageUrl` despite it being populated end-to-end). See the "STATUS REPORT" block immediately below — it supersedes everything after it, which is historical (left for provenance).
 
-> ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-24, later same day)
+> ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-24, evening)
+>
+> Continuation of the same-day session, picked up from a real user screenshot of a
+> "Cooling complete" email plus live sideload testing of the resulting build.
+>
+> ### Cooldown-resolved email: logo, unsubscribe, and a real deep link
+>
+> User's exact complaints from the screenshot: no unsubscribe option, "Open Ghost
+> Cart" opened the generic APK download page instead of the item, and no real logo
+> was used (it was emoji/text). All three fixed in `lib/email.ts`:
+>
+> - Real logo (`<img>` pointing at `theghostcart.com/brand/ghost-cart-icon-white.png`)
+>   instead of an emoji header.
+> - One-click unsubscribe: new `user_preferences.email_notifications` column
+>   (migration `0017`, applied to prod), new `EMAIL_UNSUBSCRIBE_SECRET` Cloudflare
+>   secret, HMAC-signed token link to a new `GET /api/email/unsubscribe` route.
+>   `cooldown-push-sweep.ts` checks the preference (default true) before sending.
+> - Deep link: `sendCooldownResolvedEmail`'s CTA now points at
+>   `theghostcart.com/app/cooldown/{almostBuyId}` instead of `/download/android`. New
+>   verified App Link intent-filter (`android:pathPrefix="/app"`, separate from the
+>   existing `/ghost` one) + `MainActivity.captureCooldownDeepLink()`, which reuses the
+>   exact same `notificationCooldownId` state the FCM push-tap path already uses -
+>   lands on the Cooldowns screen (not the specific item's detail view; it's a list
+>   navigation only, same as push notifications always did). New web fallback page
+>   `app/app/cooldown/[id]/page.tsx` for devices without the app - deliberately shows
+>   no private data, since unlike `/ghost` (a public share link by design) this id has
+>   no anonymous read path and must not become one.
+> - **Bonus bug found while in `MainActivity.kt`**: `captureGhostShareLink()` was still
+>   checking the old retired `ghostcart-app.maaz-n-khan.workers.dev` host instead of
+>   `theghostcart.com`. `/ghost` share links had been silently failing to open in-app
+>   since the domain migration weeks earlier - fixed alongside the deep-link work.
+>
+> ### Cooldowns page never rendered product images, despite having them
+>
+> User: "why aren't the product pictures showing up in cooldowns page?" - `AlmostBuy`
+> already carries `imageUrl` end-to-end (shared links, catalog picks, server sync all
+> populate/preserve it), but three card composables in `GhostCartV2Screens.kt` simply
+> never referenced the field: `CooldownDecisionCard` (active cooldown cards),
+> `ResolvedRow` ("Recent decisions" list), and `CooldownSummaryCard` (Home screen's
+> "Active cooldowns" preview, added in a follow-up after the user pointed out the same
+> gap there too). All three now show the thumbnail when present, with the same
+> icon-fallback pattern already used elsewhere in the app (`Color.White` rounded box +
+> `ShoppingBag`/`AccessTime` icon when there's no image). Confirmed via user
+> screenshots: items cooled down *before* the fix still show blank (no image was ever
+> saved for them, nothing to backfill), items cooled down after show correctly.
+>
+> ### Process note: JAVA_HOME gotcha + explicit build-approval request
+>
+> A fresh Bash shell in this environment defaults `java` to a bundled JRE 8, which
+> fails Gradle outright ("Gradle requires JVM 17 or later"). Android Studio's bundled
+> JBR (`C:\Program Files\Android\Android Studio\jbr`, JDK 21) works and was exported as
+> `JAVA_HOME` for the Gradle invocations - worth checking first if a build fails with
+> that exact error rather than assuming something is actually broken. Separately: a
+> background build got killed mid-run by an explicit "don't build apk" from the user
+> while mid-testing-and-reporting-issues; **user asked to always ask before building an
+> APK from now on** - don't run `gradlew assembleRelease`/`bundleRelease` proactively,
+> confirm first.
+>
+> ### Still open
+>
+> Nothing new resolved from the prior report's "Still open" list this round (Workers
+> Paid plan/email onboarding note is stale now - email is confirmed actually sending,
+> see the user's real received screenshot - the rest stands: R8 re-enable needs a real
+> device, content ratings/data safety form, Firebase IAM test campaign, deferred
+> delivery-notification copy, welcome/onboarding email templates, confirm the Closed
+> testing 14-day/12-tester clock has started). Additionally now open: the Home-screen
+> thumbnail fix (`CooldownSummaryCard`) is committed and pushed but **not yet built or
+> sideload-tested** - explicitly stopped before building per the note above.
 >
 > Continuation of the same-day Play Store push. The big one: a real, longstanding
 > functional bug in the core cooldown loop, found from a live user report ("I cooled
