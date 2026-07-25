@@ -24,6 +24,92 @@ Last updated: 2026-07-25 (Codex — simplified the primary Ghost journey, replac
 >   before deploying the grouped-order API.
 > - **Verification:** web production build plus 39 tests pass; Android debug unit
 >   tests and APK assembly pass.
+>
+> ## CLAUDE CODE HANDOFF — READ BEFORE MAKING CHANGES
+>
+> ### Repository and published build
+>
+> - **Working branch:** `phase-5/ghost-cart-stories-section`
+> - **Implementation commit:** `18664f3` (`Simplify Ghost flow and group cooldown orders`)
+> - **Draft PR:** <https://github.com/Maazkhan88/Ghostcart/pull/4>
+> - **GitHub prerelease:** <https://github.com/Maazkhan88/Ghostcart/releases/tag/debug-v2.8.0-orders>
+> - **Direct debug APK:** <https://github.com/Maazkhan88/Ghostcart/releases/download/debug-v2.8.0-orders/app-debug.apk>
+> - **Android build:** version name `2.8.0`, version code `66`, debug-signed.
+>
+> The PR is intentionally still a draft. The APK is for tester distribution and
+> is **not** the Play Store release artifact.
+>
+> ### Product invariant Claude must preserve
+>
+> A **Ghost** is now the start of a cooldown—not a simulated checkout. Every
+> primary `Ghost it` action starts a 24-hour cooldown by default and creates
+> exactly one Ghost count. Items Ghosted together may share an order group, but
+> every item keeps its own cooldown and final decision. A restart changes the
+> expiry only; it must not create another Ghost count.
+>
+> When an item becomes ready, the user chooses one of these per-item outcomes:
+>
+> 1. `Skip item` — confirmed Money Kept.
+> 2. `Buy / open source` — opens the original source when available.
+> 3. `Bought already` — not Money Kept.
+> 4. `Restart cooldown` — choose 15 minutes, 24 hours, 3 days, or 7 days.
+>
+> Do **not** restore competing `Add to cart` versus `Cool it` primary actions.
+> The simulated checkout/delivery ritual may remain as a secondary legacy
+> experience, but it is no longer the canonical Ghost action or count.
+>
+> ### UX and data model implemented by Codex
+>
+> - The former **Cooldowns** tab is labeled **Orders**. The internal enum may
+>   still be named `NavKey.Cooldowns`; that is a legacy implementation detail.
+> - Orders shows grouped **Active cooldowns** with a live one-second countdown
+>   and animated progress, followed by **Past orders** and per-item outcomes.
+> - `ghostOrderId` / `order_group_id` persists multi-item grouping across local
+>   Android state, synchronization, and the web API.
+> - `createdAt` and `initialDurationMillis` preserve accurate cooldown progress.
+> - Community Ghost counts and the opt-in leaderboard count cooldown starts
+>   (`almost_buys`), not simulated checkout records.
+> - The Android activity repository records a durable cooldown-start event via
+>   `recordGhostStart`; the API accepts `eventId` and the legacy `checkoutId`.
+> - Home has a dedicated **Food & delivery** lane before the general marketplace.
+>   Food is excluded from the general lane to avoid duplication.
+> - Link capture recognizes Noon Food, Keeta, Talabat, Deliveroo, Uber Eats, and
+>   Careem Food, while retaining the generic safe public-HTTPS metadata fallback.
+> - Restarting a cooldown replaces the local WorkManager notification, updates
+>   the server expiry, and clears `push_sent_at` so the server sweep can send the
+>   next push notification and email at the new expiry.
+>
+> ### Main implementation map
+>
+> - Navigation and tab copy: `android/app/src/main/java/com/example/ghostcart/Navigation.kt`
+> - Canonical Ghost creation/group handling: `android/app/src/main/java/com/example/ghostcart/ui/app/AppViewModel.kt`
+> - Local model fields and outcome semantics: `android/app/src/main/java/com/example/ghostcart/data/AlmostBuyModels.kt`
+> - Orders, Home lanes, import/manual flows: `android/app/src/main/java/com/example/ghostcart/ui/v2/GhostCartV2Screens.kt`
+> - Shared product presentation/actions: `android/app/src/main/java/com/example/ghostcart/ui/v2/ProductDiscovery.kt`
+> - Marketplace/detail Ghost actions: `android/app/src/main/java/com/example/ghostcart/ui/marketplace/MarketplaceScreens.kt`
+> - Multi-link review/group start: `android/app/src/main/java/com/example/ghostcart/ui/v2/ShareQueueReviewScreen.kt`
+> - Reminder scheduling: `android/app/src/main/java/com/example/ghostcart/data/GhostReminderWorkers.kt`
+> - Almost-buy API and restart behavior: `app/api/almost-buys/route.ts` and `app/api/almost-buys/[id]/route.ts`
+> - Product/food link recognition: `lib/product-link-preview.ts`
+> - Canonical community count: `app/api/community/leaderboard/route.ts`
+> - Required schema change: `drizzle/0018_ghost_order_groups.sql`
+>
+> ### Deployment and continuation notes
+>
+> - Apply `drizzle/0018_ghost_order_groups.sql` before deploying the grouped-order
+>   backend. Do not assume the migration is live merely because the APK exists.
+> - The workspace intentionally contains untracked `.openai/` artifacts and
+>   `.codex-remote-attachments/`. They are user/session artifacts; do not delete,
+>   stage, or commit them without explicit instruction.
+> - Before continuing, read `AGENTS.md`, `docs/project-context.md`,
+>   `docs/brand-guidelines.md`, `docs/product-spec.md`, `docs/decisions-log.md`,
+>   and this report. Inspect commit `18664f3` rather than inferring behavior from
+>   the older historical status reports below.
+> - Re-run the web build/tests and Android unit tests before publishing another
+>   APK. Perform real-device visual QA on Orders, multi-item resolution, food
+>   links, notifications, and both light/dark themes.
+> - Do not merge, deploy the backend, apply production migrations, or create a
+>   Play artifact unless the user explicitly requests that external action.
 
 > ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-24, late evening)
 >
