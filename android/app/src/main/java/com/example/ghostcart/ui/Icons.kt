@@ -557,6 +557,7 @@ fun GhostMascotPose(poseName: String, modifier: Modifier = Modifier) {
         "checkoutPhone" -> R.drawable.mascot_checkout_phone
         "combo" -> R.drawable.mascot_combo
         "waveAlt" -> R.drawable.mascot_wave_alt
+        "female" -> R.drawable.mascot_female
         // Placeholder pose for the home-screen "peeking ghost" easter egg - reuses an existing
         // asset until a dedicated mascot_peek.png is supplied.
         "peek" -> R.drawable.mascot_wave_alt
