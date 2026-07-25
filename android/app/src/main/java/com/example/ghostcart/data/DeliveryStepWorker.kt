@@ -7,6 +7,8 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -95,6 +97,17 @@ class DeliveryStepWorker(
     private fun decodeLocalPlaceholder(context: Context): Bitmap? =
         runCatching { BitmapFactory.decodeResource(context.resources, R.drawable.mascot_cart) }.getOrNull()
 
+    private fun letterboxToSquare(source: Bitmap): Bitmap {
+        if (source.width == source.height) return source
+        val size = maxOf(source.width, source.height)
+        val square = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        Canvas(square).apply {
+            drawColor(Color.WHITE)
+            drawBitmap(source, (size - source.width) / 2f, (size - source.height) / 2f, null)
+        }
+        return square
+    }
+
     private fun showNotification(title: String, text: String, largeIcon: Bitmap?) {
         val channelId = "ghost_delivery_channel"
         val notificationId = 1001 + inputData.getInt("stepIndex", 1)
@@ -134,7 +147,11 @@ class DeliveryStepWorker(
 
         if (largeIcon != null) {
             builder
-                .setLargeIcon(largeIcon)
+                // The collapsed-notification icon slot is a fixed square that the system
+                // center-crops non-square bitmaps into, chopping off product artwork - so
+                // letterbox a square version for that slot. BigPictureStyle already renders
+                // the untouched bitmap correctly in the expanded view, so it keeps the original.
+                .setLargeIcon(letterboxToSquare(largeIcon))
                 .setStyle(NotificationCompat.BigPictureStyle().bigPicture(largeIcon))
         }
 
