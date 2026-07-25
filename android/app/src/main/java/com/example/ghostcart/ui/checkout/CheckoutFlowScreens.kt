@@ -328,7 +328,14 @@ fun GhostCheckoutScreen(
     var deliveryAddress by remember { mutableStateOf("123 Ghost Street\nAl Wasl, Dubai\nUnited Arab Emirates") }
     var editingAddress by remember { mutableStateOf(false) }
 
-    Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
+    Box(modifier = modifier.fillMaxSize().background(Paper)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 16.dp)
+            .padding(bottom = 96.dp)
+    ) {
         GhostTopBar(title = "Ghost Checkout", onBack = onBack)
         Text(text = "Simulation mode", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
 
@@ -425,12 +432,22 @@ fun GhostCheckoutScreen(
                 modifier = Modifier.padding(top = 14.dp)
             )
         }
-        PrimaryButton(
-            text = if (hasEnoughSimulatedBalance) "Place Fake Order" else "Add simulated balance",
-            onClick = { if (hasEnoughSimulatedBalance) onPlaceOrder(total) else onOpenWallet() },
-            trailingIcon = Icons.Filled.ArrowForward,
-            modifier = Modifier.padding(top = 12.dp)
-        )
+    }
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .background(Paper)
+                .border(width = 1.dp, color = FaintBorder)
+                .padding(horizontal = 20.dp, vertical = 12.dp)
+        ) {
+            PrimaryButton(
+                text = if (hasEnoughSimulatedBalance) "Place Fake Order" else "Add simulated balance",
+                onClick = { if (hasEnoughSimulatedBalance) onPlaceOrder(total) else onOpenWallet() },
+                trailingIcon = Icons.Filled.ArrowForward
+            )
+        }
     }
 
     if (editingAddress) {
