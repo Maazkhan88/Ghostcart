@@ -348,6 +348,7 @@ fun MainNavigation(
                             onNotifications = { backStack.add(GhostCardSettings) },
                             onViewAllCatalog = { categoryId -> backStack.add(CategoryBrowse(categoryId)) },
                             onViewAllFavorites = { backStack.add(CategoryBrowse("favorites")) },
+                            onNotificationsGranted = appViewModel::enableMealRemindersByDefault,
                             onRefresh = {
                                 appViewModel.refreshCommunityProducts()
                                 appViewModel.refreshCatalogProducts()

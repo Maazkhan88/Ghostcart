@@ -1,5 +1,6 @@
 package com.example.ghostcart.ui.community
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -20,11 +21,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.example.ghostcart.data.LeaderboardEntry
+import com.example.ghostcart.data.avatarPresetById
 import com.example.ghostcart.ui.DirhamAmount
 import com.example.ghostcart.ui.common.GhostTopBar
 import com.example.ghostcart.ui.formatDirhamAmount
@@ -117,14 +121,20 @@ fun LeaderboardScreen(
                                     .background(FaintBorder),
                                 contentAlignment = Alignment.Center
                             ) {
-                                if (entry.avatarUrl != null) {
-                                    AsyncImage(
+                                val preset = avatarPresetById(entry.avatarPresetId)
+                                when {
+                                    preset != null -> Image(
+                                        painter = painterResource(preset.drawableRes),
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier.fillMaxSize().padding(4.dp)
+                                    )
+                                    entry.avatarUrl != null -> AsyncImage(
                                         model = entry.avatarUrl,
                                         contentDescription = null,
                                         modifier = Modifier.fillMaxSize().clip(CircleShape)
                                     )
-                                } else {
-                                    Text(entry.username.take(1).uppercase(), color = Ink, fontWeight = FontWeight.ExtraBold)
+                                    else -> Text(entry.username.take(1).uppercase(), color = Ink, fontWeight = FontWeight.ExtraBold)
                                 }
                             }
                             Text(

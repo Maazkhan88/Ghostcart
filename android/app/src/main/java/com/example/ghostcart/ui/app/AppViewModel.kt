@@ -877,6 +877,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Called the moment POST_NOTIFICATIONS is actually granted from Home's ambient
+    // first-run request (not the per-toggle asks in Profile, which already handle
+    // their own single reminder). Without this, granting the permission did nothing -
+    // lunch/dinner reminders stayed off until the user found and flipped them
+    // manually in Profile, even though they'd just said yes to notifications.
+    fun enableMealRemindersByDefault() {
+        val config = _uiState.value.walletConfig
+        if (!config.lunchReminderEnabled || !config.dinnerReminderEnabled) {
+            updateWalletConfig { it.copy(lunchReminderEnabled = true, dinnerReminderEnabled = true) }
+        }
+    }
+
     fun downloadGhostCard() {
         val config = _uiState.value.walletConfig
         showToast("Creating high-resolution Ghost Card…")

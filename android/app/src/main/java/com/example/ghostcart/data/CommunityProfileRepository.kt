@@ -26,6 +26,7 @@ data class UserProfile(
 data class LeaderboardEntry(
     val username: String,
     val avatarUrl: String?,
+    val avatarPresetId: String?,
     val moneyKeptCents: Long,
     val savedCount: Int,
     val ghostedCount: Int,
@@ -134,6 +135,7 @@ object CommunityProfileRepository {
                         LeaderboardEntry(
                             username = item.getString("username"),
                             avatarUrl = item.nullableStringOrNull("avatarUrl")?.let { "${ApiConfig.BASE_URL}$it" },
+                            avatarPresetId = item.nullableStringOrNull("avatarPresetId"),
                             moneyKeptCents = item.optLong("moneyKeptCents", 0),
                             savedCount = item.optInt("savedCount", 0),
                             ghostedCount = item.optInt("ghostedCount", 0),

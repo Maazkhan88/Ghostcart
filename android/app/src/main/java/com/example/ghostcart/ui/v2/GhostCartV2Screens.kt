@@ -151,6 +151,7 @@ fun GhostHomeScreen(
     onNotifications: () -> Unit,
     onViewAllCatalog: (String) -> Unit,
     onViewAllFavorites: () -> Unit,
+    onNotificationsGranted: () -> Unit = {},
     onRefresh: () -> Unit = {},
     homeBanners: List<com.example.ghostcart.data.ContentBlockItem> = emptyList(),
     ghostCartStories: List<com.example.ghostcart.data.ContentBlockItem> = emptyList(),
@@ -168,7 +169,7 @@ fun GhostHomeScreen(
     // previous version only asked once ever, tracked via a persisted SharedPreferences flag -
     // that flag could get stuck `true` from an old build/denial and then silently never ask
     // again for the lifetime of the install. Don't reintroduce that pattern.
-    val requestNotificationsOnFirstRun = rememberNotificationPermissionRequest()
+    val requestNotificationsOnFirstRun = rememberNotificationPermissionRequest(onGranted = onNotificationsGranted)
     LaunchedEffect(Unit) {
         requestNotificationsOnFirstRun()
     }
@@ -1812,9 +1813,11 @@ private fun ghostTextFieldColors() = OutlinedTextFieldDefaults.colors(
 )
 
 @Composable
-private fun rememberNotificationPermissionRequest(): () -> Unit {
+private fun rememberNotificationPermissionRequest(onGranted: () -> Unit = {}): () -> Unit {
     val context = LocalContext.current
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) onGranted()
+    }
     return remember(context, launcher) {
         {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&

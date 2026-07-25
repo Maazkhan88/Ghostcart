@@ -6,6 +6,7 @@ const MAX_ENTRIES = 50;
 type LeaderboardRow = {
   username: string;
   avatarKey: string | null;
+  avatarPresetId: string | null;
   moneyKeptCents: number;
   savedCount: number;
   ghostedCount: number;
@@ -29,6 +30,7 @@ export async function GET() {
         `SELECT
            u.username AS username,
            u.avatar_key AS avatarKey,
+           u.avatar_preset_id AS avatarPresetId,
            (SELECT COALESCE(SUM(confirmed_money_kept_cents), 0) FROM almost_buys WHERE user_id = u.id) AS moneyKeptCents,
            (SELECT COUNT(*) FROM almost_buys WHERE user_id = u.id AND state = 'resolved_skipped') AS savedCount,
            (SELECT COUNT(*) FROM almost_buys WHERE user_id = u.id) AS ghostedCount,
@@ -47,6 +49,7 @@ export async function GET() {
       leaderboard: rows.map((row) => ({
         username: row.username,
         avatarUrl: row.avatarKey ? `/api/content-blocks/image/${row.avatarKey}` : null,
+        avatarPresetId: row.avatarPresetId,
         moneyKeptCents: Number(row.moneyKeptCents),
         savedCount: Number(row.savedCount),
         ghostedCount: Number(row.ghostedCount),
