@@ -1,6 +1,86 @@
 # Current State
 
-Last updated: 2026-07-25 (Codex — simplified the primary Ghost journey, replaced Cooldowns with grouped Ghost Orders, made cooldown starts the canonical Ghost count, and added a dedicated food-delivery lane). The first status report below supersedes older historical reports.
+Last updated: 2026-07-25, later same day (Claude Code — cart-first revert now live-tested end to end, plus a batch of bug fixes, a new avatar-picker feature with production backend deploy, and a notification-permission default-on fix). This status report supersedes Codex's report below for the primary-action behavior specifically; everything else Codex built (Orders grouping, canonical Ghost counts, food lane) is unchanged and still current.
+
+> ## STATUS REPORT (Claude Code, 2026-07-25, later same day)
+>
+> Continuation of the same-day session covered by the "explicit user override" entry
+> in `docs/decisions-log.md` (cart-first revert). This report covers everything
+> since that revert landed and was released as `debug-2026-07-25-image-fix`.
+>
+> ### Bug fixes shipped this session
+>
+> - **Amazon color-variant/price scraping** (already covered by the prior entry) -
+>   confirmed still correct after the cart-first revert; R2 image re-hosting live.
+> - **Notification thumbnail crop**: `DeliveryStepWorker`'s collapsed-notification
+>   `setLargeIcon()` was center-cropping non-square product images (e.g. a
+>   PS5 box art), chopping off most of the artwork. Now letterboxed into a square
+>   (white padding, no crop) just for that slot; the expanded `BigPictureStyle`
+>   view is untouched. Verified live against a real delivery notification.
+> - **Cart nav confusion**: the bottom-nav center button now IS the real cart
+>   entry point (`GhostCartList`), with the cart-mascot icon restored and a red
+>   item-count badge. The separate top-bar cart icon/badge added earlier in the
+>   session was removed as redundant.
+> - **Sticky checkout button**: `GhostCheckoutScreen`'s "Place Fake Order" now
+>   stays pinned to the bottom like `GhostCartListScreen`'s equivalent already did.
+> - **Marketplace sort/filter**: the old Trending/Most Ghosted/Recent/All pill row
+>   plus a separate filter icon was replaced by a single floating Sort+Filter pill
+>   (Noon-style) on the "View all" screen - restyle only, the underlying sort/filter
+>   logic already existed.
+>
+> ### New features this session
+>
+> - **10 seeded Ghost-themed food products** in the Food & delivery lane (see the
+>   prior decisions-log entry for the full list/ids) - already covered, still live.
+> - **Preset avatar picker** (Profile screen): "Choose a Ghost avatar" opens a grid
+>   of 11 presets so far (the onboarding Male/Female mascots, now redrawn in a
+>   flat white-on-black vector style, plus 9 new themed avatars - shopper, sleepy,
+>   cool, angry, happy, playful, racer, gamer, foodie). 8 more are expected in a
+>   later session. Presets live in a single list
+>   (`android/app/src/main/java/com/example/ghostcart/data/AvatarPresets.kt`) -
+>   adding one later is a one-line change plus the PNG, no other code touched.
+>   Display precedence everywhere an avatar renders: explicit preset chosen >
+>   uploaded photo > the user's onboarding Male/Female mascot as a default >
+>   initial-letter placeholder.
+> - **Leaderboard avatars**: `LeaderboardScreen` now renders the same
+>   preset/photo/initial precedence (minus the gender fallback, since the public
+>   leaderboard API doesn't expose other users' gender) instead of only ever
+>   showing an uploaded photo or a blank initial.
+> - **Meal-reminder default-on**: granting `POST_NOTIFICATIONS` from Home's
+>   ambient first-run permission request now flips lunch and dinner reminders on
+>   automatically (`AppViewModel.enableMealRemindersByDefault()`), instead of
+>   leaving the user to find and enable them manually in Profile. Scoped to that
+>   one ambient request path only - Profile's per-toggle "enable this one
+>   reminder" asks are untouched and don't cross-enable the other reminder.
+>
+> ### Production deploy this session (explicit user go-ahead each time)
+>
+> - **`drizzle/0019_add_gender_avatar_preset.sql` applied to the live D1 database**
+>   (`ghostcart-v2-db`) - adds nullable `users.gender` and `users.avatar_preset_id`
+>   columns. Purely additive, no backfill, no destructive change.
+> - **`ghostcart-app` Worker redeployed twice** (`npm run build && npx wrangler
+>   deploy --config wrangler.ghostcart-app.jsonc`): once for `gender`/
+>   `avatarPresetId` support in `GET`/`PATCH /api/me/profile` and mutual-exclusion
+>   handling in `POST /api/me/avatar`, once more for `avatarPresetId` in
+>   `GET /api/community/leaderboard`. Verified live: avatar-preset selection now
+>   persists server-side and survives a force-stop + relaunch on a real device
+>   (previously blocked with a "no fields to update" error before these deploys).
+> - **Discovered along the way, not caused by this session:** migration
+>   `0018_ghost_order_groups.sql` (Codex's `order_group_id` column) was never
+>   registered in drizzle-kit's own journal/snapshot tracking
+>   (`drizzle/meta/_journal.json`) - running `npx drizzle-kit generate` tried to
+>   regenerate that same column bundled with the new ones under a colliding
+>   "0018" slot. Worked around by hand-writing `0019` with only the new columns;
+>   the underlying journal gap for `0018` is still unresolved and will recur for
+>   whoever next runs `db:generate` unless it's reconciled.
+>
+> ### Known gap, not yet fixed
+>
+> - Delivery-simulation notifications require `POST_NOTIFICATIONS` to actually be
+>   granted - if a user denies that permission prompt, every delivery-step
+>   notification silently fails to post (an existing `catch (e: SecurityException)`
+>   swallows it). Not addressed this session beyond the meal-reminder default-on
+>   fix, which is a related but separate concern.
 
 > ## STATUS REPORT (Codex, 2026-07-25)
 >
