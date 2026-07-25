@@ -207,7 +207,7 @@ fun ProfileSelectScreen(
                         .clickable { onSelectProfile(profile) }
                         .padding(20.dp)
                 ) {
-                    GhostMascotPose(poseName = if (profile == "Male") "cart" else "female", modifier = Modifier.size(96.dp))
+                    GhostMascotPose(poseName = if (profile == "Male") "male" else "female", modifier = Modifier.size(96.dp))
                     Text(text = profile, color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 10.dp))
                     Box(
                         modifier = Modifier
