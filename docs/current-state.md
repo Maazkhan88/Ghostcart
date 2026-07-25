@@ -1,6 +1,66 @@
 # Current State
 
-Last updated: 2026-07-24, evening (Claude Code — fixed the cooldown-resolved email per a real user screenshot: real logo instead of emoji, one-click unsubscribe, and the "Open Ghost Cart" button now deep-links to the specific cooldown item instead of the generic APK download page; found and fixed a second dead link in the same file (`/ghost` share links were still checking the retired `workers.dev` host); added product thumbnails to the Cooldowns tab and Home screen's Active cooldowns preview, which had never rendered `AlmostBuy.imageUrl` despite it being populated end-to-end). See the "STATUS REPORT" block immediately below — it supersedes everything after it, which is historical (left for provenance).
+Last updated: 2026-07-24, late evening (Claude Code — fixed App Link verification for sideloaded builds by adding the upload-key cert to `assetlinks.json`; added three notification action buttons — skip/bought/more-time — directly on the cooling-complete notification, working even with the app process dead; wired real Firebase Analytics funnel tracking for screen views, cooling-started, add-to-cart, checkout-completed, and the full notification received/opened/action-tapped chain). See the "STATUS REPORT" block immediately below — it supersedes everything after it, which is historical (left for provenance).
+
+> ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-24, late evening)
+>
+> Continuation of the same-day session, immediately after the cooldown-resolved
+> email / product-thumbnail report below.
+>
+> ### App Link verification was failing on sideloaded builds
+>
+> The new `/app/cooldown/{id}` deep link (from the previous report's email fix)
+> worked when installed via Play Store but silently fell back to the browser's web
+> fallback page on directly-sideloaded `app-release.apk` builds — "Open Ghost Cart"
+> in the email never actually launched the app during test installs. Cause:
+> `assetlinks.json` only listed the Play App Signing certificate(s), not the upload
+> keystore's own certificate, which is what a sideloaded release build presents.
+> Added the upload-key cert's fingerprint alongside the existing entries.
+>
+> ### Cooling-complete notifications: resolve without opening the app
+>
+> Previously the notification only opened the app on tap. New
+> `CooldownNotificationActionReceiver` adds three direct actions — **I skipped
+> it**, **Bought it**, **More time** — that call the same repository/sync path
+> `AppViewModel` uses for the Cooldowns screen's own buttons, and work even if the
+> app process is dead. It matches the notification's `cooldownId` extra against
+> either the item's local id or `serverId`, since the on-device reminder worker and
+> the backend's FCM push populate that extra with different kinds of id — a real
+> mismatch risk if only one form were checked.
+>
+> ### Real analytics funnel, not guesses
+>
+> Firebase Analytics existed (`data/Analytics.kt`) but most of the funnel wasn't
+> actually wired up. Now tracked:
+> - `logScreenView()` on every nav destination change — a single-Activity Compose
+>   app gets none of Firebase's automatic screen/engagement-time reporting for
+>   free, since that's keyed off Activity lifecycle and every screen here shares
+>   one Activity.
+> - `logCoolingStarted()` inside `createAlmostBuy()` — the one function every
+>   "Cool it"/"Start cooling" entry point (product cards, detail screen, cart,
+>   manual capture) now funnels through since the earlier `startCoolingPeriod` bug
+>   fix, so this single call site covers all of them.
+> - `logAddToCart()` inside `addToCart()` — same one-funnel-point reasoning.
+> - `logCheckoutCompleted()` inside `placeSimulatedOrder()`, with item count and
+>   total. **Deliberately not GA4's standard `PURCHASE` event** — no real money
+>   moves here, and `PURCHASE` carries revenue-reporting semantics in GA4/Play
+>   Console that would misrepresent a simulation.
+> - `logNotificationReceived`/`logNotificationOpened` — existed but were never
+>   actually called from anywhere — plus a new `logNotificationActionTapped` for
+>   the skip/bought/more-time buttons added above.
+> - Sharing (`logCaptureCompleted`'s `sourceKind` param) and story views
+>   (`logStoryViewed`) were already tracked — no changes needed there.
+>
+> ### Still open
+>
+> Nothing from the prior reports' "Still open" lists was picked up this round —
+> this pass was entirely the three items above. The full backlog still stands:
+> R8 re-enable needs a real device test, content ratings/data safety form
+> completion unconfirmed, Firebase IAM test campaign not yet created, deferred
+> delivery-notification copy, welcome/onboarding email templates, Closed testing's
+> 14-day/12-tester clock start unconfirmed, and the Home-screen thumbnail fix from
+> the prior report is still committed-but-unbuilt (stopped before building per the
+> user's standing "always ask before building an APK" instruction).
 
 > ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-24, evening)
 >
