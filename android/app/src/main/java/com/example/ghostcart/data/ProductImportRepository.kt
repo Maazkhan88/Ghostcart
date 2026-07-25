@@ -1,5 +1,6 @@
 package com.example.ghostcart.data
 
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -10,6 +11,16 @@ import java.util.UUID
 
 private val URL_PATTERN = Regex("""https://[^\s]+""", RegexOption.IGNORE_CASE)
 private val BLOCKED_LINK_SUFFIXES = listOf(".localhost", ".local", ".internal", ".home", ".lan", ".onion")
+private const val PRODUCT_IMPORT_LOG_TAG = "ProductImport"
+
+// Same bot-challenge heuristic as the server-side scraper
+// (lib/product-link-preview.ts) - Amazon can return a normal-looking 200 with
+// no product image markup at all when it decides a request looks automated.
+private val BOT_CHALLENGE_MARKERS = Regex(
+    """enter the characters you see below|api-services-support@amazon|robot check|to discuss automated access""",
+    RegexOption.IGNORE_CASE
+)
+private fun looksLikeBotChallenge(html: String): Boolean = BOT_CHALLENGE_MARKERS.containsMatchIn(html.take(20_000))
 
 /**
  * Parses a `Date().toISOString()`-style timestamp (e.g. "2026-07-19T15:30:00.000Z") from the
@@ -468,6 +479,10 @@ object ProductImportRepository {
         // an embedded warranty/insurance add-on. Re-read Amazon pages on the
         // device so the scored landing image can replace that artwork.
         if (!amazonSource && product.priceCents != null && product.imageUrl != null) return product
+        Log.d(
+            PRODUCT_IMPORT_LOG_TAG,
+            "device re-fetch starting amazonSource=$amazonSource serverImage=${product.imageUrl != null} serverPrice=${product.priceCents != null}"
+        )
         return runCatching {
             val connection = (URL(product.sourceUrl).openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
@@ -484,13 +499,25 @@ object ProductImportRepository {
             try {
                 val code = connection.responseCode
                 val finalUrl = connection.url.toString()
-                if (code !in 200..299 || !isSafePublicHttpsUrl(finalUrl)) return@runCatching product
-                val metadata = extractRetailerHtmlMetadata(readRetailerHtml(connection))
+                if (code !in 200..299 || !isSafePublicHttpsUrl(finalUrl)) {
+                    Log.w(PRODUCT_IMPORT_LOG_TAG, "device re-fetch bad response code=$code safeUrl=${isSafePublicHttpsUrl(finalUrl)}")
+                    return@runCatching product
+                }
+                val html = readRetailerHtml(connection)
+                val metadata = extractRetailerHtmlMetadata(html)
                 val mergedTitle = if (titleLooksLikeFallback(product.title)) metadata.title ?: product.title else product.title
                 val mergedPrice = product.priceCents ?: metadata.priceCents
                 val mergedImage = if (amazonSource) metadata.imageUrl ?: product.imageUrl else product.imageUrl ?: metadata.imageUrl
                 val mergedCurrency = product.currencyCode ?: metadata.currencyCode
                 val complete = !titleLooksLikeFallback(mergedTitle) && mergedPrice != null && mergedImage != null
+                if (mergedImage == null) {
+                    Log.w(
+                        PRODUCT_IMPORT_LOG_TAG,
+                        "device re-fetch image MISSING code=$code botChallenge=${looksLikeBotChallenge(html)} htmlChars=${html.length}"
+                    )
+                } else {
+                    Log.d(PRODUCT_IMPORT_LOG_TAG, "device re-fetch image found (fromDeviceFetch=${metadata.imageUrl != null})")
+                }
                 product.copy(
                     title = mergedTitle,
                     priceCents = mergedPrice,
@@ -502,6 +529,8 @@ object ProductImportRepository {
             } finally {
                 connection.disconnect()
             }
+        }.onFailure { error ->
+            Log.w(PRODUCT_IMPORT_LOG_TAG, "device re-fetch threw, keeping server product: ${error::class.simpleName}: ${error.message}")
         }.getOrDefault(product)
     }
 

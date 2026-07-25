@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.ContextThemeWrapper
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebResourceError
@@ -21,6 +22,8 @@ import org.json.JSONTokener
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
 import kotlin.math.roundToLong
+
+private const val DEVICE_LINK_PREVIEW_LOG_TAG = "DeviceLinkPreview"
 
 data class DeviceLinkMetadata(
     val title: String?,
@@ -137,22 +140,27 @@ object DeviceLinkPreview {
     @SuppressLint("SetJavaScriptEnabled")
     suspend fun read(context: Context, url: String): DeviceLinkMetadata? = withContext(Dispatchers.Main) {
         if (extractSharedUrl(url) == null) return@withContext null
+        Log.d(DEVICE_LINK_PREVIEW_LOG_TAG, "WebView fallback starting")
         suspendCancellableCoroutine { continuation ->
             val completed = AtomicBoolean(false)
             val handler = Handler(Looper.getMainLooper())
             val themedContext = ContextThemeWrapper(context, R.style.Theme_GhostCart)
             val webView = WebView(themedContext)
-            val finish: (DeviceLinkMetadata?) -> Unit = finish@{ metadata ->
+            val finish: (DeviceLinkMetadata?, String) -> Unit = finish@{ metadata, reason ->
                 if (!completed.compareAndSet(false, true)) return@finish
+                Log.d(
+                    DEVICE_LINK_PREVIEW_LOG_TAG,
+                    "WebView fallback finished reason=$reason title=${metadata?.title != null} image=${metadata?.imageUrl != null} price=${metadata?.priceCents != null}"
+                )
                 handler.removeCallbacksAndMessages(null)
                 webView.stopLoading()
                 webView.loadUrl("about:blank")
                 webView.destroy()
                 if (continuation.isActive) continuation.resume(metadata)
             }
-            val timeout = Runnable { finish(null) }
+            val timeout = Runnable { finish(null, "timeout") }
             handler.postDelayed(timeout, TIMEOUT_MS)
-            continuation.invokeOnCancellation { handler.post { finish(null) } }
+            continuation.invokeOnCancellation { handler.post { finish(null, "cancelled") } }
 
             webView.settings.apply {
                 javaScriptEnabled = true
@@ -179,18 +187,21 @@ object DeviceLinkPreview {
                     handler.postDelayed({
                         if (!completed.get()) {
                             view.evaluateJavascript(extractionScript) { result ->
-                                finish(parseDeviceLinkMetadata(result))
+                                finish(parseDeviceLinkMetadata(result), "pageFinished")
                             }
                         }
                     }, PAGE_SETTLE_MS)
                 }
 
                 override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
-                    if (request.isForMainFrame) finish(null)
+                    if (request.isForMainFrame) {
+                        Log.w(DEVICE_LINK_PREVIEW_LOG_TAG, "WebView load error code=${error.errorCode} description=${error.description}")
+                        finish(null, "loadError")
+                    }
                 }
 
                 override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
-                    finish(null)
+                    finish(null, "renderProcessGone")
                     return true
                 }
             }

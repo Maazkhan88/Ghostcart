@@ -1353,6 +1353,7 @@ private fun MetricColumn(label: String, value: String, modifier: Modifier = Modi
 
 @Composable
 private fun CooldownSummaryCard(item: AlmostBuy, onClick: () -> Unit) {
+    var imageLoadFailed by remember(item.imageUrl) { mutableStateOf(false) }
     Card(
         colors = CardDefaults.cardColors(containerColor = Paper),
         border = androidx.compose.foundation.BorderStroke(1.dp, FaintBorder),
@@ -1361,11 +1362,13 @@ private fun CooldownSummaryCard(item: AlmostBuy, onClick: () -> Unit) {
     ) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(GreenTint), contentAlignment = Alignment.Center) {
-                if (!item.imageUrl.isNullOrBlank()) {
+                if (!item.imageUrl.isNullOrBlank() && !imageLoadFailed) {
                     AsyncImage(
                         model = item.imageUrl,
                         contentDescription = item.name,
                         contentScale = ContentScale.Fit,
+                        onError = { imageLoadFailed = true },
+                        onSuccess = { imageLoadFailed = false },
                         modifier = Modifier.fillMaxSize().padding(4.dp)
                     )
                 } else {
@@ -1391,6 +1394,7 @@ private fun CooldownDecisionCard(
     onOpenSource: (String) -> Unit
 ) {
     val hasCooled = now >= item.coolingUntilMillis
+    var imageLoadFailed by remember(item.imageUrl) { mutableStateOf(false) }
     Card(
         colors = CardDefaults.cardColors(containerColor = if (hasCooled) GreenTint else SoftGray),
         shape = RoundedCornerShape(22.dp),
@@ -1402,11 +1406,13 @@ private fun CooldownDecisionCard(
                     Modifier.size(56.dp).clip(RoundedCornerShape(14.dp)).background(Color.White),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (!item.imageUrl.isNullOrBlank()) {
+                    if (!item.imageUrl.isNullOrBlank() && !imageLoadFailed) {
                         AsyncImage(
                             model = item.imageUrl,
                             contentDescription = item.name,
                             contentScale = ContentScale.Fit,
+                            onError = { imageLoadFailed = true },
+                            onSuccess = { imageLoadFailed = false },
                             modifier = Modifier.fillMaxSize().padding(5.dp)
                         )
                     } else {
@@ -1465,16 +1471,19 @@ private fun ResolvedRow(
     onShare: (AlmostBuy) -> Unit,
     onOpenSource: (String) -> Unit
 ) {
+    var imageLoadFailed by remember(item.imageUrl) { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(
             Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(Color.White),
             contentAlignment = Alignment.Center
         ) {
-            if (!item.imageUrl.isNullOrBlank()) {
+            if (!item.imageUrl.isNullOrBlank() && !imageLoadFailed) {
                 AsyncImage(
                     model = item.imageUrl,
                     contentDescription = item.name,
                     contentScale = ContentScale.Fit,
+                    onError = { imageLoadFailed = true },
+                    onSuccess = { imageLoadFailed = false },
                     modifier = Modifier.fillMaxSize().padding(4.dp)
                 )
             } else {

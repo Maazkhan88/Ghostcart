@@ -153,6 +153,17 @@ function amazonPageImage(html: string): string | null {
     .sort((left, right) => right.score - left.score || left.index - right.index)[0]?.url ?? null;
 }
 
+// Amazon (and some other retailers) serve a bot-challenge page instead of the
+// real listing to header-thin/non-browser requests - this looks like a normal
+// 200 response, so it doesn't throw anywhere, it just silently has no product
+// image markup for the scrapers below to find. Cheap heuristic so a "no image
+// found" log line can say *why* instead of just "why", the previous state of
+// affairs that made this bug invisible.
+const BOT_CHALLENGE_MARKERS = /enter the characters you see below|api-services-support@amazon|robot check|to discuss automated access/i;
+function looksLikeBotChallenge(html: string): boolean {
+  return BOT_CHALLENGE_MARKERS.test(html.slice(0, 20_000));
+}
+
 function jsonLdProducts(html: string): Record<string, unknown>[] {
   const results: Record<string, unknown>[] = [];
   const scripts = html.match(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi) ?? [];
@@ -337,6 +348,15 @@ export function extractRetailerProduct(html: string, finalUrl: URL): RetailerPro
   const currencyCode = currencyValue
     ? currencyValue.toUpperCase().slice(0, 3)
     : priceCents !== null && (hostMatches(finalUrl.hostname, ["amazon.ae", "noon.com"])) ? "AED" : null;
+  if (!imageUrl) {
+    console.log(
+      `[link-preview] server-fetch image MISSING host=${finalUrl.hostname} ` +
+      `jsonld=${structuredImage ? "hit" : "miss"} ogMeta=${documentImage ? "hit" : "miss"} amazonRegex=${amazonImage ? "hit" : "miss"} ` +
+      `rejectedByUrlValidation=${Boolean(rawImage)} botChallenge=${looksLikeBotChallenge(html)} htmlBytes=${html.length}`,
+    );
+  } else {
+    console.log(`[link-preview] server-fetch image found host=${finalUrl.hostname}`);
+  }
   return buildPreview({ finalUrl, title: rawTitle, imageUrl, priceCents, currencyCode });
 }
 
@@ -483,6 +503,10 @@ export async function previewRetailerLink(value: string): Promise<RetailerLinkRe
     throw new Error("Unable to follow the shared link");
   } catch (error) {
     const canonical = canonicalizeRetailerUrl(current.toString());
+    console.error(
+      `[link-preview] server-fetch FAILED (listing) host=${canonical.hostname} ` +
+      `error=${error instanceof Error ? `${error.name}: ${error.message}` : String(error)}`,
+    );
     return {
       kind: "product",
       product: {
@@ -592,6 +616,10 @@ export async function previewRetailerProduct(value: string): Promise<RetailerPro
     throw new Error("Unable to follow the shared link");
   } catch (error) {
     const canonical = canonicalizeRetailerUrl(current.toString());
+    console.error(
+      `[link-preview] server-fetch FAILED (product) host=${canonical.hostname} ` +
+      `error=${error instanceof Error ? `${error.name}: ${error.message}` : String(error)}`,
+    );
     return {
       status: "needs_input",
       retailer: sourceLabel(canonical),

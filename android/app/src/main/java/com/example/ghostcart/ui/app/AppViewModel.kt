@@ -2,6 +2,7 @@ package com.example.ghostcart.ui.app
 
 import android.app.Application
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.ExistingWorkPolicy
@@ -562,13 +563,30 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
             val serverProduct = (linkResult as LinkImportResult.Product).product
-            val needsDevicePreview = serverProduct.imageUrl == null || serverProduct.priceCents == null || serverProduct.status != "complete"
+            // Belt-and-suspenders on top of the status check below: an isBlank()
+            // guard here (not just == null) means this can never silently skip
+            // the WebView fallback just because some upstream layer stored ""
+            // instead of null for a missing image.
+            val missingImage = serverProduct.imageUrl.isNullOrBlank()
+            val missingPrice = serverProduct.priceCents == null
+            val statusIncomplete = serverProduct.status != "complete"
+            val needsDevicePreview = missingImage || missingPrice || statusIncomplete
+            Log.d(
+                "ProductImport",
+                "capture pipeline: host=${serverProduct.sourceDomain} afterServerAndDeviceFetch " +
+                    "image=${!missingImage} price=${!missingPrice} status=${serverProduct.status} " +
+                    "needsWebViewFallback=$needsDevicePreview (missingImage=$missingImage missingPrice=$missingPrice statusIncomplete=$statusIncomplete)"
+            )
             val deviceMetadata = if (needsDevicePreview) {
                 DeviceLinkPreview.read(getApplication(), serverProduct.sourceUrl)
             } else {
                 null
             }
             val product = deviceMetadata?.let { mergeDeviceMetadata(serverProduct, it) } ?: serverProduct
+            Log.d(
+                "ProductImport",
+                "capture pipeline: host=${serverProduct.sourceDomain} FINAL image=${!product.imageUrl.isNullOrBlank()} status=${product.status}"
+            )
             val amountCents = if (product.currencyCode == null || product.currencyCode == "AED") product.priceCents ?: 0 else 0
 
             // First share (nothing else pending): show the normal single-item "Ghost an
