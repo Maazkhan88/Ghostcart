@@ -145,8 +145,6 @@ fun GhostHomeScreen(
     onRefresh: () -> Unit = {},
     homeBanners: List<com.example.ghostcart.data.ContentBlockItem> = emptyList(),
     ghostCartStories: List<com.example.ghostcart.data.ContentBlockItem> = emptyList(),
-    cartItemCount: Int = 0,
-    onOpenCart: () -> Unit = {},
     onOpenLeaderboard: () -> Unit = {},
     onOpenStory: (Int) -> Unit = {},
     modifier: Modifier = Modifier
@@ -188,9 +186,7 @@ fun GhostHomeScreen(
                 onNotifications = onNotifications,
                 onViewAllCatalog = onViewAllCatalog,
                 onViewAllFavorites = onViewAllFavorites,
-                homeBanners = homeBanners,
-                cartItemCount = cartItemCount,
-                onOpenCart = onOpenCart
+                homeBanners = homeBanners
             )
         }
 

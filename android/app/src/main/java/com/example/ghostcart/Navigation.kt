@@ -111,7 +111,7 @@ private fun selectedBottomDestination(current: NavKey?): NavKey = when (current)
     WalletActivity, WeeklyStatement, Trends -> GhostCardSettings
     is LegalDocument -> GhostCardSettings
     GhostCartList, CaptureAlmostBuy, GhostCheckout, OrderGhostedSuccess,
-    FakeDeliveryTracking, PayWithGhostCard, OrderProtected -> CaptureAlmostBuy
+    FakeDeliveryTracking, PayWithGhostCard, OrderProtected -> GhostCartList
     else -> Home
 }
 
@@ -256,9 +256,13 @@ fun MainNavigation(
                                 onClose = { dismissedOrderId = state.lastOrderId }
                             )
                         }
-                        GhostBottomNav(selectedBottomDestination(current)) { destination ->
-                            if (backStack.lastOrNull() != destination) backStack.add(destination)
-                        }
+                        GhostBottomNav(
+                            current = selectedBottomDestination(current),
+                            cartItemCount = state.cartQuantities.values.sum(),
+                            onNavigate = { destination ->
+                                if (backStack.lastOrNull() != destination) backStack.add(destination)
+                            }
+                        )
                     }
                 }
             }
@@ -352,8 +356,6 @@ fun MainNavigation(
                             },
                             homeBanners = state.homeBanners,
                             ghostCartStories = state.ghostCartStories,
-                            cartItemCount = state.cartQuantities.values.sum(),
-                            onOpenCart = { backStack.add(GhostCartList) },
                             onOpenLeaderboard = { backStack.add(Leaderboard) },
                             onOpenStory = { index -> openStoryIndex = index }
                         )
@@ -740,12 +742,12 @@ private fun DeliveryTrackingBanner(orderId: String, deliveryStep: Int, onClick: 
 }
 
 @Composable
-private fun GhostBottomNav(current: NavKey?, onNavigate: (NavKey) -> Unit) {
+private fun GhostBottomNav(current: NavKey?, cartItemCount: Int = 0, onNavigate: (NavKey) -> Unit) {
     data class Item(val label: String, val destination: NavKey, val icon: androidx.compose.ui.graphics.vector.ImageVector, val central: Boolean = false)
     val items = listOf(
         Item(stringResource(R.string.nav_home), Home, Icons.Filled.Home),
         Item(stringResource(R.string.nav_cooldowns), Cooldowns, Icons.Filled.Timer),
-        Item("Ghost", CaptureAlmostBuy, Icons.Filled.Add, central = true),
+        Item("Cart", GhostCartList, Icons.Filled.ShoppingCart, central = true),
         Item("Wallet", Progress, Icons.Filled.AccountBalanceWallet),
         Item(stringResource(R.string.nav_profile), GhostCardSettings, Icons.Filled.Person)
     )
@@ -766,14 +768,11 @@ private fun GhostBottomNav(current: NavKey?, onNavigate: (NavKey) -> Unit) {
                             contentAlignment = Alignment.Center
                         ) {
                             if (item.central) {
+                                // This button now IS the cart entry point (GhostCartList), so the
+                                // cart-shaped mascot is accurate again, not confusable with a
+                                // different affordance - there's only one cart icon now.
                                 GhostMascotPose(
-                                    // Deliberately not "cart" - this button opens the manual
-                                    // capture form (CaptureAlmostBuy), not the real cart screen.
-                                    // A cart-shaped mascot here was confusable with the actual
-                                    // cart icon/badge on the Home top bar, which does open the
-                                    // cart - two different "looks like a cart" affordances doing
-                                    // two different things.
-                                    poseName = "waveAlt",
+                                    poseName = "cart",
                                     modifier = Modifier.size(40.dp)
                                 )
                             } else {
@@ -782,6 +781,23 @@ private fun GhostBottomNav(current: NavKey?, onNavigate: (NavKey) -> Unit) {
                                     contentDescription = item.label,
                                     tint = if (selected) GhostGreen else MutedText,
                                     modifier = Modifier.size(26.dp)
+                                )
+                            }
+                        }
+                        if (item.central && cartItemCount > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(top = 2.dp, end = 2.dp)
+                                    .size(18.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFE4342F)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (cartItemCount > 9) "9+" else "$cartItemCount",
+                                    color = Color.White,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                         }

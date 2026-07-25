@@ -30,9 +30,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -83,9 +80,7 @@ fun ProductDiscoverySection(
     onNotifications: () -> Unit,
     onViewAllCatalog: (String) -> Unit,
     onViewAllFavorites: () -> Unit,
-    homeBanners: List<com.example.ghostcart.data.ContentBlockItem> = emptyList(),
-    cartItemCount: Int = 0,
-    onOpenCart: () -> Unit = {}
+    homeBanners: List<com.example.ghostcart.data.ContentBlockItem> = emptyList()
 ) {
     var query by remember { mutableStateOf("") }
     var categoryId by remember { mutableStateOf("all") }
@@ -111,21 +106,8 @@ fun ProductDiscoverySection(
                 tint = Ink
             )
             GhostPeekMascot(modifier = Modifier.align(Alignment.CenterStart))
-            Row(modifier = Modifier.align(Alignment.CenterEnd), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onOpenCart) {
-                    BadgedBox(badge = {
-                        if (cartItemCount > 0) {
-                            Badge(containerColor = GhostGreen, contentColor = Ink) {
-                                Text(if (cartItemCount > 99) "99+" else "$cartItemCount", fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }) {
-                        Icon(Icons.Filled.ShoppingCart, contentDescription = "Cart", tint = Ink)
-                    }
-                }
-                IconButton(onClick = onNotifications) {
-                    Icon(Icons.Filled.Notifications, contentDescription = "Notifications", tint = Ink)
-                }
+            IconButton(onClick = onNotifications, modifier = Modifier.align(Alignment.CenterEnd)) {
+                Icon(Icons.Filled.Notifications, contentDescription = "Notifications", tint = Ink)
             }
         }
         PromoBannerCarousel(banners = homeBanners)
