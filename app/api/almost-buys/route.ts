@@ -13,6 +13,7 @@ import {
   readSafeUrl,
   sanitizeShortText,
 } from "../../../lib/backend-contract";
+import { rehostProductImage } from "../../../lib/product-image-rehost";
 import { requireApiSession } from "../../../lib/session-auth";
 
 const MAX_PAGE_SIZE = 100;
@@ -173,6 +174,17 @@ export async function POST(request: Request) {
       return jsonNoStore({ error: orderGroupId.error }, { status: 400 });
     }
 
+    // A scraped Amazon/retailer hotlink can go dead, get hotlink-blocked, or
+    // just change (a later re-scrape of the same listing might pick a
+    // different image). A copy we own doesn't have any of those failure
+    // modes - also what makes the link-preview reuse fallback
+    // (findKnownProductImage in app/api/link-preview/route.ts) permanently
+    // reliable rather than only as reliable as whatever Amazon still serves.
+    // Never blocks capture on failure: rehostProductImage() falls back to
+    // the original URL on any error, so a hiccup here degrades to the
+    // pre-existing raw-hotlink behavior, not a lost image.
+    const storedImageUrl = imageUrl.value ? await rehostProductImage(imageUrl.value) : imageUrl.value;
+
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
     const state = coolOffUntil.value ? "cooling" : "captured";
@@ -192,7 +204,7 @@ export async function POST(request: Request) {
           catalogProduct?.id ?? null,
           title.value,
           category.value,
-          imageUrl.value ?? null,
+          storedImageUrl ?? null,
           sourceUrl.value ?? null,
           sourceKind,
           orderGroupId.value || null,

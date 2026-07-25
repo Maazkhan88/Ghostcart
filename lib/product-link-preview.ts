@@ -135,9 +135,102 @@ function htmlTitle(html: string): string | null {
   return match ? decodeHtml(match[1]) : null;
 }
 
+// Amazon pages routinely have MANY a-offscreen price-shaped elements: the
+// struck-through "List Price", unrelated "frequently bought together"/
+// "Compare New" carousel items for entirely different products, and the
+// actual current buybox price - all wrapped in the exact same class. Trusting
+// whichever is *first* in raw HTML order is fragile - on a real page that
+// first element can be an empty screen-reader span, which permanently kills
+// price extraction for the whole page even though the real price appears
+// moments later. Score every non-empty, price-shaped candidate the same way
+// amazonPageImage() already scores image candidates: known-good context
+// (Amazon's own stable buybox price ids/classes) boosts, known-bad context
+// (struck-through original price, unrelated carousels) penalizes.
 function amazonPagePrice(html: string): string | null {
-  const match = html.match(/class=["'][^"']*\ba-offscreen\b[^"']*["'][^>]*>\s*([^<]+)</i);
-  return match ? decodeHtml(match[1]) : null;
+  const pattern = /class=["'][^"']*\ba-offscreen\b[^"']*["'][^>]*>\s*([^<]+)</gi;
+  const candidates = [...html.matchAll(pattern)]
+    .map((match) => {
+      const text = decodeHtml(match[1]);
+      const index = match.index ?? 0;
+      const context = html.slice(Math.max(0, index - 700), Math.min(html.length, index + match[0].length + 100));
+      let score = 0;
+      if (/tp_price_block_total_price_ww|apex-pricetopay-value|priceToPay|reinventPricePriceToPayMargin/i.test(context)) {
+        score += 10_000;
+      }
+      if (/data-a-strike=["']true["']|basisPrice|\ba-text-price\b/i.test(context)) score -= 8_000;
+      if (/compare new|frequently bought together|customers who bought|sponsored/i.test(context)) score -= 8_000;
+      return { text, score, index };
+    })
+    .filter((candidate) => parsePrice(candidate.text) !== null);
+  return candidates.sort((left, right) => right.score - left.score || left.index - right.index)[0]?.text ?? null;
+}
+
+// Finds the JSON-string value of `"key":"..."` at the top level of a script
+// blob, decoding standard JSON escapes (`\/`, `\"`, `\uXXXX`, ...) properly -
+// a naive [^"]+ capture would keep those escapes literal and silently fail
+// to match parsed object keys extracted the "real" way (see below).
+function extractJsonStringField(html: string, key: string): string | null {
+  const match = html.match(new RegExp(`"${key}"\\s*:\\s*("(?:[^"\\\\]|\\\\.)*")`));
+  if (!match) return null;
+  try { return JSON.parse(match[1]); } catch { return null; }
+}
+
+// `"someKey":{...}` can nest arbitrarily deep (colorImages does) - a regex
+// can't safely capture a balanced JSON object, so walk the string counting
+// brace depth (ignoring braces inside quoted strings) until it closes.
+function extractBalancedJsonObject(html: string, key: string): Record<string, unknown> | null {
+  const marker = `"${key}":{`;
+  const start = html.indexOf(marker);
+  if (start === -1) return null;
+  const braceStart = start + marker.length - 1;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = braceStart; i < html.length; i += 1) {
+    const ch = html[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') { inString = true; continue; }
+    if (ch === "{") depth += 1;
+    else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        try { return JSON.parse(html.slice(braceStart, i + 1)); } catch { return null; }
+      }
+    }
+  }
+  return null;
+}
+
+// Amazon embeds its own answer to "which color/variant is this canonical URL
+// actually showing" right in the page (`landingAsinColor`), alongside a
+// `colorImages` map keyed by every color the listing offers. The old
+// keyword-proximity image scorer below has no concept of color variants at
+// all, so on a multi-color listing it can (and did, confirmed against a real
+// amazon.ae page) land on a *different* color's gallery image than the one
+// actually selected by default - not a bot-block, not a missing-data problem,
+// just picking the wrong color's otherwise-legitimate photo. Try Amazon's own
+// stated default first; fall back to the keyword scorer if this data isn't
+// present (older page templates, non-Amazon retailers, parse failure).
+function pickLandingColorImage(html: string): string | null {
+  try {
+    const landingColor = extractJsonStringField(html, "landingAsinColor");
+    if (!landingColor) return null;
+    const colorImages = extractBalancedJsonObject(html, "colorImages");
+    const entries = colorImages?.[landingColor];
+    const entry = Array.isArray(entries) ? (entries[0] as Record<string, unknown> | undefined) : undefined;
+    if (!entry) return null;
+    const hiRes = typeof entry.hiRes === "string" ? entry.hiRes : null;
+    const large = typeof entry.large === "string" ? entry.large : null;
+    const mainKeys = entry.main && typeof entry.main === "object" ? Object.keys(entry.main as Record<string, unknown>) : [];
+    return hiRes ?? large ?? mainKeys[0] ?? null;
+  } catch {
+    return null;
+  }
 }
 
 function amazonPageImage(html: string): string | null {
@@ -354,7 +447,7 @@ export function extractRetailerProduct(html: string, finalUrl: URL): RetailerPro
     fallbackTitle(finalUrl);
   const structuredImage = firstString(product.image);
   const documentImage = meta(html, ["og:image:secure_url", "og:image", "twitter:image", "twitter:image:src", "image"]);
-  const amazonImage = amazonPageImage(html);
+  const amazonImage = pickLandingColorImage(html) ?? amazonPageImage(html);
   // Amazon pages often embed JSON-LD for an add-on warranty before the actual
   // product gallery. Prefer the explicitly marked landing/gallery image so a
   // service-plan tile cannot replace the product photo.

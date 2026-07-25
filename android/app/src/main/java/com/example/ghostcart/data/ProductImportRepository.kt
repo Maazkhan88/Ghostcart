@@ -237,6 +237,110 @@ private fun allowedRetailerImage(value: String?): String? = value
     ?.trim()
     ?.takeIf(::isSafePublicHttpsUrl)
 
+private fun looksLikePrice(text: String): Boolean {
+    val normalized = text.replace(Regex("[^0-9.,]"), "").replace(",", "")
+    if (normalized.isBlank()) return false
+    val amount = normalized.toDoubleOrNull() ?: return false
+    return amount in 0.0..100_000_000.0
+}
+
+// Mirrors lib/product-link-preview.ts's amazonPagePrice() - same underlying
+// bug (a page's *first* a-offscreen span can be an empty screen-reader
+// artifact, which permanently kills price extraction if trusted
+// unconditionally) fixed the same way: score every price-shaped candidate,
+// don't just take the first one.
+private fun amazonOffscreenPrice(html: String): String? {
+    val pattern = Regex(
+        """class=["'][^"']*\ba-offscreen\b[^"']*["'][^>]*>\s*([^<]+)<""",
+        RegexOption.IGNORE_CASE
+    )
+    return pattern.findAll(html)
+        .mapNotNull { match ->
+            val text = decodeRetailerHtml(match.groupValues[1])
+            if (!looksLikePrice(text)) return@mapNotNull null
+            val start = (match.range.first - 700).coerceAtLeast(0)
+            val end = (match.range.last + 101).coerceAtMost(html.length)
+            val context = html.substring(start, end)
+            var score = 0
+            if (Regex(
+                    """tp_price_block_total_price_ww|apex-pricetopay-value|priceToPay|reinventPricePriceToPayMargin""",
+                    RegexOption.IGNORE_CASE
+                ).containsMatchIn(context)
+            ) score += 10_000
+            if (Regex("""data-a-strike=["']true["']|basisPrice|\ba-text-price\b""", RegexOption.IGNORE_CASE).containsMatchIn(context)) score -= 8_000
+            if (Regex("""compare new|frequently bought together|customers who bought|sponsored""", RegexOption.IGNORE_CASE).containsMatchIn(context)) score -= 8_000
+            Triple(text, score, match.range.first)
+        }
+        .sortedWith(compareByDescending<Triple<String, Int, Int>> { it.second }.thenBy { it.third })
+        .firstOrNull()?.first
+}
+
+// Extracts the JSON-string value of a top-level "key":"..." field, decoding
+// real JSON escapes (\/, \", \uXXXX) via org.json rather than keeping them
+// literal - needed so this matches keys decoded the same way out of a parsed
+// JSON object (see extractBalancedJsonObject below).
+private fun extractJsonStringField(html: String, key: String): String? {
+    val pattern = Regex("\"$key\"\\s*:\\s*(\"(?:[^\"\\\\]|\\\\.)*\")")
+    val match = pattern.find(html) ?: return null
+    return runCatching { JSONObject("{\"v\":${match.groupValues[1]}}").getString("v") }.getOrNull()
+}
+
+// "someKey":{...} can nest arbitrarily deep (Amazon's colorImages does) - a
+// regex can't safely capture a balanced JSON object, so walk the string
+// counting brace depth (ignoring braces inside quoted strings) until it closes.
+private fun extractBalancedJsonObject(html: String, key: String): JSONObject? {
+    val marker = "\"$key\":{"
+    val start = html.indexOf(marker)
+    if (start == -1) return null
+    val braceStart = start + marker.length - 1
+    var depth = 0
+    var inString = false
+    var escaped = false
+    val backslash = 92.toChar()
+    for (i in braceStart until html.length) {
+        val ch = html[i]
+        if (inString) {
+            when {
+                escaped -> escaped = false
+                ch == backslash -> escaped = true
+                ch == '"' -> inString = false
+            }
+            continue
+        }
+        when (ch) {
+            '"' -> inString = true
+            '{' -> depth++
+            '}' -> {
+                depth--
+                if (depth == 0) {
+                    return runCatching { JSONObject(html.substring(braceStart, i + 1)) }.getOrNull()
+                }
+            }
+        }
+    }
+    return null
+}
+
+// Mirrors lib/product-link-preview.ts's pickLandingColorImage() - Amazon
+// states its own answer to "which color variant is this canonical URL
+// actually showing" (landingAsinColor) right in the page; the keyword-scored
+// amazonPrimaryImage() below has no concept of color variants and can (and
+// did, confirmed against a real amazon.ae multi-color listing) land on a
+// different color's gallery image. Try Amazon's stated default first; fall
+// back to the keyword scorer if this data isn't present.
+private fun pickLandingColorImage(html: String): String? = runCatching {
+    val landingColor = extractJsonStringField(html, "landingAsinColor") ?: return@runCatching null
+    val colorImages = extractBalancedJsonObject(html, "colorImages") ?: return@runCatching null
+    val entries = colorImages.optJSONArray(landingColor) ?: return@runCatching null
+    val entry = if (entries.length() > 0) entries.optJSONObject(0) else null
+    entry ?: return@runCatching null
+    val hiRes = entry.optString("hiRes").takeIf { it.isNotBlank() }
+    val large = entry.optString("large").takeIf { it.isNotBlank() }
+    val main = entry.optJSONObject("main")
+    val firstMainKey = main?.keys()?.asSequence()?.firstOrNull()
+    hiRes ?: large ?: firstMainKey
+}.getOrNull()
+
 private fun amazonPrimaryImage(html: String): String? {
     val imageRegex = Regex(
         """https://m\.media-amazon\.com/images/I/[A-Za-z0-9%_.+|~,-]+?\.(?:jpg|jpeg|png)""",
@@ -277,14 +381,11 @@ internal fun extractRetailerHtmlMetadata(html: String): RetailerHtmlMetadata {
     val rawPrice = retailerMeta(
         html,
         setOf("product:price:amount", "og:price:amount", "price")
-    ) ?: Regex(
-        """class=["'][^"']*\ba-offscreen\b[^"']*["'][^>]*>\s*([^<]+)<""",
-        RegexOption.IGNORE_CASE
-    ).find(html)?.groupValues?.getOrNull(1)?.let(::decodeRetailerHtml)
+    ) ?: amazonOffscreenPrice(html)
     val amount = rawPrice?.replace(",", "")?.replace(Regex("[^0-9.]"), "")?.toDoubleOrNull()
     val priceCents = amount?.takeIf { it > 0.0 && it <= 100_000_000.0 }?.let { kotlin.math.round(it * 100).toLong() }
     val metaImage = retailerMeta(html, setOf("og:image", "twitter:image"))
-    val amazonImage = amazonPrimaryImage(html)
+    val amazonImage = pickLandingColorImage(html) ?: amazonPrimaryImage(html)
     val imageUrl = allowedRetailerImage(amazonImage) ?: allowedRetailerImage(metaImage)
     val currency = retailerMeta(
         html,
