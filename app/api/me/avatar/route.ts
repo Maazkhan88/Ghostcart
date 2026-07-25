@@ -32,7 +32,10 @@ export async function POST(request: Request) {
   const db = getDb();
   await db
     .update(users)
-    .set({ avatarKey: uploaded.key, updatedAt: new Date().toISOString() })
+    // Uploading a photo is the more deliberate, more recent action - clear
+    // any previously-picked preset so the photo actually becomes what's
+    // shown instead of being shadowed by a stale avatarPresetId.
+    .set({ avatarKey: uploaded.key, avatarPresetId: null, updatedAt: new Date().toISOString() })
     .where(eq(users.id, session.userId));
 
   return jsonNoStore({ avatarUrl: `/api/content-blocks/image/${uploaded.key}` });

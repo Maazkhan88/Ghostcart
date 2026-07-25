@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,7 +23,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -80,6 +85,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -93,6 +99,9 @@ import com.example.ghostcart.data.AlmostBuy
 import com.example.ghostcart.data.AlmostBuyDraft
 import com.example.ghostcart.data.AlmostBuyResolution
 import com.example.ghostcart.data.AlmostBuyStatus
+import com.example.ghostcart.data.AVATAR_PRESETS
+import com.example.ghostcart.data.avatarPresetById
+import com.example.ghostcart.data.defaultAvatarPresetIdForGender
 import com.example.ghostcart.data.ProgressSummary
 import com.example.ghostcart.data.ListingProductStub
 import com.example.ghostcart.data.MarketplaceProduct
@@ -926,18 +935,38 @@ private fun ProfileCommunitySection(
     error: String?,
     onSaveDisplayName: (String) -> Unit,
     onUploadAvatar: (ByteArray, String) -> Unit,
+    onSelectAvatarPreset: (String) -> Unit,
     onSetCommunityOptIn: (username: String?, consent: Boolean) -> Unit,
     onOpenLeaderboard: () -> Unit,
 ) {
     val context = LocalContext.current
     var displayName by remember(profile?.displayName) { mutableStateOf(profile?.displayName ?: "") }
     var usernameDraft by remember(profile?.username) { mutableStateOf(profile?.username ?: "") }
+    var showAvatarPresetPicker by remember { mutableStateOf(false) }
 
     val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         val mimeType = context.contentResolver.getType(uri)?.takeIf { it == "image/png" || it == "image/jpeg" } ?: "image/jpeg"
         val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
         if (bytes != null) onUploadAvatar(bytes, mimeType)
+    }
+
+    // An explicitly-picked preset always wins; otherwise an uploaded photo
+    // wins (the more deliberate, more recent action); otherwise fall back to
+    // whichever mascot matches the onboarding Male/Female pick.
+    val explicitPreset = avatarPresetById(profile?.avatarPresetId)
+    val effectivePreset = explicitPreset
+        ?: if (profile?.avatarUrl != null) null else avatarPresetById(defaultAvatarPresetIdForGender(profile?.gender))
+
+    if (showAvatarPresetPicker) {
+        AvatarPresetPickerDialog(
+            selectedPresetId = explicitPreset?.id,
+            onSelect = { presetId ->
+                onSelectAvatarPreset(presetId)
+                showAvatarPresetPicker = false
+            },
+            onDismiss = { showAvatarPresetPicker = false }
+        )
     }
 
     Column(
@@ -953,24 +982,34 @@ private fun ProfileCommunitySection(
             Box(
                 modifier = Modifier
                     .size(56.dp)
-                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .clip(CircleShape)
                     .background(GreenTint)
                     .clickable { avatarPicker.launch("image/*") },
                 contentAlignment = Alignment.Center
             ) {
-                if (profile?.avatarUrl != null) {
-                    AsyncImage(
+                when {
+                    effectivePreset != null -> Image(
+                        painter = painterResource(effectivePreset.drawableRes),
+                        contentDescription = "Your avatar",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize().padding(6.dp)
+                    )
+                    profile?.avatarUrl != null -> AsyncImage(
                         model = profile.avatarUrl,
                         contentDescription = "Your avatar",
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize().clip(androidx.compose.foundation.shape.CircleShape)
+                        modifier = Modifier.fillMaxSize().clip(CircleShape)
                     )
-                } else {
-                    Text((displayName.ifBlank { "?" }).take(1).uppercase(), color = Ink, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+                    else -> Text((displayName.ifBlank { "?" }).take(1).uppercase(), color = Ink, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
                 }
             }
             Column(modifier = Modifier.padding(start = 12.dp)) {
-                Text("Tap to change photo", color = MutedText, fontSize = 10.sp)
+                Text("Tap photo to upload your own", color = MutedText, fontSize = 10.sp)
+                TextButton(
+                    onClick = { showAvatarPresetPicker = true },
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+                    colors = ButtonDefaults.textButtonColors(contentColor = GhostGreen)
+                ) { Text("Choose a Ghost avatar", fontSize = 10.sp, fontWeight = FontWeight.Bold) }
                 Text("Shown on the Community Leaderboard if you opt in.", color = MutedText, fontSize = 9.sp)
             }
         }
@@ -1050,6 +1089,51 @@ private fun ProfileCommunitySection(
     }
 }
 
+// Grid of every AVATAR_PRESETS entry - adding a preset later (new drawable +
+// one line in AvatarPresets.kt) shows up here automatically, no UI change needed.
+@Composable
+private fun AvatarPresetPickerDialog(
+    selectedPresetId: String?,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss, colors = ButtonDefaults.textButtonColors(contentColor = GhostGreen)) { Text("Done") }
+        },
+        title = { Text("Choose a Ghost avatar", fontWeight = FontWeight.ExtraBold) },
+        text = {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(4),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.height(280.dp)
+            ) {
+                gridItems(AVATAR_PRESETS, key = { it.id }) { preset ->
+                    val selected = preset.id == selectedPresetId
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(GreenTint)
+                            .border(if (selected) 2.dp else 1.dp, if (selected) GhostGreen else FaintBorder, CircleShape)
+                            .clickable { onSelect(preset.id) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(preset.drawableRes),
+                            contentDescription = preset.id,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.size(48.dp)
+                        )
+                    }
+                }
+            }
+        }
+    )
+}
+
 @Composable
 fun ProfileScreen(
     config: WalletConfig,
@@ -1067,6 +1151,7 @@ fun ProfileScreen(
     profileError: String? = null,
     onSaveDisplayName: (String) -> Unit = {},
     onUploadAvatar: (ByteArray, String) -> Unit = { _, _ -> },
+    onSelectAvatarPreset: (String) -> Unit = {},
     onSetCommunityOptIn: (username: String?, consent: Boolean) -> Unit = { _, _ -> },
     onOpenLeaderboard: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -1091,6 +1176,7 @@ fun ProfileScreen(
                     error = profileError,
                     onSaveDisplayName = onSaveDisplayName,
                     onUploadAvatar = onUploadAvatar,
+                    onSelectAvatarPreset = onSelectAvatarPreset,
                     onSetCommunityOptIn = onSetCommunityOptIn,
                     onOpenLeaderboard = onOpenLeaderboard
                 )

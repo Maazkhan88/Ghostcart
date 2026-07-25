@@ -569,6 +569,7 @@ fun MainNavigation(
                             profileError = state.profileError,
                             onSaveDisplayName = appViewModel::updateDisplayName,
                             onUploadAvatar = appViewModel::uploadAvatar,
+                            onSelectAvatarPreset = appViewModel::selectAvatarPreset,
                             onSetCommunityOptIn = appViewModel::setCommunityLeaderboardOptIn,
                             onOpenLeaderboard = { backStack.add(Leaderboard) }
                         )

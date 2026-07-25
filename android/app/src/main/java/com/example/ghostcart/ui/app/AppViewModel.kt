@@ -503,6 +503,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun selectAvatarPreset(presetId: String) {
+        _uiState.update { it.copy(profileSaving = true, profileError = null) }
+        viewModelScope.launch {
+            CommunityProfileRepository.updateProfile(getApplication(), avatarPresetId = presetId)
+                .onSuccess { profile -> _uiState.update { it.copy(profile = profile, profileSaving = false) } }
+                .onFailure { error ->
+                    _uiState.update { it.copy(profileSaving = false, profileError = error.message ?: "Could not update avatar.") }
+                }
+        }
+    }
+
     fun uploadAvatar(bytes: ByteArray, mimeType: String) {
         _uiState.update { it.copy(profileSaving = true, profileError = null) }
         viewModelScope.launch {
