@@ -31,12 +31,15 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.ShoppingBag
-import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.SwapVert
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -509,6 +512,7 @@ fun CategoryBrowseScreen(
     var selectedBrand by remember(categoryId) { mutableStateOf<String?>(null) }
     var userGhostedOnly by remember(categoryId) { mutableStateOf(false) }
     var showFiltersDialog by remember { mutableStateOf(false) }
+    var showSortDialog by remember { mutableStateOf(false) }
     val filters = if (categoryId == "food") {
         listOf("All", "Fast Food", "Coffee & Drinks", "Healthy")
     } else {
@@ -520,9 +524,11 @@ fun CategoryBrowseScreen(
         .filter { selectedBrand == null || it.brand == selectedBrand }
         .filter { !userGhostedOnly || it.isUserGhosted }
     val visibleProducts = sortProducts(filteredProducts, sortOption, activityCounts)
+    val filtersActive = selectedFilter != "All" || selectedBrand != null || userGhostedOnly
 
+    Box(modifier = modifier.fillMaxSize()) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .background(Paper)
             .padding(horizontal = 20.dp)
@@ -551,57 +557,7 @@ fun CategoryBrowseScreen(
         }
 
         Text(text = title, color = Ink, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 12.dp))
-        Text(text = subtitle, color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
-
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 14.dp)) {
-            items(ProductSortOption.entries.toList()) { option ->
-                val selected = option == sortOption
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(if (selected) Ink else Paper)
-                        .border(1.dp, if (selected) Ink else FaintBorder, RoundedCornerShape(999.dp))
-                        .clickable { sortOption = option }
-                        .padding(horizontal = 14.dp, vertical = 10.dp)
-                ) {
-                    Text(text = option.label, color = if (selected) Paper else Ink, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 14.dp)) {
-            items(filters) { filter ->
-                val selected = filter == selectedFilter
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(if (selected) Ink else Paper)
-                        .border(1.dp, if (selected) Ink else FaintBorder, RoundedCornerShape(999.dp))
-                        .clickable { selectedFilter = filter }
-                        .padding(horizontal = 14.dp, vertical = 10.dp)
-                ) {
-                    Text(text = filter, color = if (selected) Paper else Ink, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-            item {
-                val filtersActive = selectedBrand != null || userGhostedOnly
-                Box(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(if (filtersActive) Ink else Color.Transparent)
-                        .border(1.dp, if (filtersActive) Ink else FaintBorder, CircleShape)
-                        .clickable(role = Role.Button) { showFiltersDialog = true }
-                        .padding(10.dp)
-                ) {
-                    Icon(
-                        Icons.Filled.Tune,
-                        contentDescription = "More filters",
-                        tint = if (filtersActive) Paper else Ink,
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
-            }
-        }
+        Text(text = subtitle, color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp, bottom = 14.dp))
 
         if (visibleProducts.isEmpty()) {
             Column(
@@ -632,7 +588,7 @@ fun CategoryBrowseScreen(
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(top = 16.dp, bottom = 28.dp),
+                contentPadding = PaddingValues(top = 16.dp, bottom = 96.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.weight(1f)
@@ -651,12 +607,34 @@ fun CategoryBrowseScreen(
         }
     }
 
+        SortFilterPill(
+            filtersActive = filtersActive,
+            onSortClick = { showSortDialog = true },
+            onFilterClick = { showFiltersDialog = true },
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 20.dp)
+        )
+    }
+
+    if (showSortDialog) {
+        SortDialog(
+            selected = sortOption,
+            onSelect = { option ->
+                sortOption = option
+                showSortDialog = false
+            },
+            onDismiss = { showSortDialog = false }
+        )
+    }
+
     if (showFiltersDialog) {
         FiltersDialog(
+            categoryFilters = filters,
+            selectedCategoryFilter = selectedFilter,
             availableBrands = availableBrands,
             selectedBrand = selectedBrand,
             userGhostedOnly = userGhostedOnly,
-            onApply = { brand, ghostedOnly ->
+            onApply = { category, brand, ghostedOnly ->
+                selectedFilter = category
                 selectedBrand = brand
                 userGhostedOnly = ghostedOnly
                 showFiltersDialog = false
@@ -667,14 +645,117 @@ fun CategoryBrowseScreen(
 
 }
 
+// Floating Sort + Filter control (matches the reference "Noon"-style pill): a
+// single rounded capsule in the brand green, split by a thin divider into two
+// tap targets. Overlays the grid rather than taking layout space, so it stays
+// reachable while scrolling instead of living inline above the fold.
+@Composable
+private fun SortFilterPill(
+    filtersActive: Boolean,
+    onSortClick: () -> Unit,
+    onFilterClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val contentColor = Color(0xFF050505)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(GhostGreen)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .clickable(role = Role.Button) { onSortClick() }
+                .padding(horizontal = 20.dp, vertical = 14.dp)
+        ) {
+            Icon(Icons.Filled.SwapVert, contentDescription = null, tint = contentColor, modifier = Modifier.size(18.dp))
+            Text("Sort", color = contentColor, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 6.dp))
+        }
+        Box(
+            modifier = Modifier
+                .height(20.dp)
+                .width(1.dp)
+                .background(contentColor.copy(alpha = 0.25f))
+        )
+        Box {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clickable(role = Role.Button) { onFilterClick() }
+                    .padding(horizontal = 20.dp, vertical = 14.dp)
+            ) {
+                Icon(Icons.Filled.FilterList, contentDescription = null, tint = contentColor, modifier = Modifier.size(18.dp))
+                Text("Filter", color = contentColor, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 6.dp))
+            }
+            if (filtersActive) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 8.dp, end = 12.dp)
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFE4342F))
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SortDialog(
+    selected: ProductSortOption,
+    onSelect: (ProductSortOption) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Sort by") },
+        text = {
+            Column {
+                ProductSortOption.entries.forEach { option ->
+                    val isSelected = option == selected
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable(role = Role.Button) { onSelect(option) }
+                            .padding(vertical = 12.dp, horizontal = 4.dp)
+                    ) {
+                        Icon(
+                            if (isSelected) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
+                            contentDescription = null,
+                            tint = if (isSelected) GhostGreen else FaintBorder,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            option.label,
+                            color = Ink,
+                            fontSize = 14.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            modifier = Modifier.padding(start = 12.dp)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Close") } }
+    )
+}
+
 @Composable
 private fun FiltersDialog(
+    categoryFilters: List<String>,
+    selectedCategoryFilter: String,
     availableBrands: List<String>,
     selectedBrand: String?,
     userGhostedOnly: Boolean,
-    onApply: (brand: String?, userGhostedOnly: Boolean) -> Unit,
+    onApply: (category: String, brand: String?, userGhostedOnly: Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
+    var category by remember { mutableStateOf(selectedCategoryFilter) }
     var brand by remember { mutableStateOf(selectedBrand) }
     var ghostedOnly by remember { mutableStateOf(userGhostedOnly) }
     AlertDialog(
@@ -682,6 +763,21 @@ private fun FiltersDialog(
         title = { Text("Filters") },
         text = {
             Column {
+                if (categoryFilters.size > 1) {
+                    Text("Category", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(categoryFilters) { candidate ->
+                            FilterChip(
+                                selected = category == candidate,
+                                onClick = { category = candidate },
+                                label = { Text(candidate) },
+                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = GreenTint, selectedLabelColor = Ink)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
                 if (availableBrands.isNotEmpty()) {
                     Text("Brand", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     Text(
@@ -720,7 +816,7 @@ private fun FiltersDialog(
                 )
             }
         },
-        confirmButton = { TextButton(onClick = { onApply(brand, ghostedOnly) }) { Text("Apply") } },
+        confirmButton = { TextButton(onClick = { onApply(category, brand, ghostedOnly) }) { Text("Apply") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
