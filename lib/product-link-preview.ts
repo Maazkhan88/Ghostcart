@@ -94,6 +94,15 @@ export function canonicalizeRetailerUrl(value: string): URL {
 
 export const canonicalizeSharedUrl = canonicalizeRetailerUrl;
 
+// Shared with the known-product-image lookup (app/api/link-preview/route.ts)
+// and community_products' own dedup key (app/api/community-products/route.ts)
+// - one hash implementation for "identity of a canonicalized retailer URL"
+// used everywhere that needs it.
+export async function sha256Hex(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 function decodeHtml(value: string): string {
   const named: Record<string, string> = {
     amp: "&", quot: '"', apos: "'", lt: "<", gt: ">", nbsp: " ",

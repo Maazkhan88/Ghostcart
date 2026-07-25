@@ -3,6 +3,7 @@ import { readNonNegativeInteger, readSafeUrl, sanitizeShortText } from "../../..
 import {
   canonicalizeRetailerUrl,
   isAllowedProductImageUrl,
+  sha256Hex,
 } from "../../../lib/product-link-preview";
 import { consumeRateLimit, requestActorHash } from "../../../lib/rate-limit";
 
@@ -26,11 +27,6 @@ function json(data: unknown, init?: ResponseInit) {
   headers.set("Content-Type", "application/json; charset=utf-8");
   headers.set("X-Content-Type-Options", "nosniff");
   return new Response(JSON.stringify(data), { ...init, headers });
-}
-
-async function sha256(value: string): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 function serialize(row: CommunityRow) {
@@ -121,7 +117,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const canonicalKey = await sha256(canonicalUrl.toString());
+    const canonicalKey = await sha256Hex(canonicalUrl.toString());
     const id = `ugc_${canonicalKey.slice(0, 24)}`;
     const now = new Date().toISOString();
     const db = getD1();
