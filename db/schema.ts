@@ -210,6 +210,7 @@ export const almostBuys = sqliteTable(
     imageUrl: text("image_url"),
     sourceUrl: text("source_url"),
     sourceKind: text("source_kind").notNull().default("manual"),
+    orderGroupId: text("order_group_id"),
     trigger: text("trigger"),
     notes: text("notes").notNull().default(""),
     state: text("state").notNull().default("captured"),
@@ -245,6 +246,7 @@ export const almostBuys = sqliteTable(
       table.updatedAt,
     ),
     index("almost_buys_user_cooling_idx").on(table.userId, table.coolOffUntil),
+    index("almost_buys_user_order_group_idx").on(table.userId, table.orderGroupId),
     index("almost_buys_state_cool_off_push_idx").on(
       table.state,
       table.coolOffUntil,

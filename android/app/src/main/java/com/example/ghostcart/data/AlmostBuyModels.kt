@@ -42,7 +42,12 @@ data class AlmostBuy(
     val imageUrl: String? = null,
     val sourceKind: String = "manual",
     val sharedAnonymously: Boolean = false,
-    val serverId: String? = null
+    val serverId: String? = null,
+    /** Groups items Ghosted together so Orders can resolve a multi-item cart item-by-item. */
+    val ghostOrderId: String? = null,
+    /** Stable timing metadata for an accurate countdown bar, including restarted cooldowns. */
+    val coolingStartedAtMillis: Long = createdAtMillis,
+    val coolingDurationMillis: Long = (coolingUntilMillis - createdAtMillis).coerceAtLeast(60_000L)
 )
 
 enum class AlmostBuyStatus {
@@ -65,7 +70,10 @@ data class AlmostBuyDraft(
     val sourceUrl: String? = null,
     val imageUrl: String? = null,
     val sourceKind: String = "manual",
-    val shareWithCommunity: Boolean = false
+    val shareWithCommunity: Boolean = false,
+    val ghostOrderId: String? = null,
+    /** Catalog slug/id used only for anonymous aggregate Ghost counts. */
+    val activityKey: String? = null
 )
 
 data class ProgressSummary(
@@ -129,7 +137,10 @@ coolingUntilMillis = now + draft.coolingDurationMillis.coerceAtLeast(60_000L),
             sourceUrl = draft.sourceUrl,
             imageUrl = draft.imageUrl,
             sourceKind = draft.sourceKind,
-            sharedAnonymously = draft.shareWithCommunity
+            sharedAnonymously = draft.shareWithCommunity,
+            ghostOrderId = draft.ghostOrderId,
+            coolingStartedAtMillis = now,
+            coolingDurationMillis = draft.coolingDurationMillis.coerceAtLeast(60_000L)
         )
         update(listOf(item) + state.value)
         return item
@@ -158,7 +169,11 @@ coolingUntilMillis = now + draft.coolingDurationMillis.coerceAtLeast(60_000L),
         var result: AlmostBuy? = null
         val next = state.value.map { item ->
             if (item.id != id || item.status != AlmostBuyStatus.COOLING) item else {
-                item.copy(coolingUntilMillis = base + durationMillis.coerceAtLeast(60_000L))
+                item.copy(
+                    coolingUntilMillis = base + durationMillis.coerceAtLeast(60_000L),
+                    coolingStartedAtMillis = base,
+                    coolingDurationMillis = durationMillis.coerceAtLeast(60_000L)
+                )
                     .also { result = it }
             }
         }
@@ -208,6 +223,9 @@ item.resolvedAtMillis?.let { put("resolvedAtMillis", it) }
                 put("sourceKind", item.sourceKind)
                 put("sharedAnonymously", item.sharedAnonymously)
                 item.serverId?.let { put("serverId", it) }
+                item.ghostOrderId?.let { put("ghostOrderId", it) }
+                put("coolingStartedAtMillis", item.coolingStartedAtMillis)
+                put("coolingDurationMillis", item.coolingDurationMillis)
             })
         }
         preferences.edit().putString(ITEMS_KEY, array.toString()).apply()
@@ -234,7 +252,16 @@ resolvedAtMillis = value.optLong("resolvedAtMillis").takeIf { value.has("resolve
                         imageUrl = value.optString("imageUrl").takeIf { it.isNotBlank() },
                         sourceKind = value.optString("sourceKind", "manual"),
                         sharedAnonymously = value.optBoolean("sharedAnonymously", false),
-                        serverId = value.optString("serverId").takeIf { it.isNotBlank() }
+                        serverId = value.optString("serverId").takeIf { it.isNotBlank() },
+                        ghostOrderId = value.optString("ghostOrderId").takeIf { it.isNotBlank() },
+                        coolingStartedAtMillis = value.optLong(
+                            "coolingStartedAtMillis",
+                            value.getLong("createdAtMillis")
+                        ),
+                        coolingDurationMillis = value.optLong(
+                            "coolingDurationMillis",
+                            (value.getLong("coolingUntilMillis") - value.getLong("createdAtMillis")).coerceAtLeast(60_000L)
+                        )
                     )
                 )
             }

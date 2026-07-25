@@ -398,7 +398,6 @@ fun MarketplaceProductCard(
     product: MarketplaceProduct,
     onClick: () -> Unit,
     onAdd: () -> Unit,
-    onCool: (() -> Unit)? = null,
     activityLabel: String? = null,
     isFavorite: Boolean = false,
     onToggleFavorite: (() -> Unit)? = null,
@@ -406,7 +405,7 @@ fun MarketplaceProductCard(
 ) {
     // Mirrors the home DiscoveryProductCard so listing/community cards match the
     // home screen: white image tile with a top-right favorite, green category
-    // label, title, Dirham-glyph price, and Add to cart / Cool it actions.
+    // label, title, Dirham-glyph price, and one predictable Ghost action.
     Column(
         modifier = modifier
             .height(266.dp)
@@ -476,31 +475,18 @@ fun MarketplaceProductCard(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(40.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(SoftGray)
-                    .border(1.dp, FaintBorder, RoundedCornerShape(12.dp))
-                    .clickable(onClick = onAdd),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = if (onCool == null) "Add to Ghost Cart" else "Add to cart", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            if (onCool != null) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(40.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(GhostGreen)
-                        .clickable(onClick = onCool),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(text = "Cool it", color = Color(0xFF0A0A0A), fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(GhostGreen)
+                .clickable(onClick = onAdd),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = "Ghost it", color = Color(0xFF0A0A0A), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text(text = "24-hour cooldown", color = Color(0xFF0A0A0A).copy(alpha = 0.68f), fontSize = 9.sp)
             }
         }
     }
@@ -511,15 +497,11 @@ fun CategoryBrowseScreen(
     categoryId: String,
     products: List<MarketplaceProduct>,
     activityCounts: Map<String, Int> = emptyMap(),
-    cartItemCount: Int,
-    cartTotal: Int,
     favoriteProductIds: Set<String> = emptySet(),
     onToggleFavorite: (String) -> Unit = {},
     onBack: () -> Unit,
-    onOpenCart: () -> Unit,
     onOpenProduct: (String) -> Unit,
-    onAddToCart: (String) -> Unit,
-    onCoolProduct: (id: String, durationMillis: Long, durationLabel: String) -> Unit,
+    onGhostProduct: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var selectedFilter by remember(categoryId) { mutableStateOf("All") }
@@ -527,7 +509,6 @@ fun CategoryBrowseScreen(
     var selectedBrand by remember(categoryId) { mutableStateOf<String?>(null) }
     var userGhostedOnly by remember(categoryId) { mutableStateOf(false) }
     var showFiltersDialog by remember { mutableStateOf(false) }
-    var pendingCoolProductId by remember { mutableStateOf<String?>(null) }
     val filters = if (categoryId == "food") {
         listOf("All", "Fast Food", "Coffee & Drinks", "Healthy")
     } else {
@@ -550,11 +531,6 @@ fun CategoryBrowseScreen(
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             BackButton(onBack = onBack)
             Spacer(modifier = Modifier.weight(1f))
-            CartSummaryButton(
-                itemCount = cartItemCount,
-                cartTotal = cartTotal,
-                onClick = onOpenCart
-            )
         }
 
         val (title, subtitle) = when (categoryId) {
@@ -667,8 +643,7 @@ fun CategoryBrowseScreen(
                         isFavorite = product.id in favoriteProductIds,
                         onToggleFavorite = { onToggleFavorite(product.id) },
                         onClick = { onOpenProduct(product.id) },
-                        onAdd = { onAddToCart(product.id) },
-                        onCool = { pendingCoolProductId = product.id },
+                        onAdd = { onGhostProduct(product.id) },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -690,15 +665,6 @@ fun CategoryBrowseScreen(
         )
     }
 
-    pendingCoolProductId?.let { productId ->
-        CoolingDurationDialog(
-            onConfirm = { option ->
-                onCoolProduct(productId, option.durationMillis, option.label)
-                pendingCoolProductId = null
-            },
-            onDismiss = { pendingCoolProductId = null }
-        )
-    }
 }
 
 @Composable
@@ -882,15 +848,12 @@ fun ProductDetailScreen(
     onBack: () -> Unit,
     onShare: () -> Unit,
     onToggleFavorite: () -> Unit,
-    hasSourceLink: Boolean,
-    onAddToCart: () -> Unit,
-    onGhostBuyNow: () -> Unit,
-    onStartCooling: (durationMillis: Long, durationLabel: String) -> Unit,
+    onGhost: () -> Unit,
+    onOpenCooldown: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val coolingComplete = coolingUntilMillis != null && coolingUntilMillis <= System.currentTimeMillis()
     val coolingActive = coolingUntilMillis != null && !coolingComplete
-    var showCoolingDialog by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
@@ -981,77 +944,35 @@ fun ProductDetailScreen(
                 .padding(vertical = 16.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            HighlightPoint(Icons.Filled.FavoriteBorder, "High-Emotion Item", "Emotional purchases\noften fade fast.")
-            HighlightPoint(materialIconFor("target"), "Simulate First", "Add to Ghost Cart.\nSee if you still want it.")
-            HighlightPoint(Icons.Filled.Shield, "Protect Your Money", "Avoid impulse buys.\nSpend smarter.")
+            HighlightPoint(Icons.Filled.Schedule, "Pause", "Ghosting starts a\n24-hour cooldown.")
+            HighlightPoint(Icons.Filled.Notifications, "Get reminded", "Push, email and\nin-app reminder.")
+            HighlightPoint(Icons.Filled.Shield, "Decide calmly", "Skip, buy, record,\nor restart.")
         }
 
-        PrimaryButton(text = "Add to Ghost Cart", onClick = onAddToCart, modifier = Modifier.padding(top = 18.dp))
-        SecondaryButton(text = "Ghost Buy Now", onClick = onGhostBuyNow, modifier = Modifier.padding(top = 10.dp))
-        Text(text = "Instant. No checkout. No payment.", color = GhostGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
-
-        if (hasSourceLink) {
-            SecondaryButton(
-                text = "Ghost it first to reveal product link",
-                onClick = onGhostBuyNow,
-                leadingIcon = Icons.Filled.Lock,
-                modifier = Modifier.padding(top = 12.dp)
-            )
-            Text(
-                text = "The original retailer link is revealed after the simulated Ghost checkout.",
-                color = MutedText,
-                fontSize = 9.sp,
-                modifier = Modifier.padding(top = 5.dp)
-            )
-        }
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .border(1.dp, FaintBorder, RoundedCornerShape(14.dp))
-                .background(if (coolingUntilMillis != null) GreenTint else Paper)
-                .clickable(role = Role.Button, onClick = { showCoolingDialog = true })
-                .padding(14.dp)
-        ) {
-            Icon(Icons.Filled.Schedule, contentDescription = null, tint = GhostGreen, modifier = Modifier.size(20.dp))
-            Column(modifier = Modifier.weight(1f).padding(start = 10.dp)) {
-                Text(
-                    text = when {
-                        coolingComplete -> "Cooling complete"
-                        coolingActive -> "Cooling active"
-                        else -> "Start Cooling"
-                    },
-                    color = Ink,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = when {
-                        coolingComplete -> "Review the item now. Do you still want it? Tap to cool it again."
-                        coolingActive -> "We'll notify you when this item has cooled off."
-                        else -> "Pause this craving and choose how long to cool it."
-                    },
-                    color = MutedText,
-                    fontSize = 10.sp,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-            }
-            ForwardChevron()
-        }
-
-    }
-
-    if (showCoolingDialog) {
-        CoolingDurationDialog(
-            onConfirm = { option ->
-                onStartCooling(option.durationMillis, option.label)
-                showCoolingDialog = false
+        PrimaryButton(
+            text = when {
+                coolingComplete -> "Make your decision"
+                coolingActive -> "View cooldown"
+                else -> "Ghost it"
             },
-            onDismiss = { showCoolingDialog = false }
+            onClick = if (coolingUntilMillis != null) onOpenCooldown else onGhost,
+            modifier = Modifier.padding(top = 18.dp),
+            containerColor = GhostGreen,
+            contentColor = Color(0xFF050505)
         )
+        Text(
+            text = if (coolingUntilMillis == null) {
+                "Starts a 24-hour cooldown. No real checkout, payment or delivery."
+            } else if (coolingComplete) {
+                "Your item is ready. Skip it, visit the source, record it as bought, or restart the timer."
+            } else {
+                "This item is cooling. We’ll remind you when it is ready for a decision."
+            },
+            color = MutedText,
+            fontSize = 10.sp,
+            modifier = Modifier.padding(top = 7.dp, bottom = 24.dp)
+        )
+
     }
 }
 

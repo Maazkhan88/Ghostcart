@@ -17,15 +17,10 @@ type LeaderboardRow = {
 // never email or any other account field. Withdrawing consent removes a
 // user from this list immediately (see PATCH /api/me/profile).
 //
-// Ghost Cart's own vocabulary: "cooled & saved" = an almost-buy explicitly
-// resolved "skipped" after cooling off. "Ghosted" = actually finishing a
-// purchase - from two independent sources that must both count: (a)
-// resolving an almost-buy as "bought intentionally" after cooling, and (b)
-// completing a marketplace-cart simulated checkout (simulated_orders,
-// recorded by POST /api/me/simulated-orders). Correlated subqueries, not
-// joins, because joining both one-to-many tables at once would fan out and
-// inflate every sum/count. Ranked by ghostedCount (items ghosted), per the
-// user's explicit choice - cooled & saved is still shown, just doesn't rank.
+// Canonical vocabulary: an item is Ghosted when its cooldown begins. Every
+// almost_buys row therefore contributes exactly once to Ghosted count,
+// regardless of whether the later decision is skipped, bought, or restarted.
+// "Cooled & saved" remains the narrower skipped outcome and Money Kept metric.
 export async function GET() {
   try {
     const db = getD1();
@@ -36,14 +31,8 @@ export async function GET() {
            u.avatar_key AS avatarKey,
            (SELECT COALESCE(SUM(confirmed_money_kept_cents), 0) FROM almost_buys WHERE user_id = u.id) AS moneyKeptCents,
            (SELECT COUNT(*) FROM almost_buys WHERE user_id = u.id AND state = 'resolved_skipped') AS savedCount,
-           (
-             (SELECT COUNT(*) FROM almost_buys WHERE user_id = u.id AND state = 'resolved_bought')
-             + (SELECT COUNT(*) FROM simulated_orders WHERE user_id = u.id)
-           ) AS ghostedCount,
-           (
-             (SELECT COALESCE(SUM(almost_spent_cents), 0) FROM almost_buys WHERE user_id = u.id AND state = 'resolved_bought')
-             + (SELECT COALESCE(SUM(total_cents), 0) FROM simulated_orders WHERE user_id = u.id)
-           ) AS ghostedAmountCents
+           (SELECT COUNT(*) FROM almost_buys WHERE user_id = u.id) AS ghostedCount,
+           (SELECT COALESCE(SUM(almost_spent_cents), 0) FROM almost_buys WHERE user_id = u.id) AS ghostedAmountCents
          FROM users u
          WHERE u.community_consent = 1 AND u.username IS NOT NULL
          ORDER BY ghostedCount DESC, moneyKeptCents DESC

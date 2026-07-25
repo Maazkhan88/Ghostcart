@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">Ghost Cart</string>
     <string name="nav_home">Home</string>
-    <string name="nav_cooldowns">Cooldowns</string>
+    <string name="nav_cooldowns">Orders</string>
     <string name="nav_ghost">Ghost</string>
     <string name="nav_progress">Progress</string>
     <string name="nav_profile">Profile</string>
@@ -32,12 +32,12 @@
     <string name="cooling_period_body">We suggest a period based on the category. You stay in control.</string>
     <string name="ghost_this_purchase">Ghost this purchase</string>
     <string name="capture_disclosure">This creates a private simulation. It does not buy, reserve, or deliver anything.</string>
-    <string name="cooldowns">Cooldowns</string>
-    <string name="cooldowns_body">Come back when the feeling is quieter.</string>
+    <string name="cooldowns">Ghost Orders</string>
+    <string name="cooldowns_body">Active cooldowns and the decisions you made.</string>
     <string name="add">Add</string>
     <string name="nothing_cooling">Your cooling list is clear</string>
     <string name="nothing_cooling_body">Ghost an almost-buy before the next checkout.</string>
-    <string name="recent_decisions">Recent decisions</string>
+    <string name="recent_decisions">Past orders</string>
     <string name="ready_to_decide">Cooling complete · ready to decide</string>
     <string name="i_skipped_it">I skipped it</string>
     <string name="bought_intentionally">Bought intentionally</string>

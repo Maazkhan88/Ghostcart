@@ -135,6 +135,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
              title = ?, category = ?, image_url = ?, source_url = ?, trigger = ?,
              notes = ?, almost_spent_cents = ?, state = ?, cool_off_until = ?,
              snoozed_until = CASE WHEN ? = 'cooling' THEN NULL ELSE snoozed_until END,
+             push_sent_at = CASE WHEN ? = 'cooling' THEN NULL ELSE push_sent_at END,
              updated_at = ?, version = version + 1
            WHERE id = ? AND user_id = ? AND version = ?`,
         )
@@ -148,6 +149,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
           amount.value ?? current.almostSpentCents,
           nextState,
           coolOffUntil.value === undefined ? current.coolOffUntil : coolOffUntil.value,
+          nextState,
           nextState,
           now,
           id,

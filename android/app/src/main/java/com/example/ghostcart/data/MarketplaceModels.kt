@@ -17,7 +17,7 @@ data class MarketplaceProduct(
     val imageUrl: String? = null,
     /** Original retailer page for user-imported items. Curated products leave this null. */
     val sourceUrl: String? = null,
-    /** Real completed Ghost Checkouts reported by the activity service. */
+    /** Real cooldown starts reported by the anonymous Ghost activity service. */
     val ghostCount: Int = 0,
     /** True for items merged in from the community feed (anonymous user-ghosted finds). */
     val isUserGhosted: Boolean = false,

@@ -135,13 +135,13 @@ object GhostNotificationPublisher {
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
 
-        // Same three outcomes as the Cooldowns screen's resolve buttons,
-        // available right from the notification - only makes sense when this
-        // notification is actually about a specific cooldown.
+        // Fast decisions stay available from the notification. Restarting needs a deliberate
+        // duration choice, so that action opens the in-app decision card instead of silently
+        // adding a hard-coded day.
         if (cooldownId != null) {
-            builder.addAction(actionFor(context, notificationId, cooldownId, CooldownNotificationActionReceiver.ACTION_SKIPPED, "I skipped it"))
-            builder.addAction(actionFor(context, notificationId, cooldownId, CooldownNotificationActionReceiver.ACTION_BOUGHT, "Bought it"))
-            builder.addAction(actionFor(context, notificationId, cooldownId, CooldownNotificationActionReceiver.ACTION_MORE_TIME, "More time"))
+            builder.addAction(actionFor(context, notificationId, cooldownId, CooldownNotificationActionReceiver.ACTION_SKIPPED, "Skip item"))
+            builder.addAction(actionFor(context, notificationId, cooldownId, CooldownNotificationActionReceiver.ACTION_BOUGHT, "Bought already"))
+            builder.addAction(openAppAction(context, notificationId, cooldownId))
         }
         val notification = builder.build()
 
@@ -178,5 +178,23 @@ object GhostNotificationPublisher {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         return NotificationCompat.Action.Builder(0, label, pendingIntent).build()
+    }
+
+    private fun openAppAction(
+        context: Context,
+        notificationId: Int,
+        cooldownId: String
+    ): NotificationCompat.Action {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("cooldownId", cooldownId)
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            notificationId * 10 + 3,
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        return NotificationCompat.Action.Builder(0, "Choose time", pendingIntent).build()
     }
 }

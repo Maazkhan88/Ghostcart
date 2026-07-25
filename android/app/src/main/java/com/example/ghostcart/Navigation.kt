@@ -93,6 +93,7 @@ import com.example.ghostcart.ui.marketplace.CategoryBrowseScreen
 import com.example.ghostcart.ui.v2.CaptureAlmostBuyScreen
 import com.example.ghostcart.ui.v2.CooldownsScreen
 import com.example.ghostcart.ui.common.InAppMessageDialog
+import com.example.ghostcart.ui.common.DEFAULT_GHOST_COOLDOWN_MILLIS
 import com.example.ghostcart.ui.onboarding.SimulationConsentScreen
 import com.example.ghostcart.ui.v2.GhostHomeScreen
 import com.example.ghostcart.ui.v2.LegalDocumentScreen
@@ -110,7 +111,7 @@ private fun selectedBottomDestination(current: NavKey?): NavKey = when (current)
     WalletActivity, WeeklyStatement, Trends -> GhostCardSettings
     is LegalDocument -> GhostCardSettings
     GhostCartList, CaptureAlmostBuy, GhostCheckout, OrderGhostedSuccess,
-    FakeDeliveryTracking, PayWithGhostCard, OrderProtected -> GhostCartList
+    FakeDeliveryTracking, PayWithGhostCard, OrderProtected -> CaptureAlmostBuy
     else -> Home
 }
 
@@ -255,10 +256,7 @@ fun MainNavigation(
                                 onClose = { dismissedOrderId = state.lastOrderId }
                             )
                         }
-                        GhostBottomNav(
-                            selectedBottomDestination(current),
-                            cartCount = state.cartQuantities.values.sum()
-                        ) { destination ->
+                        GhostBottomNav(selectedBottomDestination(current)) { destination ->
                             if (backStack.lastOrNull() != destination) backStack.add(destination)
                         }
                     }
@@ -340,9 +338,8 @@ fun MainNavigation(
                             },
                             onOpenCooldowns = { backStack.add(Cooldowns) },
                             onOpenProgress = { backStack.add(Progress) },
-                            onGhost = { id -> appViewModel.addToCart(id) },
-                            onCool = { id, durationMillis, _ ->
-                                appViewModel.quickGhostCatalogProduct(id, durationMillis)
+                            onGhost = { id ->
+                                appViewModel.quickGhostCatalogProduct(id, DEFAULT_GHOST_COOLDOWN_MILLIS)
                                 backStack.add(Cooldowns)
                             },
                             onOpen = { id -> backStack.add(ProductDetail(id)) },
@@ -379,16 +376,12 @@ fun MainNavigation(
                             products = products,
                             activityCounts = state.ghostCountsByProductId +
                                 state.mostGhostedToday.associate { it.productId to it.ghostCount },
-                            cartItemCount = state.cartQuantities.values.sum(),
-                            cartTotal = appViewModel.cartSubtotal(),
                             favoriteProductIds = state.favoriteProductIds,
                             onToggleFavorite = appViewModel::toggleFavorite,
                             onBack = { backStack.removeLastOrNull() },
-                            onOpenCart = { backStack.add(GhostCartList) },
                             onOpenProduct = { id -> backStack.add(ProductDetail(id)) },
-                            onAddToCart = appViewModel::addToCart,
-                            onCoolProduct = { id, durationMillis, _ ->
-                                appViewModel.quickGhostCatalogProduct(id, durationMillis)
+                            onGhostProduct = { id ->
+                                appViewModel.quickGhostCatalogProduct(id, DEFAULT_GHOST_COOLDOWN_MILLIS)
                                 backStack.add(Cooldowns)
                             }
                         )
@@ -404,13 +397,8 @@ fun MainNavigation(
                                 importState = state.productImportState,
                                 onUpdateItem = appViewModel::updateShareQueueItem,
                                 onRemoveItem = appViewModel::removeShareQueueItem,
-                                onConfirmAll = { shareWithCommunity ->
-                                    appViewModel.bulkConfirmShareQueue(shareWithCommunity)
-                                    backStack.clear()
-                                    backStack.add(GhostCartList)
-                                },
-                                onCoolAll = { shareWithCommunity, durationMillis ->
-                                    appViewModel.bulkCoolShareQueue(shareWithCommunity, durationMillis)
+                                onGhostAll = { shareWithCommunity ->
+                                    appViewModel.bulkCoolShareQueue(shareWithCommunity, DEFAULT_GHOST_COOLDOWN_MILLIS)
                                     backStack.clear()
                                     backStack.add(Cooldowns)
                                 },
@@ -427,13 +415,7 @@ fun MainNavigation(
                                     appViewModel.clearCaptureSeed()
                                     backStack.removeLastOrNull()
                                 },
-                                onAddToCart = {
-                                    appViewModel.addDraftToCart(it)
-                                    appViewModel.clearCaptureSeed()
-                                    backStack.clear()
-                                    backStack.add(GhostCartList)
-                                },
-                                onCoolIt = {
+                                onGhostIt = {
                                     appViewModel.createAlmostBuy(it)
                                     appViewModel.clearCaptureSeed()
                                     backStack.clear()
@@ -482,16 +464,11 @@ fun MainNavigation(
                                 onBack = { backStack.removeLastOrNull() },
                                 onShare = { shareGhostItem(context, product.toGhostShareItem()) },
                                 onToggleFavorite = { appViewModel.toggleFavorite(product.id) },
-                                hasSourceLink = !product.sourceUrl.isNullOrBlank(),
-                                onAddToCart = { appViewModel.addToCart(product.id) },
-                                onGhostBuyNow = {
-                                    appViewModel.addToCart(product.id)
-                                    backStack.add(GhostCartList)
-                                },
-                                onStartCooling = { durationMillis, durationLabel ->
-                                    appViewModel.startCoolingPeriod(product.id, durationMillis, durationLabel)
+                                onGhost = {
+                                    appViewModel.startCoolingPeriod(product.id, DEFAULT_GHOST_COOLDOWN_MILLIS, "24 hours")
                                     backStack.add(Cooldowns)
-                                }
+                                },
+                                onOpenCooldown = { backStack.add(Cooldowns) }
                             )
                         }
                     }
@@ -770,12 +747,12 @@ private fun DeliveryTrackingBanner(orderId: String, deliveryStep: Int, onClick: 
 }
 
 @Composable
-private fun GhostBottomNav(current: NavKey?, cartCount: Int = 0, onNavigate: (NavKey) -> Unit) {
+private fun GhostBottomNav(current: NavKey?, onNavigate: (NavKey) -> Unit) {
     data class Item(val label: String, val destination: NavKey, val icon: androidx.compose.ui.graphics.vector.ImageVector, val central: Boolean = false)
     val items = listOf(
         Item(stringResource(R.string.nav_home), Home, Icons.Filled.Home),
         Item(stringResource(R.string.nav_cooldowns), Cooldowns, Icons.Filled.Timer),
-        Item("Ghost Cart", GhostCartList, Icons.Filled.ShoppingCart, central = true),
+        Item("Ghost", CaptureAlmostBuy, Icons.Filled.Add, central = true),
         Item("Wallet", Progress, Icons.Filled.AccountBalanceWallet),
         Item(stringResource(R.string.nav_profile), GhostCardSettings, Icons.Filled.Person)
     )
@@ -806,25 +783,6 @@ private fun GhostBottomNav(current: NavKey?, cartCount: Int = 0, onNavigate: (Na
                                     contentDescription = item.label,
                                     tint = if (selected) GhostGreen else MutedText,
                                     modifier = Modifier.size(26.dp)
-                                )
-                            }
-                        }
-                        if (item.central && cartCount > 0) {
-                            Box(
-                                modifier = Modifier
-                                    .offset(x = 4.dp, y = (-4).dp)
-                                    .size(18.dp)
-                                    .clip(CircleShape)
-                                    .background(Ink)
-                                    .border(2.dp, Paper, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = if (cartCount > 9) "9+" else "$cartCount",
-                                    color = Paper,
-                                    fontSize = 8.sp,
-                                    lineHeight = 8.sp,
-                                    fontWeight = FontWeight.ExtraBold
                                 )
                             }
                         }

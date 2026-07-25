@@ -152,13 +152,13 @@ test("rejects malformed public activity before touching persistence", async () =
     }),
   );
   assert.equal(malformedCheckout.status, 400);
-  assert.match((await malformedCheckout.json()).error, /checkoutId/);
+  assert.match((await malformedCheckout.json()).error, /eventId/);
 
   const emptyProducts = await POST(
     new Request("https://ghostcart.test/api/ghost-events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ checkoutId: "checkout-1", productIds: [], source: "web" }),
+      body: JSON.stringify({ eventId: "ghost-start-1", productIds: [], source: "web" }),
     }),
   );
   assert.equal(emptyProducts.status, 400);
@@ -168,7 +168,7 @@ test("rejects malformed public activity before touching persistence", async () =
     new Request("https://ghostcart.test/api/ghost-events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ checkoutId: "checkout-1", productIds: ["1"], source: "bank" }),
+      body: JSON.stringify({ eventId: "ghost-start-1", productIds: ["1"], source: "bank" }),
     }),
   );
   assert.equal(invalidSource.status, 400);

@@ -1,6 +1,29 @@
 # Current State
 
-Last updated: 2026-07-24, late evening (Claude Code — fixed App Link verification for sideloaded builds by adding the upload-key cert to `assetlinks.json`; added three notification action buttons — skip/bought/more-time — directly on the cooling-complete notification, working even with the app process dead; wired real Firebase Analytics funnel tracking for screen views, cooling-started, add-to-cart, checkout-completed, and the full notification received/opened/action-tapped chain). See the "STATUS REPORT" block immediately below — it supersedes everything after it, which is historical (left for provenance).
+Last updated: 2026-07-25 (Codex — simplified the primary Ghost journey, replaced Cooldowns with grouped Ghost Orders, made cooldown starts the canonical Ghost count, and added a dedicated food-delivery lane). The first status report below supersedes older historical reports.
+
+> ## STATUS REPORT (Codex, 2026-07-25)
+>
+> - **One primary action:** Ghost it starts a standard 24-hour cooldown from
+>   catalogue, details, imports, manual capture, and bulk share review.
+> - **Orders information architecture:** Active cooldowns show a live countdown
+>   and progress bar; Past orders preserve the confirmed per-item outcomes.
+> - **Multi-item handling:** items Ghosted together share a durable order-group
+>   ID. At expiry, each item independently supports Skip, open source, Bought
+>   already, or Restart with 15 minutes, 24 hours, 3 days, or 7 days.
+> - **Canonical counting:** one cooldown start equals one Ghost. Restarts and
+>   later outcomes never add another Ghost. The opt-in leaderboard now counts
+>   almost-buy rows instead of simulated checkouts.
+> - **Reminder continuity:** restarting replaces local WorkManager notification
+>   work, updates the server expiry, and clears its sweep marker so push and
+>   email can be generated again. The ready Orders card is the in-app prompt.
+> - **Food lane:** Home now separates Food & delivery from general marketplace
+>   products. Public links from Noon Food, Keeta, Talabat, Deliveroo, Uber Eats,
+>   Careem Food, and other safe HTTPS pages use the same editable Ghost flow.
+> - **Backend migration required:** apply `drizzle/0018_ghost_order_groups.sql`
+>   before deploying the grouped-order API.
+> - **Verification:** web production build plus 39 tests pass; Android debug unit
+>   tests and APK assembly pass.
 
 > ## 📋 STATUS REPORT FOR ANTIGRAVITY (Claude Code, 2026-07-24, late evening)
 >

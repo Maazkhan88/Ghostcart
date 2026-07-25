@@ -168,6 +168,10 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+    const orderGroupId = sanitizeShortText(payload.orderGroupId, "orderGroupId", 80);
+    if (orderGroupId.error) {
+      return jsonNoStore({ error: orderGroupId.error }, { status: 400 });
+    }
 
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
@@ -177,10 +181,10 @@ export async function POST(request: Request) {
         .prepare(
           `INSERT INTO almost_buys (
              id, user_id, product_id, title, category, image_url, source_url,
-             source_kind, trigger, notes, state, currency_code,
+             source_kind, order_group_id, trigger, notes, state, currency_code,
              almost_spent_cents, confirmed_money_kept_cents, cool_off_until,
              captured_at, updated_at, version
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'AED', ?, 0, ?, ?, ?, 1)`,
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'AED', ?, 0, ?, ?, ?, 1)`,
         )
         .bind(
           id,
@@ -191,6 +195,7 @@ export async function POST(request: Request) {
           imageUrl.value ?? null,
           sourceUrl.value ?? null,
           sourceKind,
+          orderGroupId.value || null,
           trigger.value || null,
           notes.value ?? "",
           state,

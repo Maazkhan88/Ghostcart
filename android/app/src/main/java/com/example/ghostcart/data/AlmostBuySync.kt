@@ -50,6 +50,22 @@ object AlmostBuySync {
             }.getOrDefault(false)
         }
 
+    /**
+     * Restarts an existing server cooldown so email and FCM reminders follow the time selected
+     * in the app. Local storage remains the UI source of truth if this best-effort sync fails.
+     */
+    suspend fun syncExtend(context: Context, serverId: String, coolOffUntilMillis: Long): Boolean =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val token = AuthRepository.getToken(context) ?: return@withContext false
+                val payload = JSONObject()
+                    .put("state", "cooling")
+                    .put("coolOffUntil", epochMillisToIso(coolOffUntilMillis))
+                authorizedRequest("/api/almost-buys/$serverId", "PATCH", token, payload)
+                true
+            }.getOrDefault(false)
+        }
+
     // One-time backfill for items resolved locally before this account ever
     // had a working auth token (or before sync existed at all) - without
     // this, real ghost/skip history a user built up on-device would never
@@ -82,6 +98,7 @@ object AlmostBuySync {
             if (item.trigger.isNotBlank()) put("trigger", item.trigger)
             put("almostSpentCents", item.amountCents)
             put("sourceKind", if (item.sourceUrl != null) "share" else "manual")
+            item.ghostOrderId?.let { put("orderGroupId", it) }
             item.sourceUrl?.let { put("sourceUrl", it) }
             item.imageUrl?.let { put("imageUrl", it) }
             coolOffUntilMillis?.let { put("coolOffUntil", epochMillisToIso(it)) }
@@ -139,7 +156,13 @@ object AlmostBuySync {
                             sourceUrl = value.optString("sourceUrl").takeIf { it.isNotBlank() },
                             imageUrl = value.optString("imageUrl").takeIf { it.isNotBlank() },
                             sourceKind = value.optString("sourceKind", "manual"),
-                            serverId = value.getString("id")
+                            serverId = value.getString("id"),
+                            ghostOrderId = jsonNullableString(value, "orderGroupId"),
+                            coolingStartedAtMillis = isoToEpochMillis(jsonNullableString(value, "updatedAt"))
+                                ?: capturedAtMillis,
+                            coolingDurationMillis = ((coolOffMillis ?: capturedAtMillis) -
+                                (isoToEpochMillis(jsonNullableString(value, "updatedAt")) ?: capturedAtMillis))
+                                .coerceAtLeast(60_000L)
                         )
                     )
                 }
@@ -159,12 +182,9 @@ object AlmostBuySync {
         }.getOrDefault(false)
     }
 
-    // Records a completed marketplace-cart simulated checkout against the
-    // signed-in account so it counts toward "Ghosted" on the Community
-    // Leaderboard. Anonymous/signed-out checkouts are never synced here -
-    // they're already covered separately (and anonymously) by
-    // GhostActivityRepository.recordCheckout for the "Most Ghosted Today"
-    // trend, which must stay unattributable to any account.
+    // Legacy compatibility for historical simulated-order records. Current
+    // leaderboard counts come from almost_buys when a cooldown starts; new
+    // Ghost actions must not call this method.
     suspend fun syncSimulatedOrder(context: Context, orderId: String, totalCents: Int, itemCount: Int): Boolean =
         withContext(Dispatchers.IO) {
             runCatching {

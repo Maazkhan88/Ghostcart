@@ -56,8 +56,8 @@ object GhostActivityRepository {
         }
     }
 
-    suspend fun recordCheckout(
-        checkoutId: String,
+    suspend fun recordGhostStart(
+        eventId: String,
         productIds: List<String>
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
@@ -70,7 +70,7 @@ object GhostActivityRepository {
             }
             try {
                 val payload = JSONObject().apply {
-                    put("checkoutId", checkoutId)
+                    put("eventId", eventId)
                     put("productIds", JSONArray(uniqueProductIds))
                     put("source", "android")
                 }

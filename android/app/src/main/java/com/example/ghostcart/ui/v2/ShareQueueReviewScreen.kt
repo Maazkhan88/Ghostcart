@@ -61,10 +61,8 @@ import com.example.ghostcart.theme.MutedText
 import com.example.ghostcart.theme.Paper
 import com.example.ghostcart.theme.SoftGray
 import com.example.ghostcart.ui.DirhamGlyph
-import com.example.ghostcart.ui.common.CoolingDurationDialog
 import com.example.ghostcart.ui.common.GhostTopBar
 import com.example.ghostcart.ui.common.PrimaryButton
-import com.example.ghostcart.ui.common.SecondaryButton
 import com.example.ghostcart.ui.common.SimulationBadge
 
 private val categories = listOf("Food & drinks", "Fashion", "Beauty", "Electronics", "Home", "Gaming", "Music", "Other")
@@ -75,17 +73,13 @@ fun ShareQueueReviewScreen(
     importState: ProductImportState,
     onUpdateItem: (ShareQueueItem) -> Unit,
     onRemoveItem: (String) -> Unit,
-    onConfirmAll: (shareWithCommunity: Boolean) -> Unit,
-    onCoolAll: (shareWithCommunity: Boolean, durationMillis: Long) -> Unit,
+    onGhostAll: (shareWithCommunity: Boolean) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var editingItem by remember { mutableStateOf<ShareQueueItem?>(null) }
     val hasUnresolvedDuplicates = queue.any { it.duplicateAction == "flagged" }
     var shareWithCommunity by remember { mutableStateOf(true) }
-    // The cooling duration is always a user choice - never a silent fixed default, even when
-    // bulk-cooling every queued item at once.
-    var showBulkCoolingDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -102,7 +96,7 @@ fun ShareQueueReviewScreen(
         )
 
         Text(
-            text = "Review and edit shared product links before pushing to the cart.",
+            text = "Review the products, then Ghost them together for the standard 24-hour cooldown.",
             color = MutedText,
             fontSize = 12.sp,
             modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)
@@ -222,36 +216,18 @@ fun ShareQueueReviewScreen(
                 }
 
                 PrimaryButton(
-                    text = if (hasUnresolvedDuplicates) "Resolve duplicates to confirm" else "Add to Ghost Cart",
+                    text = if (hasUnresolvedDuplicates) "Resolve duplicates to continue" else "Ghost ${queue.size} item${if (queue.size == 1) "" else "s"}",
                     onClick = {
                         if (!hasUnresolvedDuplicates) {
-                            onConfirmAll(shareWithCommunity)
+                            onGhostAll(shareWithCommunity)
                         }
                     },
-                    containerColor = if (hasUnresolvedDuplicates) MutedText else Ink,
+                    containerColor = if (hasUnresolvedDuplicates) MutedText else GhostGreen,
+                    contentColor = Ink,
                     leadingIcon = Icons.Filled.ShoppingBag
-                )
-
-                SecondaryButton(
-                    text = if (hasUnresolvedDuplicates) "Resolve duplicates to cool down" else "Cool Down Items",
-                    onClick = {
-                        if (!hasUnresolvedDuplicates) {
-                            showBulkCoolingDialog = true
-                        }
-                    }
                 )
             }
         }
-    }
-
-    if (showBulkCoolingDialog) {
-        CoolingDurationDialog(
-            onConfirm = { option ->
-                onCoolAll(shareWithCommunity, option.durationMillis)
-                showBulkCoolingDialog = false
-            },
-            onDismiss = { showBulkCoolingDialog = false }
-        )
     }
 
     editingItem?.let { item ->

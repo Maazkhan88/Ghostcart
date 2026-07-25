@@ -87,6 +87,18 @@ test("Amazon browser HTML falls back to title, UAE price, and high-resolution pr
   assert.equal(result.status, "complete");
 });
 
+test("food-delivery links are labeled and categorized as food even with a generic title", () => {
+  const html = `
+    <meta property="og:title" content="Friday special">
+    <meta property="og:image" content="https://images.talabat.com/menu/special.jpg">
+    <meta property="product:price:amount" content="42.00">
+    <meta property="product:price:currency" content="AED">`;
+  const result = extractRetailerProduct(html, new URL("https://www.talabat.com/uae/restaurant/123/menu"));
+  assert.equal(result.retailer, "Talabat");
+  assert.equal(result.category, "Food & drinks");
+  assert.equal(result.priceCents, 4200);
+});
+
 test("Amazon landing image beats an earlier warranty JSON-LD image", () => {
   const html = `
     <title>Schecter Reaper-6 - Satin Sky Burst: Buy Online at Best Price in UAE - Amazon.ae</title>

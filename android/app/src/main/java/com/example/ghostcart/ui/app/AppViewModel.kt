@@ -601,7 +601,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     id = UUID.randomUUID().toString(),
                     name = product.title,
                     amountCents = amountCents,
-                    category = product.category,
+                    category = importedCategory(product.category, product.sourceDomain, product.sourceUrl),
                     imageUrl = product.imageUrl,
                     sourceUrl = product.sourceUrl,
                     brand = null,
@@ -615,7 +615,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                         captureSeed = AlmostBuyDraft(
                             name = product.title,
                             amountCents = amountCents,
-                            category = normalizeCategory(product.category),
+                            category = importedCategory(product.category, product.sourceDomain, product.sourceUrl),
                             trigger = "FOMO",
                             coolingDurationMillis = recommendedCooling(product.category),
                             sourceUrl = product.sourceUrl,
@@ -664,7 +664,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 category = normalizeCategory(product.category),
                 trigger = "FOMO",
                 coolingDurationMillis = coolingDurationMillis,
-                sourceKind = "catalog"
+                sourceUrl = product.sourceUrl,
+                imageUrl = product.imageUrl,
+                sourceKind = "catalog",
+                activityKey = product.id
             ))
         }
     }
@@ -673,9 +676,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(captureSeed = null, productImportState = ProductImportState.Idle) }
     }
 
-    /** The cooling duration is always a user choice (see CoolingDurationDialog) - never a silent
-     * fixed default, even for the quick "Cool it" action on a product card. */
+    /** Primary catalogue Ghost action. Callers supply the canonical 24-hour default. */
     fun quickGhostCatalogProduct(productId: String, coolingDurationMillis: Long, onCreated: () -> Unit = {}) {
+        if (!requireSignIn()) return
+        val coolingUntil = System.currentTimeMillis() + coolingDurationMillis
+        val updatedPeriods = _uiState.value.coolingUntilByProductId + (productId to coolingUntil)
+        persistCoolingPeriods(updatedPeriods)
+        _uiState.update { it.copy(coolingUntilByProductId = updatedPeriods) }
         prepareCatalogProduct(productId, coolingDurationMillis)
         val draft = _uiState.value.captureSeed ?: return
         createAlmostBuy(draft) { clearCaptureSeed(); onCreated() }
@@ -730,6 +737,22 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         value.contains("music", true) -> "Music"
         value.contains("home", true) -> "Home"
         else -> value.ifBlank { "Other" }
+    }
+
+    private fun importedCategory(category: String, sourceDomain: String?, sourceUrl: String?): String {
+        val host = sourceDomain?.lowercase().orEmpty()
+        val url = sourceUrl?.lowercase().orEmpty()
+        val foodHost = listOf(
+            "talabat.com",
+            "deliveroo.ae",
+            "deliveroo.com",
+            "careem.com",
+            "ubereats.com",
+            "keeta.com",
+            "keeta-global.com"
+        ).any { root -> host == root || host.endsWith(".$root") }
+        val noonFood = (host == "noon.com" || host.endsWith(".noon.com")) && "/food" in url
+        return if (foodHost || noonFood) "Food & drinks" else normalizeCategory(category)
     }
 
     private fun recommendedCooling(category: String): Long = when {
@@ -1101,11 +1124,22 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun createAlmostBuy(draft: AlmostBuyDraft, onCreated: (AlmostBuy) -> Unit = {}) {
         if (!requireSignIn()) return
         viewModelScope.launch {
-            val item = almostBuyRepository.create(draft)
-            Analytics.logCoolingStarted(getApplication(), draft.sourceKind, draft.category)
+            val groupedDraft = if (draft.ghostOrderId.isNullOrBlank()) {
+                draft.copy(ghostOrderId = "GO-${UUID.randomUUID()}")
+            } else draft
+            val item = almostBuyRepository.create(groupedDraft)
+            Analytics.logCoolingStarted(getApplication(), groupedDraft.sourceKind, groupedDraft.category)
             scheduleCoolingNotification(item)
-            if (draft.shareWithCommunity) {
-                ProductImportRepository.publish(draft)
+            groupedDraft.activityKey?.takeIf { it.isNotBlank() }?.let { activityKey ->
+                launch {
+                    GhostActivityRepository.recordGhostStart(
+                        eventId = item.id,
+                        productIds = listOf(activityKey)
+                    ).onSuccess { refreshMostGhostedToday() }
+                }
+            }
+            if (groupedDraft.shareWithCommunity) {
+                ProductImportRepository.publish(groupedDraft)
                     .onSuccess { refreshCommunityProducts() }
                     .onFailure { showToast("Item is cooling; anonymous sharing could not be completed") }
             }
@@ -1146,7 +1180,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val item = almostBuyRepository.extendCooling(id, durationMillis) ?: return@launch
             scheduleCoolingNotification(item)
-            showToast("Cooling extended")
+            item.serverId?.let { serverId ->
+                launch { AlmostBuySync.syncExtend(getApplication(), serverId, item.coolingUntilMillis) }
+            }
+            showToast("Cooldown restarted")
         }
     }
 
@@ -1179,10 +1216,25 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         updateWalletConfig { it.copy(startingBalance = simulatedBalance - total) }
         val orderId = "GHOST-${10000 + Random.nextInt(90000)}"
         val placedAt = System.currentTimeMillis()
-        val activityCheckoutId = UUID.randomUUID().toString()
         val ghostedProducts = cartProductsWithQuantities().map { it.first }.distinctBy { it.id }
-        val ghostedProductIds = ghostedProducts.map { it.id }
         val ghostedItemCount = cartProductsWithQuantities().sumOf { it.second }
+        val orderGroupId = "GO-${UUID.randomUUID()}"
+        ghostedProducts.forEach { product ->
+            createAlmostBuy(
+                AlmostBuyDraft(
+                    name = product.name,
+                    amountCents = product.price.toLong() * 100,
+                    category = normalizeCategory(product.category),
+                    trigger = "FOMO",
+                    coolingDurationMillis = 24L * 60L * 60L * 1000L,
+                    sourceUrl = product.sourceUrl,
+                    imageUrl = product.imageUrl,
+                    sourceKind = "catalog",
+                    ghostOrderId = orderGroupId,
+                    activityKey = product.id
+                )
+            )
+        }
         persistCartQuantities(emptyMap())
         _uiState.update {
             it.copy(
@@ -1210,25 +1262,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         Analytics.logCheckoutCompleted(getApplication(), ghostedItemCount, total * 100)
         showToast("Ghost Order Placed Successfully!")
 
-        if (ghostedProductIds.isNotEmpty()) {
-            viewModelScope.launch {
-                GhostActivityRepository.recordCheckout(
-                    checkoutId = activityCheckoutId,
-                    productIds = ghostedProductIds
-                ).onSuccess {
-                    refreshMostGhostedToday()
         refreshCommunityProducts()
-                }
-            }
-        }
-        if (_uiState.value.authEmail != null) {
-            viewModelScope.launch {
-                // total is whole AED (see cartSubtotal()); the backend's
-                // totalCents, like every other money field, is minor units.
-                AlmostBuySync.syncSimulatedOrder(getApplication(), orderId, total * 100, ghostedItemCount)
-                    .let { if (it) refreshLeaderboard() }
-            }
-        }
         return true
     }
 
@@ -1533,8 +1567,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    /** [coolingDurationMillis] is always a user choice (see CoolingDurationDialog) - never a
-     * silent fixed default, even when bulk-cooling every queued item at once. */
+    /** Bulk Ghost action; the primary flow supplies the canonical 24-hour default. */
     fun bulkCoolShareQueue(shareWithCommunity: Boolean, coolingDurationMillis: Long) {
         if (!requireSignIn()) return
         val queue = _uiState.value.shareQueue
@@ -1545,6 +1578,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
+        val orderGroupId = "GO-${UUID.randomUUID()}"
         activeItems.forEach { item ->
             createAlmostBuy(
                 AlmostBuyDraft(
@@ -1556,7 +1590,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     sourceUrl = item.sourceUrl,
                     imageUrl = item.imageUrl,
                     sourceKind = "share",
-                    shareWithCommunity = shareWithCommunity
+                    shareWithCommunity = shareWithCommunity,
+                    ghostOrderId = orderGroupId
                 )
             )
         }

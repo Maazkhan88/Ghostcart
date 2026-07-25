@@ -10,6 +10,7 @@ export const ALMOST_BUY_SELECT = `
     image_url AS imageUrl,
     source_url AS sourceUrl,
     source_kind AS sourceKind,
+    order_group_id AS orderGroupId,
     trigger,
     notes,
     state,
@@ -33,6 +34,7 @@ export type AlmostBuyRecord = {
   imageUrl: string | null;
   sourceUrl: string | null;
   sourceKind: string;
+  orderGroupId: string | null;
   trigger: string | null;
   notes: string;
   state: string;

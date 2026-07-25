@@ -4,6 +4,26 @@ All notable changes to the Ghost Cart project will be documented in this file.
 
 ---
 
+## [2.8.0] - 2026-07-25
+
+### Changed
+- Replaced competing Add to cart/Cool it actions with one primary **Ghost it**
+  action that always starts a 24-hour cooldown.
+- Renamed the Cooldowns destination to **Orders**, with grouped Active cooldowns
+  and Past orders.
+- Defined one Ghost as one cooldown start across item activity and the opt-in
+  leaderboard.
+
+### Added
+- Added live countdown bars and per-item decisions after cooldown: Skip, open
+  source, Bought already, or Restart with a selected duration.
+- Preserved multi-item Ghost orders as groups while allowing a different outcome
+  for every item.
+- Added a dedicated Food & delivery Home lane and food-link recognition for
+  Noon Food, Keeta, Talabat, Deliveroo, Uber Eats, and Careem Food.
+
+---
+
 ## [2.7.7] - 2026-07-18
 
 ### Added

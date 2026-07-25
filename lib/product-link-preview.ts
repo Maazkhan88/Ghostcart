@@ -232,7 +232,23 @@ function parsePrice(value: unknown): number | null {
     : null;
 }
 
-function inferCategory(title: string): string {
+const FOOD_DELIVERY_HOSTS = [
+  "talabat.com",
+  "deliveroo.ae",
+  "deliveroo.com",
+  "careem.com",
+  "ubereats.com",
+  "keeta.com",
+  "keeta-global.com",
+] as const;
+
+function isFoodDeliveryUrl(url: URL): boolean {
+  return hostMatches(url.hostname, FOOD_DELIVERY_HOSTS) ||
+    (hostMatches(url.hostname, ["noon.com"]) && /(?:^|\/)food(?:\/|$)/i.test(url.pathname));
+}
+
+function inferCategory(title: string, sourceUrl?: URL): string {
+  if (sourceUrl && isFoodDeliveryUrl(sourceUrl)) return "Food & drinks";
   const text = title.toLowerCase();
   if (/phone|laptop|tablet|earbud|headphone|camera|charger|smartwatch|electronic/.test(text)) return "Electronics";
   if (/guitar|keyboard|piano|drum|microphone|instrument|pedal/.test(text)) return "Music";
@@ -246,6 +262,12 @@ function inferCategory(title: string): string {
 }
 
 function sourceLabel(url: URL): string {
+  if (hostMatches(url.hostname, ["talabat.com"])) return "Talabat";
+  if (hostMatches(url.hostname, ["deliveroo.ae", "deliveroo.com"])) return "Deliveroo";
+  if (hostMatches(url.hostname, ["careem.com"])) return "Careem Food";
+  if (hostMatches(url.hostname, ["ubereats.com"])) return "Uber Eats";
+  if (hostMatches(url.hostname, ["keeta.com", "keeta-global.com"])) return "Keeta";
+  if (hostMatches(url.hostname, ["noon.com"]) && /(?:^|\/)food(?:\/|$)/i.test(url.pathname)) return "Noon Food";
   if (hostMatches(url.hostname, ["noon.com"])) return "Noon";
   if (hostMatches(url.hostname, ["amazon.ae", "amazon.com", "amzn.eu"])) return "Amazon";
   const host = url.hostname.replace(/^www\./, "");
@@ -317,7 +339,7 @@ function buildPreview(input: {
     imageUrl,
     priceCents,
     currencyCode,
-    category: inferCategory(title),
+    category: inferCategory(title, finalUrl),
     editable: true,
     note: complete ? undefined : "Some details are still loading or were not exposed. Every field stays editable.",
   };
@@ -410,7 +432,7 @@ function listingItemFromJsonLdProduct(product: Record<string, unknown>, finalUrl
     imageUrl,
     priceCents,
     currencyCode,
-    category: inferCategory(title),
+    category: inferCategory(title, finalUrl),
     canonicalUrl,
     sourceDomain: finalUrl.hostname,
     retailer: sourceLabel(finalUrl),
@@ -444,7 +466,7 @@ function amazonSearchResultItems(html: string, finalUrl: URL): RetailerListingIt
       imageUrl: imageCandidate && isAllowedProductImageUrl(imageCandidate) ? imageCandidate : null,
       priceCents,
       currencyCode: priceCents !== null ? "AED" : null,
-      category: inferCategory(title),
+      category: inferCategory(title, finalUrl),
       canonicalUrl: canonicalizeRetailerUrl(new URL(`/dp/${asin}`, finalUrl).toString()).toString(),
       sourceDomain: finalUrl.hostname,
       retailer: sourceLabel(finalUrl),
@@ -527,7 +549,7 @@ export async function previewRetailerLink(value: string): Promise<RetailerLinkRe
         imageUrl: null,
         priceCents: null,
         currencyCode: null,
-        category: inferCategory(fallbackTitle(canonical)),
+        category: inferCategory(fallbackTitle(canonical), canonical),
         editable: true,
         note: error instanceof Error && error.name === "AbortError"
           ? "This website took too long to answer. Ghost Cart will also try reading it on your device."
@@ -638,7 +660,7 @@ export async function previewRetailerProduct(value: string): Promise<RetailerPro
       imageUrl: null,
       priceCents: null,
       currencyCode: null,
-      category: inferCategory(fallbackTitle(canonical)),
+      category: inferCategory(fallbackTitle(canonical), canonical),
       editable: true,
       note: error instanceof Error && error.name === "AbortError"
         ? "This website took too long to answer. Ghost Cart will also try reading it on your device."

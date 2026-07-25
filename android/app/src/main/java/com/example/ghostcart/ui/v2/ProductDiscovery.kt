@@ -66,7 +66,6 @@ import com.example.ghostcart.theme.Paper
 import com.example.ghostcart.theme.SoftGray
 import com.example.ghostcart.ui.GhostMascotPose
 import com.example.ghostcart.ui.ProductPhoto
-import com.example.ghostcart.ui.common.CoolingDurationDialog
 import kotlinx.coroutines.delay
 
 @Composable
@@ -76,7 +75,6 @@ fun ProductDiscoverySection(
     favoriteProductIds: Set<String>,
     communityProductsLoading: Boolean,
     onGhost: (String) -> Unit,
-    onCool: (id: String, durationMillis: Long, durationLabel: String) -> Unit,
     onOpen: (String) -> Unit,
     onToggleFavorite: (String) -> Unit,
     onNotifications: () -> Unit,
@@ -87,11 +85,12 @@ fun ProductDiscoverySection(
     var query by remember { mutableStateOf("") }
     var categoryId by remember { mutableStateOf("all") }
     var userGhostedOnly by remember { mutableStateOf(false) }
-    // The cooling duration is always a user choice - tapping "Cool it" opens this picker instead
-    // of silently applying a fixed default.
-    var pendingCoolProductId by remember { mutableStateOf<String?>(null) }
     val categoryProducts = Marketplace.productsForCategory(categoryId, unifiedProducts)
+    val foodProducts = Marketplace.productsForCategory("food", unifiedProducts).filter {
+        query.isBlank() || it.name.contains(query, ignoreCase = true) || it.category.contains(query, ignoreCase = true)
+    }
     val visibleCatalog = categoryProducts.filter {
+        Marketplace.productsForCategory("food", listOf(it)).isEmpty() &&
         (!userGhostedOnly || it.isUserGhosted) &&
             (query.isBlank() || it.name.contains(query, ignoreCase = true) || it.category.contains(query, ignoreCase = true))
     }
@@ -122,7 +121,7 @@ fun ProductDiscoverySection(
             modifier = Modifier.fillMaxWidth()
         )
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(Marketplace.browseCategories, key = { it.id }) { category ->
+            items(Marketplace.browseCategories.filterNot { it.id == "food" }, key = { it.id }) { category ->
                 FilterChip(
                     selected = categoryId == category.id,
                     onClick = { categoryId = category.id },
@@ -132,6 +131,50 @@ fun ProductDiscoverySection(
                         selectedLabelColor = Paper
                     )
                 )
+            }
+        }
+        DiscoverySectionHeader(
+            title = "Food & delivery",
+            subtitle = "Ghost lunch, dinner or a delivery craving",
+            onViewAll = { onViewAllCatalog("food") }
+        )
+        Text(
+            "Share from Noon Food, Keeta, Talabat, Deliveroo, Uber Eats or Careem Food using Ghost +.",
+            color = MutedText,
+            fontSize = 10.sp
+        )
+        if (foodProducts.isEmpty()) {
+            Text(
+                "No food matches yet. Share a food-app link using Ghost +.",
+                color = MutedText,
+                fontSize = 12.sp
+            )
+        } else {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(foodProducts.take(12), key = { "food_${it.id}" }) { product ->
+                    DiscoveryProductCard(
+                        title = product.name,
+                        category = product.category,
+                        priceCents = product.price.toLong() * 100,
+                        isFavorite = product.id in favoriteProductIds,
+                        image = {
+                            Box(Modifier.fillMaxSize().background(Color.White)) {
+                                ProductPhoto(product.name, iconForProduct(product), Modifier.fillMaxSize())
+                                if (product.imageUrl != null) {
+                                    AsyncImage(
+                                        model = product.imageUrl,
+                                        contentDescription = "${product.name} food image",
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier.fillMaxSize().background(Color.White)
+                                    )
+                                }
+                            }
+                        },
+                        onOpen = { onOpen(product.id) },
+                        onToggleFavorite = { onToggleFavorite(product.id) },
+                        onGhost = { onGhost(product.id) }
+                    )
+                }
             }
         }
         DiscoverySectionHeader(
@@ -188,8 +231,7 @@ fun ProductDiscoverySection(
                         },
                         onOpen = { onOpen(product.id) },
                         onToggleFavorite = { onToggleFavorite(product.id) },
-                        onGhost = { onGhost(product.id) },
-                        onCool = { pendingCoolProductId = product.id }
+                        onGhost = { onGhost(product.id) }
                     )
                 }
             }
@@ -230,23 +272,13 @@ fun ProductDiscoverySection(
                         },
                         onOpen = { onOpen(product.id) },
                         onToggleFavorite = { onToggleFavorite(product.id) },
-                        onGhost = { onGhost(product.id) },
-                        onCool = { pendingCoolProductId = product.id }
+                        onGhost = { onGhost(product.id) }
                     )
                 }
             }
         }
     }
 
-    pendingCoolProductId?.let { productId ->
-        CoolingDurationDialog(
-            onConfirm = { option ->
-                onCool(productId, option.durationMillis, option.label)
-                pendingCoolProductId = null
-            },
-            onDismiss = { pendingCoolProductId = null }
-        )
-    }
 }
 
 @Composable
@@ -449,8 +481,7 @@ private fun DiscoveryProductCard(
     image: @Composable () -> Unit,
     onOpen: () -> Unit,
     onToggleFavorite: () -> Unit,
-    onGhost: () -> Unit,
-    onCool: () -> Unit
+    onGhost: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -493,15 +524,19 @@ private fun DiscoveryProductCard(
             Text(formatProductPrice(priceCents), color = Ink, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 3.dp))
         }
         Box(Modifier.weight(1f))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            Box(
-                modifier = Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(12.dp)).background(SoftGray).border(1.dp, FaintBorder, RoundedCornerShape(12.dp)).clickable(onClick = onGhost),
-                contentAlignment = Alignment.Center
-            ) { Text("Add to cart", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1) }
-            Box(
-                modifier = Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(12.dp)).background(GhostGreen).clickable(onClick = onCool),
-                contentAlignment = Alignment.Center
-            ) { Text("Cool it", color = Color(0xFF0A0A0A), fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1) }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(GhostGreen)
+                .clickable(onClick = onGhost),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Ghost it", color = Color(0xFF0A0A0A), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text("24-hour cooldown", color = Color(0xFF0A0A0A).copy(alpha = 0.68f), fontSize = 9.sp)
+            }
         }
     }
 }

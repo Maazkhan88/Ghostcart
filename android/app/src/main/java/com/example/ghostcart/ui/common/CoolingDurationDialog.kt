@@ -25,6 +25,9 @@ import java.util.concurrent.TimeUnit
 
 data class CoolingOption(val label: String, val durationMillis: Long)
 
+/** The single default behind every primary "Ghost it" action. */
+const val DEFAULT_GHOST_COOLDOWN_MILLIS: Long = 24L * 60L * 60L * 1000L
+
 val coolingOptions = listOf(
     CoolingOption("15 min", TimeUnit.MINUTES.toMillis(15)),
     CoolingOption("24 hours", TimeUnit.HOURS.toMillis(24)),
@@ -33,9 +36,8 @@ val coolingOptions = listOf(
 )
 
 /**
- * Shared duration picker for every "Cool it" / "Start cooling" entry point (product cards,
- * product detail, cart list) - the cooling period must always be a user choice, never a silent
- * fixed default.
+ * Secondary duration picker used when someone deliberately changes or restarts a cooldown.
+ * Primary Ghost actions always use the predictable 24-hour default above.
  */
 @Composable
 fun CoolingDurationDialog(
@@ -46,11 +48,11 @@ fun CoolingDurationDialog(
     var selected by remember { mutableStateOf(initialSelection) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("How long do you want to cool this?") },
+        title = { Text("Restart the cooldown") },
         text = {
             Column {
                 Text(
-                    "Pick a cooldown - you'll get a reminder when it's ready for a decision.",
+                    "Choose when Ghost Cart should remind you to decide again.",
                     color = MutedText,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(bottom = 12.dp)
@@ -68,7 +70,7 @@ fun CoolingDurationDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(selected) }) { Text("Start cooling") }
+            TextButton(onClick = { onConfirm(selected) }) { Text("Restart") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }

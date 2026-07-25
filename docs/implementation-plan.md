@@ -59,7 +59,7 @@ fake activity.
 ### Item counts
 
 - Product Details and eligible community cards may display **Ghosted X times**
-  using completed Ghost Checkout events only.
+  using canonical cooldown-start events only.
 - Distinguish **your share's count** from the product's global anonymous count.
 - Global/public counts remain hidden below the privacy threshold; a sender can
   see the private count for their own share without seeing recipient identity.

@@ -1,7 +1,7 @@
 import { getD1 } from "../../../db";
 import { consumeRateLimit, requestActorHash } from "../../../lib/rate-limit";
 
-const MAX_PRODUCTS_PER_CHECKOUT = 40;
+const MAX_PRODUCTS_PER_EVENT = 40;
 const DEFAULT_RANKING_LIMIT = 12;
 const MAX_RANKING_LIMIT = 30;
 const MIN_PUBLIC_GHOSTERS = 3;
@@ -10,6 +10,8 @@ const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,119}$/;
 const UAE_UTC_OFFSET_HOURS = 4;
 
 type GhostEventPayload = {
+  eventId?: unknown;
+  /** Backward compatibility for older Android builds. */
   checkoutId?: unknown;
   productIds?: unknown;
   source?: unknown;
@@ -161,8 +163,10 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const payload = (await request.json()) as GhostEventPayload;
-    const checkoutId = typeof payload.checkoutId === "string"
-      ? payload.checkoutId.trim()
+    const eventId = typeof payload.eventId === "string"
+      ? payload.eventId.trim()
+      : typeof payload.checkoutId === "string"
+        ? payload.checkoutId.trim()
       : "";
     const rawProductIds = Array.isArray(payload.productIds)
       ? payload.productIds
@@ -179,12 +183,12 @@ export async function POST(request: Request) {
       ? payload.source.trim().toLowerCase()
       : "unknown";
 
-    if (!SAFE_ID.test(checkoutId)) {
-      return json({ error: "checkoutId is invalid" }, { status: 400 });
+    if (!SAFE_ID.test(eventId)) {
+      return json({ error: "eventId is invalid" }, { status: 400 });
     }
-    if (!productIds.length || productIds.length > MAX_PRODUCTS_PER_CHECKOUT) {
+    if (!productIds.length || productIds.length > MAX_PRODUCTS_PER_EVENT) {
       return json(
-        { error: `productIds must contain between 1 and ${MAX_PRODUCTS_PER_CHECKOUT} unique items` },
+        { error: `productIds must contain between 1 and ${MAX_PRODUCTS_PER_EVENT} unique items` },
         { status: 400 },
       );
     }
@@ -254,7 +258,7 @@ export async function POST(request: Request) {
            ON CONFLICT DO NOTHING`,
         )
         .bind(
-          `${checkoutId}:${product.productKey}`,
+          `${eventId}:${product.productKey}`,
           product.productKey,
           product.productId,
           actorHash,

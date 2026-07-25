@@ -111,6 +111,8 @@ import com.example.ghostcart.ui.DirhamAmount
 import com.example.ghostcart.ui.DirhamGlyph
 import com.example.ghostcart.ui.GhostMascotPose
 import com.example.ghostcart.ui.common.CoolingOption
+import com.example.ghostcart.ui.common.CoolingDurationDialog
+import com.example.ghostcart.ui.common.DEFAULT_GHOST_COOLDOWN_MILLIS
 import com.example.ghostcart.ui.common.coolingOptions
 import com.example.ghostcart.ui.common.GhostHeroCard
 import com.example.ghostcart.ui.common.GhostTopBar
@@ -135,7 +137,6 @@ fun GhostHomeScreen(
     onOpenCooldowns: () -> Unit,
     onOpenProgress: () -> Unit,
     onGhost: (String) -> Unit,
-    onCool: (id: String, durationMillis: Long, durationLabel: String) -> Unit,
     onOpen: (String) -> Unit,
     onToggleFavorite: (String) -> Unit,
     onNotifications: () -> Unit,
@@ -180,7 +181,6 @@ fun GhostHomeScreen(
                 favoriteProductIds = favoriteProductIds,
                 communityProductsLoading = communityProductsLoading,
                 onGhost = onGhost,
-                onCool = onCool,
                 onOpen = onOpen,
                 onToggleFavorite = onToggleFavorite,
                 onNotifications = onNotifications,
@@ -283,8 +283,7 @@ fun CaptureAlmostBuyScreen(
     importState: ProductImportState = ProductImportState.Idle,
     onImportSharedUrl: (String) -> Unit,
     onBack: () -> Unit,
-    onAddToCart: (AlmostBuyDraft) -> Unit,
-    onCoolIt: (AlmostBuyDraft) -> Unit,
+    onGhostIt: (AlmostBuyDraft) -> Unit,
     onAddListingToCart: (List<ListingProductStub>) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -300,9 +299,6 @@ fun CaptureAlmostBuyScreen(
     var readingStage by remember { mutableIntStateOf(0) }
     var category by remember(seed?.category) { mutableStateOf(seed?.category?.takeIf { it in categories } ?: categories.first()) }
     var trigger by remember(seed?.trigger) { mutableStateOf(seed?.trigger?.takeIf { it in triggers } ?: triggers.first()) }
-    var cooling by remember(seed?.coolingDurationMillis) {
-        mutableStateOf(coolingOptions.minByOrNull { kotlin.math.abs(it.durationMillis - (seed?.coolingDurationMillis ?: coolingOptions[1].durationMillis)) } ?: coolingOptions[1])
-    }
     var error by remember { mutableStateOf<String?>(null) }
     val requestNotifications = rememberNotificationPermissionRequest()
     var selectedListingIndices by remember(importState) {
@@ -320,21 +316,12 @@ fun CaptureAlmostBuyScreen(
                 amountCents = (numericAmount * 100).toLong(),
                 category = category,
                 trigger = trigger,
-                coolingDurationMillis = cooling.durationMillis,
+                coolingDurationMillis = DEFAULT_GHOST_COOLDOWN_MILLIS,
                 sourceUrl = sourceUrl.trim().takeIf { it.isNotBlank() },
                 imageUrl = imageUrl,
                 sourceKind = if (sourceUrl.isNotBlank()) "share" else sourceKind,
                 shareWithCommunity = shareWithCommunity
             )
-        }
-    }
-
-    LaunchedEffect(category, seed?.coolingDurationMillis) {
-        if (seed?.coolingDurationMillis != null) return@LaunchedEffect
-        cooling = when (category) {
-            "Food & drinks" -> coolingOptions[0]
-            "Electronics" -> coolingOptions[2]
-            else -> coolingOptions[1]
         }
     }
 
@@ -605,18 +592,14 @@ fun CaptureAlmostBuyScreen(
         item { ChoiceSection(stringResource(R.string.category), categories, category) { category = it } }
         item { ChoiceSection(stringResource(R.string.what_triggered_this), triggers, trigger) { trigger = it } }
         item {
-            Column {
-                Text(stringResource(R.string.cooling_period), color = Ink, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
-                Text(stringResource(R.string.cooling_period_body), color = MutedText, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp, bottom = 8.dp))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(coolingOptions) { option ->
-                        FilterChip(
-                            selected = option == cooling,
-                            onClick = { cooling = option },
-                            label = { Text(option.label) },
-                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = GreenTint, selectedLabelColor = Ink)
-                        )
-                    }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(GreenTint).padding(14.dp)
+            ) {
+                Icon(Icons.Filled.Timer, contentDescription = null, tint = GhostGreen)
+                Column(Modifier.padding(start = 12.dp)) {
+                    Text("24-hour cooldown", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("We’ll remind you by push, email and in the app when it’s time to decide.", color = MutedText, fontSize = 10.sp)
                 }
             }
         }
@@ -641,24 +624,16 @@ fun CaptureAlmostBuyScreen(
         if (error != null) item { Text(error.orEmpty(), color = Color(0xFFB42318), fontSize = 12.sp, fontWeight = FontWeight.Bold) }
         item {
             PrimaryButton(
-                text = "Add to Ghost Cart",
-                onClick = {
-                    validatedDraft()?.let(onAddToCart)
-                },
-                leadingIcon = Icons.Filled.ShoppingBag,
-                containerColor = Ink
-            )
-        }
-        item {
-            SecondaryButton(
-                text = "Cool it instead",
+                text = "Ghost it",
                 onClick = {
                     validatedDraft()?.let {
                         requestNotifications()
-                        onCoolIt(it)
+                        onGhostIt(it)
                     }
                 },
-                leadingIcon = Icons.Filled.Timer
+                leadingIcon = Icons.Filled.Timer,
+                containerColor = GhostGreen,
+                contentColor = Color(0xFF050505)
             )
         }
         }
@@ -683,11 +658,14 @@ fun CooldownsScreen(
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
         while (true) {
-            delay(30_000)
+            delay(1_000)
             now = System.currentTimeMillis()
         }
     }
     val active = almostBuys.filter { it.status == AlmostBuyStatus.COOLING }.sortedBy { it.coolingUntilMillis }
+    val activeGroups = active.groupBy { it.ghostOrderId ?: it.id }
+        .toList()
+        .sortedBy { (_, groupItems) -> groupItems.minOf { it.coolingUntilMillis } }
 
     LazyColumn(
         modifier = modifier.fillMaxSize().background(Paper),
@@ -714,16 +692,36 @@ fun CooldownsScreen(
                 )
             }
         } else {
-            items(active, key = { it.id }) { item ->
-                CooldownDecisionCard(item, now, onResolve, onMoreTime, onShare, onOpenSource)
+            item { SectionHeader("Active cooldowns") }
+            activeGroups.forEach { (groupId, groupItems) ->
+                if (groupItems.size > 1) {
+                    item(key = "active_group_$groupId") {
+                        GhostOrderGroupHeader(
+                            groupItems = groupItems,
+                            now = now,
+                            resolved = false
+                        )
+                    }
+                }
+                items(groupItems, key = { "active_${it.id}" }) { item ->
+                    CooldownDecisionCard(item, now, onResolve, onMoreTime, onShare, onOpenSource)
+                }
             }
         }
 
         val resolved = almostBuys.filter { it.status != AlmostBuyStatus.COOLING }
+            .sortedByDescending { it.resolvedAtMillis ?: it.createdAtMillis }
         if (resolved.isNotEmpty()) {
             item { SectionHeader(stringResource(R.string.recent_decisions)) }
-            items(resolved.take(8), key = { it.id }) { item ->
-                ResolvedRow(item, onShare, onOpenSource)
+            resolved.take(20).groupBy { it.ghostOrderId ?: it.id }.forEach { (groupId, groupItems) ->
+                if (groupItems.size > 1) {
+                    item(key = "past_group_$groupId") {
+                        GhostOrderGroupHeader(groupItems = groupItems, now = now, resolved = true)
+                    }
+                }
+                items(groupItems, key = { "past_${it.id}" }) { item ->
+                    ResolvedRow(item, onShare, onOpenSource)
+                }
             }
         }
     }
@@ -1394,7 +1392,13 @@ private fun CooldownDecisionCard(
     onOpenSource: (String) -> Unit
 ) {
     val hasCooled = now >= item.coolingUntilMillis
+    val remainingMillis = (item.coolingUntilMillis - now).coerceAtLeast(0L)
+    val expectedDuration = item.coolingDurationMillis.coerceAtLeast(60_000L)
+    val coolingProgress = if (hasCooled) 1f else {
+        (1f - remainingMillis.toFloat() / expectedDuration.toFloat()).coerceIn(0f, 1f)
+    }
     var imageLoadFailed by remember(item.imageUrl) { mutableStateOf(false) }
+    var showRestartDialog by remember(item.id) { mutableStateOf(false) }
     Card(
         colors = CardDefaults.cardColors(containerColor = if (hasCooled) GreenTint else SoftGray),
         shape = RoundedCornerShape(22.dp),
@@ -1429,7 +1433,7 @@ private fun CooldownDecisionCard(
                         IconButton(onClick = { onShare(item) }, modifier = Modifier.size(36.dp)) {
                             Icon(Icons.Filled.Share, contentDescription = "Share ${item.name}", tint = Ink, modifier = Modifier.size(17.dp))
                         }
-                        item.sourceUrl?.let { source ->
+                        if (hasCooled) item.sourceUrl?.let { source ->
                             IconButton(onClick = { onOpenSource(source) }, modifier = Modifier.size(36.dp)) {
                                 Icon(Icons.Filled.OpenInNew, contentDescription = "Open original product", tint = Ink, modifier = Modifier.size(17.dp))
                             }
@@ -1437,7 +1441,15 @@ private fun CooldownDecisionCard(
                     }
                 }
             }
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 14.dp, bottom = 14.dp)) {
+            if (!hasCooled) {
+                LinearProgressIndicator(
+                    progress = { coolingProgress },
+                    color = GhostGreen,
+                    trackColor = FaintBorder,
+                    modifier = Modifier.fillMaxWidth().padding(top = 14.dp).height(7.dp).clip(RoundedCornerShape(999.dp))
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp, bottom = 14.dp)) {
                 Icon(if (hasCooled) Icons.Filled.CheckCircle else Icons.Filled.AccessTime, null, tint = if (hasCooled) GhostGreen else MutedText, modifier = Modifier.size(17.dp))
                 Text(
                     if (hasCooled) stringResource(R.string.ready_to_decide) else remainingLabel(item.coolingUntilMillis - now),
@@ -1447,21 +1459,95 @@ private fun CooldownDecisionCard(
                     modifier = Modifier.padding(start = 7.dp)
                 )
             }
-            Button(
-                onClick = { onResolve(item.id, AlmostBuyResolution.SKIPPED) },
-                colors = ButtonDefaults.buttonColors(containerColor = Ink, contentColor = Paper),
-                modifier = Modifier.fillMaxWidth()
-            ) { Text(stringResource(R.string.i_skipped_it)) }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
-                OutlinedButton(onClick = { onResolve(item.id, AlmostBuyResolution.BOUGHT_INTENTIONALLY) }, modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.bought_intentionally), fontSize = 11.sp)
+            if (hasCooled) {
+                Text("What did you decide?", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                Button(
+                    onClick = { onResolve(item.id, AlmostBuyResolution.SKIPPED) },
+                    colors = ButtonDefaults.buttonColors(containerColor = Ink, contentColor = Paper),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                ) { Text("Skip the item") }
+                item.sourceUrl?.let { source ->
+                    OutlinedButton(
+                        onClick = { onOpenSource(source) },
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+                    ) {
+                        Icon(Icons.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(17.dp))
+                        Text("Buy it from source", modifier = Modifier.padding(start = 7.dp))
+                    }
                 }
-                OutlinedButton(onClick = { onMoreTime(item.id, TimeUnit.HOURS.toMillis(24)) }, modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.more_time), fontSize = 11.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                    OutlinedButton(
+                        onClick = { onResolve(item.id, AlmostBuyResolution.BOUGHT_INTENTIONALLY) },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Bought it already", fontSize = 11.sp) }
+                    OutlinedButton(onClick = { showRestartDialog = true }, modifier = Modifier.weight(1f)) {
+                        Text("Restart cooldown", fontSize = 11.sp)
+                    }
                 }
+                Text(stringResource(R.string.resolve_disclosure), color = MutedText, fontSize = 9.sp, modifier = Modifier.padding(top = 10.dp))
+            } else {
+                Text(
+                    "Your decision buttons will unlock when the cooldown ends.",
+                    color = MutedText,
+                    fontSize = 10.sp
+                )
             }
-            Text(stringResource(R.string.resolve_disclosure), color = MutedText, fontSize = 9.sp, modifier = Modifier.padding(top = 10.dp))
         }
+    }
+
+    if (showRestartDialog) {
+        CoolingDurationDialog(
+            onConfirm = { option ->
+                onMoreTime(item.id, option.durationMillis)
+                showRestartDialog = false
+            },
+            onDismiss = { showRestartDialog = false }
+        )
+    }
+}
+
+@Composable
+private fun GhostOrderGroupHeader(
+    groupItems: List<AlmostBuy>,
+    now: Long,
+    resolved: Boolean
+) {
+    val readyCount = groupItems.count { now >= it.coolingUntilMillis }
+    val total = groupItems.size
+    val totalCents = groupItems.sumOf { it.amountCents }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(if (resolved) SoftGray else GreenTint)
+            .padding(horizontal = 14.dp, vertical = 11.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                if (resolved) "Past Ghost order" else "Ghost order · $total items",
+                color = Ink,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Text(
+                if (resolved) {
+                    "Each item keeps its own decision"
+                } else if (readyCount > 0) {
+                    "$readyCount of $total ready to decide"
+                } else {
+                    "All items are cooling together"
+                },
+                color = MutedText,
+                fontSize = 10.sp
+            )
+        }
+        DirhamAmount(
+            formatDirhams(totalCents),
+            tint = Ink,
+            fontSize = 12.sp,
+            glyphSize = 10.dp
+        )
     }
 }
 

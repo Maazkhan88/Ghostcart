@@ -13,7 +13,7 @@ Guardrails: notification opt-out rate, unresolved-item rate, accessibility task 
 ## Canonical state model
 
 1. `captured` - an item has been added from Ghost Cart, a URL, a screenshot, or manual entry.
-2. `cooling` - the user selected a decision time and the item is waiting.
+2. `cooling` - Ghost Cart automatically started the standard 24-hour decision pause.
 3. `resolved_skipped` - the user confirms they did not purchase it. This is the only state that contributes to Money Kept.
 4. `resolved_bought` - the user bought it intentionally after reflection. It remains useful outcome data but never counts as Money Kept.
 5. `snoozed` - the user asked for more time and selected a new resolution time.
@@ -30,12 +30,23 @@ Fake Checkout and pretend delivery are optional emotional rituals. They never ch
 ## Primary mobile information architecture
 
 1. Home - product search and categories, primary Ghost action, active cooldowns, recent decisions, then anonymous User Ghosted discovery.
-2. Cooldowns - every waiting, snoozed, and ready-to-resolve item.
+2. Orders - a **Ghost Orders** page with Active cooldowns (live timer and animated progress) and Past orders (confirmed skipped/bought outcomes). Ready items stay in Active until the customer decides.
 3. Ghost + - central add-from-anywhere action.
 4. Progress - Money Kept, outcomes, patterns, and history. Never a bank balance.
 5. Profile - reminders, privacy, accessibility, theme, membership card, and account.
 
-Product discovery is a visual entry point and never a real storefront. Curated items offer **Ghost buy** (quick simulated capture) and **Cool it** (choose a pause). Sponsored content must not interrupt cooling or resolution.
+Product discovery is a visual entry point and never a real storefront. Every curated item offers one primary **Ghost it** action. Ghosting always starts the standard 24-hour cooldown; there is no competing cart, checkout, or duration choice in the primary path. Sponsored content must not interrupt cooling or resolution.
+
+Food is a separate Home discovery lane rather than being mixed through the general marketplace rail. Ghost Cart accepts public share links from food-delivery services including Noon Food, Keeta, Talabat, Deliveroo, Uber Eats, and Careem Food, while retaining the generic public-HTTPS fallback for other services.
+
+## Ghost orders and counting
+
+- Starting a cooldown is the canonical Ghost event. Therefore **items Ghosted = items put into cooldown**.
+- Each item counts once when its cooldown starts. Skipping, buying, or restarting later does not create another Ghost count.
+- The opt-in leaderboard ranks Ghosted item counts from almost-buys, not purchases or Fake Checkout completions.
+- When several items are Ghosted together, they share an opaque Ghost order ID and appear together in Orders.
+- Cooldown expiry never resolves an entire cart automatically. The customer decides separately for each item: Skip, Buy from source, Bought already, or Restart cooldown with a selected duration.
+- A mixed-outcome order remains grouped in history while preserving every item-level outcome.
 
 ## Share from retailer apps
 
@@ -87,27 +98,23 @@ Product discovery is a visual entry point and never a real storefront. Curated i
 ## Core journey
 
 1. Capture item name, amount, category, trigger, and optional source URL/image.
-2. Ghost it.
-3. Choose a recommended or custom cooling period.
-4. Optionally complete Fake Checkout or pretend delivery.
-5. Receive a cooling-complete reminder.
-6. Resolve: "I skipped it", "I bought it intentionally", or "Give me more time".
-7. Update Progress using the confirmed resolution.
+2. Tap **Ghost it**. The item immediately enters a 24-hour cooldown.
+3. While cooling, show progress and the remaining time; do not show premature purchase decisions.
+4. At expiry, send transactional email and push reminders and surface an in-app decision prompt.
+5. Resolve with one of four explicit actions: **Skip the item**, **Buy it from source**, **Bought it already**, or **Restart cooldown**.
+6. Buying from source opens the saved retailer URL but does not infer an outcome; the customer records the final outcome explicitly.
+7. Restarting opens the duration picker (15 minutes, 24 hours, 3 days, or 7 days), resets the timer, and reschedules all reminders.
+8. Update Progress only from the confirmed outcome. Only **Skip the item** contributes to Money Kept.
 
-Recommended presets:
-
-- Food: 15 or 30 minutes.
-- Fashion and beauty: 24 hours.
-- Electronics: 48 or 72 hours.
-- Luxury: 7 days.
+Fake Checkout and pretend delivery remain optional secondary rituals and are not part of the default Ghost journey.
 
 ## Trust rules
 
 - Progress uses "Money Kept", never balance, funds, deposit, withdrawal, transfer, or payment language.
 - Ghost Card is a membership/achievement card with a Ghost ID. It is not a payment card and never displays CVV, expiry, payment network, or bank-style account details.
-- Most Ghosted Today measures completed Ghost actions, not confirmed savings.
-- Item-level **Ghosted X times** counts use idempotent completed Ghost Checkout
-  events. Public totals require the privacy threshold; private share owners may
+- Most Ghosted Today measures cooldown starts, not confirmed savings.
+- Item-level **Ghosted X times** counts use idempotent cooldown-start events.
+  Public totals require the privacy threshold; private share owners may
   see their own share attribution without recipient identities.
 - Live trends require validated catalog items, abuse controls, a privacy threshold, and freshness disclosure.
 - Sample figures are visibly labeled demo data and cannot appear as a user's own history.
@@ -115,7 +122,9 @@ Recommended presets:
 
 ## Notification model
 
-- Cooling-complete reminders are transactional and deep-link to the relevant resolution.
+- Cooling-complete reminders are transactional and deep-link to the relevant decision card.
+- The same expiry is surfaced through email, push, and an in-app prompt. Push actions may record **Skip** or **Bought already** directly; choosing a new duration always opens the app.
+- Restarting a cooldown resets the server reminder state so email and push use the newly selected expiry.
 - Shared-item activity notifications are opt-in and say that someone ghosted a
   shared item without identifying the recipient. Rapid events are batched and
   subject to quiet hours and frequency caps.

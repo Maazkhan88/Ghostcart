@@ -315,7 +315,7 @@ contribute activity.
 
 ```json
 {
-  "checkoutId": "client-generated-id",
+  "eventId": "client-generated-id",
   "productIds": ["4", "wireless-headphones"],
   "source": "android"
 }
@@ -323,7 +323,7 @@ contribute activity.
 
 Rules:
 
-- `checkoutId` and each product identifier use a restricted 1-120 character
+- `eventId` and each product identifier use a restricted 1-120 character
   identifier alphabet;
 - 1-40 unique products are allowed;
 - source is `android`, `web`, `ios`, or `unknown`;
