@@ -767,7 +767,13 @@ private fun GhostBottomNav(current: NavKey?, onNavigate: (NavKey) -> Unit) {
                         ) {
                             if (item.central) {
                                 GhostMascotPose(
-                                    poseName = "cart",
+                                    // Deliberately not "cart" - this button opens the manual
+                                    // capture form (CaptureAlmostBuy), not the real cart screen.
+                                    // A cart-shaped mascot here was confusable with the actual
+                                    // cart icon/badge on the Home top bar, which does open the
+                                    // cart - two different "looks like a cart" affordances doing
+                                    // two different things.
+                                    poseName = "waveAlt",
                                     modifier = Modifier.size(40.dp)
                                 )
                             } else {
