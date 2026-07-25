@@ -485,8 +485,8 @@ fun MarketplaceProductCard(
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "Ghost it", color = Color(0xFF0A0A0A), fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                Text(text = "24-hour cooldown", color = Color(0xFF0A0A0A).copy(alpha = 0.68f), fontSize = 9.sp)
+                Text(text = "Add to cart", color = Color(0xFF0A0A0A), fontSize = 13.sp, lineHeight = 15.sp, fontWeight = FontWeight.Bold)
+                Text(text = "Cooldown starts at checkout", color = Color(0xFF0A0A0A).copy(alpha = 0.68f), fontSize = 9.sp, lineHeight = 11.sp)
             }
         }
     }
@@ -944,7 +944,7 @@ fun ProductDetailScreen(
                 .padding(vertical = 16.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            HighlightPoint(Icons.Filled.Schedule, "Pause", "Ghosting starts a\n24-hour cooldown.")
+            HighlightPoint(Icons.Filled.ShoppingBag, "Add to cart", "Review it later\nin your cart.")
             HighlightPoint(Icons.Filled.Notifications, "Get reminded", "Push, email and\nin-app reminder.")
             HighlightPoint(Icons.Filled.Shield, "Decide calmly", "Skip, buy, record,\nor restart.")
         }
@@ -953,7 +953,7 @@ fun ProductDetailScreen(
             text = when {
                 coolingComplete -> "Make your decision"
                 coolingActive -> "View cooldown"
-                else -> "Ghost it"
+                else -> "Add to cart"
             },
             onClick = if (coolingUntilMillis != null) onOpenCooldown else onGhost,
             modifier = Modifier.padding(top = 18.dp),
@@ -962,7 +962,7 @@ fun ProductDetailScreen(
         )
         Text(
             text = if (coolingUntilMillis == null) {
-                "Starts a 24-hour cooldown. No real checkout, payment or delivery."
+                "Adds to your Ghost Cart. The cooldown starts once you check out."
             } else if (coolingComplete) {
                 "Your item is ready. Skip it, visit the source, record it as bought, or restart the timer."
             } else {

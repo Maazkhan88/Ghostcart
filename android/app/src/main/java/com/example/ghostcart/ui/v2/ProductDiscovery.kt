@@ -30,6 +30,9 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -80,7 +83,9 @@ fun ProductDiscoverySection(
     onNotifications: () -> Unit,
     onViewAllCatalog: (String) -> Unit,
     onViewAllFavorites: () -> Unit,
-    homeBanners: List<com.example.ghostcart.data.ContentBlockItem> = emptyList()
+    homeBanners: List<com.example.ghostcart.data.ContentBlockItem> = emptyList(),
+    cartItemCount: Int = 0,
+    onOpenCart: () -> Unit = {}
 ) {
     var query by remember { mutableStateOf("") }
     var categoryId by remember { mutableStateOf("all") }
@@ -106,8 +111,21 @@ fun ProductDiscoverySection(
                 tint = Ink
             )
             GhostPeekMascot(modifier = Modifier.align(Alignment.CenterStart))
-            IconButton(onClick = onNotifications, modifier = Modifier.align(Alignment.CenterEnd)) {
-                Icon(Icons.Filled.Notifications, contentDescription = "Notifications", tint = Ink)
+            Row(modifier = Modifier.align(Alignment.CenterEnd), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onOpenCart) {
+                    BadgedBox(badge = {
+                        if (cartItemCount > 0) {
+                            Badge(containerColor = GhostGreen, contentColor = Ink) {
+                                Text(if (cartItemCount > 99) "99+" else "$cartItemCount", fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }) {
+                        Icon(Icons.Filled.ShoppingCart, contentDescription = "Cart", tint = Ink)
+                    }
+                }
+                IconButton(onClick = onNotifications) {
+                    Icon(Icons.Filled.Notifications, contentDescription = "Notifications", tint = Ink)
+                }
             }
         }
         PromoBannerCarousel(banners = homeBanners)
@@ -131,50 +149,6 @@ fun ProductDiscoverySection(
                         selectedLabelColor = Paper
                     )
                 )
-            }
-        }
-        DiscoverySectionHeader(
-            title = "Food & delivery",
-            subtitle = "Ghost lunch, dinner or a delivery craving",
-            onViewAll = { onViewAllCatalog("food") }
-        )
-        Text(
-            "Share from Noon Food, Keeta, Talabat, Deliveroo, Uber Eats or Careem Food using Ghost +.",
-            color = MutedText,
-            fontSize = 10.sp
-        )
-        if (foodProducts.isEmpty()) {
-            Text(
-                "No food matches yet. Share a food-app link using Ghost +.",
-                color = MutedText,
-                fontSize = 12.sp
-            )
-        } else {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(foodProducts.take(12), key = { "food_${it.id}" }) { product ->
-                    DiscoveryProductCard(
-                        title = product.name,
-                        category = product.category,
-                        priceCents = product.price.toLong() * 100,
-                        isFavorite = product.id in favoriteProductIds,
-                        image = {
-                            Box(Modifier.fillMaxSize().background(Color.White)) {
-                                ProductPhoto(product.name, iconForProduct(product), Modifier.fillMaxSize())
-                                if (product.imageUrl != null) {
-                                    AsyncImage(
-                                        model = product.imageUrl,
-                                        contentDescription = "${product.name} food image",
-                                        contentScale = ContentScale.Fit,
-                                        modifier = Modifier.fillMaxSize().background(Color.White)
-                                    )
-                                }
-                            }
-                        },
-                        onOpen = { onOpen(product.id) },
-                        onToggleFavorite = { onToggleFavorite(product.id) },
-                        onGhost = { onGhost(product.id) }
-                    )
-                }
             }
         }
         DiscoverySectionHeader(
@@ -203,7 +177,7 @@ fun ProductDiscoverySection(
                 text = if (userGhostedOnly) {
                     "No user-ghosted finds yet in this category."
                 } else {
-                    "No catalogue matches. Paste the product link in Ghost + instead."
+                    "No catalogue matches yet."
                 },
                 color = MutedText,
                 fontSize = 12.sp
@@ -223,6 +197,45 @@ fun ProductDiscoverySection(
                                     AsyncImage(
                                         model = product.imageUrl,
                                         contentDescription = "${product.name} product image",
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier.fillMaxSize().background(Color.White)
+                                    )
+                                }
+                            }
+                        },
+                        onOpen = { onOpen(product.id) },
+                        onToggleFavorite = { onToggleFavorite(product.id) },
+                        onGhost = { onGhost(product.id) }
+                    )
+                }
+            }
+        }
+        DiscoverySectionHeader(
+            title = "Food & delivery",
+            subtitle = "Ghost lunch, dinner or a delivery craving",
+            onViewAll = { onViewAllCatalog("food") }
+        )
+        if (foodProducts.isEmpty()) {
+            Text(
+                "No food matches yet.",
+                color = MutedText,
+                fontSize = 12.sp
+            )
+        } else {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(foodProducts.take(12), key = { "food_${it.id}" }) { product ->
+                    DiscoveryProductCard(
+                        title = product.name,
+                        category = product.category,
+                        priceCents = product.price.toLong() * 100,
+                        isFavorite = product.id in favoriteProductIds,
+                        image = {
+                            Box(Modifier.fillMaxSize().background(Color.White)) {
+                                ProductPhoto(product.name, iconForProduct(product), Modifier.fillMaxSize())
+                                if (product.imageUrl != null) {
+                                    AsyncImage(
+                                        model = product.imageUrl,
+                                        contentDescription = "${product.name} food image",
                                         contentScale = ContentScale.Fit,
                                         modifier = Modifier.fillMaxSize().background(Color.White)
                                     )
@@ -534,8 +547,8 @@ private fun DiscoveryProductCard(
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Ghost it", color = Color(0xFF0A0A0A), fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                Text("24-hour cooldown", color = Color(0xFF0A0A0A).copy(alpha = 0.68f), fontSize = 9.sp)
+                Text("Add to cart", color = Color(0xFF0A0A0A), fontSize = 13.sp, lineHeight = 15.sp, fontWeight = FontWeight.Bold)
+                Text("Cooldown starts at checkout", color = Color(0xFF0A0A0A).copy(alpha = 0.68f), fontSize = 9.sp, lineHeight = 11.sp)
             }
         }
     }

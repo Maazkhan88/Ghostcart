@@ -655,37 +655,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(productImportState = ProductImportState.Idle, captureSeed = null) }
     }
 
-    fun prepareCatalogProduct(productId: String, coolingDurationMillis: Long) {
-        val product = findProduct(productId) ?: return
-        _uiState.update {
-            it.copy(captureSeed = AlmostBuyDraft(
-                name = product.name,
-                amountCents = product.price.toLong() * 100,
-                category = normalizeCategory(product.category),
-                trigger = "FOMO",
-                coolingDurationMillis = coolingDurationMillis,
-                sourceUrl = product.sourceUrl,
-                imageUrl = product.imageUrl,
-                sourceKind = "catalog",
-                activityKey = product.id
-            ))
-        }
-    }
-
     fun clearCaptureSeed() {
         _uiState.update { it.copy(captureSeed = null, productImportState = ProductImportState.Idle) }
-    }
-
-    /** Primary catalogue Ghost action. Callers supply the canonical 24-hour default. */
-    fun quickGhostCatalogProduct(productId: String, coolingDurationMillis: Long, onCreated: () -> Unit = {}) {
-        if (!requireSignIn()) return
-        val coolingUntil = System.currentTimeMillis() + coolingDurationMillis
-        val updatedPeriods = _uiState.value.coolingUntilByProductId + (productId to coolingUntil)
-        persistCoolingPeriods(updatedPeriods)
-        _uiState.update { it.copy(coolingUntilByProductId = updatedPeriods) }
-        prepareCatalogProduct(productId, coolingDurationMillis)
-        val draft = _uiState.value.captureSeed ?: return
-        createAlmostBuy(draft) { clearCaptureSeed(); onCreated() }
     }
 
     /**

@@ -338,10 +338,7 @@ fun MainNavigation(
                             },
                             onOpenCooldowns = { backStack.add(Cooldowns) },
                             onOpenProgress = { backStack.add(Progress) },
-                            onGhost = { id ->
-                                appViewModel.quickGhostCatalogProduct(id, DEFAULT_GHOST_COOLDOWN_MILLIS)
-                                backStack.add(Cooldowns)
-                            },
+                            onGhost = { id -> appViewModel.addToCart(id) },
                             onOpen = { id -> backStack.add(ProductDetail(id)) },
                             onToggleFavorite = appViewModel::toggleFavorite,
                             onNotifications = { backStack.add(GhostCardSettings) },
@@ -355,6 +352,8 @@ fun MainNavigation(
                             },
                             homeBanners = state.homeBanners,
                             ghostCartStories = state.ghostCartStories,
+                            cartItemCount = state.cartQuantities.values.sum(),
+                            onOpenCart = { backStack.add(GhostCartList) },
                             onOpenLeaderboard = { backStack.add(Leaderboard) },
                             onOpenStory = { index -> openStoryIndex = index }
                         )
@@ -380,10 +379,7 @@ fun MainNavigation(
                             onToggleFavorite = appViewModel::toggleFavorite,
                             onBack = { backStack.removeLastOrNull() },
                             onOpenProduct = { id -> backStack.add(ProductDetail(id)) },
-                            onGhostProduct = { id ->
-                                appViewModel.quickGhostCatalogProduct(id, DEFAULT_GHOST_COOLDOWN_MILLIS)
-                                backStack.add(Cooldowns)
-                            }
+                            onGhostProduct = { id -> appViewModel.addToCart(id) }
                         )
                     }
                     entry<CaptureAlmostBuy> {
@@ -464,10 +460,7 @@ fun MainNavigation(
                                 onBack = { backStack.removeLastOrNull() },
                                 onShare = { shareGhostItem(context, product.toGhostShareItem()) },
                                 onToggleFavorite = { appViewModel.toggleFavorite(product.id) },
-                                onGhost = {
-                                    appViewModel.startCoolingPeriod(product.id, DEFAULT_GHOST_COOLDOWN_MILLIS, "24 hours")
-                                    backStack.add(Cooldowns)
-                                },
+                                onGhost = { appViewModel.addToCart(product.id) },
                                 onOpenCooldown = { backStack.add(Cooldowns) }
                             )
                         }
