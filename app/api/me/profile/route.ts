@@ -16,7 +16,11 @@ type ProfileRow = {
   username: string | null;
   avatarKey: string | null;
   communityConsent: boolean;
+  gender: string | null;
+  avatarPresetId: string | null;
 };
+
+const ALLOWED_GENDERS = new Set(["male", "female"]);
 
 // The username-rename-cooldown error previously interpolated the raw
 // Date.toISOString() value (e.g. "2026-08-06T16:00:51.382Z") directly into
@@ -64,6 +68,8 @@ async function ensureUsername(row: ProfileRow, userId: number): Promise<ProfileR
           username: users.username,
           avatarKey: users.avatarKey,
           communityConsent: users.communityConsent,
+          gender: users.gender,
+          avatarPresetId: users.avatarPresetId,
         });
       return updated;
     } catch (error) {
@@ -81,6 +87,8 @@ function serialize(user: {
   username: string | null;
   avatarKey: string | null;
   communityConsent: boolean;
+  gender: string | null;
+  avatarPresetId: string | null;
 }) {
   return {
     email: user.email,
@@ -88,6 +96,8 @@ function serialize(user: {
     username: user.username,
     avatarUrl: user.avatarKey ? `/api/content-blocks/image/${user.avatarKey}` : null,
     communityConsent: user.communityConsent,
+    gender: user.gender,
+    avatarPresetId: user.avatarPresetId,
   };
 }
 
@@ -103,6 +113,8 @@ export async function GET(request: Request) {
       username: users.username,
       avatarKey: users.avatarKey,
       communityConsent: users.communityConsent,
+      gender: users.gender,
+      avatarPresetId: users.avatarPresetId,
     })
     .from(users)
     .where(eq(users.id, session.userId))
@@ -135,6 +147,30 @@ export async function PATCH(request: Request) {
     const result = sanitizeShortText(payload.displayName, "displayName", 80);
     if (result.error) return jsonNoStore({ error: result.error }, { status: 400 });
     updates.displayName = result.value || null;
+  }
+
+  if (payload.gender !== undefined) {
+    if (payload.gender !== null && typeof payload.gender !== "string") {
+      return jsonNoStore({ error: "gender must be a string or null" }, { status: 400 });
+    }
+    const normalized = typeof payload.gender === "string" ? payload.gender.trim().toLowerCase() : null;
+    if (normalized !== null && !ALLOWED_GENDERS.has(normalized)) {
+      return jsonNoStore({ error: "gender must be one of: male, female" }, { status: 400 });
+    }
+    updates.gender = normalized;
+  }
+
+  // No fixed set of valid ids yet - the preset avatar picker (19 images) isn't
+  // built. Accept any short string for now so this field is ready to wire the
+  // picker into once it exists, rather than guessing an enum ahead of time.
+  if (payload.avatarPresetId !== undefined) {
+    if (payload.avatarPresetId === null) {
+      updates.avatarPresetId = null;
+    } else {
+      const result = sanitizeShortText(payload.avatarPresetId, "avatarPresetId", 80);
+      if (result.error) return jsonNoStore({ error: result.error }, { status: 400 });
+      updates.avatarPresetId = result.value || null;
+    }
   }
 
   if (payload.communityConsent !== undefined) {
@@ -189,6 +225,8 @@ export async function PATCH(request: Request) {
         username: users.username,
         avatarKey: users.avatarKey,
         communityConsent: users.communityConsent,
+        gender: users.gender,
+        avatarPresetId: users.avatarPresetId,
       });
     return jsonNoStore({ profile: serialize(user) });
   } catch (error) {

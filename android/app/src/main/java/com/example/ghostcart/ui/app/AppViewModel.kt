@@ -746,6 +746,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectProfile(profile: String) {
         _uiState.update { it.copy(selectedProfile = profile) }
+        // Persist server-side (not just this in-memory pick) so it survives a
+        // reinstall/device swap and is available later as the default avatar.
+        // Fire-and-forget: a failure here shouldn't block onboarding, since
+        // the local selection already drives the picker's UI immediately.
+        if (_uiState.value.authEmail != null) {
+            viewModelScope.launch {
+                CommunityProfileRepository.updateProfile(getApplication(), gender = profile.lowercase())
+                    .onSuccess { updated -> _uiState.update { it.copy(profile = updated) } }
+            }
+        }
     }
 
     fun toggleOverspendCategory(id: String) {

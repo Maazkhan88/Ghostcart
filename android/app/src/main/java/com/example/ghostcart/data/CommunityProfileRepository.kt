@@ -14,7 +14,9 @@ data class UserProfile(
     val displayName: String?,
     val username: String?,
     val avatarUrl: String?,
-    val communityConsent: Boolean
+    val communityConsent: Boolean,
+    val gender: String?,
+    val avatarPresetId: String?
 )
 
 // "Cooled & saved" = an almost-buy explicitly resolved "skipped" after
@@ -38,7 +40,9 @@ private fun parseProfile(json: JSONObject): UserProfile = UserProfile(
     displayName = json.nullableStringOrNull("displayName"),
     username = json.nullableStringOrNull("username"),
     avatarUrl = json.nullableStringOrNull("avatarUrl")?.let { "${ApiConfig.BASE_URL}$it" },
-    communityConsent = json.optBoolean("communityConsent", false)
+    communityConsent = json.optBoolean("communityConsent", false),
+    gender = json.nullableStringOrNull("gender"),
+    avatarPresetId = json.nullableStringOrNull("avatarPresetId")
 )
 
 // Every call here requires the bearer token AuthRepository persists on
@@ -57,7 +61,9 @@ object CommunityProfileRepository {
         context: Context,
         displayName: String? = null,
         username: String? = null,
-        communityConsent: Boolean? = null
+        communityConsent: Boolean? = null,
+        gender: String? = null,
+        avatarPresetId: String? = null
     ): Result<UserProfile> = withContext(Dispatchers.IO) {
         runCatching {
             val token = AuthRepository.getToken(context) ?: throw IllegalStateException("Not signed in")
@@ -65,6 +71,8 @@ object CommunityProfileRepository {
                 if (displayName != null) put("displayName", displayName)
                 if (username != null) put("username", username)
                 if (communityConsent != null) put("communityConsent", communityConsent)
+                if (gender != null) put("gender", gender)
+                if (avatarPresetId != null) put("avatarPresetId", avatarPresetId)
             }
             val json = authorizedRequest("/api/me/profile", "PATCH", token, payload)
             parseProfile(json.getJSONObject("profile"))

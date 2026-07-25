@@ -136,6 +136,17 @@ export const users = sqliteTable("users", {
   username: text("username").unique(),
   usernameUpdatedAt: text("username_updated_at"),
   avatarKey: text("avatar_key"),
+  // The onboarding Male/Female mascot pick - persisted server-side (not just
+  // SharedPreferences) so it survives a reinstall/device swap, matching how
+  // avatarKey and communityConsent already work. "male" | "female" | null.
+  gender: text("gender"),
+  // Which of the (future) preset avatar images the user picked on the
+  // Profile screen, distinct from avatarKey (an uploaded photo's R2 key) -
+  // presets aren't user-uploaded, so they need their own id space. No
+  // picker UI exists yet; this column exists ahead of it so the eventual
+  // "default to the onboarding mascot" behavior has gender to read from,
+  // and so the preset picker can be wired straight into an existing field.
+  avatarPresetId: text("avatar_preset_id"),
   communityConsent: integer("community_consent", { mode: "boolean" }).notNull().default(true),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
