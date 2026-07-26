@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { sendCooldownResolvedEmail } from "../lib/email.ts";
+import { sendCooldownResolvedEmail, sendGhostGiftEmail } from "../lib/email.ts";
 
 const SECRET = "test-unsubscribe-secret";
 
@@ -86,4 +86,46 @@ test("treats a send failure as a soft failure, not a thrown error", async () => 
 
   const result = await sendCooldownResolvedEmail(binding, "user@example.com", "Some item", 1, "id", SECRET);
   assert.equal(result.ok, false);
+});
+
+test("sends a private simulation-safe Ghost Gift email with an app handoff", async () => {
+  const sent = [];
+  const binding = { async send(message) { sent.push(message); } };
+  const token = "A".repeat(43);
+
+  const result = await sendGhostGiftEmail(
+    binding,
+    "recipient@example.com",
+    "Aisha",
+    "Maaz",
+    token,
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(sent.length, 1);
+  const [message] = sent;
+  assert.equal(message.to, "recipient@example.com");
+  assert.equal(message.subject, "Hi Aisha, Maaz sent you a Ghost Gift idea 👻");
+  assert.match(message.html, new RegExp(`https://theghostcart\\.com/gift/${token}`));
+  assert.match(message.html, /Google Play/i);
+  assert.match(message.html, /Simulation only/i);
+  assert.match(message.html, /No gift was purchased or sent/i);
+  assert.doesNotMatch(message.html, /Payment successful|Order placed|Tax invoice/i);
+});
+
+test("escapes recipient and sender names in Ghost Gift HTML", async () => {
+  const sent = [];
+  const binding = { async send(message) { sent.push(message); } };
+
+  await sendGhostGiftEmail(
+    binding,
+    "recipient@example.com",
+    "<Aisha>",
+    '<script>alert("gift")</script>',
+    "B".repeat(43),
+  );
+
+  assert.doesNotMatch(sent[0].html, /<script>/);
+  assert.match(sent[0].html, /&lt;Aisha&gt;/);
+  assert.match(sent[0].html, /&lt;script&gt;/);
 });

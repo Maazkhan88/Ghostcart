@@ -33,6 +33,9 @@ import com.example.ghostcart.data.DeliveryStepWorker
 import com.example.ghostcart.data.GhostActivityRepository
 import com.example.ghostcart.data.GhostRanking
 import com.example.ghostcart.data.GhostCardImageExporter
+import com.example.ghostcart.data.GhostGiftDraft
+import com.example.ghostcart.data.GhostGiftRepository
+import com.example.ghostcart.data.RevealedGhostGift
 import com.example.ghostcart.data.CommunityProduct
 import com.example.ghostcart.data.DeviceLinkPreview
 import com.example.ghostcart.data.mergeDeviceMetadata
@@ -1125,7 +1128,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun createAlmostBuy(draft: AlmostBuyDraft, onCreated: (AlmostBuy) -> Unit = {}) {
+    fun createAlmostBuy(
+        draft: AlmostBuyDraft,
+        onCreated: (AlmostBuy) -> Unit = {},
+        onServerSynced: suspend (String) -> Unit = {},
+        onServerSyncFailed: () -> Unit = {}
+    ) {
         if (!requireSignIn()) return
         viewModelScope.launch {
             val groupedDraft = if (draft.ghostOrderId.isNullOrBlank()) {
@@ -1154,8 +1162,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             // signed out; the local cooldown/notification already work either way.
             val context = getApplication<Application>()
             launch {
-                AlmostBuySync.syncCreate(context, item)?.let { serverId ->
+                val serverId = AlmostBuySync.syncCreate(context, item)
+                if (serverId != null) {
                     almostBuyRepository.attachServerId(item.id, serverId)
+                    onServerSynced(serverId)
+                } else {
+                    onServerSyncFailed()
                 }
             }
         }
@@ -1206,7 +1218,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    fun placeSimulatedOrder(checkoutTotal: Int = cartSubtotal()): Boolean {
+    fun placeSimulatedOrder(
+        checkoutTotal: Int = cartSubtotal(),
+        ghostGift: GhostGiftDraft? = null
+    ): Boolean {
         val total = checkoutTotal.coerceAtLeast(0)
         if (_uiState.value.cartQuantities.isEmpty() || total <= 0) {
             showToast("Add an item before checkout")
@@ -1217,6 +1232,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             showToast("Not enough simulated balance. Add more in Ghost Wallet.")
             return false
         }
+        ghostGift?.let { draft ->
+            GhostGiftRepository.validationError(draft)?.let { error ->
+                showToast(error)
+                return false
+            }
+            if (cartProducts().none { it.id == draft.productId }) {
+                showToast("Choose a Ghost Cart item for the gift")
+                return false
+            }
+        }
         updateWalletConfig { it.copy(startingBalance = simulatedBalance - total) }
         val orderId = "GHOST-${10000 + Random.nextInt(90000)}"
         val placedAt = System.currentTimeMillis()
@@ -1224,6 +1249,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val ghostedItemCount = cartProductsWithQuantities().sumOf { it.second }
         val orderGroupId = "GO-${UUID.randomUUID()}"
         ghostedProducts.forEach { product ->
+            val giftForProduct = ghostGift?.takeIf { it.productId == product.id }
             createAlmostBuy(
                 AlmostBuyDraft(
                     name = product.name,
@@ -1236,7 +1262,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     sourceKind = "catalog",
                     ghostOrderId = orderGroupId,
                     activityKey = product.id
-                )
+                ),
+                onServerSynced = { serverId ->
+                    if (giftForProduct != null) {
+                        GhostGiftRepository.create(getApplication(), serverId, giftForProduct)
+                            .onSuccess { showToast("Ghost Gift email sent") }
+                            .onFailure { showToast(it.message ?: "Ghosted, but the gift email could not be sent") }
+                    }
+                },
+                onServerSyncFailed = {
+                    if (giftForProduct != null) {
+                        showToast("Item is cooling, but the Ghost Gift email could not be sent")
+                    }
+                }
             )
         }
         persistCartQuantities(emptyMap())
@@ -1264,10 +1302,25 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         )
         beginDeliveryClock()
         Analytics.logCheckoutCompleted(getApplication(), ghostedItemCount, total * 100)
-        showToast("Ghost Order Placed Successfully!")
+        showToast(if (ghostGift == null) "Fake Checkout complete" else "Fake Checkout complete. Sending Ghost Gift…")
 
         refreshCommunityProducts()
         return true
+    }
+
+    fun ghostRevealedGift(gift: RevealedGhostGift, onCreated: () -> Unit = {}) {
+        createAlmostBuy(
+            AlmostBuyDraft(
+                name = gift.title,
+                amountCents = gift.amountCents,
+                category = normalizeCategory(gift.category),
+                trigger = "Gift idea",
+                coolingDurationMillis = 24L * 60L * 60L * 1000L,
+                imageUrl = gift.imageUrl,
+                sourceKind = "share"
+            ),
+            onCreated = { onCreated() }
+        )
     }
 
     fun addSimulatedWalletBalance(amount: Int) {

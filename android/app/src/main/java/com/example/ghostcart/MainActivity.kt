@@ -33,10 +33,13 @@ private data class SharedGhostItemRequest(
   val requestKey: Long
 )
 
+private data class GhostGiftRequest(val token: String, val requestKey: Long)
+
 class MainActivity : ComponentActivity() {
   private val notificationCooldownId = mutableStateOf<String?>(null)
   private val sharedProductRequest = mutableStateOf<SharedProductRequest?>(null)
   private val sharedGhostItemRequest = mutableStateOf<SharedGhostItemRequest?>(null)
+  private val ghostGiftRequest = mutableStateOf<GhostGiftRequest?>(null)
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -54,6 +57,7 @@ class MainActivity : ComponentActivity() {
     setContent {
       val shared = sharedProductRequest.value
       val ghostItem = sharedGhostItemRequest.value
+      val ghostGift = ghostGiftRequest.value
       MainNavigation(
         initialCooldownId = notificationCooldownId.value,
         initialSharedUrl = shared?.url,
@@ -66,7 +70,9 @@ class MainActivity : ComponentActivity() {
         initialGhostCategory = ghostItem?.category,
         initialGhostImageUrl = ghostItem?.imageUrl,
         initialGhostSourceUrl = ghostItem?.sourceUrl,
-        ghostShareRequestKey = ghostItem?.requestKey
+        ghostShareRequestKey = ghostItem?.requestKey,
+        initialGiftToken = ghostGift?.token,
+        giftRequestKey = ghostGift?.requestKey
       )
     }
   }
@@ -80,10 +86,23 @@ class MainActivity : ComponentActivity() {
 
   private fun captureIncomingIntent(intent: Intent) {
     if (intent.action == Intent.ACTION_VIEW) {
+      if (captureGhostGiftLink(intent.data)) return
       if (captureCooldownDeepLink(intent.data)) return
       if (captureGhostShareLink(intent.data)) return
     }
     captureSharedProduct(intent)
+  }
+
+  private fun captureGhostGiftLink(uri: Uri?): Boolean {
+    if (uri == null || !uri.scheme.equals("https", true)) return false
+    if (!uri.host.equals("theghostcart.com", true)) return false
+    val segments = uri.pathSegments
+    if (segments.size != 2 || segments[0] != "gift") return false
+    val token = segments[1].takeIf { it.matches(Regex("^[A-Za-z0-9_-]{43}$")) } ?: return false
+    ghostGiftRequest.value = GhostGiftRequest(token, System.nanoTime())
+    sharedProductRequest.value = null
+    sharedGhostItemRequest.value = null
+    return true
   }
 
   // From the cooldown-resolved email's "Open Ghost Cart" link
