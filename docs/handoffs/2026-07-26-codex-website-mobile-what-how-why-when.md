@@ -76,7 +76,21 @@ The homepage remains simulation-safe throughout: no real payment, no real order,
 
 ## Deployment
 
-The review deployment is intended only for `https://test.theghostcart.com`. The live/root website must not be changed or merged without explicit approval.
+The isolated review build is live at:
+
+- `https://test.theghostcart.com`
+
+Deployment details:
+
+- The website source was first saved and deployed to the existing Sites project without changing the live/root Ghost Cart domain.
+- The review hostname is served by a dedicated Cloudflare Worker named `ghost-cart-review-proxy` using the generated Vinext build in `dist/server` and static assets in `dist/client`.
+- Despite the legacy Worker name, the final deployment serves the built application directly; it is not an HTTP proxy to the Sites hostname.
+- The reproducible review configuration is `.openai/review-site-wrangler.jsonc`.
+- Cloudflare Worker version deployed for review: `7f029458-b06c-46ea-96e5-37117c971ee8`.
+- DNS, TLS, and HTTP were verified. The review URL returned HTTP 200 with the title `Ghost Cart — Want it? Ghost it first.`
+- Live-domain mobile QA repeated at 390×844 CSS pixels with DPR 3: no horizontal overflow; the menu, FAQ, and Android/iPhone waitlist selector all worked.
+
+The live/root website was not changed. Do not merge or repoint the root domain without explicit approval.
 
 ## Rollback
 
