@@ -143,7 +143,9 @@ Starting commit: `dc31d8a8ff879439cb7f60c97f8b651d7699b1e7`
 4. Test a recipient reveal while signed in with the exact invited email and
    confirm that the item appears under Profile → Gifts → Received.
 
-No migration, deployment, merge, push, or Play release was performed.
+Production migrations and a Worker deployment were performed only after Maaz
+explicitly requested live email/tablet QA. No merge, branch push, or Play
+release was performed.
 
 ## Rollback
 

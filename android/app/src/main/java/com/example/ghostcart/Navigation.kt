@@ -681,6 +681,20 @@ fun MainNavigation(
                             }
                         )
                     }
+                    entry<GhostGiftReveal> { key ->
+                        GhostGiftRevealScreen(
+                            token = key.token,
+                            onBack = {
+                                if (backStack.size > 1) backStack.removeLastOrNull()
+                                else backStack.add(Home)
+                            },
+                            onGhostGift = { gift ->
+                                appViewModel.ghostRevealedGift(gift) {
+                                    backStack.add(Cooldowns)
+                                }
+                            }
+                        )
+                    }
                     entry<OrderGhostedSuccess> {
                         OrderGhostedSuccessScreen(
                             orderId = state.lastOrderId,

@@ -552,6 +552,110 @@ fun GhostCheckoutScreen(
         }
         }
 
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(SoftGray)
+                .border(1.dp, FaintBorder, RoundedCornerShape(16.dp))
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().clickable {
+                    sendAsGift = !sendAsGift
+                    giftError = null
+                },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = sendAsGift,
+                    onCheckedChange = { sendAsGift = it; giftError = null }
+                )
+                Column(modifier = Modifier.padding(start = 8.dp)) {
+                    Text("Send as a gift", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("Send a private simulated gift", color = MutedText, fontSize = 11.sp)
+                }
+            }
+
+            if (sendAsGift) {
+                Text(
+                    "No gift is purchased or delivered. The selected item still enters your normal 24-hour cooldown.",
+                    color = Ink,
+                    fontSize = 11.sp,
+                    lineHeight = 16.sp,
+                    modifier = Modifier.padding(top = 10.dp)
+                )
+                if (products.size > 1) {
+                    Text(
+                        "Choose one gift",
+                        color = Ink,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 14.dp)
+                    )
+                    products.forEach { (product, _) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedGiftProductId = product.id }
+                                .padding(vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedGiftProductId == product.id,
+                                onClick = { selectedGiftProductId = product.id }
+                            )
+                            Text(product.name, color = Ink, fontSize = 11.sp, maxLines = 2)
+                        }
+                    }
+                }
+                OutlinedTextField(
+                    value = recipientName,
+                    onValueChange = { recipientName = it.take(80); giftError = null },
+                    label = { Text("Recipient name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
+                )
+                OutlinedTextField(
+                    value = recipientEmail,
+                    onValueChange = { recipientEmail = it.take(254); giftError = null },
+                    label = { Text("Recipient email") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { recipientConsent = !recipientConsent; giftError = null }
+                        .padding(top = 8.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Checkbox(
+                        checked = recipientConsent,
+                        onCheckedChange = { recipientConsent = it; giftError = null }
+                    )
+                    Text(
+                        "I confirm this person expects an email from me.",
+                        color = Ink,
+                        fontSize = 11.sp,
+                        lineHeight = 16.sp,
+                        modifier = Modifier.padding(start = 8.dp, top = 12.dp)
+                    )
+                }
+                giftError?.let {
+                    Text(
+                        it,
+                        color = DangerRed,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
+                }
+            }
+        }
+
         Text(text = "Simulation Speed (per step)", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 18.dp))
         Row(
             modifier = Modifier
