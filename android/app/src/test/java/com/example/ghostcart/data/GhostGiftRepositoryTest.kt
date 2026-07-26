@@ -20,7 +20,7 @@ class GhostGiftRepositoryTest {
     @Test
     fun requiresAProductRecipientIdentityAndExpectedEmailConsent() {
         assertEquals(
-            "Choose an item to send as a Ghost Gift",
+            "Choose an item to send as a gift",
             GhostGiftRepository.validationError(validDraft().copy(productId = ""))
         )
         assertEquals(

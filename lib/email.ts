@@ -82,14 +82,14 @@ export async function sendGhostGiftEmail(
   try {
     const revealUrl = `https://theghostcart.com/gift/${encodeURIComponent(revealToken)}`;
     const teaserUrl = `https://theghostcart.com/api/ghost-gifts/${encodeURIComponent(revealToken)}/teaser-image`;
-    const subject = `Hi ${recipientName}, ${senderName} sent you a Ghost Gift idea 👻`;
+    const subject = `Hi ${recipientName}, ${senderName} sent you a gift`;
     await email.send({
       to,
       from: FROM,
       subject,
       html: ghostGiftHtml(recipientName, senderName, revealUrl, teaserUrl),
-      text: `Hi ${recipientName}, ${senderName} shared a Ghost Gift idea with you. ` +
-        `This is a simulation only: no gift was purchased, paid for, or sent. ` +
+      text: `Hi ${recipientName}, ${senderName} sent you a gift in Ghost Cart. ` +
+        `The picture stays hidden until you reveal it in the app. This is a simulation only: no gift was purchased, paid for, or sent. ` +
         `View it privately in Ghost Cart: ${revealUrl}`,
     });
     return { ok: true };
@@ -116,11 +116,11 @@ function ghostGiftHtml(
             <span style="color:#ffffff;font-size:20px;font-weight:800;vertical-align:middle;padding-left:8px;">Ghost Cart</span>
           </td></tr>
           <tr><td style="padding:32px;">
-            <p style="margin:0 0 8px;color:#64d64a;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;">A private Ghost Gift idea</p>
-            <h1 style="margin:0 0 12px;font-size:24px;line-height:1.2;color:#050505;">Hi ${escapeHtml(recipientName)}, ${escapeHtml(senderName)} thought of you.</h1>
-            <p style="margin:0 0 22px;font-size:15px;line-height:1.55;color:#3a3a3a;">The item is hidden until you open it privately in Ghost Cart.</p>
-            <img src="${teaserUrl}" width="416" height="250" alt="Blurred Ghost Gift teaser" style="display:block;width:100%;height:250px;object-fit:cover;border-radius:16px;background:#f4f4f4;" />
-            <a href="${revealUrl}" style="display:block;margin-top:22px;background:#64d64a;color:#050505;font-weight:800;font-size:15px;text-align:center;text-decoration:none;padding:15px 24px;border-radius:999px;">View in Ghost Cart</a>
+            <p style="margin:0 0 8px;color:#64d64a;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;">A private gift</p>
+            <h1 style="margin:0 0 12px;font-size:24px;line-height:1.2;color:#050505;">Hi ${escapeHtml(recipientName)}, ${escapeHtml(senderName)} sent you a gift.</h1>
+            <p style="margin:0 0 22px;font-size:15px;line-height:1.55;color:#3a3a3a;">The product picture is blurred here. Reveal it privately in the Ghost Cart app.</p>
+            <img src="${teaserUrl}" width="416" height="250" alt="Blurred gift preview" style="display:block;width:100%;height:250px;object-fit:cover;border-radius:16px;background:#f4f4f4;" />
+            <a href="${revealUrl}" style="display:block;margin-top:22px;background:#64d64a;color:#050505;font-weight:800;font-size:15px;text-align:center;text-decoration:none;padding:15px 24px;border-radius:999px;">Reveal gift in Ghost Cart</a>
             <p style="margin:18px 0 0;font-size:12px;line-height:1.5;color:#666660;">If Ghost Cart is installed, this opens the app. Otherwise, get it from Google Play and then tap this email link again.</p>
           </td></tr>
           <tr><td style="padding:18px 32px 28px;border-top:1px solid #eeeeea;">

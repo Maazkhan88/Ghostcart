@@ -10,7 +10,8 @@ Starting commit: `dc31d8a8ff879439cb7f60c97f8b651d7699b1e7`
 - No tracked working-tree changes existed at branch creation.
 - Existing untracked `.openai/`, `.codex-remote-attachments/`, and `docs/qa/`
   files were left untouched and are not part of this work.
-- No deployment, merge, or push is authorized by this branch task.
+- No merge or push is authorized by this branch task. Live backend rollout and
+  a private test email were later explicitly requested for physical-device QA.
 
 ## Actions
 
@@ -52,6 +53,32 @@ Starting commit: `dc31d8a8ff879439cb7f60c97f8b651d7699b1e7`
     re-encode the teaser instead of exposing the original product image.
 13. Added deterministic Kotlin and Node tests for form validation, opaque
     token format, hashing/normalization, email safety, and HTML escaping.
+14. Reworded every user-facing invitation from “Ghost Gift idea” to “gift”.
+    The subject is now `Hi {recipient}, {sender} sent you a gift`.
+15. Made a real product image mandatory for gift sending. The public email and
+    handoff page expose only a strongly blurred, re-encoded private teaser;
+    they never fall back to an unblurred mascot or original product URL.
+16. Fixed production teaser rendering. A Worker cannot recursively fetch an
+    image from its own custom domain, so bundled product images now come from
+    the Cloudflare `ASSETS` binding and rehosted product images are read
+    directly from R2 before the Images binding blurs and re-encodes them.
+17. Added recipient-account attachment at reveal time. A revealed gift is
+    attached only when the signed-in account email hashes to the intended
+    recipient email; the plaintext recipient email is still not stored.
+18. Added Profile → Gifts in Android with separate Received and Sent tabs,
+    loading/error/empty states, product cards, status, sender label for
+    received gifts, and a persistent simulation disclosure.
+19. Added migration `0021_gift_recipient_accounts.sql`, which stores only the
+    matched recipient user ID and preserves gifts if that account is deleted.
+20. Applied migrations 0018, 0020, and 0021 to the canonical production D1
+    database `ghostcart-v2-db`, then deployed the Worker to theghostcart.com.
+21. Sent a corrected private QA gift email to the user-requested address. The
+    gift ID is `be620ff0-f518-4a67-a24b-3a21256c002b`; it expires on 2026-08-02.
+22. Installed a side-by-side QA build (`com.ghostcart.app.giftqa`) on the
+    connected Samsung SM-T735 without replacing the signed Play test build.
+    Signed in, opened Profile → Gifts, and visually verified both Received and
+    Sent tabs. Restored the canonical `com.ghostcart.app` package immediately
+    after QA.
 
 ## Changed files
 
@@ -63,6 +90,8 @@ Starting commit: `dc31d8a8ff879439cb7f60c97f8b651d7699b1e7`
 - `android/app/src/main/java/com/example/ghostcart/ui/app/AppViewModel.kt`
 - `android/app/src/main/java/com/example/ghostcart/ui/checkout/CheckoutFlowScreens.kt`
 - `android/app/src/main/java/com/example/ghostcart/ui/gifts/GhostGiftRevealScreen.kt`
+- `android/app/src/main/java/com/example/ghostcart/ui/gifts/GiftsScreen.kt`
+- `android/app/src/main/java/com/example/ghostcart/ui/v2/GhostCartV2Screens.kt`
 - `android/app/src/test/java/com/example/ghostcart/data/GhostGiftRepositoryTest.kt`
 - `app/api/ghost-gifts/route.ts`
 - `app/api/ghost-gifts/reveal/route.ts`
@@ -73,6 +102,7 @@ Starting commit: `dc31d8a8ff879439cb7f60c97f8b651d7699b1e7`
 - `app/site.css`
 - `db/schema.ts`
 - `drizzle/0020_ghost_gifts.sql`
+- `drizzle/0021_gift_recipient_accounts.sql`
 - `lib/email.ts`
 - `lib/ghost-gifts.ts`
 - `package.json`
@@ -93,29 +123,35 @@ Starting commit: `dc31d8a8ff879439cb7f60c97f8b651d7699b1e7`
   it resolves `EMAIL`, `DB`, `CONTENT_MEDIA`, and `IMAGES` bindings.
 - `git diff --check`: passed (only the repository's normal Windows line-ending
   warnings were emitted).
-- Physical-tablet install was deliberately non-destructive. Android rejected
-  the debug APK because the installed Play/test app has a different signing
-  certificate. The installed app and its data were not removed or changed.
+- Physical-tablet QA passed in a deliberately separate package. The installed
+  Play/test app and its data were not removed or changed. Profile → Gifts,
+  Received/Sent switching, empty state, pending sent gift, product art, amount,
+  status, and the bottom navigation were visually verified in dark mode.
+- Production teaser endpoint QA returned HTTP 200 `image/jpeg` and a visibly
+  strong blur after the ASSETS/R2 source fix.
+- Live Worker version after the teaser fix:
+  `24855d9c-7605-4bec-a490-680a903aeb18`.
 
 ## Rollout prerequisites (not performed)
 
 1. Review this branch and its copy/UX.
-2. Apply `drizzle/0020_ghost_gifts.sql` to the intended D1 environment.
-3. Confirm Cloudflare Email Sending remains onboarded for
-   `notifications@theghostcart.com` and that Images transformations are
-   enabled for the account.
-4. Deploy the Worker/web changes, then build a correctly signed Android test
-   artifact containing the App Link and reveal UI.
-5. Test installed-app and no-app gift links on a recipient device. During
+2. Build a correctly signed Android test artifact containing the App Link,
+   reveal UI, and Profile gift history, then upload it to the closed track.
+3. Test installed-app and no-app gift links on a recipient device. During
    closed testing, the Google Play fallback is available only to eligible
    testers until the production listing is public.
+4. Test a recipient reveal while signed in with the exact invited email and
+   confirm that the item appears under Profile → Gifts → Received.
 
 No migration, deployment, merge, push, or Play release was performed.
 
 ## Rollback
 
 - Before merge: switch away from `phase-gifting/ghost-gifts` or delete the
-  branch; production is unchanged.
-- After a future merge: revert the gifting commit, remove the Worker routes,
-  and leave the additive D1 table unused. Do not drop the table until any
-  issued tokens have expired and the rollback has been verified.
+  branch; the Android source remains isolated, but the requested backend QA
+  deployment is live.
+- To roll back the live backend, deploy the prior Worker version, leave the
+  additive gift tables unused, and do not drop them until issued tokens have
+  expired and rollback is verified.
+- After a future merge: revert the gifting commits and deploy the resulting
+  Worker/Android release through the normal signed release process.

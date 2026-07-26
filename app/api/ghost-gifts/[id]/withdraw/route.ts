@@ -6,7 +6,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   if (session instanceof Response) return session;
   const { id } = await context.params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) {
-    return Response.json({ error: "Ghost Gift ID is invalid" }, { status: 400 });
+    return Response.json({ error: "Gift ID is invalid" }, { status: 400 });
   }
   const result = await getD1().prepare(
     `UPDATE ghost_gifts SET status = 'withdrawn', withdrawn_at = CURRENT_TIMESTAMP,
@@ -14,7 +14,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
      WHERE id = ? AND sender_user_id = ? AND status IN ('pending', 'revealed')`,
   ).bind(id, session.userId).run();
   if (Number(result.meta.changes ?? 0) === 0) {
-    return Response.json({ error: "Ghost Gift not found or already closed" }, { status: 404 });
+    return Response.json({ error: "Gift not found or already closed" }, { status: 404 });
   }
   return Response.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
 }

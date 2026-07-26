@@ -24,11 +24,28 @@ data class RevealedGhostGift(
     val disclosure: String
 )
 
+data class GiftListItem(
+    val id: String,
+    val status: String,
+    val itemTitle: String,
+    val category: String,
+    val imageUrl: String?,
+    val amountCents: Long,
+    val createdAt: String,
+    val revealedAt: String?,
+    val senderName: String? = null
+)
+
+data class GiftLists(
+    val received: List<GiftListItem> = emptyList(),
+    val sent: List<GiftListItem> = emptyList()
+)
+
 object GhostGiftRepository {
     private val EMAIL_PATTERN = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
 
     fun validationError(draft: GhostGiftDraft): String? = when {
-        draft.productId.isBlank() -> "Choose an item to send as a Ghost Gift"
+        draft.productId.isBlank() -> "Choose an item to send as a gift"
         draft.recipientName.trim().isEmpty() -> "Enter the recipient's name"
         draft.recipientName.trim().length > 80 -> "Recipient name is too long"
         !EMAIL_PATTERN.matches(draft.recipientEmail.trim()) -> "Enter a valid recipient email"
@@ -43,7 +60,7 @@ object GhostGiftRepository {
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             validationError(draft)?.let { throw IllegalArgumentException(it) }
-            val token = AuthRepository.getToken(context) ?: error("Sign in to send a Ghost Gift")
+            val token = AuthRepository.getToken(context) ?: error("Sign in to send a gift")
             val payload = JSONObject()
                 .put("almostBuyId", serverAlmostBuyId)
                 .put("recipientName", draft.recipientName.trim())
@@ -54,15 +71,15 @@ object GhostGiftRepository {
         }
     }
 
-    suspend fun reveal(token: String, acceptedPrivacy: Boolean): Result<RevealedGhostGift> =
+    suspend fun reveal(context: Context, token: String, acceptedPrivacy: Boolean): Result<RevealedGhostGift> =
         withContext(Dispatchers.IO) {
             runCatching {
-                require(token.matches(Regex("^[A-Za-z0-9_-]{43}$"))) { "This Ghost Gift link is invalid" }
-                require(acceptedPrivacy) { "Accept the privacy notice to reveal this Ghost Gift" }
+                require(token.matches(Regex("^[A-Za-z0-9_-]{43}$"))) { "This gift link is invalid" }
+                require(acceptedPrivacy) { "Accept the privacy notice to reveal this gift" }
                 val response = request(
                     "/api/ghost-gifts/reveal",
                     "POST",
-                    null,
+                    AuthRepository.getToken(context),
                     JSONObject().put("token", token).put("acceptedPrivacy", true)
                 )
                 val gift = response.getJSONObject("ghostGift")
@@ -80,6 +97,35 @@ object GhostGiftRepository {
                 )
             }
         }
+
+    suspend fun list(context: Context): Result<GiftLists> = withContext(Dispatchers.IO) {
+        runCatching {
+            val token = AuthRepository.getToken(context) ?: error("Sign in to view gifts")
+            val response = request("/api/ghost-gifts", "GET", token, null)
+            fun readItems(key: String): List<GiftListItem> {
+                val array = response.optJSONArray(key) ?: return emptyList()
+                return buildList {
+                    for (index in 0 until array.length()) {
+                        val item = array.getJSONObject(index)
+                        add(
+                            GiftListItem(
+                                id = item.getString("id"),
+                                status = item.optString("status", "pending"),
+                                itemTitle = item.optString("itemTitle", "Gift"),
+                                category = item.optString("category", "Other"),
+                                imageUrl = item.optString("imageUrl").takeIf { it.isNotBlank() && it != "null" },
+                                amountCents = item.optLong("amountCents", 0L).coerceAtLeast(0L),
+                                createdAt = item.optString("createdAt"),
+                                revealedAt = item.optString("revealedAt").takeIf { it.isNotBlank() && it != "null" },
+                                senderName = item.optString("senderName").takeIf { it.isNotBlank() && it != "null" }
+                            )
+                        )
+                    }
+                }
+            }
+            GiftLists(received = readItems("receivedGifts"), sent = readItems("sentGifts"))
+        }
+    }
 
     private fun authorizedRequest(path: String, method: String, token: String, body: JSONObject): JSONObject =
         request(path, method, token, body)

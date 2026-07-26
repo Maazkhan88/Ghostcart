@@ -88,7 +88,7 @@ test("treats a send failure as a soft failure, not a thrown error", async () => 
   assert.equal(result.ok, false);
 });
 
-test("sends a private simulation-safe Ghost Gift email with an app handoff", async () => {
+test("sends a private simulation-safe gift email with an app handoff", async () => {
   const sent = [];
   const binding = { async send(message) { sent.push(message); } };
   const token = "A".repeat(43);
@@ -105,15 +105,18 @@ test("sends a private simulation-safe Ghost Gift email with an app handoff", asy
   assert.equal(sent.length, 1);
   const [message] = sent;
   assert.equal(message.to, "recipient@example.com");
-  assert.equal(message.subject, "Hi Aisha, Maaz sent you a Ghost Gift idea 👻");
+  assert.equal(message.subject, "Hi Aisha, Maaz sent you a gift");
   assert.match(message.html, new RegExp(`https://theghostcart\\.com/gift/${token}`));
+  assert.match(message.html, new RegExp(`/api/ghost-gifts/${token}/teaser-image`));
+  assert.match(message.html, /product picture is blurred/i);
+  assert.doesNotMatch(message.html, /Ghost Gift idea/i);
   assert.match(message.html, /Google Play/i);
   assert.match(message.html, /Simulation only/i);
   assert.match(message.html, /No gift was purchased or sent/i);
   assert.doesNotMatch(message.html, /Payment successful|Order placed|Tax invoice/i);
 });
 
-test("escapes recipient and sender names in Ghost Gift HTML", async () => {
+test("escapes recipient and sender names in gift HTML", async () => {
   const sent = [];
   const binding = { async send(message) { sent.push(message); } };
 
