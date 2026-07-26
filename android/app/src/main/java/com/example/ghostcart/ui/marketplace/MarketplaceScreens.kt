@@ -55,8 +55,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -86,6 +92,8 @@ import com.example.ghostcart.ui.common.PrimaryButton
 import com.example.ghostcart.ui.common.RoundIconButton
 import com.example.ghostcart.ui.common.SecondaryButton
 import com.example.ghostcart.ui.common.materialIconFor
+import com.example.ghostcart.ui.tutorial.TutorialGuideOverlay
+import com.example.ghostcart.ui.tutorial.TutorialGuideSpec
 import coil3.compose.AsyncImage
 
 @Composable
@@ -945,13 +953,33 @@ fun ProductDetailScreen(
     onShare: () -> Unit,
     onToggleFavorite: () -> Unit,
     onGhost: () -> Unit,
+    isInCart: Boolean = false,
+    onOpenCart: () -> Unit = {},
     onOpenCooldown: () -> Unit,
+    tutorialGuide: TutorialGuideSpec? = null,
     modifier: Modifier = Modifier
 ) {
     val coolingComplete = coolingUntilMillis != null && coolingUntilMillis <= System.currentTimeMillis()
     val coolingActive = coolingUntilMillis != null && !coolingComplete
+    var rootPosition by remember { mutableStateOf(Offset.Zero) }
+    var tutorialTarget by remember { mutableStateOf<Rect?>(null) }
+    val tutorialActionText = if (isInCart) "View Ghost Cart" else "Add to cart"
+    val tutorialAction = if (isInCart) onOpenCart else onGhost
 
-    Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Paper)
+            .onGloballyPositioned { rootPosition = it.positionInRoot() }
+    ) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 16.dp)
+            .padding(bottom = if (tutorialGuide != null) 104.dp else 0.dp)
+            .then(if (tutorialGuide != null) Modifier.blur(5.dp) else Modifier)
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             BackButton(onBack = onBack)
             Text(text = "Ghost Cart", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f).padding(start = 10.dp))
@@ -1045,20 +1073,25 @@ fun ProductDetailScreen(
             HighlightPoint(Icons.Filled.Shield, "Decide calmly", "Skip, buy, record,\nor restart.")
         }
 
-        PrimaryButton(
+        if (tutorialGuide == null) PrimaryButton(
             text = when {
                 coolingComplete -> "Make your decision"
                 coolingActive -> "View cooldown"
+                isInCart -> "View Ghost Cart"
                 else -> "Add to cart"
             },
-            onClick = if (coolingUntilMillis != null) onOpenCooldown else onGhost,
+            onClick = when {
+                coolingUntilMillis != null -> onOpenCooldown
+                isInCart -> onOpenCart
+                else -> onGhost
+            },
             modifier = Modifier.padding(top = 18.dp),
             containerColor = GhostGreen,
             contentColor = Color(0xFF050505)
         )
-        Text(
+        if (tutorialGuide == null) Text(
             text = if (coolingUntilMillis == null) {
-                "Adds to your Ghost Cart. The cooldown starts once you check out."
+                if (isInCart) "The item is waiting in your Ghost Cart." else "Adds to your Ghost Cart. The cooldown starts once you check out."
             } else if (coolingComplete) {
                 "Your item is ready. Skip it, visit the source, record it as bought, or restart the timer."
             } else {
@@ -1069,6 +1102,34 @@ fun ProductDetailScreen(
             modifier = Modifier.padding(top = 7.dp, bottom = 24.dp)
         )
 
+    }
+    if (tutorialGuide != null) {
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .background(Paper)
+                .border(1.dp, FaintBorder)
+                .padding(horizontal = 20.dp, vertical = 12.dp)
+        ) {
+            PrimaryButton(
+                text = tutorialActionText,
+                onClick = tutorialAction,
+                containerColor = GhostGreen,
+                contentColor = Color(0xFF050505),
+                modifier = Modifier.onGloballyPositioned { coordinates ->
+                    tutorialTarget = coordinates.boundsInRoot().translate(
+                        Offset(-rootPosition.x, -rootPosition.y)
+                    )
+                }
+            )
+        }
+        TutorialGuideOverlay(
+            targetBounds = tutorialTarget,
+            guide = tutorialGuide,
+            modifier = Modifier.fillMaxSize()
+        )
+    }
     }
 }
 

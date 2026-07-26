@@ -107,6 +107,7 @@ import com.example.ghostcart.data.ListingProductStub
 import com.example.ghostcart.data.MarketplaceProduct
 import com.example.ghostcart.data.ProductImportState
 import com.example.ghostcart.data.WalletConfig
+import com.example.ghostcart.data.TutorialStep
 import com.example.ghostcart.data.progressSummary
 import com.example.ghostcart.theme.DangerRed
 import com.example.ghostcart.theme.FaintBorder
@@ -1155,9 +1156,15 @@ fun ProfileScreen(
     onSelectAvatarPreset: (String) -> Unit = {},
     onSetCommunityOptIn: (username: String?, consent: Boolean) -> Unit = { _, _ -> },
     onOpenLeaderboard: () -> Unit = {},
+    onReplayTutorial: () -> Unit = {},
+    tutorialDebugState: String = "",
+    onResetTutorialDebug: () -> Unit = {},
+    onClearTutorialSessionDebug: () -> Unit = {},
+    onStartTutorialStepDebug: (TutorialStep) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var confirmDelete by remember { mutableStateOf(false) }
+    var showTutorialDebug by remember { mutableStateOf(false) }
     val requestNotifications = rememberNotificationPermissionRequest()
 
     LazyColumn(
@@ -1195,6 +1202,30 @@ fun ProfileScreen(
                             label = { Text(theme) },
                             colors = FilterChipDefaults.filterChipColors(selectedContainerColor = GreenTint)
                         )
+                    }
+                }
+            }
+        }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Text("Learn Ghost Cart", color = Ink, fontWeight = FontWeight.ExtraBold)
+                Text("Return to the practice flow whenever you want.", color = MutedText, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp, bottom = 4.dp))
+                LegalRow("Replay app tutorial", onReplayTutorial)
+            }
+        }
+        if (BuildConfig.DEBUG) {
+            item {
+                Column(
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SoftGray).padding(14.dp)
+                ) {
+                    Text("Tutorial debug tools", color = Ink, fontWeight = FontWeight.ExtraBold)
+                    Text(tutorialDebugState, color = MutedText, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
+                        OutlinedButton(onClick = onResetTutorialDebug, modifier = Modifier.weight(1f)) { Text("Reset") }
+                        OutlinedButton(onClick = onClearTutorialSessionDebug, modifier = Modifier.weight(1f)) { Text("Clear session") }
+                    }
+                    OutlinedButton(onClick = { showTutorialDebug = true }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                        Text("Start at selected step")
                     }
                 }
             }
@@ -1283,6 +1314,27 @@ fun ProfileScreen(
                 }) { Text("Delete", color = com.example.ghostcart.theme.DangerRed) }
             },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel)) } }
+        )
+    }
+
+    if (BuildConfig.DEBUG && showTutorialDebug) {
+        AlertDialog(
+            onDismissRequest = { showTutorialDebug = false },
+            title = { Text("Start tutorial at step") },
+            text = {
+                LazyColumn(modifier = Modifier.height(360.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    items(TutorialStep.entries) { step ->
+                        TextButton(
+                            onClick = {
+                                showTutorialDebug = false
+                                onStartTutorialStepDebug(step)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text(step.name.replace('_', ' '), modifier = Modifier.fillMaxWidth()) }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showTutorialDebug = false }) { Text("Close") } }
         )
     }
 }

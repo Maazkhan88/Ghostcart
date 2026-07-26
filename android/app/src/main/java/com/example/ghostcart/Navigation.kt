@@ -1,5 +1,6 @@
 package com.example.ghostcart
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
@@ -70,6 +72,10 @@ import com.example.ghostcart.data.Marketplace
 import com.example.ghostcart.data.openProductSource
 import com.example.ghostcart.data.shareGhostItem
 import com.example.ghostcart.data.toGhostShareItem
+import com.example.ghostcart.data.TUTORIAL_PRODUCT_ID
+import com.example.ghostcart.data.TutorialStatus
+import com.example.ghostcart.data.TutorialStep
+import com.example.ghostcart.data.tutorialPracticeProduct
 import com.ghostcart.app.R
 import com.example.ghostcart.theme.FaintBorder
 import com.example.ghostcart.theme.GhostGreen
@@ -100,9 +106,12 @@ import com.example.ghostcart.ui.v2.LegalDocumentScreen
 import com.example.ghostcart.ui.v2.ProfileScreen
 import com.example.ghostcart.ui.v2.ProgressScreen
 import com.example.ghostcart.ui.v2.ShareQueueReviewScreen
+import com.example.ghostcart.ui.tutorial.TutorialScreen
+import com.example.ghostcart.ui.tutorial.TutorialGuideSpec
+import com.example.ghostcart.ui.tutorial.TutorialViewModel
 import kotlinx.coroutines.delay
 
-private val onboardingDestinations: Set<NavKey> = setOf(Splash, Auth, ProfileSelect, Personalization)
+private val onboardingDestinations: Set<NavKey> = setOf(Splash, Auth, ProfileSelect, Personalization, Tutorial)
 
 private fun selectedBottomDestination(current: NavKey?): NavKey = when (current) {
     Cooldowns -> Cooldowns
@@ -138,10 +147,15 @@ fun MainNavigation(
     }
     val backStack = rememberNavBackStack(initial)
     val appViewModel: AppViewModel = viewModel()
+    val tutorialViewModel: TutorialViewModel = viewModel()
     val context = LocalContext.current
+    val tutorialProduct = remember(context.packageName) { tutorialPracticeProduct(context) }
     val state by appViewModel.uiState.collectAsState()
+    val tutorialState by tutorialViewModel.state.collectAsState()
     val current = backStack.lastOrNull()
-    val showBottomNav = current != null && current !in onboardingDestinations
+    val tutorialActive = tutorialState.status == TutorialStatus.IN_PROGRESS
+    val showBottomNav = current != null && current !in onboardingDestinations && !tutorialActive
+    var showTutorialExitDialog by remember { mutableStateOf(false) }
     var dismissedOrderId by remember { mutableStateOf<String?>(null) }
     // Full-screen story viewer overlay state - lives here (not inside
     // GhostHomeScreen) so it renders above the bottom nav/Scaffold entirely,
@@ -155,6 +169,16 @@ fun MainNavigation(
         "Dark" -> true
         "Light" -> false
         else -> isSystemInDarkTheme()
+    }
+    val tutorialProductionRoute = (current is ProductDetail && current.productId == TUTORIAL_PRODUCT_ID) ||
+        current == GhostCartList || current == GhostCheckout
+    BackHandler(enabled = tutorialActive && tutorialProductionRoute) {
+        showTutorialExitDialog = true
+    }
+
+    LaunchedEffect(state.simulationConsentStatus?.accepted, state.simulationConsentStatus?.version) {
+        val consent = state.simulationConsentStatus
+        if (consent?.accepted == true) tutorialViewModel.recordConsentAccepted()
     }
 
     LaunchedEffect(initialCooldownId) {
@@ -239,7 +263,9 @@ fun MainNavigation(
     } else if (!consentStatus.accepted) {
         SimulationConsentScreen(
             consentText = consentStatus.consentText,
-            onAccept = appViewModel::acceptSimulationConsent
+            onAccept = {
+                appViewModel.acceptSimulationConsent()
+            }
         )
     } else {
     Box(Modifier.fillMaxSize()) {
@@ -277,9 +303,70 @@ fun MainNavigation(
                             stories = state.ghostCartStories,
                             onFinished = {
                                 backStack.clear()
-                                backStack.add(if (state.authEmail == null) Auth else Home)
+                                if (tutorialViewModel.shouldAutoLaunch()) {
+                                    tutorialViewModel.startIfNeeded()
+                                    backStack.add(Tutorial)
+                                } else {
+                                    backStack.add(if (state.authEmail == null) Auth else Home)
+                                }
                             }
                         )
+                    }
+                    entry<Tutorial> {
+                        val productionStep = tutorialState.currentStep in setOf(
+                            TutorialStep.PRODUCT,
+                            TutorialStep.CART,
+                            TutorialStep.COOLDOWN,
+                            TutorialStep.FAKE_CHECKOUT
+                        )
+                        LaunchedEffect(tutorialState.currentStep) {
+                            val destination: NavKey? = when (tutorialState.currentStep) {
+                                TutorialStep.PRODUCT -> ProductDetail(TUTORIAL_PRODUCT_ID)
+                                TutorialStep.CART, TutorialStep.COOLDOWN -> GhostCartList
+                                TutorialStep.FAKE_CHECKOUT -> GhostCheckout
+                                else -> null
+                            }
+                            if (destination != null && backStack.lastOrNull() != destination) {
+                                backStack.add(destination)
+                            }
+                        }
+                        if (productionStep) {
+                            Box(Modifier.fillMaxSize().background(Paper))
+                        } else {
+                            TutorialScreen(
+                                state = tutorialState,
+                                onContinueWelcome = tutorialViewModel::continueFromWelcome,
+                                onSkip = {
+                                    tutorialViewModel.skip()
+                                    backStack.clear()
+                                    backStack.add(Home)
+                                },
+                                onOpenPracticeProduct = {
+                                    tutorialViewModel.openPracticeProduct()
+                                    backStack.add(ProductDetail(TUTORIAL_PRODUCT_ID))
+                                },
+                                onAddToCart = tutorialViewModel::addPracticeItemToCart,
+                                onOpenCooldown = tutorialViewModel::openCooldownPicker,
+                                onSelectTutorialCooldown = tutorialViewModel::selectTutorialCooldown,
+                                onContinueToCheckout = tutorialViewModel::continueToFakeCheckout,
+                                onCompleteFakeCheckout = tutorialViewModel::completeFakeCheckout,
+                                onFinishCooling = tutorialViewModel::finishCooling,
+                                onChooseDecision = tutorialViewModel::chooseDecision,
+                                onContinueFromReceipt = tutorialViewModel::continueFromReceipt,
+                                onStartDelivery = tutorialViewModel::startTutorialDelivery,
+                                onDeliveryFinished = {
+                                    tutorialViewModel.complete()
+                                    backStack.clear()
+                                    backStack.add(Home)
+                                },
+                                onReplay = tutorialViewModel::replay,
+                                onExit = {
+                                    tutorialViewModel.skip(exitDuringTutorial = true)
+                                    backStack.clear()
+                                    backStack.add(Home)
+                                }
+                            )
+                        }
                     }
                     entry<Auth> {
                         AuthScreen(
@@ -451,59 +538,121 @@ fun MainNavigation(
                         )
                     }
                     entry<ProductDetail> { key ->
-                        val product = appViewModel.findProduct(key.productId)
+                        // Keep the tutorial product backed by the isolated local session for as
+                        // long as this destination remains on the back stack. The tutorial step
+                        // advances before navigation to the cart, so tying this lookup strictly
+                        // to PRODUCT can briefly make the item disappear and pop the destination
+                        // that was just opened.
+                        val tutorialProductScreen = tutorialActive &&
+                            key.productId == TUTORIAL_PRODUCT_ID
+                        val product = if (tutorialProductScreen) tutorialProduct else appViewModel.findProduct(key.productId)
                         if (product == null) {
                             LaunchedEffect(key.productId) { backStack.removeLastOrNull() }
                         } else {
                             ProductDetailScreen(
                                 product = product,
-                                coolingUntilMillis = state.coolingUntilByProductId[product.id],
-                                isFavorite = product.id in state.favoriteProductIds,
-                                ghostCount = product.ghostCount + (state.ghostCountsByProductId[product.id] ?: 0),
-                                onBack = { backStack.removeLastOrNull() },
-                                onShare = { shareGhostItem(context, product.toGhostShareItem()) },
-                                onToggleFavorite = { appViewModel.toggleFavorite(product.id) },
-                                onGhost = { appViewModel.addToCart(product.id) },
-                                onOpenCooldown = { backStack.add(Cooldowns) }
+                                coolingUntilMillis = if (tutorialProductScreen) null else state.coolingUntilByProductId[product.id],
+                                isFavorite = !tutorialProductScreen && product.id in state.favoriteProductIds,
+                                ghostCount = if (tutorialProductScreen) 0 else product.ghostCount + (state.ghostCountsByProductId[product.id] ?: 0),
+                                onBack = { if (tutorialProductScreen) showTutorialExitDialog = true else backStack.removeLastOrNull() },
+                                onShare = { if (!tutorialProductScreen) shareGhostItem(context, product.toGhostShareItem()) },
+                                onToggleFavorite = { if (!tutorialProductScreen) appViewModel.toggleFavorite(product.id) },
+                                onGhost = {
+                                    if (tutorialProductScreen) tutorialViewModel.addPracticeItemToCart()
+                                    else appViewModel.addToCart(product.id)
+                                },
+                                isInCart = if (tutorialProductScreen) tutorialState.practiceItemInCart else product.id in state.cartQuantities,
+                                onOpenCart = {
+                                    if (tutorialProductScreen) {
+                                        tutorialViewModel.openTutorialCart()
+                                        backStack.add(GhostCartList)
+                                    } else backStack.add(GhostCartList)
+                                },
+                                onOpenCooldown = { if (!tutorialProductScreen) backStack.add(Cooldowns) },
+                                tutorialGuide = if (tutorialProductScreen) {
+                                    TutorialGuideSpec(
+                                        message = if (tutorialState.practiceItemInCart) {
+                                            "Great. Open your real Ghost Cart to continue."
+                                        } else {
+                                            "Start by adding the item to your Ghost Cart."
+                                        },
+                                        stepLabel = if (tutorialState.practiceItemInCart) "STEP 2 OF 4" else "STEP 1 OF 4"
+                                    )
+                                } else null
                             )
                         }
                     }
                     entry<GhostCartList> {
+                        val tutorialCartScreen = tutorialActive && tutorialState.currentStep in setOf(
+                            TutorialStep.CART,
+                            TutorialStep.COOLDOWN
+                        )
+                        val cartProducts = if (tutorialCartScreen) listOf(tutorialProduct to 1) else appViewModel.cartProductsWithQuantities()
                         GhostCartListScreen(
-                            products = appViewModel.cartProductsWithQuantities(),
-                            coolingUntilByProductId = state.coolingUntilByProductId,
-                            onBack = { if (backStack.size > 1) backStack.removeLastOrNull() else backStack.add(Home) },
-                            onAdd = appViewModel::addToCart,
-                            onRemove = appViewModel::removeFromCart,
-                            onClearAll = appViewModel::clearCart,
+                            products = cartProducts,
+                            coolingUntilByProductId = if (tutorialCartScreen) emptyMap() else state.coolingUntilByProductId,
+                            onBack = { if (tutorialCartScreen) showTutorialExitDialog = true else if (backStack.size > 1) backStack.removeLastOrNull() else backStack.add(Home) },
+                            onAdd = { id -> if (!tutorialCartScreen) appViewModel.addToCart(id) },
+                            onRemove = { id -> if (!tutorialCartScreen) appViewModel.removeFromCart(id) },
+                            onClearAll = { if (!tutorialCartScreen) appViewModel.clearCart() },
                             onStartCooling = { id, durationMillis, durationLabel ->
-                                appViewModel.startCoolingPeriod(id, durationMillis, durationLabel)
-                                backStack.add(Cooldowns)
-                            },
-                            onOpenProduct = { id -> backStack.add(ProductDetail(id)) },
-                            onShareProduct = { product -> shareGhostItem(context, product.toGhostShareItem()) },
-                            onCheckout = {
-                                when {
-                                    state.cartQuantities.isEmpty() -> appViewModel.showToast("Add an item before checkout")
-                                    state.authEmail == null -> backStack.add(Auth)
-                                    else -> backStack.add(GhostCheckout)
+                                if (!tutorialCartScreen) {
+                                    appViewModel.startCoolingPeriod(id, durationMillis, durationLabel)
+                                    backStack.add(Cooldowns)
                                 }
-                            }
+                            },
+                            onOpenProduct = { id -> if (!tutorialCartScreen) backStack.add(ProductDetail(id)) },
+                            onShareProduct = { product -> if (!tutorialCartScreen) shareGhostItem(context, product.toGhostShareItem()) },
+                            onCheckout = {
+                                if (tutorialCartScreen) {
+                                    tutorialViewModel.openCooldownPicker()
+                                } else {
+                                    when {
+                                        state.cartQuantities.isEmpty() -> appViewModel.showToast("Add an item before checkout")
+                                        state.authEmail == null -> backStack.add(Auth)
+                                        else -> backStack.add(GhostCheckout)
+                                    }
+                                }
+                            },
+                            tutorialGuide = if (tutorialCartScreen && tutorialState.currentStep == TutorialStep.CART) {
+                                TutorialGuideSpec(
+                                    message = "This is your simulated cart. Continue to choose a short practice cooldown.",
+                                    stepLabel = "STEP 3 OF 4"
+                                )
+                            } else null,
+                            tutorialCooldownMode = tutorialCartScreen && tutorialState.currentStep == TutorialStep.COOLDOWN,
+                            onTutorialCooldownSelected = {
+                                tutorialViewModel.selectTutorialCooldown()
+                                tutorialViewModel.continueToFakeCheckout()
+                                backStack.add(GhostCheckout)
+                            },
+                            onTutorialCooldownDismiss = tutorialViewModel::returnToTutorialCart
                         )
                     }
                     entry<GhostCheckout> {
+                        val tutorialCheckoutScreen = tutorialActive && tutorialState.currentStep == TutorialStep.FAKE_CHECKOUT
                         GhostCheckoutScreen(
-                            products = appViewModel.cartProductsWithQuantities(),
-                            walletBalance = state.walletConfig.startingBalance,
-                            simulationIntervalMinutes = state.simulationIntervalMinutes,
-                            onSelectInterval = appViewModel::setSimulationInterval,
-                            onBack = { backStack.removeLastOrNull() },
-                            onOpenWallet = { backStack.add(Progress) },
+                            products = if (tutorialCheckoutScreen) listOf(tutorialProduct to 1) else appViewModel.cartProductsWithQuantities(),
+                            walletBalance = if (tutorialCheckoutScreen) 10_000 else state.walletConfig.startingBalance,
+                            simulationIntervalMinutes = if (tutorialCheckoutScreen) 1 else state.simulationIntervalMinutes,
+                            onSelectInterval = { mins -> if (!tutorialCheckoutScreen) appViewModel.setSimulationInterval(mins) },
+                            onBack = { if (tutorialCheckoutScreen) showTutorialExitDialog = true else backStack.removeLastOrNull() },
+                            onOpenWallet = { if (!tutorialCheckoutScreen) backStack.add(Progress) },
                             onPlaceOrder = { total ->
-                                if (appViewModel.placeSimulatedOrder(total)) {
+                                if (tutorialCheckoutScreen) {
+                                    tutorialViewModel.completeFakeCheckout()
+                                    backStack.clear()
+                                    backStack.add(Tutorial)
+                                } else if (appViewModel.placeSimulatedOrder(total)) {
                                     backStack.add(OrderGhostedSuccess)
                                 }
-                            }
+                            },
+                            tutorialMode = tutorialCheckoutScreen,
+                            primaryButtonLabel = "Complete Fake Checkout".takeIf { tutorialCheckoutScreen },
+                            tutorialGuide = TutorialGuideSpec(
+                                message = "Complete the checkout feeling without spending real money.",
+                                stepLabel = "STEP 4 OF 4"
+                            ).takeIf { tutorialCheckoutScreen }
                         )
                     }
                     entry<OrderGhostedSuccess> {
@@ -561,6 +710,7 @@ fun MainNavigation(
                                 backStack.add(Auth)
                             },
                             onSignOut = {
+                                tutorialViewModel.onUserSignedOut()
                                 appViewModel.signOut()
                                 backStack.clear()
                                 backStack.add(Splash)
@@ -572,7 +722,18 @@ fun MainNavigation(
                             onUploadAvatar = appViewModel::uploadAvatar,
                             onSelectAvatarPreset = appViewModel::selectAvatarPreset,
                             onSetCommunityOptIn = appViewModel::setCommunityLeaderboardOptIn,
-                            onOpenLeaderboard = { backStack.add(Leaderboard) }
+                            onOpenLeaderboard = { backStack.add(Leaderboard) },
+                            onReplayTutorial = {
+                                tutorialViewModel.replay()
+                                backStack.add(Tutorial)
+                            },
+                            tutorialDebugState = "${tutorialState.status.name} · ${tutorialState.currentStep.name}",
+                            onResetTutorialDebug = tutorialViewModel::resetForDebug,
+                            onClearTutorialSessionDebug = tutorialViewModel::clearTutorialSession,
+                            onStartTutorialStepDebug = { step ->
+                                tutorialViewModel.startAtForDebug(step)
+                                backStack.add(Tutorial)
+                            }
                         )
                     }
                     entry<LegalDocument> { key ->
@@ -616,6 +777,29 @@ fun MainNavigation(
                 message = message,
                 onDismiss = { appViewModel.dismissInAppMessage(message.id) },
                 onOpenLink = { url -> openProductSource(context, url) }
+            )
+        }
+
+        if (showTutorialExitDialog) {
+            AlertDialog(
+                onDismissRequest = { showTutorialExitDialog = false },
+                title = { Text("Leave the tutorial?") },
+                text = { Text("The practice coffee and donut will disappear, but you can replay the tutorial later from Profile.") },
+                confirmButton = {
+                    TextButton(onClick = { showTutorialExitDialog = false }) {
+                        Text("Continue tutorial")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        showTutorialExitDialog = false
+                        tutorialViewModel.skip(exitDuringTutorial = true)
+                        backStack.clear()
+                        backStack.add(Home)
+                    }) {
+                        Text("Exit tutorial")
+                    }
+                }
             )
         }
 

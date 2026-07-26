@@ -120,4 +120,45 @@ object Analytics {
             putString("action", action)
         })
     }
+
+    fun logTutorialWelcomeViewed(context: Context, version: Int) =
+        logTutorialEvent(context, "tutorial_welcome_viewed", version)
+
+    fun logTutorialStarted(context: Context, version: Int, replayed: Boolean) =
+        logTutorialEvent(context, "tutorial_started", version, completionStatus = if (replayed) "replayed" else "started")
+
+    fun logTutorialStepCompleted(
+        context: Context,
+        version: Int,
+        stepName: String,
+        selectedDecision: String? = null
+    ) = logTutorialEvent(context, "tutorial_step_completed", version, stepName, selectedDecision = selectedDecision)
+
+    fun logTutorialSkipped(context: Context, version: Int, stepName: String) =
+        logTutorialEvent(context, "tutorial_skipped", version, stepName, completionStatus = "skipped")
+
+    fun logTutorialExited(context: Context, version: Int, stepName: String) =
+        logTutorialEvent(context, "tutorial_exited", version, stepName, completionStatus = "exited")
+
+    fun logTutorialCompleted(context: Context, version: Int) =
+        logTutorialEvent(context, "tutorial_completed", version, completionStatus = "completed")
+
+    fun logTutorialReplayed(context: Context, version: Int) =
+        logTutorialEvent(context, "tutorial_replayed", version, completionStatus = "replayed")
+
+    private fun logTutorialEvent(
+        context: Context,
+        event: String,
+        version: Int,
+        stepName: String? = null,
+        completionStatus: String? = null,
+        selectedDecision: String? = null
+    ) {
+        analytics(context).logEvent(event, Bundle().apply {
+            putInt("tutorial_version", version)
+            stepName?.let { putString("step_name", it.lowercase()) }
+            completionStatus?.let { putString("completion_status", it) }
+            selectedDecision?.let { putString("selected_decision", it.lowercase()) }
+        })
+    }
 }

@@ -3,6 +3,7 @@ package com.example.ghostcart.ui.onboarding
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
+import androidx.compose.material3.Checkbox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,21 +51,30 @@ fun SimulationConsentScreen(consentText: String, onAccept: () -> Unit, modifier:
         ) {
             GhostMascotPose("wave", modifier = Modifier.size(96.dp))
             Text(
-                "Before you start",
+                "Before we begin",
                 color = Ink,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.ExtraBold,
                 textAlign = TextAlign.Center
             )
             Text(
-                consentText,
+                "Ghost Cart is a simulation-only app. It does not process real payments, place real orders or deliver products. It helps you pause, cool and reconsider impulse purchases.",
                 color = MutedText,
                 fontSize = 14.sp,
                 lineHeight = 21.sp,
                 textAlign = TextAlign.Center
             )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = true, onCheckedChange = null)
+                Text(
+                    "I understand that Ghost Cart is only a simulation.",
+                    color = Ink,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+            }
             PrimaryButton(
-                text = "I understand this is a simulation",
+                text = "I understand — continue",
                 onClick = onAccept,
                 modifier = Modifier.padding(top = 8.dp)
             )

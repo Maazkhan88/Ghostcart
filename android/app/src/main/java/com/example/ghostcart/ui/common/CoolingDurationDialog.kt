@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import com.example.ghostcart.theme.GreenTint
 import com.example.ghostcart.theme.Ink
 import com.example.ghostcart.theme.MutedText
+import com.example.ghostcart.ui.tutorial.FloatingTutorialMascot
 import java.util.concurrent.TimeUnit
 
 data class CoolingOption(val label: String, val durationMillis: Long)
@@ -43,22 +44,40 @@ val coolingOptions = listOf(
 fun CoolingDurationDialog(
     onConfirm: (CoolingOption) -> Unit,
     onDismiss: () -> Unit,
-    initialSelection: CoolingOption = coolingOptions[1]
+    initialSelection: CoolingOption? = coolingOptions[1],
+    options: List<CoolingOption> = coolingOptions,
+    title: String = "Restart the cooldown",
+    description: String = "Choose when Ghost Cart should remind you to decide again.",
+    confirmLabel: String = "Restart",
+    showTutorialGuide: Boolean = false
 ) {
     var selected by remember { mutableStateOf(initialSelection) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Restart the cooldown") },
+        title = { Text(title) },
         text = {
             Column {
+                if (showTutorialGuide) {
+                    androidx.compose.foundation.layout.Row(
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    ) {
+                        FloatingTutorialMascot(Modifier.padding(end = 10.dp))
+                        Text(
+                            "Cooling gives the impulse time to fade. Choose the 10-second practice option.",
+                            color = Ink,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
                 Text(
-                    "Choose when Ghost Cart should remind you to decide again.",
+                    description,
                     color = MutedText,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(coolingOptions) { option ->
+                    items(options) { option ->
                         FilterChip(
                             selected = option == selected,
                             onClick = { selected = option },
@@ -70,7 +89,10 @@ fun CoolingDurationDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(selected) }) { Text("Restart") }
+            TextButton(
+                enabled = selected != null,
+                onClick = { selected?.let(onConfirm) }
+            ) { Text(confirmLabel) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }

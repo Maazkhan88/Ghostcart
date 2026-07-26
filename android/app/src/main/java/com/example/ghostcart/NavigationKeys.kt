@@ -10,6 +10,7 @@ import kotlinx.serialization.Serializable
 @Serializable data object Auth : NavKey
 @Serializable data object ProfileSelect : NavKey
 @Serializable data object Personalization : NavKey
+@Serializable data object Tutorial : NavKey
 
 // Marketplace / shopping
 @Serializable data object Home : NavKey

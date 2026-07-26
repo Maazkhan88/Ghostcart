@@ -62,12 +62,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -91,12 +96,15 @@ import com.example.ghostcart.ui.GhostMascotPose
 import com.example.ghostcart.ui.ProductPhoto
 import com.example.ghostcart.ui.common.BackButton
 import com.example.ghostcart.ui.common.CoolingDurationDialog
+import com.example.ghostcart.ui.common.CoolingOption
 import com.example.ghostcart.ui.common.ForwardChevron
 import com.example.ghostcart.ui.common.GhostHeroCard
 import com.example.ghostcart.ui.common.GhostTopBar
 import com.example.ghostcart.ui.common.PrimaryButton
 import com.example.ghostcart.ui.common.RoundIconButton
 import com.example.ghostcart.ui.common.SecondaryButton
+import com.example.ghostcart.ui.tutorial.TutorialGuideOverlay
+import com.example.ghostcart.ui.tutorial.TutorialGuideSpec
 import coil3.compose.AsyncImage
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -118,14 +126,27 @@ fun GhostCartListScreen(
     onOpenProduct: (String) -> Unit,
     onShareProduct: (MarketplaceProduct) -> Unit,
     onCheckout: () -> Unit,
+    tutorialGuide: TutorialGuideSpec? = null,
+    tutorialCooldownMode: Boolean = false,
+    onTutorialCooldownSelected: (CoolingOption) -> Unit = {},
+    onTutorialCooldownDismiss: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val subtotal = products.sumOf { (product, qty) -> product.price * qty }
     var pendingCoolProductId by remember { mutableStateOf<String?>(null) }
+    var rootPosition by remember { mutableStateOf(Offset.Zero) }
+    var tutorialTarget by remember { mutableStateOf<Rect?>(null) }
 
-    Box(modifier = modifier.fillMaxSize().background(Paper)) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Paper)
+            .onGloballyPositioned { rootPosition = it.positionInRoot() }
+    ) {
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .then(if (tutorialGuide != null) Modifier.blur(5.dp) else Modifier),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(
                 start = 20.dp,
                 top = 16.dp,
@@ -279,7 +300,27 @@ fun GhostCartListScreen(
                 .border(width = 1.dp, color = FaintBorder)
                 .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
-            PrimaryButton(text = "Proceed to Ghost Checkout", onClick = onCheckout)
+            PrimaryButton(
+                text = "Proceed to Ghost Checkout",
+                onClick = onCheckout,
+                modifier = Modifier.then(
+                    if (tutorialGuide != null) {
+                        Modifier.onGloballyPositioned { coordinates ->
+                            tutorialTarget = coordinates.boundsInRoot().translate(
+                                Offset(-rootPosition.x, -rootPosition.y)
+                            )
+                        }
+                    } else Modifier
+                )
+            )
+        }
+
+        tutorialGuide?.let {
+            TutorialGuideOverlay(
+                targetBounds = tutorialTarget,
+                guide = it,
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 
@@ -290,6 +331,19 @@ fun GhostCartListScreen(
                 pendingCoolProductId = null
             },
             onDismiss = { pendingCoolProductId = null }
+        )
+    }
+
+    if (tutorialCooldownMode) {
+        CoolingDurationDialog(
+            onConfirm = onTutorialCooldownSelected,
+            onDismiss = onTutorialCooldownDismiss,
+            initialSelection = null,
+            options = listOf(CoolingOption("10 seconds — Tutorial", 10_000L)),
+            title = "Choose a cooldown",
+            description = "For this practice run, choose 10 seconds.",
+            confirmLabel = "Continue",
+            showTutorialGuide = true
         )
     }
 }
@@ -316,25 +370,36 @@ fun GhostCheckoutScreen(
     onBack: () -> Unit,
     onOpenWallet: () -> Unit,
     onPlaceOrder: (Int) -> Unit,
+    tutorialMode: Boolean = false,
+    primaryButtonLabel: String? = null,
+    tutorialGuide: TutorialGuideSpec? = null,
     modifier: Modifier = Modifier
 ) {
     val subtotal = products.sumOf { (product, qty) -> product.price * qty }
-    val promoDiscount = (subtotal * PROMO_RATE).toInt()
-    val serviceFee = ((subtotal - promoDiscount) * SERVICE_FEE_RATE).toInt()
-    val vat = ((subtotal - promoDiscount) * VAT_RATE).toInt()
+    val promoDiscount = if (tutorialMode) 0 else (subtotal * PROMO_RATE).toInt()
+    val serviceFee = if (tutorialMode) 0 else ((subtotal - promoDiscount) * SERVICE_FEE_RATE).toInt()
+    val vat = if (tutorialMode) 0 else ((subtotal - promoDiscount) * VAT_RATE).toInt()
     val total = subtotal - promoDiscount + serviceFee + vat
     val hasEnoughSimulatedBalance = walletBalance >= total
 
     var deliveryAddress by remember { mutableStateOf("123 Ghost Street\nAl Wasl, Dubai\nUnited Arab Emirates") }
     var editingAddress by remember { mutableStateOf(false) }
+    var rootPosition by remember { mutableStateOf(Offset.Zero) }
+    var tutorialTarget by remember { mutableStateOf<Rect?>(null) }
 
-    Box(modifier = modifier.fillMaxSize().background(Paper)) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Paper)
+            .onGloballyPositioned { rootPosition = it.positionInRoot() }
+    ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 16.dp)
             .padding(bottom = 96.dp)
+            .then(if (tutorialGuide != null) Modifier.blur(5.dp) else Modifier)
     ) {
         GhostTopBar(title = "Ghost Checkout", onBack = onBack)
         Text(text = "Simulation mode", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
@@ -364,7 +429,9 @@ fun GhostCheckoutScreen(
             action = if (hasEnoughSimulatedBalance) "View" else "Add more",
             onAction = onOpenWallet
         )
-        CheckoutInfoRow(icon = Icons.Filled.Sell, title = "Promo Code", subtitle = "GHOST10 · 10% off applied", action = "Remove")
+        if (!tutorialMode) {
+            CheckoutInfoRow(icon = Icons.Filled.Sell, title = "Promo Code", subtitle = "GHOST10 · 10% off applied", action = "Remove")
+        }
 
         Text(text = "Simulation Speed (per step)", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 18.dp))
         Row(
@@ -416,9 +483,11 @@ fun GhostCheckoutScreen(
             }
             Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).height(1.dp).background(FaintBorder))
             SummaryLine("Subtotal", "${Marketplace.currency} $subtotal")
-            SummaryLine("Promo Discount (GHOST10)", "-${Marketplace.currency} $promoDiscount", valueColor = GhostGreen)
-            SummaryLine("Service Fee", "${Marketplace.currency} $serviceFee")
-            SummaryLine("VAT (5%)", "${Marketplace.currency} $vat")
+            if (!tutorialMode) {
+                SummaryLine("Promo Discount (GHOST10)", "-${Marketplace.currency} $promoDiscount", valueColor = GhostGreen)
+                SummaryLine("Service Fee", "${Marketplace.currency} $serviceFee")
+                SummaryLine("VAT (5%)", "${Marketplace.currency} $vat")
+            }
             Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).height(1.dp).background(FaintBorder))
             SummaryLine("Total", "${Marketplace.currency} $total", bold = true, showDirhamIcon = true)
         }
@@ -443,9 +512,25 @@ fun GhostCheckoutScreen(
                 .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
             PrimaryButton(
-                text = if (hasEnoughSimulatedBalance) "Place Fake Order" else "Add simulated balance",
+                text = primaryButtonLabel ?: if (hasEnoughSimulatedBalance) "Place Fake Order" else "Add simulated balance",
                 onClick = { if (hasEnoughSimulatedBalance) onPlaceOrder(total) else onOpenWallet() },
-                trailingIcon = Icons.Filled.ArrowForward
+                trailingIcon = Icons.Filled.ArrowForward,
+                modifier = Modifier.then(
+                    if (tutorialGuide != null) {
+                        Modifier.onGloballyPositioned { coordinates ->
+                            tutorialTarget = coordinates.boundsInRoot().translate(
+                                Offset(-rootPosition.x, -rootPosition.y)
+                            )
+                        }
+                    } else Modifier
+                )
+            )
+        }
+        tutorialGuide?.let {
+            TutorialGuideOverlay(
+                targetBounds = tutorialTarget,
+                guide = it,
+                modifier = Modifier.fillMaxSize()
             )
         }
     }
