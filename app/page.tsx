@@ -1,8 +1,27 @@
+import { and, eq } from "drizzle-orm";
+import { getDb } from "../db";
+import { contentBlocks } from "../db/schema";
 import { Brand } from "./components/Brand";
 import { DirhamAmount } from "./components/DirhamAmount";
 import { RevealObserver } from "./components/RevealObserver";
 import { SiteNav } from "./components/SiteNav";
 import { WaitlistForm } from "./components/WaitlistForm";
+
+async function getGhostCartStories() {
+  try {
+    const db = getDb();
+    const rows = await db
+      .select({ id: contentBlocks.id, imageKey: contentBlocks.imageKey })
+      .from(contentBlocks)
+      .where(and(eq(contentBlocks.type, "story"), eq(contentBlocks.isActive, true)))
+      .orderBy(contentBlocks.sortOrder);
+    return rows;
+  } catch {
+    // Same admin-curated story feed the Android app already uses - if it's
+    // ever unavailable, the homepage should still render everything else.
+    return [];
+  }
+}
 
 const HOW_STEPS = [
   {
@@ -62,7 +81,8 @@ const FAQS = [
   ],
 ] as const;
 
-export default function Home() {
+export default async function Home() {
+  const ghostCartStories = await getGhostCartStories();
   return (
     <main id="top" className="gc-site gc-v3-site">
       <RevealObserver />
@@ -176,6 +196,28 @@ export default function Home() {
           <span aria-hidden="true">✓</span> No purchase, payment, or delivery happens inside Ghost Cart.
         </p>
       </section>
+
+      {ghostCartStories.length > 0 ? (
+        <section id="stories" className="gc-v3-stories" aria-labelledby="stories-title">
+          <header className="gc-v3-section-heading gc-v3-section-heading-light" data-gc-reveal>
+            <p className="gc-v3-eyebrow">Ghost Cart Stories</p>
+            <h2 id="stories-title">See it in the wild.</h2>
+            <p>A few moments from people who ghosted something instead of buying it.</p>
+          </header>
+
+          <div className="gc-v3-stories-row" data-gc-reveal>
+            {ghostCartStories.map((story) => (
+              <div className="gc-v3-story-card" key={story.id}>
+                <img
+                  src={`/api/content-blocks/image/${story.imageKey}`}
+                  alt="A Ghost Cart story"
+                  loading="lazy"
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section id="faq" className="gc-v3-faq" aria-labelledby="faq-title">
         <header className="gc-v3-section-heading" data-gc-reveal>

@@ -14,6 +14,19 @@
   "assets": {
     "directory": "../dist/client"
   },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ghostcart-v2-db",
+      "database_id": "325c0966-2b01-4a60-97a9-1a6d974d8039"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "CONTENT_MEDIA",
+      "bucket_name": "ghostcart-content-media"
+    }
+  ],
   "routes": [
     {
       "pattern": "test.theghostcart.com",
