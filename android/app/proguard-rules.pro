@@ -11,3 +11,13 @@
 # fixes this for WorkManager and any future direct Room usage.
 -keep class * extends androidx.room.RoomDatabase
 -keep class **_Impl { *; }
+
+# Navigation3's NavKey hierarchy (NavigationKeys.kt) is dozens of small
+# @Serializable data classes/objects, several with zero fields. Without
+# this, R8's class-merging optimization can collapse two structurally
+# identical NavKey types into one physical class, and Navigation3's
+# internal entry registry (keyed by class) then sees a duplicate
+# registration and crashes on first launch: "An entry with the same clazz
+# has already been added: p." (reproduced on-device, versionCode 68).
+# Keeping every NavKey implementor whole - unmerged, unrenamed - fixes it.
+-keep class * implements androidx.navigation3.runtime.NavKey { *; }

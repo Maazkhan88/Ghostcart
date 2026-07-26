@@ -392,16 +392,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             .sortedByDescending { it.isUserGhosted }
     }
 
-    // Cooling, ghosting, and adding to cart all require an account - anonymous
-    // users can browse, but every action that creates something (an
-    // almost-buy, a cart entry) needs somewhere real to belong to. Sets a
+    // Cooling and ghosting require an account - anonymous users can browse
+    // and add to cart freely, but any action that creates something durable
+    // (an almost-buy) needs somewhere real to belong to. Checkout has its
+    // own explicit gate in placeSimulatedOrder rather than relying on this
+    // indirectly through createAlmostBuy, since by the time that ran the
+    // wallet balance and order state had already been mutated. Sets a
     // one-shot flag Navigation.kt observes to push the sign-in screen,
     // mirroring the existing checkout sign-in gate rather than introducing a
     // second pattern.
     private fun requireSignIn(): Boolean {
         if (_uiState.value.authEmail != null) return true
         _uiState.update { it.copy(authRequiredPrompt = true) }
-        showToast("Sign in to cool, ghost, or add products")
+        showToast("Sign in to cool, ghost, or check out")
         return false
     }
 
@@ -410,7 +413,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addDraftToCart(draft: AlmostBuyDraft) {
-        if (!requireSignIn()) return
         val id = "shared_${UUID.randomUUID()}"
         val product = MarketplaceProduct(
             id = id,
@@ -882,7 +884,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addToCart(productId: String) {
-        if (!requireSignIn()) return
         _uiState.update { current ->
             val nextQty = (current.cartQuantities[productId] ?: 0) + 1
             val nextMap = current.cartQuantities + (productId to nextQty)
@@ -1370,6 +1371,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         ghostGift: GhostGiftDraft? = null,
         deliveryAddress: String = ""
     ): Boolean {
+        if (!requireSignIn()) return false
         val total = checkoutTotal.coerceAtLeast(0)
         if (_uiState.value.cartQuantities.isEmpty() || total <= 0) {
             showToast("Add an item before checkout")
