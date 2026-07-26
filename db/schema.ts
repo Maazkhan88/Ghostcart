@@ -511,6 +511,22 @@ export const simulationConsentConfig = sqliteTable("simulation_consent_config", 
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
+// Singleton row (id = 1), same pattern as simulation_consent_config. Read by
+// the Android app on every cold start to offer an in-app update - this app
+// isn't on the Play Store yet, so there's no Play Core In-App Update API to
+// rely on; this is the whole mechanism. minimumSupportedVersionCode blocks
+// (rather than just suggests) an update when raised above a device's
+// current versionCode - leave it at 1 to never force one.
+export const appReleaseInfo = sqliteTable("app_release_info", {
+  id: integer("id").primaryKey(),
+  latestVersionCode: integer("latest_version_code").notNull(),
+  latestVersionName: text("latest_version_name").notNull(),
+  minimumSupportedVersionCode: integer("minimum_supported_version_code").notNull().default(1),
+  releaseNotes: text("release_notes").notNull().default(""),
+  apkUrl: text("apk_url").notNull(),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
 // One row per (actor, version accepted). actor_key is "user:<id>" for a signed-in
 // account or "install:<installation id>" for an anonymous device - never a raw
 // email or other directly-identifying value. Presence of a row for the *current*

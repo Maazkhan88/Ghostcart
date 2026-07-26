@@ -844,6 +844,17 @@ fun MainNavigation(
             )
         }
 
+        state.availableUpdate?.let { update ->
+            if (!state.updateDismissed || update.mandatory) {
+                com.example.ghostcart.ui.common.UpdateAvailableDialog(
+                    update = update,
+                    downloading = state.updateDownloading,
+                    onUpdate = appViewModel::downloadAndInstallUpdate,
+                    onDismiss = appViewModel::dismissUpdateBanner
+                )
+            }
+        }
+
         if (showTutorialExitDialog) {
             AlertDialog(
                 onDismissRequest = { showTutorialExitDialog = false },
