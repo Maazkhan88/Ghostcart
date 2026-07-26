@@ -13,12 +13,12 @@ const MISSING_TABLE_HINT =
 // (PATCH, admin only) each time a new APK is published.
 const DEFAULT_RELEASE = {
   id: 1,
-  latestVersionCode: 67,
-  latestVersionName: "2.9.0",
+  latestVersionCode: 68,
+  latestVersionName: "2.10.0",
   minimumSupportedVersionCode: 1,
-  releaseNotes: "Onboarding tutorial, Ghost Gifting, and general improvements.",
+  releaseNotes: "Invoice UI, leaderboard redesign, favorites sync, and in-app updates.",
   apkUrl:
-    "https://github.com/Maazkhan88/Ghostcart/releases/download/release-v2.9.0-67-tutorial-gifting/ghostcart-v2.9.0-67-tutorial-gifting-release.apk",
+    "https://github.com/Maazkhan88/Ghostcart/releases/download/release-v2.10.0-68-invoice-leaderboard-updates/ghostcart-v2.10.0-68-invoice-leaderboard-updates-release.apk",
 };
 
 async function getOrCreateConfig(db: ReturnType<typeof getDb>) {
