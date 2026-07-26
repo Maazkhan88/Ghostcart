@@ -16,9 +16,6 @@
     <string name="no_active_cooldowns">لا توجد رغبات قيد الانتظار الآن</string>
     <string name="no_active_cooldowns_body">عندما يغريك شيء في المرة القادمة، ضعه هنا قبل أن تنفق.</string>
     <string name="add_almost_buy">أضف شيئًا كدت تشتريه</string>
-    <string name="add_from_anywhere">وجدته في مكان آخر؟</string>
-    <string name="add_from_anywhere_body">إضافة الروابط والصور قادمة لاحقًا. حاليًا يمكنك إضافة العنصر يدويًا خلال ثوانٍ.</string>
-    <string name="add_manually">إضافة يدويًا</string>
     <string name="safety_disclosure">محاكاة فقط. لا يتم تحصيل أي مبلغ ولا يتم إنشاء أي طلب.</string>
     <string name="ghost_an_almost_buy">أضف شيئًا كدت تشتريه إلى غوست</string>
     <string name="capture_headline">ما الذي كدت تشتريه؟</string>

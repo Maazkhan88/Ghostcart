@@ -16,9 +16,6 @@
     <string name="no_active_cooldowns">Nothing is cooling right now</string>
     <string name="no_active_cooldowns_body">The next time something tempts you, give it a safe place before you spend.</string>
     <string name="add_almost_buy">Add an almost-buy</string>
-    <string name="add_from_anywhere">Found it somewhere else?</string>
-    <string name="add_from_anywhere_body">Paste and screenshot import are coming next. For now, add the item manually in seconds.</string>
-    <string name="add_manually">Add manually</string>
     <string name="safety_disclosure">Simulation only. No payment is collected and no order is placed.</string>
     <string name="ghost_an_almost_buy">Ghost an almost-buy</string>
     <string name="capture_headline">What nearly got you?</string>

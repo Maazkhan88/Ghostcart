@@ -258,23 +258,6 @@ fun GhostHomeScreen(
         }
 
         item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = SoftGray),
-                shape = RoundedCornerShape(22.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(Modifier.padding(18.dp)) {
-                    Text(stringResource(R.string.add_from_anywhere), color = Ink, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(stringResource(R.string.add_from_anywhere_body), color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 5.dp, bottom = 14.dp))
-                    OutlinedButton(onClick = onGhostSomething, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Filled.Add, contentDescription = null)
-                        Text(stringResource(R.string.add_manually), modifier = Modifier.padding(start = 8.dp))
-                    }
-                }
-            }
-        }
-
-        item {
             Text(
                 stringResource(R.string.safety_disclosure),
                 color = MutedText,

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ (API 31) shows its own App Icon splash screen before the
+     Activity's first frame draws. Without an explicit background/icon here,
+     it defaults to a bare black rectangle - this is the "black screen for a
+     couple seconds before the app appears" users see on cold start. -->
+<resources>
+    <style name="Theme.GhostCart" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowSplashScreenBackground">#0C0C0C</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/mascot_wave</item>
+    </style>
+</resources>

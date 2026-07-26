@@ -64,7 +64,7 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
-import coil3.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
 import com.example.ghostcart.data.AlmostBuyResolution
 import com.example.ghostcart.data.AlmostBuyStatus
 import com.example.ghostcart.data.ContentBlockItem
@@ -900,12 +900,17 @@ private fun RandomStorySplashScreen(stories: List<ContentBlockItem>, onFinished:
         finish()
     }
 
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
-        AsyncImage(
+    Box(Modifier.fillMaxSize()) {
+        // The story image is fetched over the network and may take a moment
+        // on a cold start with no cache - show the branded wordmark while it
+        // loads instead of a flat black rectangle with nothing on it.
+        SubcomposeAsyncImage(
             model = story.imageUrl,
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            loading = { SplashContent() },
+            error = { SplashContent() }
         )
         AnimatedVisibility(
             visible = showSkip,
