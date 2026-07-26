@@ -923,6 +923,7 @@ private fun ProfileCommunitySection(
     onSelectAvatarPreset: (String) -> Unit,
     onSetCommunityOptIn: (username: String?, consent: Boolean) -> Unit,
     onOpenLeaderboard: () -> Unit,
+    onSetShowRecentActivityPublicly: (Boolean) -> Unit = {},
 ) {
     val context = LocalContext.current
     var displayName by remember(profile?.displayName) { mutableStateOf(profile?.displayName ?: "") }
@@ -1039,6 +1040,22 @@ private fun ProfileCommunitySection(
                     colors = ButtonDefaults.textButtonColors(contentColor = DangerRed, disabledContentColor = MutedText)
                 ) { Text("Opt out") }
             }
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Show recent activity to other members", color = Ink, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Lets others see your recent ghosted items and activity feed when they open your leaderboard entry. Off by default.",
+                        color = MutedText,
+                        fontSize = 9.sp
+                    )
+                }
+                Switch(
+                    checked = profile.showRecentActivityPublicly,
+                    onCheckedChange = onSetShowRecentActivityPublicly,
+                    enabled = !saving,
+                    colors = SwitchDefaults.colors(checkedTrackColor = GhostGreen, checkedThumbColor = Ink)
+                )
+            }
         } else {
             LaunchedEffect(profile?.username) {
                 if (editingUsername && profile?.username == usernameDraft.trim()) editingUsername = false
@@ -1139,6 +1156,7 @@ fun ProfileScreen(
     onSelectAvatarPreset: (String) -> Unit = {},
     onSetCommunityOptIn: (username: String?, consent: Boolean) -> Unit = { _, _ -> },
     onOpenLeaderboard: () -> Unit = {},
+    onSetShowRecentActivityPublicly: (Boolean) -> Unit = {},
     onReplayTutorial: () -> Unit = {},
     tutorialDebugState: String = "",
     onResetTutorialDebug: () -> Unit = {},
@@ -1170,7 +1188,8 @@ fun ProfileScreen(
                     onUploadAvatar = onUploadAvatar,
                     onSelectAvatarPreset = onSelectAvatarPreset,
                     onSetCommunityOptIn = onSetCommunityOptIn,
-                    onOpenLeaderboard = onOpenLeaderboard
+                    onOpenLeaderboard = onOpenLeaderboard,
+                    onSetShowRecentActivityPublicly = onSetShowRecentActivityPublicly
                 )
             }
             item {

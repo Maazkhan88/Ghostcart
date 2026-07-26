@@ -148,6 +148,13 @@ export const users = sqliteTable("users", {
   // and so the preset picker can be wired straight into an existing field.
   avatarPresetId: text("avatar_preset_id"),
   communityConsent: integer("community_consent", { mode: "boolean" }).notNull().default(true),
+  // A finer-grained control than communityConsent: that one governs whether
+  // the aggregate rank/counts show on the leaderboard at all (opt-out,
+  // default true); this one governs whether OTHER members can additionally
+  // see this user's recent ghosted items and recent activity feed on their
+  // leaderboard detail view - opt-in, default false, since individual
+  // purchase-adjacent behavior is more sensitive than an aggregate count.
+  showRecentActivityPublicly: integer("show_recent_activity_publicly", { mode: "boolean" }).notNull().default(false),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });

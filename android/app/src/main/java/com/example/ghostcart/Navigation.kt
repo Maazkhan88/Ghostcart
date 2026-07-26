@@ -771,6 +771,7 @@ fun MainNavigation(
                             onUploadAvatar = appViewModel::uploadAvatar,
                             onSelectAvatarPreset = appViewModel::selectAvatarPreset,
                             onSetCommunityOptIn = appViewModel::setCommunityLeaderboardOptIn,
+                            onSetShowRecentActivityPublicly = appViewModel::setShowRecentActivityPublicly,
                             onOpenLeaderboard = { backStack.add(Leaderboard) },
                             onReplayTutorial = {
                                 tutorialViewModel.replay()
@@ -801,6 +802,16 @@ fun MainNavigation(
                             entries = state.leaderboard,
                             loading = state.leaderboardLoading,
                             currentUsername = state.profile?.username,
+                            onBack = { backStack.removeLastOrNull() },
+                            onOpenDetail = { username -> backStack.add(LeaderboardDetail(username)) }
+                        )
+                    }
+                    entry<LeaderboardDetail> { key ->
+                        LaunchedEffect(key.username) { appViewModel.openLeaderboardDetail(key.username) }
+                        com.example.ghostcart.ui.community.LeaderboardDetailScreen(
+                            detail = state.leaderboardDetail?.takeIf { it.username == key.username },
+                            loading = state.leaderboardDetailLoading,
+                            isYou = state.profile?.username == key.username,
                             onBack = { backStack.removeLastOrNull() }
                         )
                     }

@@ -11,6 +11,7 @@ type LeaderboardRow = {
   savedCount: number;
   ghostedCount: number;
   ghostedAmountCents: number;
+  coolingCount: number;
 };
 
 // Public, unauthenticated: only users who explicitly opted in
@@ -34,7 +35,8 @@ export async function GET() {
            (SELECT COALESCE(SUM(confirmed_money_kept_cents), 0) FROM almost_buys WHERE user_id = u.id) AS moneyKeptCents,
            (SELECT COUNT(*) FROM almost_buys WHERE user_id = u.id AND state = 'resolved_skipped') AS savedCount,
            (SELECT COUNT(*) FROM almost_buys WHERE user_id = u.id) AS ghostedCount,
-           (SELECT COALESCE(SUM(almost_spent_cents), 0) FROM almost_buys WHERE user_id = u.id) AS ghostedAmountCents
+           (SELECT COALESCE(SUM(almost_spent_cents), 0) FROM almost_buys WHERE user_id = u.id) AS ghostedAmountCents,
+           (SELECT COUNT(*) FROM almost_buys WHERE user_id = u.id AND state IN ('captured','cooling','snoozed')) AS coolingCount
          FROM users u
          WHERE u.community_consent = 1 AND u.username IS NOT NULL
          ORDER BY ghostedCount DESC, moneyKeptCents DESC
@@ -54,6 +56,7 @@ export async function GET() {
         savedCount: Number(row.savedCount),
         ghostedCount: Number(row.ghostedCount),
         ghostedAmountCents: Number(row.ghostedAmountCents),
+        coolingCount: Number(row.coolingCount),
       })),
     });
   } catch (error) {

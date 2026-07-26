@@ -22,6 +22,7 @@ import com.example.ghostcart.data.Analytics
 import com.example.ghostcart.data.AuthRepository
 import com.example.ghostcart.data.CommunityProfileRepository
 import com.example.ghostcart.data.ContentBlockItem
+import com.example.ghostcart.data.LeaderboardDetail
 import com.example.ghostcart.data.LeaderboardEntry
 import com.example.ghostcart.data.UserProfile
 import com.example.ghostcart.data.LocalAlmostBuyRepository
@@ -115,6 +116,8 @@ data class AppUiState(
     val profile: UserProfile? = null,
     val leaderboard: List<LeaderboardEntry> = emptyList(),
     val leaderboardLoading: Boolean = false,
+    val leaderboardDetail: LeaderboardDetail? = null,
+    val leaderboardDetailLoading: Boolean = false,
     val profileSaving: Boolean = false,
     val profileError: String? = null,
     val captureSeed: AlmostBuyDraft? = null,
@@ -546,6 +549,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun setShowRecentActivityPublicly(show: Boolean) {
+        _uiState.update { it.copy(profileSaving = true, profileError = null) }
+        viewModelScope.launch {
+            CommunityProfileRepository.updateProfile(getApplication(), showRecentActivityPublicly = show)
+                .onSuccess { profile -> _uiState.update { it.copy(profile = profile, profileSaving = false) } }
+                .onFailure { error ->
+                    _uiState.update { it.copy(profileSaving = false, profileError = error.message ?: "Could not update this setting.") }
+                }
+        }
+    }
+
     fun selectAvatarPreset(presetId: String) {
         _uiState.update { it.copy(profileSaving = true, profileError = null) }
         viewModelScope.launch {
@@ -575,6 +589,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             CommunityProfileRepository.fetchLeaderboard()
                 .onSuccess { entries -> _uiState.update { it.copy(leaderboard = entries, leaderboardLoading = false) } }
                 .onFailure { _uiState.update { it.copy(leaderboardLoading = false) } }
+        }
+    }
+
+    fun openLeaderboardDetail(username: String) {
+        _uiState.update { it.copy(leaderboardDetail = null, leaderboardDetailLoading = true) }
+        viewModelScope.launch {
+            CommunityProfileRepository.fetchLeaderboardDetail(username)
+                .onSuccess { detail -> _uiState.update { it.copy(leaderboardDetail = detail, leaderboardDetailLoading = false) } }
+                .onFailure { _uiState.update { it.copy(leaderboardDetailLoading = false) } }
         }
     }
 

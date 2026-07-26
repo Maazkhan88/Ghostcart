@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `show_recent_activity_publicly` integer DEFAULT false NOT NULL;

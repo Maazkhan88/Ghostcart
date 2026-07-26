@@ -16,7 +16,48 @@ data class UserProfile(
     val avatarUrl: String?,
     val communityConsent: Boolean,
     val gender: String?,
-    val avatarPresetId: String?
+    val avatarPresetId: String?,
+    val showRecentActivityPublicly: Boolean
+)
+
+data class LeaderboardRecentItem(
+    val name: String,
+    val category: String,
+    val amountCents: Long,
+    val capturedAt: String,
+    val imageUrl: String?
+)
+
+data class LeaderboardActivityEntry(
+    val label: String,
+    val amountCents: Long,
+    val createdAt: String
+)
+
+data class LeaderboardMonthStats(
+    val ghostedCount: Int,
+    val savedCents: Long,
+    val coolingCount: Int,
+    val ghostedCountChangePercent: Int?,
+    val savedCentsChangePercent: Int?
+)
+
+data class LeaderboardDetail(
+    val username: String,
+    val avatarUrl: String?,
+    val avatarPresetId: String?,
+    val rank: Int,
+    val moneyKeptCents: Long,
+    val savedCount: Int,
+    val ghostedCount: Int,
+    val ghostedAmountCents: Long,
+    val coolingCount: Int,
+    val activityPrivate: Boolean,
+    val currentStreakDays: Int,
+    val achievements: List<String>,
+    val recentGhostedItems: List<LeaderboardRecentItem>,
+    val recentActivity: List<LeaderboardActivityEntry>,
+    val thisMonth: LeaderboardMonthStats?
 )
 
 // "Cooled & saved" = an almost-buy explicitly resolved "skipped" after
@@ -30,7 +71,8 @@ data class LeaderboardEntry(
     val moneyKeptCents: Long,
     val savedCount: Int,
     val ghostedCount: Int,
-    val ghostedAmountCents: Long
+    val ghostedAmountCents: Long,
+    val coolingCount: Int
 )
 
 private fun JSONObject.nullableStringOrNull(key: String): String? =
@@ -43,8 +85,72 @@ private fun parseProfile(json: JSONObject): UserProfile = UserProfile(
     avatarUrl = json.nullableStringOrNull("avatarUrl")?.let { "${ApiConfig.BASE_URL}$it" },
     communityConsent = json.optBoolean("communityConsent", false),
     gender = json.nullableStringOrNull("gender"),
-    avatarPresetId = json.nullableStringOrNull("avatarPresetId")
+    avatarPresetId = json.nullableStringOrNull("avatarPresetId"),
+    showRecentActivityPublicly = json.optBoolean("showRecentActivityPublicly", false)
 )
+
+private fun optIntOrNull(json: JSONObject, key: String): Int? = if (json.isNull(key) || !json.has(key)) null else json.optInt(key)
+
+private fun parseLeaderboardDetail(json: JSONObject): LeaderboardDetail {
+    val profile = json.getJSONObject("profile")
+    val activityPrivate = json.optBoolean("activityPrivate", true)
+    val thisMonthJson = json.optJSONObject("thisMonth")
+    return LeaderboardDetail(
+        username = profile.getString("username"),
+        avatarUrl = profile.nullableStringOrNull("avatarUrl")?.let { "${ApiConfig.BASE_URL}$it" },
+        avatarPresetId = profile.nullableStringOrNull("avatarPresetId"),
+        rank = profile.optInt("rank", 0),
+        moneyKeptCents = profile.optLong("moneyKeptCents", 0),
+        savedCount = profile.optInt("savedCount", 0),
+        ghostedCount = profile.optInt("ghostedCount", 0),
+        ghostedAmountCents = profile.optLong("ghostedAmountCents", 0),
+        coolingCount = profile.optInt("coolingCount", 0),
+        activityPrivate = activityPrivate,
+        currentStreakDays = json.optInt("currentStreakDays", 0),
+        achievements = json.optJSONArray("achievements")?.let { array ->
+            buildList { for (i in 0 until array.length()) add(array.getString(i)) }
+        } ?: emptyList(),
+        recentGhostedItems = json.optJSONArray("recentGhostedItems")?.let { array ->
+            buildList {
+                for (i in 0 until array.length()) {
+                    val item = array.getJSONObject(i)
+                    add(
+                        LeaderboardRecentItem(
+                            name = item.getString("name"),
+                            category = item.optString("category", "Other"),
+                            amountCents = item.optLong("amountCents", 0),
+                            capturedAt = item.optString("capturedAt"),
+                            imageUrl = item.nullableStringOrNull("imageUrl")
+                        )
+                    )
+                }
+            }
+        } ?: emptyList(),
+        recentActivity = json.optJSONArray("recentActivity")?.let { array ->
+            buildList {
+                for (i in 0 until array.length()) {
+                    val item = array.getJSONObject(i)
+                    add(
+                        LeaderboardActivityEntry(
+                            label = item.getString("label"),
+                            amountCents = item.optLong("amountCents", 0),
+                            createdAt = item.optString("createdAt")
+                        )
+                    )
+                }
+            }
+        } ?: emptyList(),
+        thisMonth = thisMonthJson?.let {
+            LeaderboardMonthStats(
+                ghostedCount = it.optInt("ghostedCount", 0),
+                savedCents = it.optLong("savedCents", 0),
+                coolingCount = it.optInt("coolingCount", 0),
+                ghostedCountChangePercent = optIntOrNull(it, "ghostedCountChangePercent"),
+                savedCentsChangePercent = optIntOrNull(it, "savedCentsChangePercent")
+            )
+        }
+    )
+}
 
 // Every call here requires the bearer token AuthRepository persists on
 // sign-in - these endpoints 401 without it, unlike the rest of
@@ -64,7 +170,8 @@ object CommunityProfileRepository {
         username: String? = null,
         communityConsent: Boolean? = null,
         gender: String? = null,
-        avatarPresetId: String? = null
+        avatarPresetId: String? = null,
+        showRecentActivityPublicly: Boolean? = null
     ): Result<UserProfile> = withContext(Dispatchers.IO) {
         runCatching {
             val token = AuthRepository.getToken(context) ?: throw IllegalStateException("Not signed in")
@@ -74,9 +181,30 @@ object CommunityProfileRepository {
                 if (communityConsent != null) put("communityConsent", communityConsent)
                 if (gender != null) put("gender", gender)
                 if (avatarPresetId != null) put("avatarPresetId", avatarPresetId)
+                if (showRecentActivityPublicly != null) put("showRecentActivityPublicly", showRecentActivityPublicly)
             }
             val json = authorizedRequest("/api/me/profile", "PATCH", token, payload)
             parseProfile(json.getJSONObject("profile"))
+        }
+    }
+
+    suspend fun fetchLeaderboardDetail(username: String): Result<LeaderboardDetail> = withContext(Dispatchers.IO) {
+        runCatching {
+            val url = URL("${ApiConfig.BASE_URL}/api/community/leaderboard/${java.net.URLEncoder.encode(username, "UTF-8")}")
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "GET"
+            conn.setRequestProperty("Accept", "application/json")
+            conn.connectTimeout = ApiConfig.CONNECT_TIMEOUT_MS
+            conn.readTimeout = ApiConfig.READ_TIMEOUT_MS
+
+            val responseCode = conn.responseCode
+            val text = (if (responseCode in 200..299) conn.inputStream else conn.errorStream)
+                ?.bufferedReader()?.use { it.readText() }.orEmpty()
+            val json = if (text.isBlank()) JSONObject() else JSONObject(text)
+            if (responseCode !in 200..299) {
+                throw Exception(json.optString("error", "This member's details are unavailable"))
+            }
+            parseLeaderboardDetail(json)
         }
     }
 
@@ -139,7 +267,8 @@ object CommunityProfileRepository {
                             moneyKeptCents = item.optLong("moneyKeptCents", 0),
                             savedCount = item.optInt("savedCount", 0),
                             ghostedCount = item.optInt("ghostedCount", 0),
-                            ghostedAmountCents = item.optLong("ghostedAmountCents", 0)
+                            ghostedAmountCents = item.optLong("ghostedAmountCents", 0),
+                            coolingCount = item.optInt("coolingCount", 0)
                         )
                     )
                 }

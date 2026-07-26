@@ -18,6 +18,7 @@ type ProfileRow = {
   communityConsent: boolean;
   gender: string | null;
   avatarPresetId: string | null;
+  showRecentActivityPublicly: boolean;
 };
 
 const ALLOWED_GENDERS = new Set(["male", "female"]);
@@ -70,6 +71,7 @@ async function ensureUsername(row: ProfileRow, userId: number): Promise<ProfileR
           communityConsent: users.communityConsent,
           gender: users.gender,
           avatarPresetId: users.avatarPresetId,
+          showRecentActivityPublicly: users.showRecentActivityPublicly,
         });
       return updated;
     } catch (error) {
@@ -89,6 +91,7 @@ function serialize(user: {
   communityConsent: boolean;
   gender: string | null;
   avatarPresetId: string | null;
+  showRecentActivityPublicly: boolean;
 }) {
   return {
     email: user.email,
@@ -98,6 +101,7 @@ function serialize(user: {
     communityConsent: user.communityConsent,
     gender: user.gender,
     avatarPresetId: user.avatarPresetId,
+    showRecentActivityPublicly: user.showRecentActivityPublicly,
   };
 }
 
@@ -115,6 +119,7 @@ export async function GET(request: Request) {
       communityConsent: users.communityConsent,
       gender: users.gender,
       avatarPresetId: users.avatarPresetId,
+      showRecentActivityPublicly: users.showRecentActivityPublicly,
     })
     .from(users)
     .where(eq(users.id, session.userId))
@@ -180,6 +185,13 @@ export async function PATCH(request: Request) {
     updates.communityConsent = payload.communityConsent;
   }
 
+  if (payload.showRecentActivityPublicly !== undefined) {
+    if (typeof payload.showRecentActivityPublicly !== "boolean") {
+      return jsonNoStore({ error: "showRecentActivityPublicly must be a boolean" }, { status: 400 });
+    }
+    updates.showRecentActivityPublicly = payload.showRecentActivityPublicly;
+  }
+
   if (payload.username !== undefined) {
     if (typeof payload.username !== "string") {
       return jsonNoStore({ error: "username must be a string" }, { status: 400 });
@@ -227,6 +239,7 @@ export async function PATCH(request: Request) {
         communityConsent: users.communityConsent,
         gender: users.gender,
         avatarPresetId: users.avatarPresetId,
+        showRecentActivityPublicly: users.showRecentActivityPublicly,
       });
     return jsonNoStore({ profile: serialize(user) });
   } catch (error) {
