@@ -34,6 +34,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.OpenInNew
@@ -376,7 +377,7 @@ fun GhostCheckoutScreen(
     onSelectInterval: (Int) -> Unit,
     onBack: () -> Unit,
     onOpenWallet: () -> Unit,
-    onPlaceOrder: (Int, GhostGiftDraft?) -> Unit,
+    onPlaceOrder: (Int, GhostGiftDraft?, String) -> Unit,
     tutorialMode: Boolean = false,
     primaryButtonLabel: String? = null,
     tutorialGuide: TutorialGuideSpec? = null,
@@ -744,7 +745,7 @@ fun GhostCheckoutScreen(
                     if (!hasEnoughSimulatedBalance) {
                         onOpenWallet()
                     } else if (!sendAsGift) {
-                        onPlaceOrder(total, null)
+                        onPlaceOrder(total, null, deliveryAddress)
                     } else {
                         val draft = GhostGiftDraft(
                             productId = selectedGiftProductId,
@@ -753,7 +754,7 @@ fun GhostCheckoutScreen(
                             recipientConsentConfirmed = recipientConsent
                         )
                         val error = GhostGiftRepository.validationError(draft)
-                        if (error != null) giftError = error else onPlaceOrder(total, draft)
+                        if (error != null) giftError = error else onPlaceOrder(total, draft, deliveryAddress)
                     }
                 },
                 trailingIcon = Icons.Filled.ArrowForward,
@@ -838,6 +839,15 @@ fun OrderGhostedSuccessScreen(
     onTrackDelivery: () -> Unit,
     onViewSavings: () -> Unit,
     onOpenSource: (String) -> Unit,
+    placedAtMillis: Long = 0L,
+    deliveryAddress: String = "",
+    invoiceItems: List<Pair<MarketplaceProduct, Int>> = emptyList(),
+    subtotal: Int = 0,
+    promoDiscount: Int = 0,
+    serviceFee: Int = 0,
+    vat: Int = 0,
+    onDownloadInvoice: () -> Unit = {},
+    onShareInvoice: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val redeemableProducts = sourceProducts.filter { !it.sourceUrl.isNullOrBlank() }.distinctBy { it.sourceUrl }
@@ -888,6 +898,23 @@ fun OrderGhostedSuccessScreen(
             InfoTile(label = "Not counted as Money Kept until you later choose to skip it", value = "", modifier = Modifier.weight(1f))
         }
 
+        if (invoiceItems.isNotEmpty()) {
+            InvoiceCard(
+                orderId = orderId,
+                placedAtMillis = placedAtMillis,
+                deliveryAddress = deliveryAddress,
+                items = invoiceItems,
+                subtotal = subtotal,
+                promoDiscount = promoDiscount,
+                serviceFee = serviceFee,
+                vat = vat,
+                total = amountAvoided,
+                onDownloadInvoice = onDownloadInvoice,
+                onShareInvoice = onShareInvoice,
+                modifier = Modifier.padding(top = 20.dp)
+            )
+        }
+
         Spacer(modifier = Modifier.height(24.dp))
 
         if (redeemableProducts.isNotEmpty()) {
@@ -920,6 +947,119 @@ fun OrderGhostedSuccessScreen(
 
         PrimaryButton(text = "Track Fake Delivery", onClick = onTrackDelivery, trailingIcon = Icons.Filled.ArrowForward)
         SecondaryButton(text = "View Progress", onClick = onViewSavings, modifier = Modifier.padding(top = 10.dp, bottom = 24.dp))
+    }
+}
+
+@Composable
+private fun InvoiceCard(
+    orderId: String,
+    placedAtMillis: Long,
+    deliveryAddress: String,
+    items: List<Pair<MarketplaceProduct, Int>>,
+    subtotal: Int,
+    promoDiscount: Int,
+    serviceFee: Int,
+    vat: Int,
+    total: Int,
+    onDownloadInvoice: () -> Unit,
+    onShareInvoice: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, FaintBorder, RoundedCornerShape(16.dp))
+            .padding(18.dp)
+    ) {
+        Text(text = "Order placed", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+        Text(
+            text = "Your invoice is ready and a copy has been sent to your email.",
+            color = MutedText,
+            fontSize = 11.sp,
+            modifier = Modifier.padding(top = 4.dp, bottom = 14.dp)
+        )
+
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = "ORDER NUMBER", color = MutedText, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text(text = orderId, color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
+            }
+            if (placedAtMillis > 0L) {
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(text = "DATE & TIME", color = MutedText, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = SimpleDateFormat("d MMM yyyy, h:mm a", Locale.getDefault()).format(Date(placedAtMillis)),
+                        color = Ink,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+            }
+        }
+
+        if (deliveryAddress.isNotBlank()) {
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 14.dp), verticalAlignment = Alignment.Top) {
+                Icon(Icons.Filled.LocationOn, contentDescription = null, tint = MutedText, modifier = Modifier.size(16.dp))
+                Column(modifier = Modifier.padding(start = 8.dp)) {
+                    Text(text = "DELIVERY ADDRESS", color = MutedText, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Text(text = deliveryAddress, color = Ink, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+                }
+            }
+        }
+
+        Box(modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp).height(1.dp).background(FaintBorder))
+
+        Text(text = "Order summary", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+        items.forEach { (product, qty) ->
+            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(text = "${product.name} (x$qty)", color = Ink, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                com.example.ghostcart.ui.DirhamAmount("${product.price * qty}", tint = Ink, fontSize = 11.sp, glyphSize = 9.dp)
+            }
+        }
+
+        Box(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp).height(1.dp).background(FaintBorder))
+        SummaryLine("Subtotal", "${Marketplace.currency} $subtotal")
+        if (promoDiscount > 0) SummaryLine("Promo Discount (GHOST10)", "-${Marketplace.currency} $promoDiscount", valueColor = GhostGreen)
+        if (serviceFee > 0) SummaryLine("Service Fee", "${Marketplace.currency} $serviceFee")
+        if (vat > 0) SummaryLine("VAT (5%)", "${Marketplace.currency} $vat")
+        Box(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp).height(1.dp).background(FaintBorder))
+        SummaryLine("Total", "${Marketplace.currency} $total", bold = true)
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 14.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(SoftGray)
+                .padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = "Payment method", color = MutedText, fontSize = 10.sp, modifier = Modifier.weight(1f))
+            Text(text = "Simulation only", color = Ink, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        }
+
+        SecondaryButton(
+            text = "Download invoice PDF",
+            onClick = onDownloadInvoice,
+            leadingIcon = Icons.Filled.Download,
+            modifier = Modifier.padding(top = 16.dp)
+        )
+        SecondaryButton(
+            text = "Share / Email again",
+            onClick = onShareInvoice,
+            leadingIcon = Icons.Filled.Share,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+
+        Text(
+            text = "This is a simulation invoice for Ghost Cart",
+            color = MutedText,
+            fontSize = 9.sp,
+            modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+            textAlign = TextAlign.Center
+        )
     }
 }
 

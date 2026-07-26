@@ -650,12 +650,12 @@ fun MainNavigation(
                             onSelectInterval = { mins -> if (!tutorialCheckoutScreen) appViewModel.setSimulationInterval(mins) },
                             onBack = { if (tutorialCheckoutScreen) showTutorialExitDialog = true else backStack.removeLastOrNull() },
                             onOpenWallet = { if (!tutorialCheckoutScreen) backStack.add(Progress) },
-                            onPlaceOrder = { total, ghostGift ->
+                            onPlaceOrder = { total, ghostGift, deliveryAddress ->
                                 if (tutorialCheckoutScreen) {
                                     tutorialViewModel.completeFakeCheckout()
                                     backStack.clear()
                                     backStack.add(Tutorial)
-                                } else if (appViewModel.placeSimulatedOrder(total, ghostGift)) {
+                                } else if (appViewModel.placeSimulatedOrder(total, ghostGift, deliveryAddress)) {
                                     backStack.add(OrderGhostedSuccess)
                                 }
                             },
@@ -708,7 +708,16 @@ fun MainNavigation(
                                 backStack.clear()
                                 backStack.add(Progress)
                             },
-                            onOpenSource = { url -> openProductSource(context, url) }
+                            onOpenSource = { url -> openProductSource(context, url) },
+                            placedAtMillis = state.lastOrderPlacedAtMillis,
+                            deliveryAddress = state.lastOrderDeliveryAddress,
+                            invoiceItems = state.lastOrderItemsWithQty,
+                            subtotal = state.lastOrderSubtotal,
+                            promoDiscount = state.lastOrderPromoDiscount,
+                            serviceFee = state.lastOrderServiceFee,
+                            vat = state.lastOrderVat,
+                            onDownloadInvoice = appViewModel::downloadInvoice,
+                            onShareInvoice = appViewModel::shareInvoice
                         )
                     }
                     entry<FakeDeliveryTracking> {

@@ -34,6 +34,10 @@ import com.example.ghostcart.data.GhostActivityRepository
 import com.example.ghostcart.data.GhostRanking
 import com.example.ghostcart.data.GhostCardImageExporter
 import com.example.ghostcart.data.FavoriteRepository
+import com.example.ghostcart.data.InvoiceData
+import com.example.ghostcart.data.InvoiceEmailRepository
+import com.example.ghostcart.data.InvoiceLineItem
+import com.example.ghostcart.data.InvoicePdfExporter
 import com.example.ghostcart.data.GhostGiftDraft
 import com.example.ghostcart.data.GhostGiftRepository
 import com.example.ghostcart.data.RevealedGhostGift
@@ -81,6 +85,12 @@ data class AppUiState(
     val lastOrderTotal: Int = 0,
     val lastOrderProducts: List<MarketplaceProduct> = emptyList(),
     val lastOrderPlacedAtMillis: Long = 0L,
+    val lastOrderItemsWithQty: List<Pair<MarketplaceProduct, Int>> = emptyList(),
+    val lastOrderDeliveryAddress: String = "",
+    val lastOrderSubtotal: Int = 0,
+    val lastOrderPromoDiscount: Int = 0,
+    val lastOrderServiceFee: Int = 0,
+    val lastOrderVat: Int = 0,
     val deliveryStep: Int = -1,
     val promoApplied: Boolean = true,
     val authEmail: String? = null,
@@ -115,6 +125,12 @@ data class AppUiState(
     val simulationConsentStatus: SimulationConsentStatus? = null,
     val activeInAppMessage: InAppMessage? = null
 )
+
+// Mirrors CheckoutFlowScreens.kt's rates exactly - kept in sync there since
+// this is where the invoice's breakdown is recomputed after the cart clears.
+private const val CHECKOUT_SERVICE_FEE_RATE = 0.05f
+private const val CHECKOUT_VAT_RATE = 0.05f
+private const val CHECKOUT_PROMO_RATE = 0.10f
 
 internal fun deliveryStepAt(nowMillis: Long, placedAtMillis: Long, intervalMinutes: Int): Int {
     if (placedAtMillis <= 0L) return -1
@@ -935,6 +951,59 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun buildLastOrderInvoice(): InvoiceData {
+        val current = _uiState.value
+        return InvoiceData(
+            orderId = current.lastOrderId,
+            placedAtMillis = current.lastOrderPlacedAtMillis,
+            customerName = current.profile?.displayName.orEmpty(),
+            customerEmail = current.authEmail.orEmpty(),
+            deliveryAddress = current.lastOrderDeliveryAddress,
+            items = current.lastOrderItemsWithQty.map { (product, qty) ->
+                InvoiceLineItem(name = product.name, quantity = qty, lineTotal = product.price * qty)
+            },
+            subtotal = current.lastOrderSubtotal,
+            promoDiscount = current.lastOrderPromoDiscount,
+            serviceFee = current.lastOrderServiceFee,
+            vat = current.lastOrderVat,
+            total = current.lastOrderTotal
+        )
+    }
+
+    fun downloadInvoice() {
+        showToast("Creating invoice…")
+        viewModelScope.launch {
+            val context = getApplication<Application>()
+            val result = withContext(Dispatchers.IO) { InvoicePdfExporter.generate(context, buildLastOrderInvoice()) }
+            result.onSuccess {
+                showToast("Invoice saved to Downloads/Ghost Cart")
+            }.onFailure {
+                showToast("Couldn't create the invoice")
+            }
+        }
+    }
+
+    fun shareInvoice() {
+        viewModelScope.launch {
+            val context = getApplication<Application>()
+            val result = withContext(Dispatchers.IO) { InvoicePdfExporter.generate(context, buildLastOrderInvoice()) }
+            result.onSuccess { uri ->
+                val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                    type = "application/pdf"
+                    putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                    putExtra(android.content.Intent.EXTRA_SUBJECT, "Your Ghost Cart invoice")
+                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(android.content.Intent.createChooser(shareIntent, "Share invoice").apply {
+                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                })
+            }.onFailure {
+                showToast("Couldn't create the invoice")
+            }
+        }
+    }
+
     /**
      * [durationLabel] is currently unused for messaging (createAlmostBuy owns the
      * confirmation toast) but kept in the signature since every call site already
@@ -1244,7 +1313,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun placeSimulatedOrder(
         checkoutTotal: Int = cartSubtotal(),
-        ghostGift: GhostGiftDraft? = null
+        ghostGift: GhostGiftDraft? = null,
+        deliveryAddress: String = ""
     ): Boolean {
         val total = checkoutTotal.coerceAtLeast(0)
         if (_uiState.value.cartQuantities.isEmpty() || total <= 0) {
@@ -1269,8 +1339,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         updateWalletConfig { it.copy(startingBalance = simulatedBalance - total) }
         val orderId = "GHOST-${10000 + Random.nextInt(90000)}"
         val placedAt = System.currentTimeMillis()
-        val ghostedProducts = cartProductsWithQuantities().map { it.first }.distinctBy { it.id }
-        val ghostedItemCount = cartProductsWithQuantities().sumOf { it.second }
+        val itemsWithQty = cartProductsWithQuantities()
+        val ghostedProducts = itemsWithQty.map { it.first }.distinctBy { it.id }
+        val ghostedItemCount = itemsWithQty.sumOf { it.second }
+        val orderSubtotal = itemsWithQty.sumOf { (product, qty) -> product.price * qty }
+        val orderPromoDiscount = (orderSubtotal * CHECKOUT_PROMO_RATE).toInt()
+        val orderServiceFee = ((orderSubtotal - orderPromoDiscount) * CHECKOUT_SERVICE_FEE_RATE).toInt()
+        val orderVat = ((orderSubtotal - orderPromoDiscount) * CHECKOUT_VAT_RATE).toInt()
         val orderGroupId = "GO-${UUID.randomUUID()}"
         ghostedProducts.forEach { product ->
             val giftForProduct = ghostGift?.takeIf { it.productId == product.id }
@@ -1308,6 +1383,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 lastOrderTotal = total,
                 lastOrderProducts = ghostedProducts,
                 lastOrderPlacedAtMillis = placedAt,
+                lastOrderItemsWithQty = itemsWithQty,
+                lastOrderDeliveryAddress = deliveryAddress,
+                lastOrderSubtotal = orderSubtotal,
+                lastOrderPromoDiscount = orderPromoDiscount,
+                lastOrderServiceFee = orderServiceFee,
+                lastOrderVat = orderVat,
                 deliveryStep = 0,
                 cartProductIds = emptyList(),
                 cartQuantities = emptyMap()
@@ -1329,6 +1410,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         showToast(if (ghostGift == null) "Fake Checkout complete" else "Fake Checkout complete. Sending gift…")
 
         refreshCommunityProducts()
+        viewModelScope.launch { InvoiceEmailRepository.sendInvoiceEmail(getApplication(), buildLastOrderInvoice()) }
         return true
     }
 

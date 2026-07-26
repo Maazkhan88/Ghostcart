@@ -99,6 +99,107 @@ export async function sendGhostGiftEmail(
   }
 }
 
+export interface OrderInvoiceLineItem {
+  name: string;
+  quantity: number;
+  lineTotalCents: number;
+}
+
+export interface OrderInvoiceDetails {
+  orderId: string;
+  placedAtMillis: number;
+  deliveryAddress: string;
+  items: OrderInvoiceLineItem[];
+  subtotalCents: number;
+  promoDiscountCents: number;
+  serviceFeeCents: number;
+  vatCents: number;
+  totalCents: number;
+}
+
+export async function sendOrderInvoiceEmail(
+  email: EmailBinding | undefined,
+  to: string,
+  invoice: OrderInvoiceDetails,
+): Promise<{ ok: boolean }> {
+  if (!email) return { ok: false };
+
+  try {
+    await email.send({
+      to,
+      from: FROM,
+      subject: `Your Ghost Cart invoice: ${invoice.orderId}`,
+      html: orderInvoiceHtml(invoice),
+      text: `Your Ghost Cart invoice (${invoice.orderId}) is ready. Total: AED ${(invoice.totalCents / 100).toFixed(2)}. ` +
+        `This is a simulation only: no real payment was collected and no order was placed.`,
+    });
+    return { ok: true };
+  } catch (err) {
+    console.error("order invoice email send failed", err);
+    return { ok: false };
+  }
+}
+
+function orderInvoiceHtml(invoice: OrderInvoiceDetails): string {
+  const money = (cents: number) => `AED ${(cents / 100).toFixed(2)}`;
+  const dateText = new Date(invoice.placedAtMillis).toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  const itemRows = invoice.items
+    .map(
+      (item) => `<tr>
+        <td style="padding:10px 0;font-size:14px;color:#050505;">${escapeHtml(item.name)} <span style="color:#9a9a94;">x${item.quantity}</span></td>
+        <td style="padding:10px 0;font-size:14px;color:#050505;text-align:right;">${money(item.lineTotalCents)}</td>
+      </tr>`,
+    )
+    .join("");
+  const summaryRow = (label: string, cents: number, bold = false) => `<tr>
+    <td style="padding:${bold ? "12px" : "4px"} 0;font-size:${bold ? "15px" : "12px"};color:${bold ? "#050505" : "#9a9a94"};font-weight:${bold ? "800" : "400"};">${label}</td>
+    <td style="padding:${bold ? "12px" : "4px"} 0;font-size:${bold ? "15px" : "12px"};color:${bold ? "#050505" : "#9a9a94"};font-weight:${bold ? "800" : "400"};text-align:right;">${money(cents)}</td>
+  </tr>`;
+
+  return `<!doctype html>
+<html>
+  <body style="margin:0;padding:0;background:#f4f4f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f2;padding:32px 0;">
+      <tr><td align="center">
+        <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:20px;overflow:hidden;">
+          <tr><td style="background:#050505;padding:20px 32px;">
+            <img src="${LOGO_URL}" width="28" height="28" alt="" style="vertical-align:middle;display:inline-block;" />
+            <span style="color:#ffffff;font-size:20px;font-weight:800;vertical-align:middle;padding-left:8px;">Ghost Cart</span>
+          </td></tr>
+          <tr><td style="padding:32px;">
+            <h1 style="margin:0 0 8px;font-size:22px;color:#050505;">Your invoice is ready</h1>
+            <p style="margin:0 0 20px;font-size:13px;color:#666660;">Order <strong>${escapeHtml(invoice.orderId)}</strong> &middot; ${escapeHtml(dateText)}</p>
+            ${invoice.deliveryAddress ? `<p style="margin:0 0 20px;font-size:13px;color:#3a3a3a;line-height:1.5;"><strong>Delivery address</strong><br/>${escapeHtml(invoice.deliveryAddress).replace(/\n/g, "<br/>")}</p>` : ""}
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eeeeea;margin-top:8px;">
+              ${itemRows}
+            </table>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eeeeea;margin-top:8px;padding-top:8px;">
+              ${summaryRow("Subtotal", invoice.subtotalCents)}
+              ${invoice.promoDiscountCents > 0 ? summaryRow("Promo Discount (GHOST10)", -invoice.promoDiscountCents) : ""}
+              ${invoice.serviceFeeCents > 0 ? summaryRow("Service Fee", invoice.serviceFeeCents) : ""}
+              ${invoice.vatCents > 0 ? summaryRow("VAT (5%)", invoice.vatCents) : ""}
+            </table>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eeeeea;margin-top:4px;">
+              ${summaryRow("Total", invoice.totalCents, true)}
+            </table>
+            <p style="margin:20px 0 0;font-size:12px;color:#9a9a94;">Payment method: Simulation only</p>
+          </td></tr>
+          <tr><td style="padding:18px 32px 28px;border-top:1px solid #eeeeea;">
+            <p style="margin:0;font-size:11px;line-height:1.5;color:#888882;"><strong>Simulation only.</strong> No real payment was collected and no order was placed or delivered.</p>
+          </td></tr>
+        </table>
+      </td></tr>
+    </table>
+  </body>
+</html>`;
+}
+
 function ghostGiftHtml(
   recipientName: string,
   senderName: string,
