@@ -67,5 +67,11 @@
   // Service -> Email Sending -> Onboard Domain), which provisions the
   // required SPF/DKIM records. Sends silently no-op (logged, not thrown)
   // until that's done - see lib/email.ts.
-  "send_email": [{ "name": "EMAIL" }]
+  "send_email": [{ "name": "EMAIL" }],
+  // Used only to generate a strongly blurred, private teaser for Ghost Gift
+  // emails and the install handoff. The unblurred source is never exposed by
+  // the public gift page.
+  "images": {
+    "binding": "IMAGES"
+  }
 }

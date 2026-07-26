@@ -293,6 +293,44 @@ export const almostBuyEvents = sqliteTable(
   ],
 );
 
+// A Ghost Gift is a private invitation to reveal one existing simulated
+// almost-buy. It never represents a purchased or deliverable gift. Recipient
+// details are not stored in plaintext: the email address is retained only as
+// a one-way hash for abuse controls, while the bearer reveal token is also
+// stored only as a SHA-256 digest.
+export const ghostGifts = sqliteTable(
+  "ghost_gifts",
+  {
+    id: text("id").primaryKey(),
+    senderUserId: integer("sender_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    almostBuyId: text("almost_buy_id")
+      .notNull()
+      .references(() => almostBuys.id, { onDelete: "cascade" }),
+    recipientEmailHash: text("recipient_email_hash").notNull(),
+    tokenHash: text("token_hash").notNull(),
+    status: text("status").notNull().default("pending"),
+    emailSentAt: text("email_sent_at"),
+    revealedAt: text("revealed_at"),
+    withdrawnAt: text("withdrawn_at"),
+    expiresAt: text("expires_at").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("ghost_gifts_almost_buy_unique").on(table.almostBuyId),
+    uniqueIndex("ghost_gifts_token_hash_unique").on(table.tokenHash),
+    index("ghost_gifts_sender_created_idx").on(table.senderUserId, table.createdAt),
+    index("ghost_gifts_recipient_created_idx").on(table.recipientEmailHash, table.createdAt),
+    index("ghost_gifts_status_expires_idx").on(table.status, table.expiresAt),
+    check(
+      "ghost_gifts_status_check",
+      sql`${table.status} IN ('pending', 'revealed', 'withdrawn', 'expired', 'reported')`,
+    ),
+  ],
+);
+
 // Compact, public handoff records behind /ghost?s=<id>. These rows contain
 // product-display metadata only and expire automatically after six months.
 export const sharedGhostItems = sqliteTable(

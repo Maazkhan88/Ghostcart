@@ -10,6 +10,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -44,9 +45,11 @@ import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.platform.LocalContext
@@ -59,6 +62,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,11 +75,14 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ghostcart.data.Marketplace
 import com.example.ghostcart.data.MarketplaceProduct
+import com.example.ghostcart.data.GhostGiftDraft
+import com.example.ghostcart.data.GhostGiftRepository
 import com.example.ghostcart.data.WalletDemoData
 import com.example.ghostcart.data.WalletConfig
 import com.example.ghostcart.data.iconForProduct
@@ -315,7 +322,7 @@ fun GhostCheckoutScreen(
     onSelectInterval: (Int) -> Unit,
     onBack: () -> Unit,
     onOpenWallet: () -> Unit,
-    onPlaceOrder: (Int) -> Unit,
+    onPlaceOrder: (Int, GhostGiftDraft?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val subtotal = products.sumOf { (product, qty) -> product.price * qty }
@@ -327,6 +334,12 @@ fun GhostCheckoutScreen(
 
     var deliveryAddress by remember { mutableStateOf("123 Ghost Street\nAl Wasl, Dubai\nUnited Arab Emirates") }
     var editingAddress by remember { mutableStateOf(false) }
+    var sendAsGift by rememberSaveable { mutableStateOf(false) }
+    var recipientName by rememberSaveable { mutableStateOf("") }
+    var recipientEmail by rememberSaveable { mutableStateOf("") }
+    var recipientConsent by rememberSaveable { mutableStateOf(false) }
+    var selectedGiftProductId by rememberSaveable { mutableStateOf(products.firstOrNull()?.first?.id.orEmpty()) }
+    var giftError by rememberSaveable { mutableStateOf<String?>(null) }
 
     Box(modifier = modifier.fillMaxSize().background(Paper)) {
     Column(
@@ -365,6 +378,110 @@ fun GhostCheckoutScreen(
             onAction = onOpenWallet
         )
         CheckoutInfoRow(icon = Icons.Filled.Sell, title = "Promo Code", subtitle = "GHOST10 · 10% off applied", action = "Remove")
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(SoftGray)
+                .border(1.dp, FaintBorder, RoundedCornerShape(16.dp))
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().clickable {
+                    sendAsGift = !sendAsGift
+                    giftError = null
+                },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = sendAsGift,
+                    onCheckedChange = { sendAsGift = it; giftError = null }
+                )
+                Column(modifier = Modifier.padding(start = 8.dp)) {
+                    Text("Send as a Ghost Gift", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("Share a private simulated gift idea", color = MutedText, fontSize = 11.sp)
+                }
+            }
+
+            if (sendAsGift) {
+                Text(
+                    "No gift is purchased or delivered. The selected item still enters your normal 24-hour cooldown.",
+                    color = Ink,
+                    fontSize = 11.sp,
+                    lineHeight = 16.sp,
+                    modifier = Modifier.padding(top = 10.dp)
+                )
+                if (products.size > 1) {
+                    Text(
+                        "Choose one gift idea",
+                        color = Ink,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 14.dp)
+                    )
+                    products.forEach { (product, _) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedGiftProductId = product.id }
+                                .padding(vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedGiftProductId == product.id,
+                                onClick = { selectedGiftProductId = product.id }
+                            )
+                            Text(product.name, color = Ink, fontSize = 11.sp, maxLines = 2)
+                        }
+                    }
+                }
+                OutlinedTextField(
+                    value = recipientName,
+                    onValueChange = { recipientName = it.take(80); giftError = null },
+                    label = { Text("Recipient name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
+                )
+                OutlinedTextField(
+                    value = recipientEmail,
+                    onValueChange = { recipientEmail = it.take(254); giftError = null },
+                    label = { Text("Recipient email") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { recipientConsent = !recipientConsent; giftError = null }
+                        .padding(top = 8.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Checkbox(
+                        checked = recipientConsent,
+                        onCheckedChange = { recipientConsent = it; giftError = null }
+                    )
+                    Text(
+                        "I confirm this person expects an email from me.",
+                        color = Ink,
+                        fontSize = 11.sp,
+                        lineHeight = 16.sp,
+                        modifier = Modifier.padding(start = 8.dp, top = 12.dp)
+                    )
+                }
+                giftError?.let {
+                    Text(
+                        it,
+                        color = DangerRed,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
+                }
+            }
+        }
 
         Text(text = "Simulation Speed (per step)", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 18.dp))
         Row(
@@ -443,8 +560,27 @@ fun GhostCheckoutScreen(
                 .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
             PrimaryButton(
-                text = if (hasEnoughSimulatedBalance) "Place Fake Order" else "Add simulated balance",
-                onClick = { if (hasEnoughSimulatedBalance) onPlaceOrder(total) else onOpenWallet() },
+                text = when {
+                    !hasEnoughSimulatedBalance -> "Add simulated balance"
+                    sendAsGift -> "Complete Fake Checkout & Send Gift"
+                    else -> "Complete Fake Checkout"
+                },
+                onClick = {
+                    if (!hasEnoughSimulatedBalance) {
+                        onOpenWallet()
+                    } else if (!sendAsGift) {
+                        onPlaceOrder(total, null)
+                    } else {
+                        val draft = GhostGiftDraft(
+                            productId = selectedGiftProductId,
+                            recipientName = recipientName,
+                            recipientEmail = recipientEmail,
+                            recipientConsentConfirmed = recipientConsent
+                        )
+                        val error = GhostGiftRepository.validationError(draft)
+                        if (error != null) giftError = error else onPlaceOrder(total, draft)
+                    }
+                },
                 trailingIcon = Icons.Filled.ArrowForward
             )
         }

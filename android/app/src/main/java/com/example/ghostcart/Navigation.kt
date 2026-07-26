@@ -85,6 +85,7 @@ import com.example.ghostcart.ui.checkout.FakeDeliveryTrackingScreen
 import com.example.ghostcart.ui.checkout.GhostCartListScreen
 import com.example.ghostcart.ui.checkout.GhostCheckoutScreen
 import com.example.ghostcart.ui.checkout.OrderGhostedSuccessScreen
+import com.example.ghostcart.ui.gifts.GhostGiftRevealScreen
 import com.example.ghostcart.ui.onboarding.AuthScreen
 import com.example.ghostcart.ui.onboarding.PersonalizationScreen
 import com.example.ghostcart.ui.onboarding.ProfileSelectScreen
@@ -128,9 +129,12 @@ fun MainNavigation(
     initialGhostCategory: String? = null,
     initialGhostImageUrl: String? = null,
     initialGhostSourceUrl: String? = null,
-    ghostShareRequestKey: Long? = null
+    ghostShareRequestKey: Long? = null,
+    initialGiftToken: String? = null,
+    giftRequestKey: Long? = null
 ) {
     val initial = when {
+        initialGiftToken != null -> GhostGiftReveal(initialGiftToken)
         initialSharedUrl != null -> CaptureAlmostBuy
         initialGhostTitle != null || initialGhostShareId != null -> CaptureAlmostBuy
         initialCooldownId != null -> Cooldowns
@@ -225,6 +229,13 @@ fun MainNavigation(
                 sourceUrl = initialGhostSourceUrl
             )
             if (backStack.lastOrNull() != CaptureAlmostBuy) backStack.add(CaptureAlmostBuy)
+        }
+    }
+
+    LaunchedEffect(giftRequestKey) {
+        if (initialGiftToken != null) {
+            val destination = GhostGiftReveal(initialGiftToken)
+            if (backStack.lastOrNull() != destination) backStack.add(destination)
         }
     }
 
@@ -499,9 +510,23 @@ fun MainNavigation(
                             onSelectInterval = appViewModel::setSimulationInterval,
                             onBack = { backStack.removeLastOrNull() },
                             onOpenWallet = { backStack.add(Progress) },
-                            onPlaceOrder = { total ->
-                                if (appViewModel.placeSimulatedOrder(total)) {
+                            onPlaceOrder = { total, ghostGift ->
+                                if (appViewModel.placeSimulatedOrder(total, ghostGift)) {
                                     backStack.add(OrderGhostedSuccess)
+                                }
+                            }
+                        )
+                    }
+                    entry<GhostGiftReveal> { key ->
+                        GhostGiftRevealScreen(
+                            token = key.token,
+                            onBack = {
+                                if (backStack.size > 1) backStack.removeLastOrNull()
+                                else backStack.add(Home)
+                            },
+                            onGhostGift = { gift ->
+                                appViewModel.ghostRevealedGift(gift) {
+                                    backStack.add(Cooldowns)
                                 }
                             }
                         )
