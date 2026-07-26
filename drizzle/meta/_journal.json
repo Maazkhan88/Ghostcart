@@ -127,6 +127,41 @@
       "when": 1784916090310,
       "tag": "0017_safe_ogun",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1784916090311,
+      "tag": "0018_ghost_order_groups",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1784916090312,
+      "tag": "0019_add_gender_avatar_preset",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1784916090313,
+      "tag": "0020_ghost_gifts",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1784916090314,
+      "tag": "0021_gift_recipient_accounts",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1785083916336,
+      "tag": "0022_favorite_products",
+      "breakpoints": true
     }
   ]
 }

@@ -587,6 +587,26 @@ export const deviceTokens = sqliteTable(
   ],
 );
 
+// A user's favorited product. product_id is plain text (not an FK) because it
+// can point at either the catalog products table (integer id, stringified)
+// or a community product (already text id) - the Android client already
+// treats both under one unified string id space.
+export const favoriteProducts = sqliteTable(
+  "favorite_products",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    productId: text("product_id").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("favorite_products_user_product_idx").on(table.userId, table.productId),
+    index("favorite_products_user_idx").on(table.userId),
+  ],
+);
+
 // A completed marketplace-cart simulated checkout ("ghosted" it, in this
 // app's vocabulary - finished the process, as opposed to cooling off and
 // keeping the money). Deliberately separate from the anonymous, hashed-actor

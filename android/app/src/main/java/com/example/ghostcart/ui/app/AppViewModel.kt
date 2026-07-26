@@ -33,6 +33,7 @@ import com.example.ghostcart.data.DeliveryStepWorker
 import com.example.ghostcart.data.GhostActivityRepository
 import com.example.ghostcart.data.GhostRanking
 import com.example.ghostcart.data.GhostCardImageExporter
+import com.example.ghostcart.data.FavoriteRepository
 import com.example.ghostcart.data.GhostGiftDraft
 import com.example.ghostcart.data.GhostGiftRepository
 import com.example.ghostcart.data.RevealedGhostGift
@@ -268,17 +269,20 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleFavorite(productId: String) {
         if (findProduct(productId) == null) return
+        val nowFavorited = productId !in _uiState.value.favoriteProductIds
         _uiState.update { current ->
-            val next = if (productId in current.favoriteProductIds) {
-                current.favoriteProductIds - productId
-            } else {
-                current.favoriteProductIds + productId
-            }
+            val next = if (nowFavorited) current.favoriteProductIds + productId else current.favoriteProductIds - productId
             sharedPrefs.edit()
                 .putStringSet("favorite_product_ids", HashSet(next))
                 .putString("favorite_product_ids_v2", next.joinToString("\n"))
                 .apply()
             current.copy(favoriteProductIds = next)
+        }
+        // Best-effort - a signed-out user's favorites stay local-only, and a
+        // failed request here just means the next sign-in's merge catches up.
+        viewModelScope.launch {
+            val context = getApplication<Application>()
+            if (nowFavorited) FavoriteRepository.add(context, productId) else FavoriteRepository.remove(context, productId)
         }
     }
 
@@ -476,6 +480,26 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val remote = AlmostBuySync.fetchRemote(getApplication()) ?: return@launch
             if (remote.isNotEmpty()) almostBuyRepository.mergeFromServer(remote)
         }
+        viewModelScope.launch { syncFavoritesWithServer() }
+    }
+
+    /** Two-way merge on sign-in: anything favorited locally before this
+     * feature existed (or while offline) gets pushed up, anything already on
+     * the server gets pulled down - a plain union, since unfavoriting is rare
+     * enough that "favorited on either side wins" is the right default. */
+    private suspend fun syncFavoritesWithServer() {
+        val context = getApplication<Application>()
+        val remoteIds = FavoriteRepository.list(context).getOrNull() ?: return
+        val localIds = _uiState.value.favoriteProductIds
+        val merged = localIds + remoteIds
+        if (merged != localIds) {
+            sharedPrefs.edit()
+                .putStringSet("favorite_product_ids", HashSet(merged))
+                .putString("favorite_product_ids_v2", merged.joinToString("\n"))
+                .apply()
+            _uiState.update { it.copy(favoriteProductIds = merged) }
+        }
+        (localIds - remoteIds).forEach { productId -> FavoriteRepository.add(context, productId) }
     }
 
     fun updateDisplayName(name: String) {
