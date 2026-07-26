@@ -1,6 +1,146 @@
 # Current State
 
-Last updated: 2026-07-25, later same day (Claude Code — cart-first revert now live-tested end to end, plus a batch of bug fixes, a new avatar-picker feature with production backend deploy, and a notification-permission default-on fix). This status report supersedes Codex's report below for the primary-action behavior specifically; everything else Codex built (Orders grouping, canonical Ghost counts, food lane) is unchanged and still current.
+Last updated: 2026-07-26 (Claude Code — tutorial+gifting integration merged and released, repo/branch cleanup, website Stories section + QA pass live, R8/minification re-enabled and verified, favorites now syncs to the server). Written as a handoff checkpoint for another agent ("Antigravity") picking up work in this repo - everything below this report and above the 2026-07-25 report is now superseded/historical context only; read this report first.
+
+> ## STATUS REPORT (Claude Code, 2026-07-26)
+>
+> ### Branch/repo state - read this first
+>
+> - **`main` is now the canonical branch.** `phase-5/ghost-cart-stories-section`
+>   was fast-forward-promoted to `main` earlier this session (verified ancestor
+>   check first, real `git merge --ff-only`, no force-push). Other stale local
+>   branches were deleted after a full backup; a `git bundle` of every ref
+>   (including two branches Codex worked on in an isolated separate checkout
+>   that were never pushed to origin) lives at
+>   `D:\ghostcart-branch-backup-2026-07-26\ghostcart-all-branches.bundle` plus
+>   a patch/file copy for the one branch with real uncommitted work
+>   (`phase4-shared-ghost-attribution-UNCOMMITTED\`). `feature/google-signin-backend`
+>   and `phase-4/shared-ghost-attribution-notifications` still exist locally,
+>   untouched - their fate is still Maaz's call, not decided.
+> - **Android tutorial + gifting are merged into `main`** via three cherry-picks
+>   from Codex's isolated work (`82d8f0f` tutorial, `fe016f8` gift foundation,
+>   `a1b6029` gift history/teaser-image fix). Full spec verification (D1
+>   queries, deployed-Worker bindings, direct code reads) happened before
+>   merging - see the conversation/PR history, not repeated here. Compiles,
+>   passes the full unit test suite; a live device regression test on the S7 FE
+>   tablet got partway through the tutorial flow (spotlighted "Add to cart"
+>   tap) before being paused for other work - **not yet confirmed end-to-end
+>   on a real device, this still needs finishing.**
+> - **Website redesign (Codex, `codex/website-mobile-what-how-why-when`,
+>   local-only branch, not yet merged to `main`)** is deployed and QA'd:
+>   mobile-first `page.tsx`/`site.css` rewrite (What/How/Why/When sections,
+>   waitlist form), plus this session's additions on top - see below.
+>
+> ### This session's work, in order
+>
+> 1. **Signed release APK shipped**: versionCode 67 / versionName 2.9.0 (previous
+>    66/2.8.0 was debug-signed only, never uploaded anywhere real), built from
+>    `main`. Published as a GitHub prerelease:
+>    <https://github.com/Maazkhan88/Ghostcart/releases/tag/release-v2.9.0-67-tutorial-gifting>.
+>    Intended for Play Store closed testing once the remaining device
+>    regression test above is finished.
+> 2. **R8 minification + resource shrinking re-enabled and verified on a real
+>    device** (previously disabled after a crash, see the 2026-07-18ish entry
+>    below - that entry's root-cause guess about Firebase resource stripping
+>    was only half right). Two keep rules were needed:
+>    `android/app/src/main/res/raw/keep.xml` (google-services string resources
+>    Firebase's startup ContentProvider reads by raw name) and a
+>    `proguard-rules.pro` rule keeping Room's generated `*_Impl` classes
+>    (WorkManager's internal database is instantiated via
+>    `Class.forName(...)`, which R8 was breaking by renaming that class -
+>    this was the actual crash, not Firebase). Confirmed clean launch + full
+>    UI render on the S7 FE tablet. Roughly halves release APK size (35MB to
+>    17.6MB). This is now the permanent default for `assembleRelease` - don't
+>    re-disable it without a real reason.
+> 3. **Website: desktop visual QA + Ghost Cart Stories section + deploy.**
+>    - Fixed a real pixelation bug: `mascot-thumbsup.png` (native 154x140) was
+>      rendered at 230px width (1.49x upscale) in `.gc-v3-when-art img`; now
+>      renders at native size with proportionally adjusted container
+>      padding/min-height at both the base and mobile-breakpoint rules.
+>    - Added a "Ghost Cart Stories" section to `app/page.tsx` (new
+>      `getGhostCartStories()` server-side query against the same
+>      `content_blocks` table the Android app already uses - 9 real active
+>      story rows, no new/duplicate assets uploaded) with matching CSS in
+>      `app/site.css` (horizontal scroll-snap rail, same pattern as the
+>      existing product rail).
+>    - Deployed and verified on both the isolated review Worker
+>      (`test.theghostcart.com`, config `.openai/review-site-wrangler.jsonc` -
+>      had to add `d1_databases`/`r2_buckets` bindings there, which it didn't
+>      have before) and then, per explicit instruction, straight to production
+>      (`theghostcart.com`) without a further review step. Both live and
+>      verified (200s on the story images, no horizontal overflow, mascot fix
+>      confirmed via naturalWidth/clientWidth check).
+>    - Committed locally on `codex/website-mobile-what-how-why-when` -
+>      **not pushed to origin, and not yet merged into `main`.**
+> 4. **Android: removed a redundant Home-screen card.** The "Found it
+>    somewhere else? / Add manually" card called the exact same
+>    `onGhostSomething` action as the "Ghost something" button directly above
+>    it - deleted, plus its now-unused strings (`add_from_anywhere`,
+>    `add_from_anywhere_body`, `add_manually`) from both `values/strings.xml`
+>    and `values-ar/strings.xml`.
+> 5. **Android: fixed the ~2s black screen on cold start.** Two stacked
+>    causes, both fixed: (a) Android 12+'s built-in App Icon splash screen
+>    defaults to a bare black rectangle with no icon/background configured -
+>    added `values-v31/themes.xml` with the app's real dark background
+>    (`#0C0C0C`) and the `mascot_wave` ghost as the splash icon; (b) the
+>    cold-start story splash (`RandomStorySplashScreen` in `Navigation.kt`)
+>    put its `AsyncImage` on a flat `Color.Black` box while the story image
+>    downloaded over the network with nothing else shown - swapped to
+>    `SubcomposeAsyncImage` with the branded wordmark (`SplashContent()`) as
+>    the loading/error placeholder instead.
+> 6. **Favorites now sync to the server** (previously 100% local
+>    `SharedPreferences`, no backend at all - confirmed by grep, not an
+>    assumption). Added: `favorite_products` table (migration `0022`),
+>    `GET`/`POST`/`DELETE /api/me/favorites`, and an Android
+>    `FavoriteRepository` wired into `toggleFavorite` (best-effort push) and
+>    sign-in (`hydrateFromServer` now also does a union merge both ways, so
+>    anything favorited locally before this existed or while offline
+>    reconciles correctly). **The migration has been generated and committed
+>    but not yet applied to production D1** - the auto-mode classifier blocked
+>    running `wrangler d1 execute --remote` directly; Maaz needs to either
+>    approve that action or run
+>    `npx wrangler d1 execute ghostcart-v2-db --remote --file=drizzle/0022_favorite_products.sql`
+>    themselves before the API route will work (it will 500 against
+>    production until then - the table doesn't exist yet).
+> 7. **Fixed a latent drizzle-kit migration-numbering bug** while generating
+>    the favorites migration. Codex's migrations 0018-0021 (order groups,
+>    gender/avatar preset, gifts, gift-recipient-accounts) were hand-written
+>    SQL files that never went through `drizzle-kit generate`, so
+>    `drizzle/meta/_journal.json` never learned about them. Running
+>    `npm run db:generate` collided by reusing "0018" and silently composing
+>    a migration that re-created `ghost_gifts` and re-added already-applied
+>    columns - would have failed outright (or worse) if ever run against
+>    production. Fixed by backfilling the missing journal entries (idx
+>    18-21, correct tags) and renumbering the real new migration to `0022`.
+>    Verified fixed: `npm run db:generate` now reports "No schema changes,
+>    nothing to migrate" when re-run with no schema edits. **If you ever add
+>    a new migration and `db:generate` produces something that looks like it
+>    re-creates existing tables/columns, stop and check the journal against
+>    the actual `drizzle/*.sql` file list before proceeding** - this can
+>    happen again if a future migration is ever hand-written without running
+>    `drizzle-kit generate` afterward.
+>
+> ### Still open / not started this session
+>
+> - **Leaderboard privacy toggle**: let a user choose whether their recent
+>   ghosted items and recent activity show publicly on their own leaderboard
+>   detail view (separate from the existing leaderboard opt-in/username
+>   consent in `user_preferences` - this would be a finer-grained visibility
+>   control on top of that, not a replacement for it). Not started.
+> - **Invoice UI on checkout**: an order-confirmation screen (downloadable
+>   PDF, "Order placed" summary) plus a matching order-confirmation email,
+>   per a reference design Maaz shared. Not started.
+> - **In-app update delivery**: some mechanism to notify/update users inside
+>   the app instead of only via GitHub Releases / manual reinstall. Not
+>   started, no design decided yet (e.g. an in-app "update available" banner
+>   checking a version endpoint, vs. Play Store's own update flow once
+>   published there).
+> - Device regression test for the tutorial flow (see branch/repo state above)
+>   - still needs finishing before the release APK should actually go to
+>   Play Store closed testing.
+> - `codex/website-mobile-what-how-why-when` still needs an explicit decision
+>   on whether/when to merge into `main` (currently diverged, deployed to prod
+>   by content but not merged in git).
 
 > ## STATUS REPORT (Claude Code, 2026-07-25, later same day)
 >
