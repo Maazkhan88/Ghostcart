@@ -5,13 +5,11 @@ import { Brand } from "./Brand";
 import { trackEvent } from "./GoogleAnalytics";
 
 const LINKS = [
-  ["How it works", "#how-it-works"],
-  ["Try it", "#try-it"],
-  ["Progress", "#progress"],
-  ["FAQ", "#faq"],
+  ["What", "#what"],
+  ["How", "#how"],
+  ["Why", "#why"],
+  ["When", "#when"],
 ] as const;
-
-const DOWNLOAD_HREF = "/download/android";
 
 export function SiteNav() {
   const [open, setOpen] = useState(false);
@@ -25,41 +23,20 @@ export function SiteNav() {
   }, []);
 
   return (
-    <header className="gc-nav-shell">
-      <nav className="gc-nav" aria-label="Primary navigation">
+    <header className="gc-v3-nav-shell">
+      <nav className="gc-v3-nav" aria-label="Primary navigation">
         <a href="#top" aria-label="Ghost Cart home"><Brand light compact /></a>
-        <div className="gc-nav-links">
+        <div className="gc-v3-nav-links">
           {LINKS.map(([label, href]) => <a key={href} href={href}>{label}</a>)}
         </div>
-        <a
-          className="gc-button gc-button-small gc-button-green gc-nav-cta"
-          href={DOWNLOAD_HREF}
-          onClick={() => trackEvent("download_clicked", { placement: "nav" })}
-        >
-          Download beta
-        </a>
-        <button
-          type="button"
-          className="gc-menu-button"
-          aria-label={open ? "Close navigation" : "Open navigation"}
-          aria-expanded={open}
-          aria-controls="gc-mobile-menu"
-          onClick={() => setOpen((current) => !current)}
-        >
+        <a className="gc-button gc-button-small gc-button-green gc-v3-nav-cta" href="#when" onClick={() => trackEvent("waitlist_clicked", { placement: "nav" })}>Join waitlist</a>
+        <button type="button" className="gc-v3-menu-button" aria-label={open ? "Close navigation" : "Open navigation"} aria-expanded={open} aria-controls="gc-mobile-menu" onClick={() => setOpen((current) => !current)}>
           <span aria-hidden="true">{open ? "×" : "≡"}</span>
         </button>
       </nav>
-      <div id="gc-mobile-menu" className={`gc-mobile-menu${open ? " is-open" : ""}`}>
-        {LINKS.map(([label, href]) => (
-          <a key={href} href={href} onClick={() => setOpen(false)}>{label}</a>
-        ))}
-        <a
-          className="gc-button gc-button-green"
-          href={DOWNLOAD_HREF}
-          onClick={() => { trackEvent("download_clicked", { placement: "mobile_menu" }); setOpen(false); }}
-        >
-          Download beta
-        </a>
+      <div id="gc-mobile-menu" className={`gc-v3-mobile-menu${open ? " is-open" : ""}`}>
+        {LINKS.map(([label, href]) => <a key={href} href={href} onClick={() => setOpen(false)}>{label}</a>)}
+        <a className="gc-button gc-button-green" href="#when" onClick={() => { trackEvent("waitlist_clicked", { placement: "mobile_menu" }); setOpen(false); }}>Join waitlist</a>
       </div>
     </header>
   );

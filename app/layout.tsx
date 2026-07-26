@@ -9,13 +9,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Ghost Cart — Before you buy it, Ghost it.",
+  title: "Ghost Cart — Want it? Ghost it first.",
   description:
     "Capture an almost-buy, cool the urge, then decide with a clear head. Ghost Cart is simulation-only: no real payment and no real delivery.",
   keywords: ["Ghost Cart", "almost bought", "cooling off", "impulse shopping", "shopping simulation"],
   openGraph: {
-    title: "Ghost Cart — Before you buy it, Ghost it.",
-    description: "The cooling-off app for everything you almost bought.",
+    title: "Ghost Cart — Want it? Ghost it first.",
+    description: "Give every almost-buy 24 hours to cool before you decide.",
     type: "website",
   },
 };
