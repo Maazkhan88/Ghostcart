@@ -22,7 +22,8 @@
     }
   ],
   "assets": {
-    "directory": "dist/client"
+    "directory": "dist/client",
+    "binding": "ASSETS"
   },
   // The workers.dev URL was kept alive temporarily while every client
   // migrated to the theghostcart.com custom domain (Android's ApiConfig.BASE_URL

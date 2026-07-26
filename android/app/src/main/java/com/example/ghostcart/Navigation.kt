@@ -92,6 +92,7 @@ import com.example.ghostcart.ui.checkout.GhostCartListScreen
 import com.example.ghostcart.ui.checkout.GhostCheckoutScreen
 import com.example.ghostcart.ui.checkout.OrderGhostedSuccessScreen
 import com.example.ghostcart.ui.gifts.GhostGiftRevealScreen
+import com.example.ghostcart.ui.gifts.GiftsScreen
 import com.example.ghostcart.ui.onboarding.AuthScreen
 import com.example.ghostcart.ui.onboarding.PersonalizationScreen
 import com.example.ghostcart.ui.onboarding.ProfileSelectScreen
@@ -119,7 +120,7 @@ private fun selectedBottomDestination(current: NavKey?): NavKey = when (current)
     Progress -> Progress
     GhostCardSettings, WalletHome, WalletSetup, SalaryShield, Goals,
     WalletActivity, WeeklyStatement, Trends -> GhostCardSettings
-    is LegalDocument -> GhostCardSettings
+    is LegalDocument, Gifts -> GhostCardSettings
     GhostCartList, CaptureAlmostBuy, GhostCheckout, OrderGhostedSuccess,
     FakeDeliveryTracking, PayWithGhostCard, OrderProtected -> GhostCartList
     else -> Home
@@ -758,8 +759,12 @@ fun MainNavigation(
                             onStartTutorialStepDebug = { step ->
                                 tutorialViewModel.startAtForDebug(step)
                                 backStack.add(Tutorial)
-                            }
+                            },
+                            onOpenGifts = { backStack.add(Gifts) }
                         )
+                    }
+                    entry<Gifts> {
+                        GiftsScreen(onBack = { backStack.removeLastOrNull() })
                     }
                     entry<LegalDocument> { key ->
                         LegalDocumentScreen(docId = key.docId, onBack = { backStack.removeLastOrNull() })

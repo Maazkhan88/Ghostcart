@@ -1161,6 +1161,7 @@ fun ProfileScreen(
     onResetTutorialDebug: () -> Unit = {},
     onClearTutorialSessionDebug: () -> Unit = {},
     onStartTutorialStepDebug: (TutorialStep) -> Unit = {},
+    onOpenGifts: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var confirmDelete by remember { mutableStateOf(false) }
@@ -1188,6 +1189,12 @@ fun ProfileScreen(
                     onSetCommunityOptIn = onSetCommunityOptIn,
                     onOpenLeaderboard = onOpenLeaderboard
                 )
+            }
+            item {
+                Column {
+                    SectionHeader("Gifts")
+                    LegalRow("Received and sent gifts", onOpenGifts)
+                }
             }
         }
         item {

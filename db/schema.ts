@@ -308,7 +308,9 @@ export const ghostGifts = sqliteTable(
     almostBuyId: text("almost_buy_id")
       .notNull()
       .references(() => almostBuys.id, { onDelete: "cascade" }),
-    recipientEmailHash: text("recipient_email_hash").notNull(),
+      recipientEmailHash: text("recipient_email_hash").notNull(),
+      recipientUserId: integer("recipient_user_id")
+        .references(() => users.id, { onDelete: "set null" }),
     tokenHash: text("token_hash").notNull(),
     status: text("status").notNull().default("pending"),
     emailSentAt: text("email_sent_at"),
@@ -322,7 +324,8 @@ export const ghostGifts = sqliteTable(
     uniqueIndex("ghost_gifts_almost_buy_unique").on(table.almostBuyId),
     uniqueIndex("ghost_gifts_token_hash_unique").on(table.tokenHash),
     index("ghost_gifts_sender_created_idx").on(table.senderUserId, table.createdAt),
-    index("ghost_gifts_recipient_created_idx").on(table.recipientEmailHash, table.createdAt),
+      index("ghost_gifts_recipient_created_idx").on(table.recipientEmailHash, table.createdAt),
+      index("ghost_gifts_recipient_user_created_idx").on(table.recipientUserId, table.createdAt),
     index("ghost_gifts_status_expires_idx").on(table.status, table.expiresAt),
     check(
       "ghost_gifts_status_check",

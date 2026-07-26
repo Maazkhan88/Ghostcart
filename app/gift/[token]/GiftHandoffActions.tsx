@@ -39,7 +39,7 @@ export function GiftHandoffActions({ token }: { token: string }) {
 
   return (
     <div className="gc-gift-actions">
-      <a className="gc-button gc-button-green" href={intentUrl}>Open your Ghost Gift</a>
+      <a className="gc-button gc-button-green" href={intentUrl}>Open your gift</a>
       <a className="gc-button gc-gift-play" href={PLAY_STORE_URL}>Get Ghost Cart on Google Play</a>
       <p>After installing, return to the email and tap the gift link again.</p>
     </div>

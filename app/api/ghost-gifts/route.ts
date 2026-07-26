@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       windowSeconds: 24 * 60 * 60,
     });
     if (!actorLimit.allowed) {
-      return noStore({ error: "Too many Ghost Gift attempts. Try again tomorrow." }, 429);
+      return noStore({ error: "Too many gift attempts. Try again tomorrow." }, 429);
     }
 
     const payload = (await request.json()) as Record<string, unknown>;
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     const recipientName = readRecipientName(payload.recipientName);
     const recipientEmail = readRecipientEmail(payload.recipientEmail);
     if (!almostBuyId || almostBuyId.length > 80) {
-      return noStore({ error: "Choose an item to send as a Ghost Gift" }, 400);
+      return noStore({ error: "Choose an item to send as a gift" }, 400);
     }
     if (!recipientName) return noStore({ error: "Recipient name is invalid" }, 400);
     if (!recipientEmail) return noStore({ error: "Recipient email is invalid" }, 400);
@@ -49,10 +49,13 @@ export async function POST(request: Request) {
 
     const db = getD1();
     const item = await db.prepare(
-      `SELECT id FROM almost_buys
+      `SELECT id, image_url AS imageUrl FROM almost_buys
        WHERE id = ? AND user_id = ? AND state IN ('captured', 'cooling', 'snoozed') LIMIT 1`,
-    ).bind(almostBuyId, session.userId).first<{ id: string }>();
+    ).bind(almostBuyId, session.userId).first<{ id: string; imageUrl: string | null }>();
     if (!item) return noStore({ error: "That almost-buy is not available for gifting" }, 404);
+    if (!item.imageUrl) {
+      return noStore({ error: "Add a product picture before sending this gift" }, 400);
+    }
 
     const recipientEmailHash = await hashRecipientEmail(recipientEmail);
     const [senderDaily, recipientDaily] = await db.batch([
@@ -68,7 +71,7 @@ export async function POST(request: Request) {
     const senderCount = Number((senderDaily.results?.[0] as { count?: number } | undefined)?.count ?? 0);
     const recipientCount = Number((recipientDaily.results?.[0] as { count?: number } | undefined)?.count ?? 0);
     if (senderCount >= 5 || recipientCount >= 2) {
-      return noStore({ error: "Ghost Gift daily limit reached" }, 429);
+      return noStore({ error: "Gift daily limit reached" }, 429);
     }
 
     const token = createGiftToken();
@@ -100,7 +103,7 @@ export async function POST(request: Request) {
     );
     if (!sent.ok) {
       await db.prepare("DELETE FROM ghost_gifts WHERE id = ?").bind(giftId).run();
-      return noStore({ error: "The Ghost Gift email could not be sent. Try again later." }, 503);
+      return noStore({ error: "The gift email could not be sent. Try again later." }, 503);
     }
     await db.prepare(
       "UPDATE ghost_gifts SET email_sent_at = ?, updated_at = ? WHERE id = ?",
@@ -109,7 +112,7 @@ export async function POST(request: Request) {
     return noStore({ ghostGift: { id: giftId, status: "pending", expiresAt } }, 201);
   } catch (error) {
     console.error("ghost gift creation failed", error);
-    return noStore({ error: "Unable to send this Ghost Gift right now" }, 500);
+    return noStore({ error: "Unable to send this gift right now" }, 500);
   }
 }
 
@@ -117,15 +120,32 @@ export async function GET(request: Request) {
   try {
     const session = await requireApiSession(request);
     if (session instanceof Response) return session;
-    const result = await getD1().prepare(
+    const db = getD1();
+    const [sentResult, receivedResult] = await db.batch([
+      db.prepare(
       `SELECT g.id, g.status, g.created_at AS createdAt, g.expires_at AS expiresAt,
-              g.revealed_at AS revealedAt, a.title AS itemTitle
+              g.revealed_at AS revealedAt, a.title AS itemTitle,
+              a.category, a.image_url AS imageUrl, a.almost_spent_cents AS amountCents
        FROM ghost_gifts g INNER JOIN almost_buys a ON a.id = g.almost_buy_id
        WHERE g.sender_user_id = ? ORDER BY g.created_at DESC LIMIT 50`,
-    ).bind(session.userId).all();
-    return noStore({ ghostGifts: result.results ?? [] });
+      ).bind(session.userId),
+      db.prepare(
+        `SELECT g.id, g.status, g.created_at AS createdAt, g.expires_at AS expiresAt,
+                g.revealed_at AS revealedAt, a.title AS itemTitle,
+                a.category, a.image_url AS imageUrl, a.almost_spent_cents AS amountCents,
+                COALESCE(NULLIF(TRIM(u.display_name), ''), 'A Ghost Cart member') AS senderName
+         FROM ghost_gifts g
+         INNER JOIN almost_buys a ON a.id = g.almost_buy_id
+         INNER JOIN users u ON u.id = g.sender_user_id
+         WHERE g.recipient_user_id = ? AND g.status = 'revealed'
+         ORDER BY g.revealed_at DESC LIMIT 50`,
+      ).bind(session.userId),
+    ]);
+    const sentGifts = sentResult.results ?? [];
+    const receivedGifts = receivedResult.results ?? [];
+    return noStore({ ghostGifts: sentGifts, sentGifts, receivedGifts });
   } catch (error) {
     console.error("ghost gift list failed", error);
-    return noStore({ error: "Unable to load Ghost Gifts" }, 500);
+    return noStore({ error: "Unable to load gifts" }, 500);
   }
 }

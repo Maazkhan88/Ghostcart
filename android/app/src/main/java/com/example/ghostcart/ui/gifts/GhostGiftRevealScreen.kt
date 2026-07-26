@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -55,6 +56,7 @@ fun GhostGiftRevealScreen(
     onGhostGift: (RevealedGhostGift) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var privacyAccepted by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
@@ -69,7 +71,7 @@ fun GhostGiftRevealScreen(
             .padding(horizontal = 20.dp, vertical = 16.dp)
             .padding(bottom = 108.dp)
     ) {
-        GhostTopBar(title = "Ghost Gift", onBack = onBack)
+        GhostTopBar(title = "Your gift", onBack = onBack)
 
         if (gift == null) {
             Box(
@@ -84,7 +86,7 @@ fun GhostGiftRevealScreen(
                 GhostMascotPose("cart", Modifier.size(160.dp))
             }
             Text(
-                "A private Ghost Gift idea is waiting.",
+                "A private gift is waiting.",
                 color = Ink,
                 fontSize = 28.sp,
                 lineHeight = 32.sp,
@@ -110,7 +112,7 @@ fun GhostGiftRevealScreen(
             ) {
                 Checkbox(checked = privacyAccepted, onCheckedChange = { privacyAccepted = it; error = null })
                 Text(
-                    "I understand this is a simulation-only gift idea. Revealing it records that this private invitation was opened; it creates no purchase, payment, or delivery.",
+                    "I understand this is a simulation-only gift. Revealing it records that this private invitation was opened; it creates no purchase, payment, or delivery.",
                     color = Ink,
                     fontSize = 11.sp,
                     lineHeight = 16.sp,
@@ -121,7 +123,7 @@ fun GhostGiftRevealScreen(
                 Text(it, color = DangerRed, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp))
             }
             PrimaryButton(
-                text = if (loading) "Revealing…" else "Reveal Ghost Gift",
+                text = if (loading) "Revealing…" else "Reveal gift",
                 onClick = {
                     if (!privacyAccepted) {
                         error = "Accept the privacy notice to continue"
@@ -129,9 +131,9 @@ fun GhostGiftRevealScreen(
                         loading = true
                         error = null
                         scope.launch {
-                            GhostGiftRepository.reveal(token, true)
+                            GhostGiftRepository.reveal(context, token, true)
                                 .onSuccess { gift = it }
-                                .onFailure { error = it.message ?: "Unable to reveal this Ghost Gift" }
+                                .onFailure { error = it.message ?: "Unable to reveal this gift" }
                             loading = false
                         }
                     }

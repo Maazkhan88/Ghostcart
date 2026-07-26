@@ -468,8 +468,8 @@ fun GhostCheckoutScreen(
                     onCheckedChange = { sendAsGift = it; giftError = null }
                 )
                 Column(modifier = Modifier.padding(start = 8.dp)) {
-                    Text("Send as a Ghost Gift", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("Share a private simulated gift idea", color = MutedText, fontSize = 11.sp)
+                    Text("Send as a gift", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("Send a private simulated gift", color = MutedText, fontSize = 11.sp)
                 }
             }
 
@@ -483,7 +483,7 @@ fun GhostCheckoutScreen(
                 )
                 if (products.size > 1) {
                     Text(
-                        "Choose one gift idea",
+                        "Choose one gift",
                         color = Ink,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,

@@ -4,11 +4,11 @@ import { isGiftToken } from "../../../lib/ghost-gifts";
 import { GiftHandoffActions } from "./GiftHandoffActions";
 
 export const metadata: Metadata = {
-  title: "A private Ghost Gift idea is waiting",
-  description: "Open a private, simulation-only Ghost Gift idea in Ghost Cart.",
+  title: "A private gift is waiting",
+  description: "Open a private, simulation-only gift in Ghost Cart.",
   robots: { index: false, follow: false },
   openGraph: {
-    title: "A private Ghost Gift idea is waiting",
+    title: "A private gift is waiting",
     description: "Open it privately in Ghost Cart. No real payment or delivery.",
     type: "website",
   },
@@ -25,8 +25,8 @@ export default async function GhostGiftHandoffPage(
       <header className="gc-gift-nav"><a href="/"><Brand light /></a></header>
       <section className="gc-gift-shell">
         <div className="gc-gift-copy">
-          <p className="gc-kicker">A PRIVATE GHOST GIFT IDEA</p>
-          <h1>{valid ? <>Someone thought<br />of <em>you.</em></> : "This Ghost Gift link is invalid."}</h1>
+          <p className="gc-kicker">A PRIVATE GIFT</p>
+          <h1>{valid ? <>Someone sent<br />you a <em>gift.</em></> : "This gift link is invalid."}</h1>
           {valid ? (
             <>
               <p>The item stays blurred here. Open Ghost Cart to reveal it privately and decide whether it belongs in your own cooling-off list.</p>
@@ -40,10 +40,10 @@ export default async function GhostGiftHandoffPage(
           </div>
         </div>
         {valid ? (
-          <div className="gc-gift-teaser" aria-label="Blurred Ghost Gift preview">
+          <div className="gc-gift-teaser" aria-label="Blurred gift preview">
             <img
               src={`/api/ghost-gifts/${encodeURIComponent(token)}/teaser-image`}
-              alt="Blurred Ghost Gift teaser"
+              alt="Blurred gift preview"
             />
             <span aria-hidden="true">?</span>
             <p>Hidden until you open Ghost Cart</p>
@@ -51,7 +51,7 @@ export default async function GhostGiftHandoffPage(
         ) : null}
       </section>
       <footer className="gc-gift-footer">
-        <strong>This is a Ghost Gift idea—not a purchased gift.</strong>
+        <strong>This is a simulated gift—not a purchased gift.</strong>
         <span>No product was purchased, paid for, or sent.</span>
       </footer>
     </main>

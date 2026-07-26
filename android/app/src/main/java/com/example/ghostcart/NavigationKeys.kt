@@ -26,6 +26,7 @@ import kotlinx.serialization.Serializable
 @Serializable data object PayWithGhostCard : NavKey
 @Serializable data object OrderProtected : NavKey
 @Serializable data class GhostGiftReveal(val token: String) : NavKey
+@Serializable data object Gifts : NavKey
 
 // Ghost Wallet
 @Serializable data object WalletHome : NavKey

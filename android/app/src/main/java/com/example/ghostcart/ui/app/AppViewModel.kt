@@ -1266,13 +1266,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 onServerSynced = { serverId ->
                     if (giftForProduct != null) {
                         GhostGiftRepository.create(getApplication(), serverId, giftForProduct)
-                            .onSuccess { showToast("Ghost Gift email sent") }
+                            .onSuccess { showToast("Gift email sent") }
                             .onFailure { showToast(it.message ?: "Ghosted, but the gift email could not be sent") }
                     }
                 },
                 onServerSyncFailed = {
                     if (giftForProduct != null) {
-                        showToast("Item is cooling, but the Ghost Gift email could not be sent")
+                        showToast("Item is cooling, but the gift email could not be sent")
                     }
                 }
             )
@@ -1302,7 +1302,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         )
         beginDeliveryClock()
         Analytics.logCheckoutCompleted(getApplication(), ghostedItemCount, total * 100)
-        showToast(if (ghostGift == null) "Fake Checkout complete" else "Fake Checkout complete. Sending Ghost Gift…")
+        showToast(if (ghostGift == null) "Fake Checkout complete" else "Fake Checkout complete. Sending gift…")
 
         refreshCommunityProducts()
         return true
@@ -1314,7 +1314,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 name = gift.title,
                 amountCents = gift.amountCents,
                 category = normalizeCategory(gift.category),
-                trigger = "Gift idea",
+                trigger = "Gift",
                 coolingDurationMillis = 24L * 60L * 60L * 1000L,
                 imageUrl = gift.imageUrl,
                 sourceKind = "share"
