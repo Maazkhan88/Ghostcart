@@ -47,21 +47,14 @@ android {
 
     buildTypes {
         release {
-            // Temporarily disabled - the first-ever minified/shrunk release
-            // build crashed on launch on a real device, before any UI ever
-            // showed. Firebase (Analytics + FCM, wired via the google-services
-            // plugin) reads its config from generated string resources
-            // (google_app_id, gcm_defaultSenderId, etc.) via a raw
-            // resource-name lookup in its startup ContentProvider, not a
-            // static R.string reference - isShrinkResources can't see that
-            // usage and is the prime suspect for a crash this early. Ship
-            // unminified now to unblock launch; re-enable once verified on a
-            // real device (either add an explicit tools:keep resource entry
-            // for the Firebase-generated strings, or bisect minify vs
-            // shrinkResources independently) - do not just flip both back on
-            // without a real device test.
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // Verified on a real device (S7 FE tablet, 2026-07-26): launches
+            // clean, Firebase inits, full UI renders. Needed two keep rules
+            // to get here - see res/raw/keep.xml (google-services strings
+            // Firebase reads by raw name) and proguard-rules.pro (Room's
+            // WorkManager database, instantiated via Class.forName on the
+            // generated *_Impl class name).
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
