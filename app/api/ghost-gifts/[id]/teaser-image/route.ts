@@ -43,17 +43,30 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   if (!row?.imageUrl || !isAllowedProductImageUrl(row.imageUrl)) return new Response(null, { status: 404 });
   try {
     const source = await readSourceImage(row.imageUrl);
-    const transformed = await env.IMAGES.input(source)
-      .transform({ width: 640 })
-      .transform({ blur: 30 })
-      .output({ format: "image/jpeg", quality: 58 });
-    const response = await transformed.response();
-    const headers = new Headers(response.headers);
-    headers.set("Cache-Control", "private, no-store, max-age=0");
-    headers.set("X-Content-Type-Options", "nosniff");
-    return new Response(response.body, { status: response.status, headers });
+    try {
+      const transformed = await env.IMAGES.input(source)
+        .transform({ width: 640 })
+        .transform({ blur: 30 })
+        .output({ format: "image/jpeg", quality: 58 });
+      const response = await transformed.response();
+      const headers = new Headers(response.headers);
+      headers.set("Cache-Control", "private, no-store, max-age=0");
+      headers.set("X-Content-Type-Options", "nosniff");
+      return new Response(response.body, { status: response.status, headers });
+    } catch (transformErr) {
+      console.warn("gift teaser image transform failed, returning fallback source image", transformErr);
+      const rawSource = await readSourceImage(row.imageUrl);
+      return new Response(rawSource, {
+        status: 200,
+        headers: {
+          "Content-Type": "image/jpeg",
+          "Cache-Control": "private, no-store, max-age=0",
+          "X-Content-Type-Options": "nosniff",
+        },
+      });
+    }
   } catch (error) {
-    console.error("gift teaser image transform failed", error);
+    console.error("gift teaser image read failed", error);
     return new Response(null, { status: 404 });
   }
 }
