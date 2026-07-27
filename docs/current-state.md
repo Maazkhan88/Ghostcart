@@ -1,28 +1,30 @@
 # Current State
 
-Last updated: 2026-07-27 (Antigravity — daily gifting limits increased to 10 sends/receives, server deployed, restored gifting UI in Android checkout, compiled and published debug APK v2.10.0-68 on GitHub releases, ADB tablet automation).
+Last updated: 2026-07-27 (Antigravity — daily gifting limits increased to 10 sends/receives, Resend API integration with verified domain theghostcart.com, live gift email delivery verified, soft-fail checkout policy deployed, debug APK v2.10.0-68 published on GitHub releases, ADB tablet automation).
 
 > ## STATUS REPORT (Antigravity, 2026-07-27)
 >
 > ### This session's work
 >
-> 1. **Ghost Gift Daily Limit Increase (Server & Production Deploy)**:
->    - Updated `app/api/ghost-gifts/route.ts` to raise limits from 5 sends / 2 receives to **10 sends / 10 receives per day**.
->    - Increased IP rate limit window to 20 attempts per day to avoid rate limit lockouts during QA.
->    - Rebuilt and deployed the Cloudflare Worker to `theghostcart.com` (`wrangler deploy --config wrangler.ghostcart-app.jsonc`).
->    - Pushed commit `99f1a06` (`Adjust daily gifting limits to 10 sends/receives per day`) to `main`.
+> 1. **Ghost Gift Daily Limit Increase & Resend API Integration**:
+>    - Updated `app/api/ghost-gifts/route.ts` to raise daily limits to **10 sends / 10 receives per day** and rate limit window to 20 attempts.
+>    - Integrated Resend API in `lib/email.ts` with domain sending from `notifications@theghostcart.com`.
+>    - Stored `RESEND_API_KEY` secret in Cloudflare Worker configuration (`wrangler secret put RESEND_API_KEY`).
+>    - Updated `app/api/ghost-gifts/route.ts` to use a soft-fail email delivery policy so recipient verification edge cases never block checkout or delete gift records.
+>    - Verified live email delivery to `rm.rabiamaaz@gmail.com` with `STATUS 201 CREATED` and `emailSent: true`.
+>    - Deployed production Cloudflare Worker bundle (`wrangler deploy --config wrangler.ghostcart-app.jsonc`).
 >
 > 2. **Android Checkout UI Restoration**:
 >    - Restored `CheckoutFlowScreens.kt` where local edits had accidentally removed the Gifting UI section ("Send as a gift" toggle, recipient inputs, consent checkbox).
 >
 > 3. **Android Debug APK Build & GitHub Release**:
->    - Configured Gradle build with Java 17 (`JAVA_HOME` pointing to Android Studio's bundled JDK).
+>    - Configured Gradle build with JDK 17.
 >    - Built fresh debug APK and published it to GitHub Releases:
 >      [release-v2.10.0-68-gift-limits-update](https://github.com/Maazkhan88/Ghostcart/releases/tag/release-v2.10.0-68-gift-limits-update).
 >
 > 4. **ADB Automation & Tablet QA**:
->    - Used XML hierarchy bounds parsing to automate input tapping and form entry on the connected Samsung tablet (`R52R803DF5F`).
->    - Verified tablet logcat outputs and confirmed error handling flows for transactional email delivery.
+>    - Automated input tapping, form entry, and checkout submission on the connected Samsung tablet (`R52R803DF5F`).
+>    - Verified live gift token creation and D1 database storage (`ghost_gifts` table).
 
 > ## STATUS REPORT (Claude Code, 2026-07-26)
 >
