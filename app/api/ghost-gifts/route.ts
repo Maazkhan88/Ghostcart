@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       namespace: "ghost-gift-create",
       actorHash: await requestActorHash(request),
       cost: 1,
-      limit: 10,
+      limit: 20,
       windowSeconds: 24 * 60 * 60,
     });
     if (!actorLimit.allowed) {
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
     ]);
     const senderCount = Number((senderDaily.results?.[0] as { count?: number } | undefined)?.count ?? 0);
     const recipientCount = Number((recipientDaily.results?.[0] as { count?: number } | undefined)?.count ?? 0);
-    if (senderCount >= 5 || recipientCount >= 2) {
+    if (senderCount >= 10 || recipientCount >= 10) {
       return noStore({ error: "Gift daily limit reached" }, 429);
     }
 
