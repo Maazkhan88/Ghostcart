@@ -70,32 +70,104 @@ export async function sendCooldownResolvedEmail(
   }
 }
 
+async function sendViaResend(
+  apiKey: string,
+  to: string,
+  subject: string,
+  html: string,
+  text: string,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    // Try custom domain first, fall back to onboarding@resend.dev if domain not yet verified in Resend
+    let res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "Ghost Cart <notifications@theghostcart.com>",
+        to: [to],
+        subject,
+        html,
+        text,
+      }),
+    });
+
+    let data = (await res.json()) as any;
+    if (res.ok && data?.id) {
+      return { ok: true };
+    }
+
+    // If custom domain is not yet verified in Resend dashboard, retry with default onboarding sender
+    if (data?.message?.includes("domain") || res.status === 403 || res.status === 422) {
+      console.warn("Resend custom domain not verified yet, retrying with onboarding sender:", data?.message);
+      res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: "Ghost Cart <onboarding@resend.dev>",
+          to: [to],
+          subject,
+          html,
+          text,
+        }),
+      });
+      data = (await res.json()) as any;
+      if (res.ok && data?.id) {
+        return { ok: true };
+      }
+    }
+
+    console.warn("Resend API delivery failed:", data);
+    return { ok: false, error: data?.message || "Resend delivery error" };
+  } catch (err: any) {
+    console.error("Resend API exception:", err);
+    return { ok: false, error: err?.message || String(err) };
+  }
+}
+
 export async function sendGhostGiftEmail(
   email: EmailBinding | undefined,
   to: string,
   recipientName: string,
   senderName: string,
   revealToken: string,
-): Promise<{ ok: boolean }> {
-  if (!email) return { ok: false };
+  resendApiKey?: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const revealUrl = `https://theghostcart.com/gift/${encodeURIComponent(revealToken)}`;
+  const teaserUrl = `https://theghostcart.com/api/ghost-gifts/${encodeURIComponent(revealToken)}/teaser-image`;
+  const subject = `Hi ${recipientName}, ${senderName} sent you a gift`;
+  const html = ghostGiftHtml(recipientName, senderName, revealUrl, teaserUrl);
+  const text = `Hi ${recipientName}, ${senderName} sent you a gift in Ghost Cart. ` +
+    `The picture stays hidden until you reveal it in the app. This is a simulation only: no gift was purchased, paid for, or sent. ` +
+    `View it privately in Ghost Cart: ${revealUrl}`;
+
+  // 1. Try Resend API if key is available
+  const apiKey = resendApiKey || (typeof process !== "undefined" ? process.env.RESEND_API_KEY : undefined);
+  if (apiKey) {
+    const resendResult = await sendViaResend(apiKey, to, subject, html, text);
+    if (resendResult.ok) return { ok: true };
+  }
+
+  // 2. Fall back to Cloudflare EMAIL binding
+  if (!email) return { ok: false, error: "No email binding configured" };
 
   try {
-    const revealUrl = `https://theghostcart.com/gift/${encodeURIComponent(revealToken)}`;
-    const teaserUrl = `https://theghostcart.com/api/ghost-gifts/${encodeURIComponent(revealToken)}/teaser-image`;
-    const subject = `Hi ${recipientName}, ${senderName} sent you a gift`;
     await email.send({
       to,
       from: FROM,
       subject,
-      html: ghostGiftHtml(recipientName, senderName, revealUrl, teaserUrl),
-      text: `Hi ${recipientName}, ${senderName} sent you a gift in Ghost Cart. ` +
-        `The picture stays hidden until you reveal it in the app. This is a simulation only: no gift was purchased, paid for, or sent. ` +
-        `View it privately in Ghost Cart: ${revealUrl}`,
+      html,
+      text,
     });
     return { ok: true };
-  } catch (err) {
+  } catch (err: any) {
     console.error("ghost gift email send failed", err);
-    return { ok: false };
+    return { ok: false, error: err?.message || String(err) };
   }
 }
 

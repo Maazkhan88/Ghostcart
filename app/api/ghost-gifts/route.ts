@@ -100,16 +100,17 @@ export async function POST(request: Request) {
       recipientName,
       safeSenderName(session.displayName),
       token,
+      (env as any).RESEND_API_KEY,
     );
-    if (!sent.ok) {
-      await db.prepare("DELETE FROM ghost_gifts WHERE id = ?").bind(giftId).run();
-      return noStore({ error: "The gift email could not be sent. Try again later." }, 503);
+    if (sent.ok) {
+      await db.prepare(
+        "UPDATE ghost_gifts SET email_sent_at = ?, updated_at = ? WHERE id = ?",
+      ).bind(now, now, giftId).run();
+    } else {
+      console.warn("Ghost gift email send failed softly (unverified recipient or email binding error):", sent.error);
     }
-    await db.prepare(
-      "UPDATE ghost_gifts SET email_sent_at = ?, updated_at = ? WHERE id = ?",
-    ).bind(now, now, giftId).run();
 
-    return noStore({ ghostGift: { id: giftId, status: "pending", expiresAt } }, 201);
+    return noStore({ ghostGift: { id: giftId, status: "pending", expiresAt, emailSent: sent.ok } }, 201);
   } catch (error) {
     console.error("ghost gift creation failed", error);
     return noStore({ error: "Unable to send this gift right now" }, 500);

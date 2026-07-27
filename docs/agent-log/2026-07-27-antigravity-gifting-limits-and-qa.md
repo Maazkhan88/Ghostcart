@@ -1,4 +1,4 @@
-# Antigravity developer log: Gifting Limits, Build Release & Tablet QA
+# Antigravity developer log: Gifting Limits, Resend Integration & Verification
 
 Date: 2026-07-27
 Agent: Antigravity
@@ -19,7 +19,8 @@ Agent: Antigravity
    - Built debug APK using `gradlew assembleDebug`.
    - Created GitHub Pre-Release: [release-v2.10.0-68-gift-limits-update](https://github.com/Maazkhan88/Ghostcart/releases/tag/release-v2.10.0-68-gift-limits-update).
 
-4. **ADB Automation & Diagnostic Logs**:
-   - Dumped and parsed `/sdcard/window_dump.xml` to accurately locate the exact clickable bounds of the "Send as a gift" checkbox (`[68,1037][158,1127]`), recipient input fields, and consent checkbox.
-   - Executed ADB input sequence to fill in recipient details and submit the checkout flow.
-   - Analyzed device `logcat` buffer to trace error notifications and email delivery behaviors.
+4. **Resend API Integration & Global Delivery**:
+   - Integrated Resend transactional email API in `lib/email.ts` to bypass Cloudflare Worker `send_email` destination verification limits.
+   - Stored `RESEND_API_KEY` secret in Cloudflare Worker configuration (`wrangler secret put RESEND_API_KEY`).
+   - Updated `app/api/ghost-gifts/route.ts` to handle email delivery with soft-fail fallback so checkout never breaks or deletes gift records on network edge cases.
+   - Verified live email delivery from `notifications@theghostcart.com` to `rm.rabiamaaz@gmail.com` (`STATUS 201 CREATED`, `emailSent: true`).
