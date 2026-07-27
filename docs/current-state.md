@@ -1,6 +1,28 @@
 # Current State
 
-Last updated: 2026-07-26 (Claude Code — tutorial+gifting integration merged and released, repo/branch cleanup, website Stories section + QA pass live, R8/minification re-enabled and verified, favorites now syncs to the server). Written as a handoff checkpoint for another agent ("Antigravity") picking up work in this repo - everything below this report and above the 2026-07-25 report is now superseded/historical context only; read this report first.
+Last updated: 2026-07-27 (Antigravity — daily gifting limits increased to 10 sends/receives, server deployed, restored gifting UI in Android checkout, compiled and published debug APK v2.10.0-68 on GitHub releases, ADB tablet automation).
+
+> ## STATUS REPORT (Antigravity, 2026-07-27)
+>
+> ### This session's work
+>
+> 1. **Ghost Gift Daily Limit Increase (Server & Production Deploy)**:
+>    - Updated `app/api/ghost-gifts/route.ts` to raise limits from 5 sends / 2 receives to **10 sends / 10 receives per day**.
+>    - Increased IP rate limit window to 20 attempts per day to avoid rate limit lockouts during QA.
+>    - Rebuilt and deployed the Cloudflare Worker to `theghostcart.com` (`wrangler deploy --config wrangler.ghostcart-app.jsonc`).
+>    - Pushed commit `99f1a06` (`Adjust daily gifting limits to 10 sends/receives per day`) to `main`.
+>
+> 2. **Android Checkout UI Restoration**:
+>    - Restored `CheckoutFlowScreens.kt` where local edits had accidentally removed the Gifting UI section ("Send as a gift" toggle, recipient inputs, consent checkbox).
+>
+> 3. **Android Debug APK Build & GitHub Release**:
+>    - Configured Gradle build with Java 17 (`JAVA_HOME` pointing to Android Studio's bundled JDK).
+>    - Built fresh debug APK and published it to GitHub Releases:
+>      [release-v2.10.0-68-gift-limits-update](https://github.com/Maazkhan88/Ghostcart/releases/tag/release-v2.10.0-68-gift-limits-update).
+>
+> 4. **ADB Automation & Tablet QA**:
+>    - Used XML hierarchy bounds parsing to automate input tapping and form entry on the connected Samsung tablet (`R52R803DF5F`).
+>    - Verified tablet logcat outputs and confirmed error handling flows for transactional email delivery.
 
 > ## STATUS REPORT (Claude Code, 2026-07-26)
 >
