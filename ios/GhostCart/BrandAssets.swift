@@ -3,6 +3,9 @@ import SwiftUI
 struct GhostMascotView: View {
     let poseName: String
 
+    // Matches Android's GhostMascotPose (ui/Icons.kt) pose->drawable
+    // mapping exactly, per the asset manifest (§2). "peek" reuses waveAlt
+    // on Android too, not a dedicated asset.
     private var assetName: String {
         switch poseName {
         case "cart": return "MascotCart"
@@ -10,6 +13,12 @@ struct GhostMascotView: View {
         case "cooldown": return "MascotCooldown"
         case "thumbsup": return "MascotThumbsup"
         case "combo": return "MascotCombo"
+        case "waveAlt", "peek": return "MascotWaveAlt"
+        case "trio": return "MascotTrio"
+        case "phoneList": return "MascotPhoneList"
+        case "checkoutPhone": return "MascotCheckoutPhone"
+        case "male": return "MascotMale"
+        case "female": return "MascotFemale"
         default: return "MascotWave"
         }
     }

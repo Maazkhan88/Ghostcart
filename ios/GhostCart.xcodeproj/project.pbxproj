@@ -40,6 +40,7 @@
 		A10000000000000000000039 /* ContentBlocks.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000039 /* ContentBlocks.swift */; };
 		A1000000000000000000003A /* MarketplaceSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000003A /* MarketplaceSection.swift */; };
 		T10000000000000000000002 /* GhostCartStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T10000000000000000000001 /* GhostCartStoreTests.swift */; };
+		A1000000000000000000003B /* AvatarPresets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000003B /* AvatarPresets.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -111,6 +112,7 @@
 		B1000000000000000000003A /* MarketplaceSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketplaceSection.swift; sourceTree = "<group>"; };
 		T10000000000000000000000 /* GhostCartTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GhostCartTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		T10000000000000000000001 /* GhostCartStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhostCartStoreTests.swift; sourceTree = "<group>"; };
+		B1000000000000000000003B /* AvatarPresets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarPresets.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -187,6 +189,7 @@
 				B10000000000000000000038 /* OnboardingFlowView.swift */,
 				B10000000000000000000039 /* ContentBlocks.swift */,
 				B1000000000000000000003A /* MarketplaceSection.swift */,
+				B1000000000000000000003B /* AvatarPresets.swift */,
 				B10000000000000000000013 /* GhostCart.entitlements */,
 				B1000000000000000000000F /* Assets.xcassets */,
 			);
@@ -370,6 +373,7 @@
 				A10000000000000000000038 /* OnboardingFlowView.swift in Sources */,
 				A10000000000000000000039 /* ContentBlocks.swift in Sources */,
 				A1000000000000000000003A /* MarketplaceSection.swift in Sources */,
+				A1000000000000000000003B /* AvatarPresets.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -1,5 +1,14 @@
 import XCTest
+import UIKit
 @testable import GhostCart
+
+final class AvatarPresetsTests: XCTestCase {
+    func testEveryAvatarPresetImageLoads() {
+        for preset in AvatarPreset.all {
+            XCTAssertNotNil(UIImage(named: preset.imageName), "Missing asset for avatar preset \(preset.id): \(preset.imageName)")
+        }
+    }
+}
 
 final class GhostCartStoreTests: XCTestCase {
     func testStoreInitializesWithoutCrashing() {
