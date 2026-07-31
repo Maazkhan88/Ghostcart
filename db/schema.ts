@@ -120,6 +120,10 @@ export const users = sqliteTable("users", {
   passwordHash: text("password_hash").notNull(),
   passwordSalt: text("password_salt").notNull(),
   displayName: text("display_name"),
+  // Stable Apple `sub` claim. Apple may only provide the relay email/name on
+  // the first authorization, so subsequent sign-ins must resolve the account
+  // by this provider identifier rather than by email alone.
+  appleSubject: text("apple_subject").unique(),
   // Grants access to /admin and its APIs. Never settable via any user-facing
   // API - only flipped directly in D1 by whoever operates the deployment.
   isAdmin: integer("is_admin", { mode: "boolean" }).notNull().default(false),

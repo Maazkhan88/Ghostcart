@@ -41,6 +41,12 @@
 		A1000000000000000000003A /* MarketplaceSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000003A /* MarketplaceSection.swift */; };
 		T10000000000000000000002 /* GhostCartStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T10000000000000000000001 /* GhostCartStoreTests.swift */; };
 		A1000000000000000000003B /* AvatarPresets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000003B /* AvatarPresets.swift */; };
+		A20000000000000000000001 /* FirebaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000001 /* FirebaseService.swift */; };
+		A20000000000000000000002 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = P20000000000000000000002 /* FirebaseAnalytics */; };
+		A20000000000000000000003 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = P20000000000000000000003 /* FirebaseMessaging */; };
+		A20000000000000000000004 /* FirebaseInAppMessaging-Beta in Frameworks */ = {isa = PBXBuildFile; productRef = P20000000000000000000004 /* FirebaseInAppMessaging-Beta */; };
+		A20000000000000000000005 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000003 /* GoogleService-Info.plist */; };
+		A20000000000000000000006 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = P20000000000000000000006 /* GoogleSignIn */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -113,6 +119,9 @@
 		T10000000000000000000000 /* GhostCartTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GhostCartTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		T10000000000000000000001 /* GhostCartStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhostCartStoreTests.swift; sourceTree = "<group>"; };
 		B1000000000000000000003B /* AvatarPresets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarPresets.swift; sourceTree = "<group>"; };
+		B20000000000000000000001 /* FirebaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseService.swift; sourceTree = "<group>"; };
+		B20000000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B20000000000000000000003 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -120,6 +129,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A20000000000000000000002 /* FirebaseAnalytics in Frameworks */,
+				A20000000000000000000003 /* FirebaseMessaging in Frameworks */,
+				A20000000000000000000004 /* FirebaseInAppMessaging-Beta in Frameworks */,
+				A20000000000000000000006 /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -190,6 +203,9 @@
 				B10000000000000000000039 /* ContentBlocks.swift */,
 				B1000000000000000000003A /* MarketplaceSection.swift */,
 				B1000000000000000000003B /* AvatarPresets.swift */,
+				B20000000000000000000001 /* FirebaseService.swift */,
+				B20000000000000000000002 /* Info.plist */,
+				B20000000000000000000003 /* GoogleService-Info.plist */,
 				B10000000000000000000013 /* GhostCart.entitlements */,
 				B1000000000000000000000F /* Assets.xcassets */,
 			);
@@ -234,6 +250,12 @@
 				D10000000000000000000015 /* PBXTargetDependency */,
 			);
 			name = GhostCart;
+			packageProductDependencies = (
+				P20000000000000000000002 /* FirebaseAnalytics */,
+				P20000000000000000000003 /* FirebaseMessaging */,
+				P20000000000000000000004 /* FirebaseInAppMessaging-Beta */,
+				P20000000000000000000006 /* GoogleSignIn */,
+			);
 			productName = GhostCart;
 			productReference = B10000000000000000000000 /* GhostCart.app */;
 			productType = "com.apple.product-type.application";
@@ -305,6 +327,10 @@
 			);
 			mainGroup = C10000000000000000000002;
 			productRefGroup = C10000000000000000000004 /* Products */;
+			packageReferences = (
+				P20000000000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				P20000000000000000000005 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+			);
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -321,6 +347,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1000000000000000000000F /* Assets.xcassets in Resources */,
+				A20000000000000000000005 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -374,6 +401,7 @@
 				A10000000000000000000039 /* ContentBlocks.swift in Sources */,
 				A1000000000000000000003A /* MarketplaceSection.swift in Sources */,
 				A1000000000000000000003B /* AvatarPresets.swift in Sources */,
+				A20000000000000000000001 /* FirebaseService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -447,7 +475,8 @@
 				CODE_SIGN_ENTITLEMENTS = GhostCart/GhostCart.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = GhostCart/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Ghost Cart";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -455,6 +484,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MARKETING_VERSION = 2.0;
+				OTHER_LDFLAGS = ("$(inherited)", "-ObjC");
 				PRODUCT_BUNDLE_IDENTIFIER = com.ghostcart.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -469,7 +499,8 @@
 				CODE_SIGN_ENTITLEMENTS = GhostCart/GhostCart.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = GhostCart/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Ghost Cart";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -477,6 +508,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MARKETING_VERSION = 2.0;
+				OTHER_LDFLAGS = ("$(inherited)", "-ObjC");
 				PRODUCT_BUNDLE_IDENTIFIER = com.ghostcart.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -607,6 +639,48 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		P20000000000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.14.0;
+			};
+		};
+		P20000000000000000000005 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.2.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		P20000000000000000000002 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = P20000000000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		P20000000000000000000003 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = P20000000000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
+		P20000000000000000000004 /* FirebaseInAppMessaging-Beta */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = P20000000000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = "FirebaseInAppMessaging-Beta";
+		};
+		P20000000000000000000006 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = P20000000000000000000005 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = D10000000000000000000004 /* Project object */;
 }

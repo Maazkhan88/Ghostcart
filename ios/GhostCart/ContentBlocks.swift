@@ -8,6 +8,7 @@ struct ContentBlock: Identifiable, Equatable {
     let id: Int
     let type: String
     let imageKey: String
+    let mediaType: String
     let sortOrder: Int
 
     var imageURL: URL? {
@@ -26,7 +27,13 @@ enum ContentBlocksService {
                   let type = raw["type"] as? String,
                   let imageKey = raw["imageKey"] as? String,
                   (raw["isActive"] as? Bool) != false else { return nil }
-            return ContentBlock(id: id, type: type, imageKey: imageKey, sortOrder: raw["sortOrder"] as? Int ?? 0)
+            return ContentBlock(
+                id: id,
+                type: type,
+                imageKey: imageKey,
+                mediaType: raw["mediaType"] as? String ?? "image",
+                sortOrder: raw["sortOrder"] as? Int ?? 0
+            )
         }
         .sorted { $0.sortOrder < $1.sortOrder }
     }

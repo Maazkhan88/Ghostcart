@@ -166,6 +166,35 @@ struct AlmostBuy: Identifiable, Codable, Hashable {
     }
 }
 
+// A cart product is a snapshot rather than a reference to the remote catalog,
+// so a guest can finish the simulated checkout offline and catalog changes do
+// not silently alter an in-progress cart.
+struct GhostCartItem: Identifiable, Codable, Hashable {
+    let id: String
+    var name: String
+    var category: String
+    var priceCents: Int
+    var imageURL: String?
+    var quantity: Int
+    var cooldownMinutes: Int
+
+    var amount: Double { Double(priceCents * quantity) / 100 }
+}
+
+struct SimulatedOrder: Identifiable, Codable, Hashable {
+    let id: String
+    let items: [GhostCartItem]
+    let placedAt: Date
+    let subtotalCents: Int
+    let promoDiscountCents: Int
+    let serviceFeeCents: Int
+    let vatCents: Int
+    let totalCents: Int
+    var deliveryStep: Int
+
+    var totalAmount: Double { Double(totalCents) / 100 }
+}
+
 struct ProgressSnapshot {
     let almostSpent: Double
     let cooling: Double

@@ -23,10 +23,13 @@ struct OnboardingFlowView: View {
 
     var body: some View {
         Group {
-            if !onboarding.progress.consentAccepted {
-                SimulationConsentView(onAccept: {
-                    onboarding.progress.consentAccepted = true
-                })
+            if let consent = onboarding.consentStatus, !consent.accepted {
+                SimulationConsentView(
+                    consentText: consent.consentText,
+                    isSubmitting: onboarding.consentSubmitting,
+                    errorMessage: onboarding.consentError,
+                    onAccept: { Task { await onboarding.acceptConsent() } }
+                )
             } else {
                 switch step {
                 case .landing:
@@ -64,6 +67,13 @@ struct OnboardingFlowView: View {
         }
         .animation(.default, value: step)
         .animation(.default, value: onboarding.progress.consentAccepted)
+        .onAppear {
+            if onboarding.progress.personalizationComplete && !onboarding.progress.tutorialComplete {
+                step = .tutorial
+            } else if onboarding.progress.selectedProfile != nil && !onboarding.progress.personalizationComplete {
+                step = .personalization
+            }
+        }
         // Every onboarding screen forces a bright, always-white background
         // (Color.paperColor) by design - pin the color scheme to light here
         // too, so semantic colors (Color.primary/.secondary) resolve to

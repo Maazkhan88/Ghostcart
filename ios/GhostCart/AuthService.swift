@@ -43,6 +43,24 @@ final class AuthService: ObservableObject {
         try await authenticate(path: "/api/auth/signin", body: ["email": email, "password": password])
     }
 
+    func signInWithGoogle(idToken: String) async throws {
+        try await authenticate(
+            path: "/api/auth/google",
+            body: ["idToken": idToken],
+            analyticsMethod: "google"
+        )
+    }
+
+    func signInWithApple(identityToken: String, nonce: String, displayName: String?) async throws {
+        var body: [String: Any] = ["identityToken": identityToken, "nonce": nonce]
+        if let displayName, !displayName.isEmpty { body["displayName"] = displayName }
+        try await authenticate(
+            path: "/api/auth/apple",
+            body: body,
+            analyticsMethod: "apple"
+        )
+    }
+
     func continueAsGuest() {
         accessToken = nil
         state = .guest
@@ -65,6 +83,7 @@ final class AuthService: ObservableObject {
             let object = try await ApiClient.shared.getJSON(path: "/api/auth/session", bearerToken: token)
             if let user = Self.parseUser(object["user"] as? [String: Any]) {
                 state = .signedIn(user)
+                await FirebaseService.shared.registerStoredTokenIfSignedIn()
             } else {
                 accessToken = nil
             }
@@ -84,7 +103,11 @@ final class AuthService: ObservableObject {
         return try await ApiClient.shared.postJSON(path: path, body: body, bearerToken: accessToken)
     }
 
-    private func authenticate(path: String, body: [String: Any]) async throws {
+    private func authenticate(
+        path: String,
+        body: [String: Any],
+        analyticsMethod: String = "password"
+    ) async throws {
         let object = try await ApiClient.shared.postJSON(path: path, body: body)
         guard let token = object["accessToken"] as? String,
               let user = Self.parseUser(object["user"] as? [String: Any]) else {
@@ -92,6 +115,8 @@ final class AuthService: ObservableObject {
         }
         accessToken = token
         state = .signedIn(user)
+        GhostAnalytics.signIn(method: analyticsMethod)
+        await FirebaseService.shared.registerStoredTokenIfSignedIn()
     }
 
     private static func parseUser(_ object: [String: Any]?) -> AuthUser? {

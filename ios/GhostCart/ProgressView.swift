@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ProgressView: View {
     @EnvironmentObject private var store: GhostCartStore
+    @AppStorage("ghostcart.wallet.simulated-balance") private var simulatedBalance = 10_000
+    @State private var showAddBalance = false
 
     private var topTriggers: [(SpendingTrigger, Int)] {
         let grouped = Dictionary(grouping: store.items, by: \.trigger)
@@ -16,10 +18,46 @@ struct ProgressView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 26) {
                 ScreenHeader(
-                    eyebrow: "Learn from decisions",
-                    title: "Progress",
-                    subtitle: "Almost Spent records temptation. Money Kept records only purchases you confirmed you skipped."
+                    eyebrow: "Simulation only",
+                    title: "Ghost Wallet",
+                    subtitle: "Your simulated balance, membership card and decision progress, together."
                 )
+
+                VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Text("SIMULATED BALANCE")
+                                .font(.caption2.weight(.black))
+                                .tracking(1)
+                                .foregroundStyle(Color.white.opacity(0.65))
+                            Spacer()
+                            Text("DEMO WALLET")
+                                .font(.system(size: 9, weight: .black))
+                                .foregroundStyle(Color.inkColor)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.ghostGreenColor, in: Capsule())
+                        }
+                        Text(AmountFormatter.string(Double(simulatedBalance)))
+                            .font(.system(size: 36, weight: .black, design: .rounded))
+                            .foregroundStyle(Color.ghostGreenColor)
+                            .minimumScaleFactor(0.7)
+                            .lineLimit(1)
+                        Text("Internal Ghost Cart credit only. No real money is stored.")
+                            .font(.caption)
+                            .foregroundStyle(Color.white.opacity(0.65))
+                        Button {
+                            showAddBalance = true
+                        } label: {
+                            Label("Add simulated balance", systemImage: "plus")
+                        }
+                        .buttonStyle(GhostPrimaryButtonStyle())
+                }
+                .padding(20)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.inkColor)
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+
+                GhostWalletMembershipCard(profile: store.membership)
 
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                     ProgressMetricCard(
@@ -139,10 +177,63 @@ struct ProgressView: View {
                 SimulationDisclosure()
             }
             .padding(20)
-            .padding(.bottom, 24)
+            .padding(.bottom, 112)
         }
         .background(Color(.systemBackground))
         .navigationBarHidden(true)
+        .sheet(isPresented: $showAddBalance) {
+            AddSimulatedBalanceView { amount in
+                simulatedBalance = min(simulatedBalance + amount, 1_000_000)
+                showAddBalance = false
+            }
+            .presentationDetents([.medium])
+        }
+    }
+}
+
+private struct GhostWalletMembershipCard: View {
+    let profile: MembershipProfile
+
+    var body: some View {
+        HStack(spacing: 14) {
+            GhostMascotView(poseName: "wallet")
+                .frame(width: 70, height: 70)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("GHOST MEMBERSHIP").font(.caption2.weight(.black)).foregroundStyle(Color.white.opacity(0.62))
+                Text(profile.displayName).font(.headline.weight(.black)).foregroundStyle(Color.white)
+                Text("Ghost ID  \(profile.ghostID)").font(.caption2.monospaced()).foregroundStyle(Color.white.opacity(0.62))
+                Text("Not a payment card").font(.caption2.weight(.bold)).foregroundStyle(Color.ghostGreenColor)
+            }
+            Spacer()
+        }
+        .padding(18)
+        .background(Color.inkColor)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+}
+
+private struct AddSimulatedBalanceView: View {
+    let onAdd: (Int) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var amount = 500
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Capsule().fill(Color.secondary.opacity(0.3)).frame(width: 38, height: 5).frame(maxWidth: .infinity)
+            Text("Add simulated balance").font(.title2.weight(.black))
+            Text("This changes demo credit only. It does not add, collect, or move real money.")
+                .font(.subheadline).foregroundStyle(Color.secondary)
+            Picker("Amount", selection: $amount) {
+                ForEach([100, 500, 1_000, 5_000], id: \.self) { value in
+                    Text(AmountFormatter.string(Double(value))).tag(value)
+                }
+            }
+            .pickerStyle(.segmented)
+            Button("Add \(AmountFormatter.string(Double(amount)))", action: { onAdd(amount) })
+                .buttonStyle(GhostPrimaryButtonStyle())
+            Button("Cancel") { dismiss() }.frame(maxWidth: .infinity)
+        }
+        .padding(22)
     }
 }
 

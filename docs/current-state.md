@@ -1,6 +1,52 @@
 # Current State
 
-Last updated: 2026-08-01 (Claude Code — deep Android-source-grounded audit produced `docs/handoffs/2026-07-31-android-ios-deep-audit-and-plan.md`, superseding the earlier handoff docs' Wallet-suite guidance (dead Android code — do not build); started executing its 15-slice implementation plan: slice 1 (test-target baseline) and slice 2 (missing asset import) done, committed, and verified with real `xcodebuild test` runs, not just compilation).
+Last updated: 2026-08-01 (Codex — iOS Home/search/header, leaderboard, Wallet, Profile, tutorial replay, and local-notification action/delivery pass completed and verified).
+
+> ## STATUS REPORT (Codex, 2026-08-01 — requested functional audit)
+>
+> This report distinguishes a visible UI from a feature that actually works
+> end-to-end. The iOS app builds, its three existing unit tests pass, and the
+> Firebase SDK is connected. That does **not** make the missing server and
+> provider integrations below complete.
+>
+> **Repository delivery state:** all work described in this Codex report is
+> present in the local working tree on `main`, but it is **not committed or
+> pushed**. The current local/GitHub commit boundary remains `ebc5961`
+> (`Fix bottom-nav badge placement`). The Apple route, migration 0025,
+> Firebase configuration, authentication changes, UI fixes, QA screenshots,
+> and this report are therefore newer than the latest commit. Do not deploy
+> or hand off from GitHub until this working tree is intentionally reviewed,
+> committed, and pushed.
+>
+> **Latest verification evidence:** `xcodebuild build` succeeded;
+> `xcodebuild test` passed all 3 tests; the live public leaderboard endpoint
+> returned the expected schema; and a real Simulator-delivered local
+> notification was captured in
+> `docs/qa/ios-local-notification-working.png`.
+>
+> | Area | Current iOS state | What remains |
+> |---|---|---|
+> | Three cooling decisions | **Working locally / partial overall.** A ready cooldown offers **I skipped it**, **Bought intentionally**, and **More time**. More time offers 1 hour, 24 hours, or 3 days. Skip and buy resolve the item; more time reschedules it. Only skip contributes to Money Kept, matching the Android rule. | iOS stores and resolves these records only in `UserDefaults`. Unlike Android's `AlmostBuySync`, it does not call `/api/almost-buys`, so decisions do not sync to Android/web, survive on another device, or trigger server-side email/remote push for iOS-created records. |
+> | Local reminders | **Implemented and simulator-delivery verified.** Cooling-complete, lunch, dinner, late-night, and monthly salary-day requests are implemented. Profile shows the real permission state, opens iPhone Settings when denied, and can send a three-second test. Rapid preference changes no longer allow stale scheduling tasks to re-add disabled reminders. Cooling notifications expose **Skipped it**, **Bought it**, and **More time** actions; cold-launch actions are persisted and applied by the store. Simulator delivery proof: `docs/qa/ios-local-notification-working.png`. | Run the remaining physical-iPhone matrix: denied permission, quiet hours, changed reminder time, snooze/cancellation, and cold-launch action handling. Local notifications do **not** require an APNs key or paid membership activation. |
+> | Remote Firebase push | **SDK connected / delivery blocked.** Firebase Messaging is included and the app has token-upload code. | A real APNs authentication key and physical-device test are still required. Apple Developer membership currently showing Pending prevents creating the key. This is separate from lunch/dinner local reminders. |
+> | Gifting | **Missing on iOS.** There is no gift toggle, recipient form, Gifts history screen, gift-link handling, reveal screen, or gift API client. | Mirror Android's Fake Checkout **Send as a gift** flow, recipient validation/consent, `/api/ghost-gifts` creation, Profile → Gifts list, incoming deep-link reveal, and “Ghost this gift” action. Backend and Android foundations already exist. |
+> | Email notifications | **Not integrated on iOS.** The server has cooldown-email code and an unsubscribe route, but iOS does not sync its local almost-buys or expose/sync an email-notification preference. Therefore an iOS-created cooldown cannot currently cause a server email. | Add iOS almost-buy sync first, expose `emailNotifications` through `/api/me/preferences`, add the iOS setting, and verify the deployed email provider with a real delivery/unsubscribe test. Existing server code alone is not proof that production delivery is working. |
+> | Email/password sign-in | **Implemented.** iOS sign-in and sign-up call the Ghost Cart backend. | Add authentication UI/integration tests and verify against the deployed environment before marking production-certified. |
+> | Google sign-in | **Implemented and Firebase-configured / deployment and live-login QA pending.** iOS now includes GoogleSignIn 9.2, uses the real imported Google logo, obtains an ID token, calls `/api/auth/google`, persists the Ghost Cart bearer session, handles cancellation, and routes OAuth callbacks. Firebase Authentication and its Google provider were enabled on 2026-08-01 with `ghostcartapp@gmail.com` as the public support email. The generated native/server OAuth IDs, refreshed plist values, and reversed-client-ID URL scheme are in the project. The backend accepts both the existing Android/web audience and the new iOS server audience. | Deploy the updated backend so it accepts the iOS audience, then run a real Google account sign-in, sign-out and relaunch test on the simulator/device before marking production-ready. |
+> | Apple sign-in | **Implemented in code / external activation and deployment pending.** iOS uses Apple's native button and authorization UI with a cryptographically random nonce. New `/api/auth/apple` code verifies Apple's RS256 signature/JWKS, issuer, audience, expiry and nonce, then creates or links a Ghost Cart account by stable Apple subject. Migration `0025_purple_mauler.sql` adds that stable identity. Focused verifier tests pass and the iOS app builds/tests successfully. | Apply migration 0025 and deploy the backend route. Apple Developer membership must activate before the Sign in with Apple capability can be provisioned and a physical-device account test can pass. Test first authorization, returning authorization, private-relay email, cancellation, sign-out and relaunch before marking production-ready. |
+> | Tutorial | **Implemented with Profile replay / branch automation still open.** iOS contains Android's isolated, durable 11-state coffee-and-donut practice journey, including cart, cooldown, fake checkout, ten-second cooling, all three decisions, receipt, completion, and simulated delivery. Profile now has **Replay app tutorial**, which clears the saved practice session before starting. Tutorial data does not affect real totals. | Add automated interaction tests/screenshots for every tutorial branch. Current unit tests cover store initialization, capture/amount formatting, and avatar asset loading—not the full journey. |
+> | Home discovery/header | **Working and simulator-verified.** The Ghost Cart wordmark is centered independently of the trailing bell, matching Android's `Box` alignment. The product search field now has the same leading search affordance plus a clear control. | Complete the broader Android/iOS checklist for any remaining marketplace interaction edge cases. |
+> | Community leaderboard | **Working.** The Home banner and Profile entry open a native list backed by the live public `/api/community/leaderboard` endpoint, using Android avatar presets/uploaded images, rank, ghosted/cooling counts and Money Kept. Member summary rows open a detail screen. | Profile does not yet expose Android's username/opt-in/editor controls; add `/api/me/profile` editing before claiming complete community-profile parity. |
+> | Ghost Wallet | **Core Wallet screen repaired and simulator-verified.** The Wallet tab now presents Ghost Wallet—not a mislabeled Progress screen—with explicitly simulated balance, add-balance control, the real membership mascot/card, honest decision metrics, category/trigger insights and receipt history. Screenshot: `docs/qa/ios-wallet-fixed.png`. | Android's deeper goals, Salary Shield, activity statement and card-theme controls are not yet mirrored. |
+> | Profile | **Core page repaired and simulator-verified.** It now shows signed-in/guest state, a guest sign-in entry, sign-out, membership editing, reminders, appearance, leaderboard, tutorial replay, privacy disclosures, and extra bottom clearance above the floating navigation bar. Screenshot: `docs/qa/ios-profile-fixed.png`. | Android's community username/avatar/opt-in editor, Gifts, Legal documents, account deletion, and build-number footer remain missing on iOS. |
+>
+> **Recommended next order:** (1) review, commit and push the current local
+> working tree; (2) apply migration 0025 and deploy the updated backend so
+> Google/Apple routes match the app; (3) run live Google sign-in QA;
+> (4) build cross-platform almost-buy sync, which unlocks email and reliable
+> server push; (5) gifting; (6) community-profile editing; (7) Apple sign-in
+> and remote-push device QA after membership activation. Do not mark an item
+> complete merely because its UI is visible.
 
 > ## STATUS REPORT (Claude Code, 2026-08-01, part 6)
 >

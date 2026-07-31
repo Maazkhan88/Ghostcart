@@ -90,15 +90,42 @@ private extension String {
 struct ApiClient {
     static let shared = ApiClient()
 
-    func getJSON(path: String, bearerToken: String? = nil) async throws -> [String: Any] {
-        try await sendJSON(path: path, method: "GET", body: nil, bearerToken: bearerToken)
+    func getJSON(
+        path: String,
+        bearerToken: String? = nil,
+        additionalHeaders: [String: String] = [:]
+    ) async throws -> [String: Any] {
+        try await sendJSON(
+            path: path,
+            method: "GET",
+            body: nil,
+            bearerToken: bearerToken,
+            additionalHeaders: additionalHeaders
+        )
     }
 
-    func postJSON(path: String, body: [String: Any], bearerToken: String? = nil) async throws -> [String: Any] {
-        try await sendJSON(path: path, method: "POST", body: body, bearerToken: bearerToken)
+    func postJSON(
+        path: String,
+        body: [String: Any],
+        bearerToken: String? = nil,
+        additionalHeaders: [String: String] = [:]
+    ) async throws -> [String: Any] {
+        try await sendJSON(
+            path: path,
+            method: "POST",
+            body: body,
+            bearerToken: bearerToken,
+            additionalHeaders: additionalHeaders
+        )
     }
 
-    private func sendJSON(path: String, method: String, body: [String: Any]?, bearerToken: String? = nil) async throws -> [String: Any] {
+    private func sendJSON(
+        path: String,
+        method: String,
+        body: [String: Any]?,
+        bearerToken: String? = nil,
+        additionalHeaders: [String: String] = [:]
+    ) async throws -> [String: Any] {
         guard let url = URL(string: "\(ApiConfig.baseURL)\(path)") else {
             throw ApiError(message: unavailableFallback)
         }
@@ -107,6 +134,9 @@ struct ApiClient {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         if let bearerToken {
             request.setValue("Bearer \(bearerToken)", forHTTPHeaderField: "Authorization")
+        }
+        for (field, value) in additionalHeaders {
+            request.setValue(value, forHTTPHeaderField: field)
         }
         if let body {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")

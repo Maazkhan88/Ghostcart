@@ -6,13 +6,16 @@ import SwiftUI
 // All/User Ghosted filter, a "Food & delivery" rail, and a "Your favorites"
 // rail. All filtering (category/food/favorites/search) is client-side over
 // one merged catalog+community product list, matching Android.
-struct MarketplaceProduct: Identifiable, Equatable {
+struct MarketplaceProduct: Identifiable, Equatable, Hashable {
     let id: String
     let name: String
     let category: String
     let priceCents: Int
     let imageUrl: String?
     let isUserGhosted: Bool
+    var productDescription: String? = nil
+    var brand: String? = nil
+    var sourceURL: String? = nil
 
     var priceAmount: Double { Double(priceCents) / 100 }
 
@@ -45,7 +48,10 @@ enum MarketplaceService {
                 category: item["category"] as? String ?? "Other",
                 priceCents: (item["priceCents"] as? Int) ?? 0,
                 imageUrl: item["imageUrl"] as? String,
-                isUserGhosted: false
+                isUserGhosted: false,
+                productDescription: item["description"] as? String,
+                brand: item["brand"] as? String,
+                sourceURL: item["sourceUrl"] as? String
             )
         }
     }
@@ -61,7 +67,10 @@ enum MarketplaceService {
                 category: item["category"] as? String ?? "Other",
                 priceCents: (item["priceCents"] as? Int) ?? 0,
                 imageUrl: item["imageUrl"] as? String,
-                isUserGhosted: true
+                isUserGhosted: true,
+                productDescription: item["note"] as? String,
+                brand: item["retailer"] as? String,
+                sourceURL: item["sourceUrl"] as? String
             )
         }
     }
@@ -104,11 +113,40 @@ private enum BrowseCategory: String, CaseIterable, Identifiable {
     }
 }
 
+private enum MarketplaceBrowseKind: Hashable {
+    case all
+    case food
+    case favorites
+    case userGhosted
+    case category(String)
+
+    var title: String {
+        switch self {
+        case .all: return "Almost-Spent Catalog"
+        case .food: return "Food & drinks"
+        case .favorites: return "Your Favorites"
+        case .userGhosted: return "Community Products"
+        case .category(let value): return value
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .all: return "Browse simulation items you can add to Ghost Cart."
+        case .food: return "Ghost delivery cravings before they reach checkout."
+        case .favorites: return "Everything you saved for a calmer decision."
+        case .userGhosted: return "Anonymous products other Ghost Cart users chose to ghost."
+        case .category: return "Put tempting products somewhere safe before buying."
+        }
+    }
+}
+
 struct MarketplaceSection: View {
     let products: [MarketplaceProduct]
     var favoriteIds: Set<String>
     let onToggleFavorite: (MarketplaceProduct) -> Void
     let onAddToCart: (MarketplaceProduct) -> Void
+    let onOpenCart: () -> Void
 
     @State private var query = ""
     @State private var category: BrowseCategory = .all
@@ -137,8 +175,32 @@ struct MarketplaceSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
-            TextField("Search products", text: $query)
-                .ghostTextField()
+            HStack(spacing: 10) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(Color.secondary)
+                    .accessibilityHidden(true)
+                TextField("Search products", text: $query)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                if !query.isEmpty {
+                    Button {
+                        query = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(Color.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Clear search")
+                }
+            }
+            .padding(.horizontal, 14)
+            .frame(minHeight: 50)
+            .background(Color.primary.opacity(0.045))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.primary.opacity(0.10), lineWidth: 1)
+            }
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
@@ -158,11 +220,18 @@ struct MarketplaceSection: View {
                 title: "Marketplace products",
                 subtitle: "browse every temptation",
                 products: marketplaceRow,
-                filterToggle: true
+                filterToggle: true,
+                browseKind: .all
             )
 
             if !foodRow.isEmpty {
-                productRailSection(title: "Food & delivery", subtitle: "Ghost lunch, dinner or a delivery craving", products: foodRow, filterToggle: false)
+                productRailSection(
+                    title: "Food & delivery",
+                    subtitle: "Ghost lunch, dinner or a delivery craving",
+                    products: foodRow,
+                    filterToggle: false,
+                    browseKind: .food
+                )
             }
 
             productRailSection(
@@ -170,15 +239,40 @@ struct MarketplaceSection: View {
                 subtitle: "saved for a calmer decision",
                 products: favoritesRow,
                 filterToggle: false,
+                browseKind: .favorites,
                 emptyMessage: "Favorite an item to keep it close without buying it."
             )
         }
     }
 
     @ViewBuilder
-    private func productRailSection(title: String, subtitle: String, products: [MarketplaceProduct], filterToggle: Bool, emptyMessage: String? = nil) -> some View {
+    private func productRailSection(
+        title: String,
+        subtitle: String,
+        products: [MarketplaceProduct],
+        filterToggle: Bool,
+        browseKind: MarketplaceBrowseKind,
+        emptyMessage: String? = nil
+    ) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            SectionHeading(title: title)
+            HStack(alignment: .firstTextBaseline) {
+                Text(title).font(.title3.weight(.bold))
+                Spacer()
+                NavigationLink {
+                    ProductListingView(
+                        kind: browseKind,
+                        products: productsForListing(browseKind),
+                        favoriteIds: favoriteIds,
+                        onToggleFavorite: onToggleFavorite,
+                        onAddToCart: onAddToCart,
+                        onOpenCart: onOpenCart
+                    )
+                } label: {
+                    Text("View all")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(Color.ghostGreenColor)
+                }
+            }
             Text(subtitle).font(.caption).foregroundStyle(Color.secondary)
 
             if filterToggle {
@@ -210,12 +304,23 @@ struct MarketplaceSection: View {
                                 product: product,
                                 isFavorite: favoriteIds.contains(product.id),
                                 onToggleFavorite: { onToggleFavorite(product) },
-                                onAddToCart: { onAddToCart(product) }
+                                onAddToCart: { onAddToCart(product) },
+                                onOpenCart: onOpenCart
                             )
                         }
                     }
                 }
             }
+        }
+    }
+
+    private func productsForListing(_ kind: MarketplaceBrowseKind) -> [MarketplaceProduct] {
+        switch kind {
+        case .all: return products
+        case .food: return products.filter(\.isFood)
+        case .favorites: return products.filter { favoriteIds.contains($0.id) }
+        case .userGhosted: return products.filter(\.isUserGhosted)
+        case .category(let value): return products.filter { $0.category.localizedCaseInsensitiveContains(value) }
         }
     }
 }
@@ -225,6 +330,7 @@ private struct MarketplaceProductCard: View {
     let isFavorite: Bool
     let onToggleFavorite: () -> Void
     let onAddToCart: () -> Void
+    let onOpenCart: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -232,7 +338,18 @@ private struct MarketplaceProductCard: View {
                 // Full card width x ~112pt, a wide rectangle - matches
                 // Android's DiscoveryProductCard image box exactly
                 // (ProductDiscovery.kt: "full width x 112dp"), not a square.
-                ProductThumbnail(imageURL: product.imageUrl, systemImage: AlmostBuyCategory(serverName: product.category).systemImage, width: 168, height: 112, cornerRadius: 14)
+                NavigationLink {
+                    ProductDetailView(
+                        product: product,
+                        initiallyFavorite: isFavorite,
+                        onToggleFavorite: onToggleFavorite,
+                        onAddToCart: onAddToCart,
+                        onOpenCart: onOpenCart
+                    )
+                } label: {
+                    ProductThumbnail(imageURL: product.imageUrl, systemImage: AlmostBuyCategory(serverName: product.category).systemImage, width: 168, height: 112, cornerRadius: 14)
+                }
+                .buttonStyle(.plain)
                 Button(action: onToggleFavorite) {
                     Image(systemName: isFavorite ? "heart.fill" : "heart")
                         .font(.subheadline)
@@ -244,16 +361,30 @@ private struct MarketplaceProductCard: View {
                 .padding(6)
             }
 
-            Text(product.category).font(.caption2.weight(.bold)).foregroundStyle(Color.ghostGreenColor)
-            Text(product.name)
-                .font(.caption.weight(.bold))
-                .lineLimit(2)
-                .frame(height: 32, alignment: .top)
-            if product.priceCents > 0 {
-                DirhamAmount(value: product.priceAmount, font: .caption.weight(.heavy))
-            } else {
-                Text("Add price").font(.caption.weight(.bold)).foregroundStyle(Color.secondary)
+            NavigationLink {
+                ProductDetailView(
+                    product: product,
+                    initiallyFavorite: isFavorite,
+                    onToggleFavorite: onToggleFavorite,
+                    onAddToCart: onAddToCart,
+                    onOpenCart: onOpenCart
+                )
+            } label: {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(product.category).font(.caption2.weight(.bold)).foregroundStyle(Color.ghostGreenColor)
+                    Text(product.name)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Color.primary)
+                        .lineLimit(2)
+                        .frame(height: 32, alignment: .top)
+                    if product.priceCents > 0 {
+                        DirhamAmount(value: product.priceAmount, font: .caption.weight(.heavy))
+                    } else {
+                        Text("Add price").font(.caption.weight(.bold)).foregroundStyle(Color.secondary)
+                    }
+                }
             }
+            .buttonStyle(.plain)
 
             Button(action: onAddToCart) {
                 VStack(spacing: 1) {
@@ -275,5 +406,329 @@ private struct MarketplaceProductCard: View {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.primary.opacity(0.09), lineWidth: 1)
         }
+    }
+}
+
+private enum MarketplaceSort: String, CaseIterable, Identifiable {
+    case trending = "Trending"
+    case priceLow = "Price: Low to High"
+    case priceHigh = "Price: High to Low"
+    case name = "Name"
+    var id: String { rawValue }
+}
+
+private struct ProductListingView: View {
+    let kind: MarketplaceBrowseKind
+    let products: [MarketplaceProduct]
+    let onToggleFavorite: (MarketplaceProduct) -> Void
+    let onAddToCart: (MarketplaceProduct) -> Void
+    let onOpenCart: () -> Void
+
+    @State private var favoriteIds: Set<String>
+    @State private var query = ""
+    @State private var selectedCategory = "All"
+    @State private var sort: MarketplaceSort = .trending
+    @State private var userGhostedOnly = false
+    @State private var recentlyAdded: Set<String> = []
+
+    init(
+        kind: MarketplaceBrowseKind,
+        products: [MarketplaceProduct],
+        favoriteIds: Set<String>,
+        onToggleFavorite: @escaping (MarketplaceProduct) -> Void,
+        onAddToCart: @escaping (MarketplaceProduct) -> Void,
+        onOpenCart: @escaping () -> Void
+    ) {
+        self.kind = kind
+        self.products = products
+        self.onToggleFavorite = onToggleFavorite
+        self.onAddToCart = onAddToCart
+        self.onOpenCart = onOpenCart
+        _favoriteIds = State(initialValue: favoriteIds)
+    }
+
+    private var categories: [String] {
+        ["All"] + Array(Set(products.map(\.category))).sorted()
+    }
+
+    private var visibleProducts: [MarketplaceProduct] {
+        let filtered = products
+            .filter { kind != .favorites || favoriteIds.contains($0.id) }
+            .filter { kind != .userGhosted || $0.isUserGhosted }
+            .filter {
+                query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                $0.name.localizedCaseInsensitiveContains(query) ||
+                $0.category.localizedCaseInsensitiveContains(query) ||
+                ($0.brand?.localizedCaseInsensitiveContains(query) ?? false)
+            }
+            .filter { selectedCategory == "All" || $0.category == selectedCategory }
+            .filter { !userGhostedOnly || $0.isUserGhosted }
+
+        switch sort {
+        case .trending: return filtered.sorted { $0.isUserGhosted && !$1.isUserGhosted }
+        case .priceLow: return filtered.sorted { $0.priceCents < $1.priceCents }
+        case .priceHigh: return filtered.sorted { $0.priceCents > $1.priceCents }
+        case .name: return filtered.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        }
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text(kind.title).font(.title2.weight(.black))
+                Text(kind.subtitle).font(.caption).foregroundStyle(Color.secondary)
+
+                HStack(spacing: 10) {
+                    Image(systemName: "magnifyingglass").foregroundStyle(Color.secondary)
+                    TextField("What are you tempted to buy?", text: $query)
+                }
+                .ghostTextField()
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(categories, id: \.self) { option in
+                            Button(option) { selectedCategory = option }
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(selectedCategory == option ? Color.inkColor : Color.primary)
+                                .padding(.horizontal, 13).padding(.vertical, 8)
+                                .background(selectedCategory == option ? Color.ghostGreenColor : Color.primary.opacity(0.05), in: Capsule())
+                        }
+                    }
+                }
+
+                HStack {
+                    Menu {
+                        ForEach(MarketplaceSort.allCases) { option in
+                            Button {
+                                sort = option
+                            } label: {
+                                if sort == option { Label(option.rawValue, systemImage: "checkmark") }
+                                else { Text(option.rawValue) }
+                            }
+                        }
+                    } label: {
+                        Label("Sort", systemImage: "arrow.up.arrow.down")
+                    }
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color.inkColor)
+                    .padding(.horizontal, 16).padding(.vertical, 10)
+                    .background(Color.ghostGreenColor, in: Capsule())
+
+                    Button {
+                        userGhostedOnly.toggle()
+                    } label: {
+                        Label("User Ghosted", systemImage: userGhostedOnly ? "checkmark.circle.fill" : "line.3.horizontal.decrease.circle")
+                    }
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color.inkColor)
+                    .padding(.horizontal, 16).padding(.vertical, 10)
+                    .background(userGhostedOnly ? Color.ghostGreenColor : Color.primary.opacity(0.05), in: Capsule())
+                }
+
+                if visibleProducts.isEmpty {
+                    EmptyStateView(
+                        image: "bag",
+                        title: kind == .favorites ? "No favorites yet" : "No demo items here yet",
+                        message: kind == .favorites ? "Tap the heart on a product to save it here." : "Try clearing a filter or searching for something else."
+                    )
+                } else {
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                        ForEach(visibleProducts) { product in
+                            listingCard(product)
+                        }
+                    }
+                }
+            }
+            .padding(20)
+            .padding(.bottom, 28)
+        }
+        .background(Color(.systemBackground))
+        .navigationTitle("Ghost Cart")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func listingCard(_ product: MarketplaceProduct) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            ZStack(alignment: .topTrailing) {
+                NavigationLink {
+                    detail(product)
+                } label: {
+                    ProductThumbnail(
+                        imageURL: product.imageUrl,
+                        systemImage: AlmostBuyCategory(serverName: product.category).systemImage,
+                        width: 154,
+                        height: 112,
+                        cornerRadius: 14
+                    )
+                }.buttonStyle(.plain)
+                Button { toggleFavorite(product) } label: {
+                    Image(systemName: favoriteIds.contains(product.id) ? "heart.fill" : "heart")
+                        .foregroundStyle(Color.inkColor).padding(7).background(Color.white, in: Circle())
+                }.padding(5)
+            }
+            NavigationLink { detail(product) } label: {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(product.category).font(.caption2.weight(.bold)).foregroundStyle(Color.ghostGreenColor).lineLimit(1)
+                    Text(product.name).font(.caption.weight(.bold)).foregroundStyle(Color.primary).lineLimit(2).frame(height: 32, alignment: .top)
+                    if product.priceCents > 0 {
+                        DirhamAmount(value: product.priceAmount, font: .caption.weight(.black), iconSize: 10)
+                    } else {
+                        Text("Add price").font(.caption.weight(.bold)).foregroundStyle(Color.secondary)
+                    }
+                }
+            }.buttonStyle(.plain)
+            Button {
+                onAddToCart(product)
+                recentlyAdded.insert(product.id)
+            } label: {
+                Text(recentlyAdded.contains(product.id) ? "Added ✓" : "Add to cart")
+                    .font(.caption.weight(.bold)).frame(maxWidth: .infinity).padding(.vertical, 10)
+            }
+            .foregroundStyle(Color.inkColor).background(Color.ghostGreenColor, in: RoundedRectangle(cornerRadius: 12))
+        }
+        .padding(10)
+        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 18))
+        .overlay { RoundedRectangle(cornerRadius: 18).stroke(Color.primary.opacity(0.09)) }
+    }
+
+    private func detail(_ product: MarketplaceProduct) -> some View {
+        ProductDetailView(
+            product: product,
+            initiallyFavorite: favoriteIds.contains(product.id),
+            onToggleFavorite: { toggleFavorite(product) },
+            onAddToCart: {
+                onAddToCart(product)
+                recentlyAdded.insert(product.id)
+            },
+            onOpenCart: onOpenCart
+        )
+    }
+
+    private func toggleFavorite(_ product: MarketplaceProduct) {
+        if favoriteIds.contains(product.id) { favoriteIds.remove(product.id) }
+        else { favoriteIds.insert(product.id) }
+        FavoritesStore.save(favoriteIds)
+        onToggleFavorite(product)
+    }
+}
+
+private struct ProductDetailView: View {
+    @EnvironmentObject private var store: GhostCartStore
+    let product: MarketplaceProduct
+    let onToggleFavorite: () -> Void
+    let onAddToCart: () -> Void
+    let onOpenCart: () -> Void
+
+    @State private var isFavorite: Bool
+    @State private var justAdded = false
+
+    init(
+        product: MarketplaceProduct,
+        initiallyFavorite: Bool,
+        onToggleFavorite: @escaping () -> Void,
+        onAddToCart: @escaping () -> Void,
+        onOpenCart: @escaping () -> Void
+    ) {
+        self.product = product
+        self.onToggleFavorite = onToggleFavorite
+        self.onAddToCart = onAddToCart
+        self.onOpenCart = onOpenCart
+        _isFavorite = State(initialValue: initiallyFavorite)
+    }
+
+    private var isInCart: Bool { store.cartItems.contains { $0.id == product.id } }
+    private var shareText: String {
+        if let source = product.sourceURL, !source.isEmpty { return "Check this out on Ghost Cart:\n\(source)" }
+        return "Check out \(product.name) on Ghost Cart."
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text("Ghost Cart").font(.headline.weight(.black))
+                    Spacer()
+                    ShareLink(item: shareText) {
+                        Image(systemName: "square.and.arrow.up").detailRoundButton()
+                    }
+                    Button {
+                        isFavorite.toggle(); onToggleFavorite()
+                    } label: {
+                        Image(systemName: isFavorite ? "heart.fill" : "heart").detailRoundButton()
+                    }
+                }
+
+                Text(product.name).font(.system(size: 27, weight: .black)).fixedSize(horizontal: false, vertical: true)
+                if let description = product.productDescription, !description.isEmpty {
+                    Text(description).font(.subheadline).foregroundStyle(Color.secondary)
+                }
+                if product.priceCents > 0 {
+                    DirhamAmount(value: product.priceAmount, font: .title2.weight(.black), iconSize: 20)
+                }
+                Label("Safe to Ghost", systemImage: "checkmark.shield.fill")
+                    .font(.caption.weight(.bold)).foregroundStyle(Color.ghostGreenColor)
+
+                ProductThumbnail(
+                    imageURL: product.imageUrl,
+                    systemImage: AlmostBuyCategory(serverName: product.category).systemImage,
+                    width: 353,
+                    height: 230,
+                    cornerRadius: 20
+                )
+                .frame(maxWidth: .infinity)
+
+                detailRow("Category", value: product.category)
+                if let brand = product.brand, !brand.isEmpty { detailRow("Brand", value: brand) }
+                if product.isUserGhosted { detailRow("Source", value: "User Ghosted") }
+
+                HStack(spacing: 0) {
+                    highlight("bag.fill", title: "Add to cart", caption: "Review it later\nin your cart.")
+                    highlight("bell.fill", title: "Get reminded", caption: "Choose a cooldown\nat checkout.")
+                    highlight("checkmark.shield.fill", title: "Decide calmly", caption: "Skip, buy, or\ncool longer.")
+                }
+                .padding(.vertical, 16).background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 14))
+
+                Button(isInCart ? "View Ghost Cart" : (justAdded ? "Added to Ghost Cart ✓" : "Add to cart")) {
+                    if isInCart { onOpenCart() }
+                    else { onAddToCart(); justAdded = true }
+                }
+                .buttonStyle(GhostPrimaryButtonStyle())
+
+                if isInCart {
+                    Button("Choose cooldown in Cart", action: onOpenCart)
+                        .buttonStyle(GhostSecondaryButtonStyle())
+                    Text("The item is waiting in your Ghost Cart. Its cooldown starts after Fake Checkout.")
+                        .font(.caption).foregroundStyle(Color.secondary)
+                } else {
+                    Text("Adds to your Ghost Cart. You stay on this page, and the cooldown starts once you check out.")
+                        .font(.caption).foregroundStyle(Color.secondary)
+                }
+                SimulationDisclosure()
+            }
+            .padding(20).padding(.bottom, 24)
+        }
+        .background(Color(.systemBackground))
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func detailRow(_ label: String, value: String) -> some View {
+        HStack { Text(label).font(.caption.weight(.bold)).foregroundStyle(Color.secondary); Spacer(); Text(value).font(.caption.weight(.bold)) }
+    }
+
+    private func highlight(_ symbol: String, title: String, caption: String) -> some View {
+        VStack(spacing: 5) {
+            Image(systemName: symbol).foregroundStyle(Color.ghostGreenColor)
+            Text(title).font(.system(size: 10, weight: .bold)).multilineTextAlignment(.center)
+            Text(caption).font(.system(size: 8)).foregroundStyle(Color.secondary).multilineTextAlignment(.center)
+        }.frame(maxWidth: .infinity)
+    }
+}
+
+private extension Image {
+    func detailRoundButton() -> some View {
+        self.font(.subheadline.weight(.bold))
+            .foregroundStyle(Color.primary)
+            .frame(width: 38, height: 38)
+            .background(Color.primary.opacity(0.06), in: Circle())
     }
 }

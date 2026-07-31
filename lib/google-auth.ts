@@ -17,7 +17,7 @@ type GoogleTokenInfo = {
 // browser-facing /api/admin/login/google route.
 export async function verifyGoogleIdToken(
   idToken: string,
-  expectedAudience: string,
+  expectedAudience: string | string[],
 ): Promise<{ email: string; name: string | null } | null> {
   const response = await fetch(
     `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`,
@@ -25,8 +25,9 @@ export async function verifyGoogleIdToken(
   if (!response.ok) return null;
   const tokenInfo = (await response.json()) as GoogleTokenInfo;
 
+  const acceptedAudiences = Array.isArray(expectedAudience) ? expectedAudience : [expectedAudience];
   if (
-    tokenInfo.aud !== expectedAudience ||
+    !tokenInfo.aud || !acceptedAudiences.includes(tokenInfo.aud) ||
     (tokenInfo.iss !== "accounts.google.com" && tokenInfo.iss !== "https://accounts.google.com") ||
     tokenInfo.email_verified !== "true" ||
     !tokenInfo.email

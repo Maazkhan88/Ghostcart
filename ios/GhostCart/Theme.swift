@@ -149,7 +149,11 @@ struct ProductThumbnail: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .fill(Color.ghostGreenColor.opacity(0.12))
+                // Product photography always sits on a neutral white stage,
+                // matching Android's DiscoveryProductCard in both themes.
+                // The former green tint remained visible around contained
+                // images and made the product art look color-cast.
+                .fill(Color.white)
             if let imageURL, let url = URL(string: imageURL) {
                 AsyncImage(url: url) { phase in
                     switch phase {

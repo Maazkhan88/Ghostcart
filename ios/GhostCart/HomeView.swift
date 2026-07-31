@@ -1,3 +1,4 @@
+import AVKit
 import SwiftUI
 
 struct HomeView: View {
@@ -6,8 +7,9 @@ struct HomeView: View {
     @State private var stories: [ContentBlock] = []
     @State private var products: [MarketplaceProduct] = []
     @State private var favoriteIds: Set<String> = FavoritesStore.load()
-    @State private var showLeaderboardComingSoon = false
+    @State private var showLeaderboard = false
     let onGhostSomething: () -> Void
+    let onOpenCart: () -> Void
     let onViewCooldowns: () -> Void
     let onOpenProfile: () -> Void
 
@@ -18,30 +20,32 @@ struct HomeView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                HStack {
+                ZStack {
                     GhostCartLogoView()
                         .frame(width: 142, height: 42)
-                    Spacer()
-                    if !store.readyItems.isEmpty {
-                        Button(action: onViewCooldowns) {
-                            Label("\(store.readyItems.count) ready", systemImage: "bell.badge.fill")
-                                .font(.caption.weight(.bold))
-                                .foregroundStyle(Color.inkColor)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 9)
-                                .background(Color.ghostGreenColor)
-                                .clipShape(Capsule())
+                    HStack {
+                        Spacer()
+                        if !store.readyItems.isEmpty {
+                            Button(action: onViewCooldowns) {
+                                Label("\(store.readyItems.count) ready", systemImage: "bell.badge.fill")
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(Color.inkColor)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 8)
+                                    .background(Color.ghostGreenColor)
+                                    .clipShape(Capsule())
+                            }
+                        }
+                        Button(action: onOpenProfile) {
+                            Image(systemName: "bell")
+                                .font(.title3)
+                                .foregroundStyle(Color.primary)
+                                .frame(width: 36, height: 36)
+                                .contentShape(Circle())
                         }
                     }
-                    // Matches Android's header bell (ProductDiscovery.kt) -
-                    // was missing entirely on iOS. Spec: "Notification
-                    // control routes to Profile/settings."
-                    Button(action: onOpenProfile) {
-                        Image(systemName: "bell")
-                            .font(.title3)
-                            .foregroundStyle(Color.primary)
-                    }
                 }
+                .frame(maxWidth: .infinity, minHeight: 42)
 
                 if !banners.isEmpty {
                     PromoBannerCarousel(banners: banners)
@@ -51,14 +55,15 @@ struct HomeView: View {
                     products: products,
                     favoriteIds: favoriteIds,
                     onToggleFavorite: toggleFavorite,
-                    onAddToCart: addToCart
+                    onAddToCart: addToCart,
+                    onOpenCart: onOpenCart
                 )
 
                 if !stories.isEmpty {
                     GhostCartStoriesSection(stories: stories)
                 }
 
-                CommunityLeaderboardBanner(onTap: { showLeaderboardComingSoon = true })
+                CommunityLeaderboardBanner(onTap: { showLeaderboard = true })
 
                 VStack(alignment: .leading, spacing: 18) {
                     HStack(alignment: .top) {
@@ -153,10 +158,10 @@ struct HomeView: View {
         .navigationBarHidden(true)
         .onAppear { Task { await loadContentBlocks() } }
         .refreshable { await loadContentBlocks() }
-        .alert("Coming soon", isPresented: $showLeaderboardComingSoon) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("The Community Leaderboard isn't wired up on iOS yet.")
+        .sheet(isPresented: $showLeaderboard) {
+            NavigationStack {
+                LeaderboardView()
+            }
         }
     }
 
@@ -181,20 +186,7 @@ struct HomeView: View {
     }
 
     private func addToCart(_ product: MarketplaceProduct) {
-        store.stageCapture(
-            CaptureSeed(
-                name: product.name,
-                amount: product.priceCents > 0 ? product.priceAmount : nil,
-                category: AlmostBuyCategory(serverName: product.category),
-                sourceURL: nil,
-                imageURL: product.imageUrl,
-                sourceDomain: nil,
-                retailer: nil,
-                note: nil,
-                offerCommunityShare: false
-            )
-        )
-        onGhostSomething()
+        store.addToCart(product)
     }
 }
 
@@ -269,16 +261,10 @@ private struct GhostCartStoriesSection: View {
     }
 }
 
-// Full-screen story viewer. Behavior per
-// docs/handoffs/2026-07-31-android-asset-icon-and-interaction-manifest.md
-// section 8 (canonical source: StoryViewer.kt) - implemented: pure black
-// background, aspect-fit (not fill), exactly 7000ms per image, segmented
-// progress bar, X close, tap left-third = previous / tap rest = next,
-// press-and-hold pauses, swipe down >140pt closes. NOT implemented yet
-// (deferred, not faked): swipe-up Like/Share action tray, pinch-to-zoom,
-// video playback, analytics events - those need real product decisions
-// (what does Share actually link to?) and more testing time than this pass
-// has had.
+// Full-screen story viewer mirroring Android StoryViewer.kt: black stage,
+// aspect-fit media, seven-second image progress, real-duration video,
+// tap navigation, hold-to-pause, swipe down to close, swipe up for actions,
+// pinch zoom that snaps back, session-only Like, and native Share.
 private struct StoryViewerView: View {
     let stories: [ContentBlock]
     let startIndex: Int
@@ -287,6 +273,11 @@ private struct StoryViewerView: View {
     @State private var progress: Double = 0
     @State private var paused = false
     @State private var dragOffset: CGFloat = 0
+    @State private var scale: CGFloat = 1
+    @State private var zoomOffset: CGSize = .zero
+    @State private var showActions = false
+    @State private var likedStoryIDs: Set<Int> = []
+    @State private var player: AVPlayer?
 
     init(stories: [ContentBlock], startIndex: Int) {
         self.stories = stories
@@ -300,12 +291,24 @@ private struct StoryViewerView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             if stories.indices.contains(index) {
-                AsyncImage(url: stories[index].imageURL) { phase in
-                    if case .success(let image) = phase {
-                        image.resizable().scaledToFit()
+                Group {
+                    if stories[index].mediaType == "video", let player {
+                        VideoPlayer(player: player)
+                            .disabled(true)
+                            .scaledToFit()
+                    } else {
+                        AsyncImage(url: stories[index].imageURL) { phase in
+                            if case .success(let image) = phase {
+                                image.resizable().scaledToFit()
+                            }
+                        }
+                        .id(index)
                     }
                 }
-                .id(index)
+                .scaleEffect(scale)
+                .offset(zoomOffset)
+                .animation(.easeOut(duration: 0.22), value: scale)
+                .animation(.easeOut(duration: 0.22), value: zoomOffset)
             }
 
             // Left third = previous, remaining two-thirds = next.
@@ -354,26 +357,118 @@ private struct StoryViewerView: View {
                 }
                 Spacer()
             }
+
+            if showActions, stories.indices.contains(index) {
+                VStack {
+                    Spacer()
+                    HStack(spacing: 34) {
+                        Button {
+                            let id = stories[index].id
+                            if likedStoryIDs.contains(id) {
+                                likedStoryIDs.remove(id)
+                            } else {
+                                likedStoryIDs.insert(id)
+                            }
+                        } label: {
+                            storyAction(
+                                symbol: likedStoryIDs.contains(stories[index].id) ? "heart.fill" : "heart",
+                                label: "Like",
+                                tint: likedStoryIDs.contains(stories[index].id)
+                                    ? Color(red: 1, green: 0.3, blue: 0.4)
+                                    : .white
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        if let url = stories[index].imageURL {
+                            ShareLink(
+                                item: "Check this out on Ghost Cart:\n\(url.absoluteString)",
+                                subject: Text("Ghost Cart Story")
+                            ) {
+                                storyAction(symbol: "square.and.arrow.up", label: "Share", tint: .white)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    Button("Tap to close") {
+                        withAnimation { showActions = false }
+                        paused = false
+                    }
+                    .font(.caption)
+                    .foregroundStyle(Color.white.opacity(0.55))
+                    .padding(.top, 14)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(20)
+                .background(Color.black.opacity(0.86))
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
         .offset(y: max(0, dragOffset))
         .opacity(1 - Double(max(0, dragOffset)) / 400)
         .gesture(
             DragGesture()
                 .onChanged { value in
+                    guard scale == 1 else {
+                        zoomOffset = value.translation
+                        return
+                    }
                     if value.translation.height > 0 { dragOffset = value.translation.height }
                 }
                 .onEnded { value in
-                    if value.translation.height > 140 {
+                    if scale > 1 {
+                        withAnimation {
+                            scale = 1
+                            zoomOffset = .zero
+                        }
+                    } else if value.translation.height > 140 {
                         dismiss()
+                    } else if value.translation.height < -140 {
+                        withAnimation { showActions = true }
+                        paused = true
                     } else {
                         withAnimation { dragOffset = 0 }
                     }
                 }
         )
+        .simultaneousGesture(
+            MagnificationGesture()
+                .onChanged { value in
+                    paused = true
+                    scale = min(max(value, 1), 4)
+                }
+                .onEnded { _ in
+                    withAnimation {
+                        scale = 1
+                        zoomOffset = .zero
+                    }
+                    paused = showActions
+                }
+        )
         .onReceive(Timer.publish(every: 0.05, on: .main, in: .common).autoconnect()) { _ in
-            guard !paused, dragOffset == 0 else { return }
-            progress += 0.05 / duration
-            if progress >= 1 { step(by: 1) }
+            guard !paused, !showActions, dragOffset == 0 else { return }
+            if stories.indices.contains(index), stories[index].mediaType == "video", let player {
+                let seconds = player.currentTime().seconds
+                let total = player.currentItem?.duration.seconds ?? 0
+                if total.isFinite, total > 0 {
+                    progress = min(max(seconds / total, 0), 1)
+                }
+                if total.isFinite, total > 0, seconds >= total - 0.05 {
+                    step(by: 1)
+                }
+            } else {
+                progress += 0.05 / duration
+                if progress >= 1 { step(by: 1) }
+            }
+        }
+        .onAppear { configureMedia() }
+        .onDisappear { player?.pause() }
+        .onChange(of: paused) { isPaused in
+            if isPaused || showActions {
+                player?.pause()
+            } else {
+                player?.play()
+            }
         }
     }
 
@@ -391,6 +486,34 @@ private struct StoryViewerView: View {
         }
         index = next
         progress = 0
+        showActions = false
+        scale = 1
+        zoomOffset = .zero
+        configureMedia()
+    }
+
+    @ViewBuilder
+    private func storyAction(symbol: String, label: String, tint: Color) -> some View {
+        VStack(spacing: 5) {
+            Image(systemName: symbol)
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(tint)
+                .frame(width: 52, height: 52)
+                .background(Color.white.opacity(0.12))
+                .clipShape(Circle())
+            Text(label).font(.caption2.weight(.bold)).foregroundStyle(.white)
+        }
+    }
+
+    private func configureMedia() {
+        player?.pause()
+        player = nil
+        guard stories.indices.contains(index),
+              stories[index].mediaType == "video",
+              let url = stories[index].imageURL else { return }
+        let nextPlayer = AVPlayer(url: url)
+        player = nextPlayer
+        if !paused && !showActions { nextPlayer.play() }
     }
 }
 
@@ -421,6 +544,208 @@ private struct CommunityLeaderboardBanner: View {
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct LeaderboardEntry: Identifiable {
+    var id: String { username }
+    let username: String
+    let avatarURL: URL?
+    let avatarPresetID: String?
+    let moneyKeptCents: Int
+    let ghostedCount: Int
+    let coolingCount: Int
+}
+
+private enum LeaderboardService {
+    static func fetch() async throws -> [LeaderboardEntry] {
+        let response = try await ApiClient.shared.getJSON(path: "/api/community/leaderboard")
+        guard let rows = response["leaderboard"] as? [[String: Any]] else { return [] }
+        return rows.compactMap { row in
+            guard let username = row["username"] as? String, !username.isEmpty else { return nil }
+            let rawAvatar = row["avatarUrl"] as? String
+            let avatarURL = rawAvatar.flatMap {
+                URL(string: $0.hasPrefix("http") ? $0 : "\(ApiConfig.baseURL)\($0)")
+            }
+            return LeaderboardEntry(
+                username: username,
+                avatarURL: avatarURL,
+                avatarPresetID: row["avatarPresetId"] as? String,
+                moneyKeptCents: (row["moneyKeptCents"] as? NSNumber)?.intValue ?? 0,
+                ghostedCount: (row["ghostedCount"] as? NSNumber)?.intValue ?? 0,
+                coolingCount: (row["coolingCount"] as? NSNumber)?.intValue ?? 0
+            )
+        }
+    }
+}
+
+struct LeaderboardView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var entries: [LeaderboardEntry] = []
+    @State private var loading = true
+    @State private var errorMessage: String?
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 12) {
+                Text("Ranked by items ghosted. Money cooled and kept is shown too, but doesn't affect rank. Only members who opt in from Profile appear here.")
+                    .font(.caption)
+                    .foregroundStyle(Color.secondary)
+                    .padding(.bottom, 4)
+
+                if loading {
+                    ProgressView().frame(maxWidth: .infinity).padding(.top, 80)
+                } else if let errorMessage {
+                    EmptyStateView(image: "wifi.exclamationmark", title: "Leaderboard unavailable", message: errorMessage)
+                    Button("Try again") { Task { await load() } }
+                        .buttonStyle(GhostPrimaryButtonStyle())
+                } else if entries.isEmpty {
+                    EmptyStateView(
+                        image: "trophy",
+                        title: "No one's on the board yet",
+                        message: "Opt in from your Profile to be the first."
+                    )
+                } else {
+                    ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+                        NavigationLink {
+                            LeaderboardDetailView(entry: entry, rank: index + 1)
+                        } label: {
+                            LeaderboardRow(entry: entry, rank: index + 1)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .padding(20)
+        }
+        .background(Color(.systemBackground))
+        .navigationTitle("Community Leaderboard")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Close") { dismiss() }
+            }
+        }
+        .task { await load() }
+        .refreshable { await load() }
+    }
+
+    private func load() async {
+        loading = true
+        errorMessage = nil
+        do {
+            entries = try await LeaderboardService.fetch()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        loading = false
+    }
+}
+
+private struct LeaderboardRow: View {
+    let entry: LeaderboardEntry
+    let rank: Int
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text("#\(rank)")
+                .font(.subheadline.weight(.black))
+                .foregroundStyle(rank == 1 ? Color.ghostGreenColor : Color.secondary)
+                .frame(width: 32)
+            LeaderboardAvatar(entry: entry, size: 44)
+            VStack(alignment: .leading, spacing: 5) {
+                Text("@\(entry.username)").font(.subheadline.weight(.bold)).foregroundStyle(Color.primary)
+                HStack(spacing: 10) {
+                    Label("\(entry.ghostedCount) ghosted", systemImage: "checkmark.circle")
+                    Label("\(entry.coolingCount) cooling", systemImage: "snowflake")
+                }
+                .font(.caption2)
+                .foregroundStyle(Color.secondary)
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(AmountFormatter.string(Double(entry.moneyKeptCents) / 100))
+                    .font(.caption.weight(.black))
+                    .foregroundStyle(Color.ghostGreenColor)
+                Text("kept").font(.caption2).foregroundStyle(Color.secondary)
+            }
+            Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(Color.secondary)
+        }
+        .padding(14)
+        .background(Color.primary.opacity(0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(rank == 1 ? Color.ghostGreenColor : Color.primary.opacity(0.08), lineWidth: rank == 1 ? 2 : 1)
+        }
+    }
+}
+
+private struct LeaderboardAvatar: View {
+    let entry: LeaderboardEntry
+    let size: CGFloat
+
+    var body: some View {
+        Group {
+            if let preset = AvatarPreset.byId(entry.avatarPresetID) {
+                Image(preset.imageName).resizable().scaledToFit().padding(4)
+            } else if let url = entry.avatarURL {
+                AsyncImage(url: url) { phase in
+                    if case .success(let image) = phase { image.resizable().scaledToFill() }
+                    else { fallback }
+                }
+            } else {
+                fallback
+            }
+        }
+        .frame(width: size, height: size)
+        .background(Color.primary.opacity(0.06))
+        .clipShape(Circle())
+    }
+
+    private var fallback: some View {
+        Text(entry.username.prefix(1).uppercased())
+            .font(.headline.weight(.black))
+            .foregroundStyle(Color.primary)
+    }
+}
+
+private struct LeaderboardDetailView: View {
+    let entry: LeaderboardEntry
+    let rank: Int
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 22) {
+                LeaderboardAvatar(entry: entry, size: 92)
+                VStack(spacing: 4) {
+                    Text("@\(entry.username)").font(.title2.weight(.black))
+                    Text("Community rank #\(rank)").font(.caption).foregroundStyle(Color.secondary)
+                }
+                HStack(spacing: 10) {
+                    stat("Ghosted", "\(entry.ghostedCount)")
+                    stat("Cooling", "\(entry.coolingCount)")
+                    stat("Money kept", AmountFormatter.string(Double(entry.moneyKeptCents) / 100), accent: true)
+                }
+                Text("Only activity this member chose to share is represented on the community leaderboard. Email addresses and real names are never shown here.")
+                    .font(.caption)
+                    .foregroundStyle(Color.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(24)
+        }
+        .navigationTitle("Leaderboard details")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func stat(_ title: String, _ value: String, accent: Bool = false) -> some View {
+        VStack(spacing: 6) {
+            Text(title).font(.caption2).foregroundStyle(Color.secondary)
+            Text(value).font(.subheadline.weight(.black)).foregroundStyle(accent ? Color.ghostGreenColor : Color.primary)
+                .minimumScaleFactor(0.65).lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, minHeight: 72)
+        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 14))
     }
 }
 
