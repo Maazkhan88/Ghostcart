@@ -128,11 +128,8 @@ struct MembershipCardCanvas: View {
             let scale = max(geometry.size.width / 340, 1)
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .top) {
-                    GhostCartLogoView()
+                    GhostCartLogoView(tint: foreground)
                         .frame(width: 112 * scale, height: 38 * scale)
-                        .padding(.horizontal, 7 * scale)
-                        .background(Color.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 8 * scale, style: .continuous))
                     Spacer()
                     Text("MEMBERSHIP")
                         .font(.system(size: 8 * scale, weight: .black))

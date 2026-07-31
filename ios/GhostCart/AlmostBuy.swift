@@ -127,6 +127,7 @@ struct AlmostBuy: Identifiable, Codable, Hashable {
     var trigger: SpendingTrigger
     var source: CaptureSource
     var sourceURL: String?
+    var imageURL: String?
     var capturedAt: Date
     var decisionAt: Date?
     var resolvedAt: Date?
@@ -140,6 +141,7 @@ struct AlmostBuy: Identifiable, Codable, Hashable {
         trigger: SpendingTrigger,
         source: CaptureSource,
         sourceURL: String? = nil,
+        imageURL: String? = nil,
         capturedAt: Date = Date(),
         decisionAt: Date? = nil,
         resolvedAt: Date? = nil,
@@ -152,6 +154,7 @@ struct AlmostBuy: Identifiable, Codable, Hashable {
         self.trigger = trigger
         self.source = source
         self.sourceURL = sourceURL
+        self.imageURL = imageURL
         self.capturedAt = capturedAt
         self.decisionAt = decisionAt
         self.resolvedAt = resolvedAt

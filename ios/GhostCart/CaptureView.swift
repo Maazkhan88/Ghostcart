@@ -424,7 +424,8 @@ struct CaptureView: View {
             category: category,
             trigger: trigger,
             source: source,
-            sourceURL: capturedURL
+            sourceURL: capturedURL,
+            imageURL: importedImageURL
         )
         if startCooling {
             store.startCooling(id: id, minutes: cooldownMinutes)
@@ -479,7 +480,7 @@ private struct CaptureFieldLabel: View {
     }
 }
 
-private extension View {
+extension View {
     func ghostTextField() -> some View {
         self
             .padding(.horizontal, 14)

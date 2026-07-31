@@ -108,13 +108,70 @@ struct SectionHeading: View {
 
 struct SimulationDisclosure: View {
     var body: some View {
-        Label("Simulation only. No real payment. No real delivery.", systemImage: "checkmark.shield")
+        // Exact copy from Android's safety_disclosure string resource
+        // (strings.xml), verified against a live device.
+        Label("Simulation only. No payment is collected and no order is placed.", systemImage: "checkmark.shield")
             .font(.caption.weight(.semibold))
             .foregroundStyle(Color.secondary)
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.ghostGreenColor.opacity(0.12))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+// Shared product-thumbnail: real remote image when the item has one (Coil's
+// AsyncImage equivalent), category glyph fallback otherwise. Used anywhere
+// an AlmostBuy/CommunityProduct thumbnail appears (Home, Cooldowns).
+struct ProductThumbnail: View {
+    let imageURL: String?
+    let systemImage: String
+    var width: CGFloat = 44
+    var height: CGFloat = 44
+    var cornerRadius: CGFloat = 14
+
+    init(imageURL: String?, systemImage: String, size: CGFloat = 44, cornerRadius: CGFloat = 14) {
+        self.imageURL = imageURL
+        self.systemImage = systemImage
+        self.width = size
+        self.height = size
+        self.cornerRadius = cornerRadius
+    }
+
+    init(imageURL: String?, systemImage: String, width: CGFloat, height: CGFloat, cornerRadius: CGFloat = 14) {
+        self.imageURL = imageURL
+        self.systemImage = systemImage
+        self.width = width
+        self.height = height
+        self.cornerRadius = cornerRadius
+    }
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .fill(Color.ghostGreenColor.opacity(0.12))
+            if let imageURL, let url = URL(string: imageURL) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        // Contained, not cropped - matches Android's
+                        // DiscoveryProductCard (ContentScale.Fit against a
+                        // white box), not a cover/fill crop.
+                        image.resizable().scaledToFit().padding(min(width, height) * 0.08)
+                            .background(Color.white)
+                    default:
+                        Image(systemName: systemImage)
+                            .foregroundStyle(Color.ghostGreenColor)
+                    }
+                }
+            } else {
+                Image(systemName: systemImage)
+                    .foregroundStyle(Color.ghostGreenColor)
+            }
+        }
+        .font(.headline)
+        .frame(width: width, height: height)
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 }
 
@@ -148,7 +205,10 @@ enum AmountFormatter {
         let formatter = NumberFormatter()
         formatter.locale = Locale(identifier: "en_AE")
         formatter.numberStyle = .decimal
-        formatter.minimumFractionDigits = 0
+        // Always 2 decimals ("8,399.00", not "8,399") - matches Android
+        // exactly, verified on a live device (Progress strip, product
+        // cards, cooldown amounts all show trailing .00).
+        formatter.minimumFractionDigits = 2
         formatter.maximumFractionDigits = 2
         formatter.groupingSeparator = ","
         return formatter
@@ -156,6 +216,30 @@ enum AmountFormatter {
 
     static func string(_ value: Double) -> String {
         number.string(from: NSNumber(value: value)) ?? "0"
+    }
+}
+
+// Real dirham glyph icon + amount, matching Android's currency_dirham.png
+// usage (e.g. Progress strip, product prices) - copied directly from
+// android/app/src/main/res/drawable-nodpi/currency_dirham.png, not
+// recreated.
+struct DirhamAmount: View {
+    let value: Double
+    var font: Font = .body
+    var iconSize: CGFloat = 14
+    var color: Color = .primary
+
+    var body: some View {
+        HStack(spacing: 3) {
+            Image("DirhamGlyph")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: iconSize, height: iconSize)
+            Text(AmountFormatter.string(value))
+                .font(font)
+        }
+        .foregroundStyle(color)
     }
 }
 

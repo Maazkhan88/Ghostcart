@@ -14,42 +14,10 @@ struct ContentView: View {
     @State private var selectedTab: AppTab = .home
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            NavigationStack {
-                HomeView(
-                    onGhostSomething: { selectedTab = .capture },
-                    onViewCooldowns: { selectedTab = .cooldowns }
-                )
+        screen
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                GhostBottomNav(selectedTab: $selectedTab, readyCount: store.readyItems.count)
             }
-            .tabItem { Label("Home", systemImage: "house") }
-            .tag(AppTab.home)
-
-            NavigationStack {
-                CooldownsView()
-            }
-            .tabItem { Label("Cooldowns", systemImage: "timer") }
-            .badge(store.readyItems.count)
-            .tag(AppTab.cooldowns)
-
-            NavigationStack {
-                CaptureView(onComplete: { selectedTab = .cooldowns })
-            }
-            .tabItem { Label("Ghost +", systemImage: "plus.circle.fill") }
-            .tag(AppTab.capture)
-
-            NavigationStack {
-                ProgressView()
-            }
-            .tabItem { Label("Progress", systemImage: "chart.line.uptrend.xyaxis") }
-            .tag(AppTab.progress)
-
-            NavigationStack {
-                ProfileView()
-            }
-            .tabItem { Label("Profile", systemImage: "person.crop.circle") }
-            .tag(AppTab.profile)
-        }
-        .tint(.ghostGreenColor)
         .onReceive(NotificationCenter.default.publisher(for: .ghostCartNotificationDestination)) { notification in
             guard let destination = notification.userInfo?["destination"] as? String else { return }
             selectedTab = destination == "capture" ? .capture : .cooldowns
@@ -57,6 +25,28 @@ struct ContentView: View {
         .onAppear { handleSharedImport() }
         .onChange(of: scenePhase) { phase in
             if phase == .active { handleSharedImport() }
+        }
+    }
+
+    @ViewBuilder
+    private var screen: some View {
+        switch selectedTab {
+        case .home:
+            NavigationStack {
+                HomeView(
+                    onGhostSomething: { selectedTab = .capture },
+                    onViewCooldowns: { selectedTab = .cooldowns },
+                    onOpenProfile: { selectedTab = .profile }
+                )
+            }
+        case .cooldowns:
+            NavigationStack { CooldownsView() }
+        case .capture:
+            NavigationStack { CaptureView(onComplete: { selectedTab = .cooldowns }) }
+        case .progress:
+            NavigationStack { ProgressView() }
+        case .profile:
+            NavigationStack { ProfileView() }
         }
     }
 
@@ -107,6 +97,86 @@ struct ContentView: View {
             note: nil,
             offerCommunityShare: true
         )
+    }
+}
+
+// Custom bottom nav, not SwiftUI's native TabView chrome. Two separate bugs
+// (an oversized mascot image, then solid-colored-square icons) appeared when
+// custom template images were used inside .tabItem - that API path seems to
+// mishandle custom images on this SwiftUI/OS version, while the exact same
+// images render correctly as normal views everywhere else in this app
+// (headers, product thumbnails). Building the bar directly sidesteps that
+// and matches Android's actual GhostBottomNav (Navigation.kt:997-1065),
+// including the raised circular Cart button, more faithfully than tabItem
+// ever could anyway.
+private struct GhostBottomNav: View {
+    @Binding var selectedTab: AppTab
+    let readyCount: Int
+
+    var body: some View {
+        HStack(spacing: 0) {
+            navItem(.home, icon: "HomeIcon", label: "Home")
+            navItem(.cooldowns, icon: "OrdersIcon", label: "Orders", badge: readyCount)
+            cartItem
+            navItem(.progress, icon: "WalletIcon", label: "Wallet")
+            navItem(.profile, icon: "ProfileIcon", label: "Profile")
+        }
+        .padding(.horizontal, 8)
+        .padding(.top, 10)
+        .padding(.bottom, 26)
+        // Liquid Glass floating capsule is intentional per the user - only
+        // the icons/labels/spacing should match Android, not the bar
+        // material/shape.
+        .background(.regularMaterial, in: Capsule())
+        .padding(.horizontal, 14)
+    }
+
+    private func navItem(_ tab: AppTab, icon: String, label: String, badge: Int = 0) -> some View {
+        let selected = selectedTab == tab
+        return Button(action: { selectedTab = tab }) {
+            VStack(spacing: 4) {
+                ZStack(alignment: .topTrailing) {
+                    Image(icon)
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 25, height: 25)
+                    if badge > 0 {
+                        Text("\(badge)")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(3)
+                            .background(Color.red)
+                            .clipShape(Circle())
+                            .offset(x: 8, y: -6)
+                    }
+                }
+                Text(label).font(.system(size: 10, weight: .semibold))
+            }
+            .foregroundStyle(selected ? Color.ghostGreenColor : Color.secondary)
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // Android's central Cart tab: raised 48dp circular Ghost-green button
+    // with the cart mascot, no text label (GhostBottomNav,
+    // Navigation.kt:1014-1038).
+    private var cartItem: some View {
+        Button(action: { selectedTab = .capture }) {
+            Image("MascotCart")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 32, height: 32)
+                .frame(width: 48, height: 48)
+                .background(Color.ghostGreenColor)
+                .clipShape(Circle())
+                .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
+                .offset(y: -10)
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+        .accessibilityLabel("Cart")
     }
 }
 

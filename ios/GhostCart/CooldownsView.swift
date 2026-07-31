@@ -241,12 +241,7 @@ private struct ItemSummary: View {
 
     var body: some View {
         HStack(spacing: 13) {
-            Image(systemName: item.category.systemImage)
-                .font(.title3)
-                .foregroundStyle(accent ? Color.inkColor : Color.ghostGreenColor)
-                .frame(width: 46, height: 46)
-                .background(accent ? Color.ghostGreenColor : Color.ghostGreenColor.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            ProductThumbnail(imageURL: item.imageURL, systemImage: item.category.systemImage, size: 46)
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.name).font(.headline.weight(.bold))
                 Text("\(item.category.title) · \(stateText)")

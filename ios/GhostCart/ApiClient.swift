@@ -1,11 +1,14 @@
 import Foundation
 
 // Canonical Cloudflare Worker for the whole app (auth, activity, product
-// import, sharing). Mirrors Android's ApiConfig; both platforms target the
-// same consolidated deployment. Do not point this at the retired
-// nameless-d98e or ghost-cart-preview endpoints.
+// import, sharing). Mirrors Android's ApiConfig (android/.../data/ApiConfig.kt);
+// both platforms target the same consolidated deployment. Uses the branded
+// theghostcart.com custom domain, not the workers.dev URL - the workers.dev
+// route currently 404s (Cloudflare error 1042), theghostcart.com is the live
+// one. Do not point this at the retired nameless-d98e or ghost-cart-preview
+// endpoints either.
 enum ApiConfig {
-    static let baseURL = "https://ghostcart-app.maaz-n-khan.workers.dev"
+    static let baseURL = "https://theghostcart.com"
     static let requestTimeout: TimeInterval = 8
 
     // The backend currently accepts community values in UAE dirham only. The
@@ -87,21 +90,24 @@ private extension String {
 struct ApiClient {
     static let shared = ApiClient()
 
-    func getJSON(path: String) async throws -> [String: Any] {
-        try await sendJSON(path: path, method: "GET", body: nil)
+    func getJSON(path: String, bearerToken: String? = nil) async throws -> [String: Any] {
+        try await sendJSON(path: path, method: "GET", body: nil, bearerToken: bearerToken)
     }
 
-    func postJSON(path: String, body: [String: Any]) async throws -> [String: Any] {
-        try await sendJSON(path: path, method: "POST", body: body)
+    func postJSON(path: String, body: [String: Any], bearerToken: String? = nil) async throws -> [String: Any] {
+        try await sendJSON(path: path, method: "POST", body: body, bearerToken: bearerToken)
     }
 
-    private func sendJSON(path: String, method: String, body: [String: Any]?) async throws -> [String: Any] {
+    private func sendJSON(path: String, method: String, body: [String: Any]?, bearerToken: String? = nil) async throws -> [String: Any] {
         guard let url = URL(string: "\(ApiConfig.baseURL)\(path)") else {
             throw ApiError(message: unavailableFallback)
         }
         var request = URLRequest(url: url, timeoutInterval: ApiConfig.requestTimeout)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let bearerToken {
+            request.setValue("Bearer \(bearerToken)", forHTTPHeaderField: "Authorization")
+        }
         if let body {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])

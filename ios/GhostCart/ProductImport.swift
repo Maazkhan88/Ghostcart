@@ -153,19 +153,6 @@ enum ProductImportService {
         }
     }
 
-    static func communityFeed(limit: Int = 12) async -> Result<[CommunityProduct], ApiError> {
-        do {
-            let clamped = min(max(limit, 1), 30)
-            let response = try await ApiClient.shared.getJSON(path: "/api/community-products?limit=\(clamped)")
-            let rawItems = response["products"] as? [[String: Any]] ?? []
-            return .success(rawItems.compactMap(parseCommunityProduct))
-        } catch let error as ApiError {
-            return .failure(error)
-        } catch {
-            return .failure(ApiError(message: "Community items are temporarily unavailable."))
-        }
-    }
-
     // Optional, consent-gated anonymous publish. Never changes Money Kept.
     @discardableResult
     static func publish(
@@ -260,39 +247,6 @@ enum ProductImportService {
             ghostCount: intValue(object, "ghostCount") ?? 1,
             activityTag: object["activityTag"] as? String ?? "User Ghosted"
         )
-    }
-}
-
-// MARK: - Home community shelf model
-
-@MainActor
-final class CommunityFeedModel: ObservableObject {
-    enum State: Equatable {
-        case idle
-        case loading
-        case loaded([CommunityProduct])
-        case failed(String)
-    }
-
-    @Published private(set) var state: State = .idle
-
-    func loadIfNeeded() {
-        if case .loaded = state { return }
-        if case .loading = state { return }
-        reload()
-    }
-
-    func reload() {
-        state = .loading
-        Task {
-            let result = await ProductImportService.communityFeed(limit: 8)
-            switch result {
-            case .success(let products):
-                state = .loaded(products)
-            case .failure(let error):
-                state = .failed(error.message)
-            }
-        }
     }
 }
 

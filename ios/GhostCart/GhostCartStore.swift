@@ -64,7 +64,8 @@ final class GhostCartStore: ObservableObject {
         category: AlmostBuyCategory,
         trigger: SpendingTrigger,
         source: CaptureSource,
-        sourceURL: String?
+        sourceURL: String?,
+        imageURL: String? = nil
     ) -> UUID {
         let item = AlmostBuy(
             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -72,7 +73,8 @@ final class GhostCartStore: ObservableObject {
             category: category,
             trigger: trigger,
             source: source,
-            sourceURL: sourceURL?.trimmingCharacters(in: .whitespacesAndNewlines)
+            sourceURL: sourceURL?.trimmingCharacters(in: .whitespacesAndNewlines),
+            imageURL: imageURL
         )
         items.insert(item, at: 0)
         save()
