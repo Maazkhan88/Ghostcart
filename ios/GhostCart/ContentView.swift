@@ -16,7 +16,7 @@ struct ContentView: View {
     var body: some View {
         screen
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                GhostBottomNav(selectedTab: $selectedTab, readyCount: store.readyItems.count)
+                GhostBottomNav(selectedTab: $selectedTab)
             }
         .onReceive(NotificationCenter.default.publisher(for: .ghostCartNotificationDestination)) { notification in
             guard let destination = notification.userInfo?["destination"] as? String else { return }
@@ -111,12 +111,22 @@ struct ContentView: View {
 // ever could anyway.
 private struct GhostBottomNav: View {
     @Binding var selectedTab: AppTab
-    let readyCount: Int
 
     var body: some View {
         HStack(spacing: 0) {
             navItem(.home, icon: "HomeIcon", label: "Home")
-            navItem(.cooldowns, icon: "OrdersIcon", label: "Orders", badge: readyCount)
+            // No badge here - mirror plan slice 4 fix. This tab previously
+            // carried a "ready to decide" count badge, but Android's badge
+            // on this row is cart-item count, on the CENTER tab, not this
+            // one (GhostBottomNav, Navigation.kt:1039-1055; confirmed via
+            // deep audit docs/handoffs/2026-07-31-android-ios-deep-audit-
+            // and-plan.md §F). iOS's label mismatch the same audit also
+            // flagged ("Orders" vs expected "Cooldowns") was independently
+            // re-verified against the live strings.xml value and a real
+            // device screenshot - Android's actual displayed string is
+            // "Orders" (R.string.nav_cooldowns = "Orders", not "Cooldowns"
+            // despite the key name), so no label change was made here.
+            navItem(.cooldowns, icon: "OrdersIcon", label: "Orders")
             cartItem
             navItem(.progress, icon: "WalletIcon", label: "Wallet")
             navItem(.profile, icon: "ProfileIcon", label: "Profile")
@@ -161,7 +171,11 @@ private struct GhostBottomNav: View {
 
     // Android's central Cart tab: raised 48dp circular Ghost-green button
     // with the cart mascot, no text label (GhostBottomNav,
-    // Navigation.kt:1014-1038).
+    // Navigation.kt:1014-1038). Real Android badge here is cart-item
+    // count, capped "9+" - not added yet because there is no real cart
+    // model on iOS to count (this tab still opens the capture form; a real
+    // cart is mirror-plan slice 11). Deliberately not faking a number here
+    // - no badge is more honest than a wrong one.
     private var cartItem: some View {
         Button(action: { selectedTab = .capture }) {
             Image("MascotCart")
