@@ -1,6 +1,75 @@
 # Current State
 
-Last updated: 2026-07-31 (Claude Code — iOS build fixed and confirmed compiling/running on macOS for the first time; iOS/Android feature-parity gap audit done; iOS Onboarding/Auth/Consent/Tutorial built; iOS Home screen fixed and rebuilt against a real Android device via adb; nav bar icons fixed (real Material icon assets, actually-transparent this time); Story viewer added; three new handoff docs establish a formal 18-section/353-item mirror checklist that supersedes ad-hoc gap-filling going forward).
+Last updated: 2026-08-01 (Claude Code — deep Android-source-grounded audit produced `docs/handoffs/2026-07-31-android-ios-deep-audit-and-plan.md`, superseding the earlier handoff docs' Wallet-suite guidance (dead Android code — do not build); started executing its 15-slice implementation plan: slice 1 (test-target baseline) and slice 2 (missing asset import) done, committed, and verified with real `xcodebuild test` runs, not just compilation).
+
+> ## STATUS REPORT (Claude Code, 2026-08-01, part 6)
+>
+> **Began executing the dependency-ordered implementation plan from
+> `docs/handoffs/2026-07-31-android-ios-deep-audit-and-plan.md`** (the deep
+> audit a background agent produced last session). Working strictly in the
+> plan's own order, one slice at a time, each with real build/test evidence
+> before moving on - per the plan's and checklist's own "no compile-only
+> completions" rule.
+>
+> **This session's real git history is the most reliable record of exactly
+> what changed** - three commits on `main` (not pushed):
+> `db28299` (all of last session's onboarding/Home/nav work, finally
+> committed - it had been sitting uncommitted the whole prior session),
+> `c80d0b7` (slice 1: `GhostCartTests` target), `66e2906` (slice 2: asset
+> import). Read those commit messages for full detail; this entry
+> summarizes.
+>
+> **Slice 1 - test baseline:** Hand-added a `GhostCartTests` unit test
+> target to `project.pbxproj` (no project-generator tool like XcodeGen
+> available on this machine, had to write the target/build-phase/config
+> entries directly - validated with `plutil -lint` and `xcodebuild -list`
+> before trusting it). Two tests, both actually executed via
+> `xcodebuild test` against the booted simulator, not just compiled:
+> store-initializes-without-crashing, and capture()-adds-item +
+> `AmountFormatter` matches Android's always-2-decimal formatting. The
+> first draft of the init test asserted `items.count == 0` and *failed* on
+> a real run - `GhostCartStore` reads real persisted `UserDefaults` from
+> whatever's on this simulator already, and there's no dependency-injected
+> store for test isolation yet. Narrowed the assertion to match what the
+> plan actually specified (no-crash) rather than papering over it; the
+> test-isolation gap itself is real and still open.
+>
+> **Slice 2 - missing assets:** Copied 24 real files directly from
+> `android/app/src/main/res/drawable-nodpi/` (never recreated/redrawn, per
+> the asset manifest's explicit rule) into new `.xcassets` imagesets: all 9
+> avatar presets, 5 tutorial images, 6 remaining mascot poses (waveAlt,
+> trio, phoneList, checkoutPhone, male, female), Google G logo, both Apple
+> logo variants, the stacked logo, and app icon artwork. New
+> `AvatarPresets.swift` mirrors Android's `AVATAR_PRESETS` list exactly
+> (same ids, same order). Extended `GhostMascotView`'s pose switch
+> (`BrandAssets.swift`) to cover every pose Android supports.
+>
+> **Found for free while doing slice 2, not chased separately:**
+> `ProfileSelectView` already passed `pose: "male"`/`"female"` to
+> `GhostMascotView` - it just had nowhere to resolve to, so both cards
+> silently fell back to the generic wave mascot. Fixed by the pose-switch
+> extension alone; `ProfileSelectView.swift` itself needed no changes. A
+> new `AvatarPresetsTests.testEveryAvatarPresetImageLoads()` verifies all 11
+> assets resolve via `UIImage(named:)` for real, not just "the Swift
+> compiles."
+>
+> **What's next per the plan (not started yet):** slice 4 (bottom-nav bug
+> fixes - a badge-on-wrong-tab bug and an Orders-vs-Cooldowns label
+> question the audit flagged as needing product-owner sign-off, not a
+> silent pick), slice 5 (story splash + real `/api/simulation-consent`),
+> then the two explicitly **High-risk** slices later in the plan:
+> cross-platform sync (slice 9 - the audit's single highest-value gap, but
+> a bad reconciliation algorithm can silently destroy user data, build
+> behind a feature flag) and Cart/Checkout/Delivery (slice 11 - the
+> largest single slice, currently the center tab opens the capture form
+> instead of anything cart-shaped). User was given the choice to run
+> straight through in plan order or check in before those two specifically
+> - awaiting that answer before continuing.
+>
+> **`.gitignore` gained Xcode user-state exclusions** this session
+> (`xcuserdata/`, `project.xcworkspace/`) - those were previously untracked
+> but unignored, now properly excluded per the audit's own instruction not
+> to commit generated Xcode user state.
 
 > ## STATUS REPORT (Claude Code, 2026-07-31, part 5)
 >
