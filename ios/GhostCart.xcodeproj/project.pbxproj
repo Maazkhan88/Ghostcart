@@ -39,6 +39,7 @@
 		A10000000000000000000038 /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000038 /* OnboardingFlowView.swift */; };
 		A10000000000000000000039 /* ContentBlocks.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000039 /* ContentBlocks.swift */; };
 		A1000000000000000000003A /* MarketplaceSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000003A /* MarketplaceSection.swift */; };
+		T10000000000000000000002 /* GhostCartStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T10000000000000000000001 /* GhostCartStoreTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -48,6 +49,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = D10000000000000000000010;
 			remoteInfo = GhostCartShare;
+		};
+		T10000000000000000000005 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D10000000000000000000004 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D10000000000000000000001;
+			remoteInfo = GhostCart;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -101,6 +109,8 @@
 		B10000000000000000000038 /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowView.swift; sourceTree = "<group>"; };
 		B10000000000000000000039 /* ContentBlocks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentBlocks.swift; sourceTree = "<group>"; };
 		B1000000000000000000003A /* MarketplaceSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketplaceSection.swift; sourceTree = "<group>"; };
+		T10000000000000000000000 /* GhostCartTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GhostCartTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		T10000000000000000000001 /* GhostCartStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhostCartStoreTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -118,6 +128,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		T10000000000000000000003 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -126,8 +143,17 @@
 			children = (
 				C10000000000000000000003 /* GhostCart */,
 				C10000000000000000000010 /* GhostCartShare */,
+				T10000000000000000000004 /* GhostCartTests */,
 				C10000000000000000000004 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		T10000000000000000000004 /* GhostCartTests */ = {
+			isa = PBXGroup;
+			children = (
+				T10000000000000000000001 /* GhostCartStoreTests.swift */,
+			);
+			path = GhostCartTests;
 			sourceTree = "<group>";
 		};
 		C10000000000000000000003 /* GhostCart */ = {
@@ -182,6 +208,7 @@
 			children = (
 				B10000000000000000000000 /* GhostCart.app */,
 				B10000000000000000000024 /* GhostCartShare.appex */,
+				T10000000000000000000000 /* GhostCartTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -225,6 +252,24 @@
 			productReference = B10000000000000000000024 /* GhostCartShare.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		T10000000000000000000006 /* GhostCartTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = T10000000000000000000009 /* Build configuration list for PBXNativeTarget "GhostCartTests" */;
+			buildPhases = (
+				T10000000000000000000007 /* Sources */,
+				T10000000000000000000003 /* Frameworks */,
+				T10000000000000000000008 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				T10000000000000000000010 /* PBXTargetDependency */,
+			);
+			name = GhostCartTests;
+			productName = GhostCartTests;
+			productReference = T10000000000000000000000 /* GhostCartTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -240,6 +285,10 @@
 					};
 					D10000000000000000000010 = {
 						CreatedOnToolsVersion = 15.0;
+					};
+					T10000000000000000000006 = {
+						CreatedOnToolsVersion = 15.0;
+						TestTargetID = D10000000000000000000001;
 					};
 				};
 			};
@@ -258,6 +307,7 @@
 			targets = (
 				D10000000000000000000001 /* GhostCart */,
 				D10000000000000000000010 /* GhostCartShare */,
+				T10000000000000000000006 /* GhostCartTests */,
 			);
 		};
 /* End PBXProject section */
@@ -272,6 +322,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		D10000000000000000000013 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		T10000000000000000000008 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -325,6 +382,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		T10000000000000000000007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				T10000000000000000000002 /* GhostCartStoreTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -332,6 +397,11 @@
 			isa = PBXTargetDependency;
 			target = D10000000000000000000010 /* GhostCartShare */;
 			targetProxy = D10000000000000000000016 /* PBXContainerItemProxy */;
+		};
+		T10000000000000000000010 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D10000000000000000000001 /* GhostCart */;
+			targetProxy = T10000000000000000000005 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -454,6 +524,45 @@
 			};
 			name = Release;
 		};
+		T10000000000000000000011 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ghostcart.app.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/GhostCart.app/GhostCart";
+			};
+			name = Debug;
+		};
+		T10000000000000000000012 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ghostcart.app.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/GhostCart.app/GhostCart";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -480,6 +589,15 @@
 			buildConfigurations = (
 				E10000000000000000000001 /* Debug */,
 				E10000000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		T10000000000000000000009 /* Build configuration list for PBXNativeTarget "GhostCartTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				T10000000000000000000011 /* Debug */,
+				T10000000000000000000012 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
