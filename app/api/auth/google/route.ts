@@ -76,7 +76,8 @@ export async function POST(request: Request) {
       },
       { headers: { "Cache-Control": "no-store" } },
     );
-  } catch {
+  } catch (error) {
+    console.error("google auth failed:", error);
     return Response.json(
       { error: "Unable to sign in with Google right now" },
       { status: 500, headers: { "Cache-Control": "no-store" } },
