@@ -310,9 +310,13 @@
 				TargetAttributes = {
 					D10000000000000000000001 = {
 						CreatedOnToolsVersion = 15.0;
+						DevelopmentTeam = 2A5Q764W66;
+						ProvisioningStyle = Automatic;
 					};
 					D10000000000000000000010 = {
 						CreatedOnToolsVersion = 15.0;
+						DevelopmentTeam = 2A5Q764W66;
+						ProvisioningStyle = Automatic;
 					};
 					T10000000000000000000006 = {
 						CreatedOnToolsVersion = 15.0;
@@ -476,6 +480,7 @@
 		E10000000000000000000003 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = GhostCart/GhostCart.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 2A5Q764W66;
@@ -501,8 +506,11 @@
 		E10000000000000000000004 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = GhostCart/GhostCart.entitlements;
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				CODE_SIGN_STYLE = Manual;
+				PROVISIONING_PROFILE_SPECIFIER = "GhostCart App Store";
 				DEVELOPMENT_TEAM = 2A5Q764W66;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -550,7 +558,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = GhostCartShare/GhostCartShare.entitlements;
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				CODE_SIGN_STYLE = Manual;
+				PROVISIONING_PROFILE_SPECIFIER = "GhostCart Share App Store";
 				DEVELOPMENT_TEAM = 2A5Q764W66;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
