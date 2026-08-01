@@ -183,6 +183,7 @@ struct ProductThumbnail: View {
     var width: CGFloat = 44
     var height: CGFloat = 44
     var cornerRadius: CGFloat = 14
+    var fillWidth: Bool = false
 
     init(imageURL: String?, systemImage: String, productName: String? = nil, size: CGFloat = 44, cornerRadius: CGFloat = 14) {
         self.imageURL = imageURL
@@ -200,6 +201,21 @@ struct ProductThumbnail: View {
         self.width = width
         self.height = height
         self.cornerRadius = cornerRadius
+    }
+
+    // Grid cards (LazyVGrid with flexible columns) need the thumbnail - and
+    // therefore the whole card, since the card's VStack has no width of its
+    // own - to stretch to the column's actual (device-dependent) width
+    // instead of hugging a hardcoded pixel width. Without this, the card
+    // sat at its fixed intrinsic width inside a wider flexible column,
+    // leaving a dead gap on the right ("everything stuck to the left").
+    init(imageURL: String?, systemImage: String, productName: String? = nil, fillWidthHeight height: CGFloat, cornerRadius: CGFloat = 14) {
+        self.imageURL = imageURL
+        self.systemImage = systemImage
+        self.productName = productName
+        self.height = height
+        self.cornerRadius = cornerRadius
+        self.fillWidth = true
     }
 
     private var bundledPhotoName: String? {
@@ -239,8 +255,22 @@ struct ProductThumbnail: View {
             }
         }
         .font(.headline)
-        .frame(width: width, height: height)
+        .modifier(ProductThumbnailFrame(fillWidth: fillWidth, width: width, height: height))
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+    }
+}
+
+private struct ProductThumbnailFrame: ViewModifier {
+    let fillWidth: Bool
+    let width: CGFloat
+    let height: CGFloat
+
+    func body(content: Content) -> some View {
+        if fillWidth {
+            content.frame(maxWidth: .infinity, minHeight: height, maxHeight: height)
+        } else {
+            content.frame(width: width, height: height)
+        }
     }
 }
 

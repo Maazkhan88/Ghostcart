@@ -397,6 +397,7 @@ private struct MarketplaceProductCard: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
             }
+            .frame(maxWidth: .infinity)
             .foregroundStyle(Color.inkColor)
             .background(Color.ghostGreenColor)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -588,8 +589,7 @@ private struct ProductListingView: View {
                         imageURL: product.imageUrl,
                         systemImage: AlmostBuyCategory(serverName: product.category).systemImage,
                         productName: product.name,
-                        width: 154,
-                        height: 112,
+                        fillWidthHeight: 112,
                         cornerRadius: 14
                     )
                 }.buttonStyle(.plain)
@@ -616,6 +616,7 @@ private struct ProductListingView: View {
                 Text(recentlyAdded.contains(product.id) ? "Added ✓" : "Add to cart")
                     .font(.caption.weight(.bold)).frame(maxWidth: .infinity).padding(.vertical, 10)
             }
+            .frame(maxWidth: .infinity)
             .foregroundStyle(Color.inkColor).background(Color.ghostGreenColor, in: RoundedRectangle(cornerRadius: 12))
         }
         .padding(10)
