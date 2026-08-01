@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UserNotifications
 
 final class GhostCartStore: ObservableObject {
     @Published private(set) var items: [AlmostBuy] = []
@@ -341,6 +342,24 @@ final class GhostCartStore: ObservableObject {
             changed = true
         }
         if changed { save() }
+    }
+
+    // Mirrors Android's deleteAccountAndLocalData (AppViewModel.kt): purely a
+    // local wipe. Android's own "Delete account" doesn't call a backend
+    // delete endpoint either (none exists) - it clears SharedPreferences,
+    // cancels scheduled reminders, and resets in-memory state to fresh
+    // defaults. Matching that exactly rather than inventing new server
+    // behavior here.
+    func resetAllLocalData() {
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        UNUserNotificationCenter.current().removeAllDeliveredNotifications()
+        UserDefaults.standard.removeObject(forKey: persistenceKey)
+        UserDefaults.standard.removeObject(forKey: "ghostcart.v2.favorite-product-ids")
+        items = []
+        cartItems = []
+        activeOrder = nil
+        membership = .fresh()
+        preferences = GhostCartPreferences()
     }
 
     private func save() {

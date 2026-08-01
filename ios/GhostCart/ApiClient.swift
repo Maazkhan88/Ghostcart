@@ -112,6 +112,21 @@ struct ApiClient {
         )
     }
 
+    func patchJSON(
+        path: String,
+        body: [String: Any],
+        bearerToken: String? = nil,
+        additionalHeaders: [String: String] = [:]
+    ) async throws -> [String: Any] {
+        try await sendJSON(
+            path: path,
+            method: "PATCH",
+            body: body,
+            bearerToken: bearerToken,
+            additionalHeaders: additionalHeaders
+        )
+    }
+
     func postJSON(
         path: String,
         body: [String: Any],

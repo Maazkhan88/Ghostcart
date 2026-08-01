@@ -111,6 +111,11 @@ final class AuthService: ObservableObject {
         return try await ApiClient.shared.postJSON(path: path, body: body, bearerToken: accessToken)
     }
 
+    func authorizedPatch(path: String, body: [String: Any]) async throws -> [String: Any] {
+        guard let accessToken else { throw ApiError(message: "Sign in to continue.") }
+        return try await ApiClient.shared.patchJSON(path: path, body: body, bearerToken: accessToken)
+    }
+
     private func authenticate(
         path: String,
         body: [String: Any],

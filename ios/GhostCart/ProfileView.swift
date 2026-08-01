@@ -9,6 +9,7 @@ struct ProfileView: View {
     @State private var showLeaderboard = false
     @State private var showTutorial = false
     @State private var showSignIn = false
+    @State private var communityProfile: CommunityProfile?
 
     var body: some View {
         ScrollView {
@@ -58,10 +59,14 @@ struct ProfileView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     SectionHeading(title: "Community & learning")
-                    Button { showLeaderboard = true } label: {
-                        SettingsRow(image: "trophy", title: "Community Leaderboard", subtitle: "See opted-in members and their Ghost Cart progress")
+                    if case .signedIn = auth.state {
+                        CommunityLeaderboardOptInView(profile: $communityProfile, onOpenLeaderboard: { showLeaderboard = true })
+                    } else {
+                        Button { showLeaderboard = true } label: {
+                            SettingsRow(image: "trophy", title: "Community Leaderboard", subtitle: "Sign in to opt in and see opted-in members' progress")
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                     Button {
                         TutorialView.resetSavedSession()
                         showTutorial = true
@@ -82,6 +87,12 @@ struct ProfileView: View {
                     }
                 }
 
+                LegalDocumentsSection()
+
+                if case .signedIn = auth.state {
+                    DeleteAccountButton()
+                }
+
                 SimulationDisclosure()
             }
             .padding(20)
@@ -89,6 +100,10 @@ struct ProfileView: View {
         }
         .background(Color(.systemBackground))
         .navigationBarHidden(true)
+        .task(id: authIdentity) {
+            guard case .signedIn = auth.state else { communityProfile = nil; return }
+            communityProfile = await CommunityProfileService.fetch()
+        }
         .sheet(isPresented: $showMembership) {
             NavigationStack {
                 MembershipCardEditorView()
@@ -124,6 +139,11 @@ struct ProfileView: View {
             .preferredColorScheme(.light)
             .environmentObject(auth)
         }
+    }
+
+    private var authIdentity: String {
+        if case .signedIn(let user) = auth.state { return user.id }
+        return "guest"
     }
 
     private var accountSubtitle: String {
