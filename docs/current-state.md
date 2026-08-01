@@ -1,6 +1,70 @@
 # Current State
 
-Last updated: 2026-08-01 (Codex — iOS Home/search/header, leaderboard, Wallet, Profile, tutorial replay, and local-notification action/delivery pass completed and verified).
+Last updated: 2026-08-01 (Claude Code — background-agent re-audit of Codex's pass confirms it closed far more than its commit message claimed (real story splash, full Story Viewer gestures, 11-state tutorial, Category Browse/Product Detail, full Cart->Checkout->Success->Delivery, real Leaderboard); added authenticated almost-buy sync against /api/almost-buys, the top remaining gap from the 2026-07-31 deep-audit plan; all iOS work now committed to git, 7 commits ahead of origin/main, not pushed).
+
+> ## STATUS REPORT (Claude Code, 2026-08-01, part 2)
+>
+> **Committed all prior uncommitted iOS/backend work in stages** this
+> session (multiple contributors - this session's own slices 1/2/4, then a
+> separate concurrent "Codex" pass, then this entry's slice 9) - see git log
+> on `main` for the real sequence, this entry summarizes rather than
+> repeats commit messages.
+>
+> **Re-audited Codex's concurrent pass** via a background agent (full
+> report: `docs/handoffs/2026-08-01-post-codex-reaudit.md`) rather than
+> trusting its own commit message, per this project's established practice
+> of verifying claims with build/test/code evidence. Confirmed closed:
+> real story splash (3s/5s/1.2s timing matches Android), full Story Viewer
+> (pinch-zoom, swipe-up Like/Share tray, real video), the tutorial rewritten
+> from a static 4-slide carousel into the actual Android-matching 11-state
+> interactive machine, Category Browse + Product Detail screens, and a
+> complete Cart -> Checkout -> Order Success -> Fake Delivery loop with
+> delivery-step copy verified verbatim against Android's four strings, plus
+> a real Leaderboard (not even mentioned in Codex's own commit message).
+> Two QA screenshot filenames in `docs/qa/` are misleading and worth
+> knowing if anyone reviews by filename alone:
+> `ios-story-splash.png` actually shows Home, `ios-cart-flow-current.png`
+> shows the Consent screen.
+>
+> **Built authenticated almost-buy sync** (`AlmostBuySyncService.swift`),
+> the top item the re-audit flagged as still open - Codex's new Cart/
+> Checkout/Delivery state was, and until now still is by default,
+> local-only `UserDefaults`. Read the actual backend route source
+> (`app/api/almost-buys/**/route.ts`) directly rather than inferring the
+> contract from Android alone - useful, since it caught that `productId`
+> looked required on a first read but is actually optional (empty-payload
+> path returns `{}`, not an error, when the field is simply absent). Wired
+> into `GhostCartStore` at capture/startCooling/snooze/resolve, all
+> best-effort and non-blocking, matching Android's exact design philosophy
+> ("never blocks capture or resolution, silently no-ops when signed out").
+> Sign-in triggers a purely-additive merge (dedup by `serverId`, never
+> deletes/overwrites local data) via a new `.ghostCartDidSignIn`
+> notification.
+>
+> Fixed two real Swift 6 concurrency warnings this introduced along the way
+> (non-Sendable `self` captured weakly across a `MainActor.run` boundary) -
+> caught by actually reading the build output's warnings, not just
+> checking for "BUILD SUCCEEDED".
+>
+> **Known gap, stated plainly rather than glossed over:** no unit test for
+> the sync merge logic itself - would need network mocking not yet present
+> in `GhostCartTests`. The three existing tests (store init, capture +
+> `AmountFormatter`, avatar assets) all still pass against the full
+> combined tree, but they don't cover this new code's actual merge
+> behavior.
+>
+> **Still open per the plan, unchanged by this session:** localization (no
+> `.strings`/`.xcstrings` files exist at all), Ghost Gifts (still entirely
+> absent), the multi-link Share Extension queue (single-link sharing works
+> fine; sharing 3 links in a row still doesn't get a review screen), avatar
+> picker UI, leaderboard opt-in toggle, legal document links, delete-account.
+>
+> The Apple Developer account is now active (per the user, this session) -
+> this unblocks real Sign in with Apple end-to-end (was previously
+> client-code-only pending this), real push notification entitlements
+> beyond simulator testing, and eventual TestFlight distribution. Nothing
+> in this session's own work depended on it, but it's relevant for whoever
+> picks up push/Apple-auth verification next.
 
 > ## STATUS REPORT (Codex, 2026-08-01 — requested functional audit)
 >
