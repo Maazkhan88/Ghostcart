@@ -156,7 +156,17 @@ struct HomeView: View {
         }
         .background(Color(.systemBackground))
         .navigationBarHidden(true)
-        .onAppear { Task { await loadContentBlocks() } }
+        .onAppear {
+            Task { await loadContentBlocks() }
+            // Mirrors Android's Home composable: ask every time Home is
+            // reached while permission isn't granted yet (covers guest and
+            // signed-up onboarding paths, and anyone who dismissed/denied
+            // before). requestAuthorizationIfNeeded() no-ops once the OS
+            // has an answer, so this never re-nags someone who already
+            // said yes or no - don't gate this behind a persisted
+            // "already asked" flag, which can get stuck true.
+            Task { await NotificationService.shared.requestAuthorizationIfNeeded() }
+        }
         .refreshable { await loadContentBlocks() }
         .sheet(isPresented: $showLeaderboard) {
             NavigationStack {
