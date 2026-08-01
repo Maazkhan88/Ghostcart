@@ -353,6 +353,7 @@ private struct StoryViewerView: View {
                             .font(.headline)
                             .foregroundStyle(.white)
                             .padding(10)
+                            .modifier(GlassCircleBackground())
                     }
                 }
                 Spacer()

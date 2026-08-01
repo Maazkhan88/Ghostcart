@@ -195,8 +195,7 @@ struct MarketplaceSection: View {
             }
             .padding(.horizontal, 14)
             .frame(minHeight: 50)
-            .background(Color.primary.opacity(0.045))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .modifier(GlassCardBackground(cornerRadius: 14))
             .overlay {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .stroke(Color.primary.opacity(0.10), lineWidth: 1)
@@ -210,8 +209,13 @@ struct MarketplaceSection: View {
                             .foregroundStyle(category == option ? Color.inkColor : Color.primary)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 9)
-                            .background(category == option ? Color.ghostGreenColor : Color.primary.opacity(0.05))
-                            .clipShape(Capsule())
+                            .background {
+                                if category == option {
+                                    Capsule().fill(Color.ghostGreenColor)
+                                } else {
+                                    Capsule().fill(.clear).modifier(GlassPillBackground())
+                                }
+                            }
                     }
                 }
             }
@@ -355,8 +359,7 @@ private struct MarketplaceProductCard: View {
                         .font(.subheadline)
                         .foregroundStyle(Color.inkColor)
                         .padding(7)
-                        .background(Color.white)
-                        .clipShape(Circle())
+                        .modifier(GlassCircleBackground())
                 }
                 .padding(6)
             }
@@ -400,11 +403,45 @@ private struct MarketplaceProductCard: View {
         }
         .padding(12)
         .frame(width: 168)
-        .background(Color.primary.opacity(0.04))
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .modifier(GlassCardBackground(cornerRadius: 20))
         .overlay {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.primary.opacity(0.09), lineWidth: 1)
+        }
+    }
+}
+
+// Shared iOS 26 Liquid Glass card/button backgrounds, falling back to
+// .regularMaterial pre-26 - mirrors GhostBottomNav's own gating
+// (ContentView.swift) so glass adoption stays consistent app-wide.
+struct GlassCardBackground: ViewModifier {
+    var cornerRadius: CGFloat
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+        } else {
+            content.background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        }
+    }
+}
+
+struct GlassCircleBackground: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.glassEffect(.regular, in: .circle)
+        } else {
+            content.background(.regularMaterial, in: Circle())
+        }
+    }
+}
+
+struct GlassPillBackground: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.glassEffect(.regular, in: .capsule)
+        } else {
+            content.background(.regularMaterial, in: Capsule())
         }
     }
 }
@@ -563,7 +600,7 @@ private struct ProductListingView: View {
                 }.buttonStyle(.plain)
                 Button { toggleFavorite(product) } label: {
                     Image(systemName: favoriteIds.contains(product.id) ? "heart.fill" : "heart")
-                        .foregroundStyle(Color.inkColor).padding(7).background(Color.white, in: Circle())
+                        .foregroundStyle(Color.inkColor).padding(7).modifier(GlassCircleBackground())
                 }.padding(5)
             }
             NavigationLink { detail(product) } label: {
@@ -587,7 +624,7 @@ private struct ProductListingView: View {
             .foregroundStyle(Color.inkColor).background(Color.ghostGreenColor, in: RoundedRectangle(cornerRadius: 12))
         }
         .padding(10)
-        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 18))
+        .modifier(GlassCardBackground(cornerRadius: 18))
         .overlay { RoundedRectangle(cornerRadius: 18).stroke(Color.primary.opacity(0.09)) }
     }
 
@@ -729,6 +766,6 @@ private extension Image {
         self.font(.subheadline.weight(.bold))
             .foregroundStyle(Color.primary)
             .frame(width: 38, height: 38)
-            .background(Color.primary.opacity(0.06), in: Circle())
+            .modifier(GlassCircleBackground())
     }
 }
