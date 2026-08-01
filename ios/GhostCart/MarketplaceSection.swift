@@ -351,7 +351,7 @@ private struct MarketplaceProductCard: View {
                         onOpenCart: onOpenCart
                     )
                 } label: {
-                    ProductThumbnail(imageURL: product.imageUrl, systemImage: AlmostBuyCategory(serverName: product.category).systemImage, productName: product.name, width: 168, height: 112, cornerRadius: 14)
+                    ProductThumbnail(imageURL: product.imageUrl, systemImage: AlmostBuyCategory(serverName: product.category).systemImage, productName: product.name, fillWidthHeight: 112, cornerRadius: 14)
                 }
                 .buttonStyle(.plain)
                 Button(action: onToggleFavorite) {
@@ -705,11 +705,9 @@ private struct ProductDetailView: View {
                     imageURL: product.imageUrl,
                     systemImage: AlmostBuyCategory(serverName: product.category).systemImage,
                     productName: product.name,
-                    width: 353,
-                    height: 230,
+                    fillWidthHeight: 230,
                     cornerRadius: 20
                 )
-                .frame(maxWidth: .infinity)
 
                 detailRow("Category", value: product.category)
                 if let brand = product.brand, !brand.isEmpty { detailRow("Brand", value: brand) }
