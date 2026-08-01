@@ -2950,3 +2950,70 @@ section-alignment instructions (still current). For the asset situation:
 - Imported product images are retained in cart and checkout.
 - Profile contains a persistent app appearance setting: System, Light, or Dark.
 - The app remains simulation-only: real amount charged is always zero and simulated checkout is not automatically counted as confirmed Money Kept.
+
+## STATUS REPORT (Claude Code, 2026-08-01, part 3) — TestFlight ship + auth production bugs
+
+**TestFlight**: builds 1-4 uploaded and processed. Build 4 is the current
+candidate (icon/orientation fixes, Mac "Designed for iPad" support, marketplace
+card layout fixes, Dynamic Type cap, numeric user.id parsing fix). Signing is
+via a manually-created Apple Distribution cert + App Store provisioning
+profiles (`~/Library/MobileDevice/Provisioning Profiles/`), **not**
+`-allowProvisioningUpdates` — that flow reliably failed
+(`Communication with Apple failed`) for both API-key and Xcode-account auth on
+this Mac; don't retry it without a new reason to believe it's fixed.
+
+**Backend deploy path**: this repo has **no CI/CD auto-deploy on git push**.
+`git push origin main` only updates GitHub — `theghostcart.com` requires a
+manual `npx wrangler deploy --config wrangler.ghostcart-app.jsonc` (build
+first: `npm run build`). Confirmed the hard way: the Apple Sign-In route
+(`app/api/auth/apple/route.ts`) existed in git since the "Codex" commit but
+returned a plain-text 404 in production until manually deployed this session.
+Node/npm/wrangler/gh are not installed on this Mac by default — see
+"local tooling" below.
+
+**Google/Apple Sign-In — root causes found and fixed, both live in prod now**:
+1. `lib/google-auth.ts` accepted-audience constant: `GIDGoogleUser.idToken`'s
+   `aud` claim is the **serverClientID** (Info.plist's `GIDServerClientID`),
+   confirmed directly from `GoogleSignIn-iOS/GIDSignIn.m`
+   (`additionalParameters["audience"] = configuration.serverClientID` is set
+   on the sign-in request itself). Do not swap this for the iOS `CLIENT_ID`
+   again without re-reading that source line — a mid-session "fix" did
+   exactly that and broke every real sign-in.
+2. `AuthService.swift`'s `parseUser` did `object["id"] as? String`, but
+   `users.id` is an **integer** primary key (`db/schema.ts`) — the cast
+   silently failed on the JSON number, so the server-side sign-in was
+   succeeding the whole time while the client showed "response was
+   unreadable" for every auth method (not just Google/Apple).
+3. **Migration `drizzle/0025_purple_mauler.sql` (adds `users.apple_subject`)
+   had never been applied to the production D1 database**, even though it's
+   long since committed. Drizzle's `insert into "users"` includes every
+   schema column regardless of provider, so this broke Apple sign-in
+   outright *and* Google sign-in for any brand-new user (existing users hit
+   only the `SELECT` path and were unaffected — this is why it looked
+   account-specific at first). Applied directly via
+   `wrangler d1 execute ghostcart-v2-db --remote --file drizzle/0025_purple_mauler.sql`.
+   **Before assuming a schema-only column exists in prod, check
+   `PRAGMA table_info(users)` against the live D1 DB — the Drizzle schema
+   and drizzle/*.sql migration files being present in the repo does not mean
+   they've been applied.**
+4. Both routes' generic `catch {}` blocks swallowed the real error with no
+   `console.error` — added logging to `google/route.ts`'s (should probably
+   do the same in `apple/route.ts` and other auth-adjacent routes next time
+   one of them needs debugging). `wrangler tail --format pretty` against the
+   live Worker is the fastest way to see the real exception when a route's
+   error message is generic.
+
+**Local tooling installed this session (not present by default on this
+Mac)**: `gh` (GitHub CLI, downloaded as a plain binary zip, no Homebrew/sudo
+needed — see scratchpad for the extraction pattern), Node.js 22 (plain
+tarball, same reasoning), `wrangler` (via `npx`, needs Node). `gh auth login
+--web` + `gh auth setup-git` is what unblocked `git push` (this Mac's GitHub
+account uses Google SSO, so it has no traditional password for git's HTTPS
+credential prompt). Cloudflare access is `wrangler login` (browser OAuth,
+same pattern). Both are one-time per Mac unless credentials are cleared.
+
+**Still open from the Android mirror plan**: localization (no `.strings`
+files), Ghost Gifts (absent), multi-link Share queue (single link only),
+avatar picker UI, leaderboard opt-in toggle + display-name selection
+(Profile has no control for either), legal document links in Profile,
+delete-account flow, unit tests for the sync merge logic (Slice 9).
