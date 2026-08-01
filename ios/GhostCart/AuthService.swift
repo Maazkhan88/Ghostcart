@@ -129,7 +129,20 @@ final class AuthService: ObservableObject {
     }
 
     private static func parseUser(_ object: [String: Any]?) -> AuthUser? {
-        guard let object, let id = object["id"] as? String, let email = object["email"] as? String else { return nil }
+        // users.id is an integer primary key server-side (db/schema.ts), so
+        // JSONSerialization hands this back as an NSNumber, not a String -
+        // "id" as? String always failed here, silently breaking every
+        // sign-in method (not just Google/Apple) with a generic "response
+        // was unreadable" error after the server had already succeeded.
+        guard let object, let email = object["email"] as? String else { return nil }
+        let id: String
+        if let stringId = object["id"] as? String {
+            id = stringId
+        } else if let numberId = object["id"] as? NSNumber {
+            id = numberId.stringValue
+        } else {
+            return nil
+        }
         return AuthUser(id: id, email: email, displayName: object["displayName"] as? String)
     }
 }
