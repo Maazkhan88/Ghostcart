@@ -6,13 +6,16 @@ import { generateSalt, hashPassword } from "../../../../lib/password";
 import { verifyGoogleIdToken } from "../../../../lib/google-auth";
 import { createApiSession } from "../../../../lib/session-auth";
 
-// GIDGoogleUser.idToken's `aud` claim is always the OAuth client ID that
-// requested the sign-in (GIDConfiguration's `clientID`, from
-// GoogleService-Info.plist's CLIENT_ID) - NOT the `serverClientID` used to
-// additionally request a server auth code. This previously held the
-// serverClientID value (Info.plist's GIDServerClientID) by mistake, so every
-// iOS Google sign-in failed verification here regardless of device.
-const IOS_CLIENT_ID = "172577078460-7h38fc6737bttb21lm3rtcb6i542gur2.apps.googleusercontent.com";
+// GIDSignIn sends `serverClientID` as an `audience` request parameter to
+// Google (GoogleSignIn-iOS's GIDSignIn.m: additionalParameters[@"audience"]
+// = configuration.serverClientID), which makes Google issue the ID token
+// audienced to the *server* client ID, not the iOS app's own client ID -
+// confirmed directly from the SDK source, not assumed. This constant must
+// match Info.plist's GIDServerClientID. (A prior fix here briefly swapped
+// this for the iOS CLIENT_ID under the wrong assumption and broke
+// verification for every real sign-in - do not repeat that change without
+// re-checking GIDSignIn.m first.)
+const GOOGLE_SERVER_CLIENT_ID = "172577078460-g55fm81e48qn3n3j4ko3daj7b2i23uej.apps.googleusercontent.com";
 
 export async function POST(request: Request) {
   try {
@@ -33,7 +36,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const verified = await verifyGoogleIdToken(idToken, [expectedAudience, IOS_CLIENT_ID]);
+    const verified = await verifyGoogleIdToken(idToken, [expectedAudience, GOOGLE_SERVER_CLIENT_ID]);
     if (!verified) {
       return Response.json(
         { error: "Could not verify Google sign-in" },
