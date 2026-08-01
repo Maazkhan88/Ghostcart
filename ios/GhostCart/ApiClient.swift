@@ -25,11 +25,19 @@ struct ApiError: LocalizedError {
     var errorDescription: String? { message }
 }
 
+// Generic transport/parse-failure wording for the shared HTTP client - used
+// by every API call in the app (auth, sync, marketplace, product import,
+// etc.), not just product capture. Previously this said "could not read
+// product details... enter manually", which leaked confusing, wrong-context
+// text into unrelated failures (e.g. a network hiccup during Google/Apple
+// sign-in showed product-import guidance). Callers that want more specific
+// framing (like ProductImport.swift's link-capture flow) already set their
+// own message at the catch site instead of relying on this fallback.
 private let manualEntryFallback =
-    "Ghost Cart could not read product details right now. Try again, or enter the details manually."
+    "Ghost Cart couldn't connect right now. Check your connection and try again."
 
 private let unavailableFallback =
-    "Product capture is temporarily unavailable. Enter the details manually or try again."
+    "Ghost Cart is temporarily unavailable. Try again in a moment."
 
 // Shared blocked suffixes / safety rules ported from Android's
 // isSafePublicHttpsUrl so the client refuses private or non-HTTPS links
