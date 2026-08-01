@@ -2,14 +2,20 @@ package com.example.ghostcart
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -40,6 +46,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -53,9 +60,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -83,6 +92,11 @@ import com.example.ghostcart.theme.DarkGray
 import com.example.ghostcart.theme.Ink
 import com.example.ghostcart.theme.MutedText
 import com.example.ghostcart.theme.Paper
+import com.example.ghostcart.theme.ExpressivePrimaryText
+import com.example.ghostcart.theme.ExpressiveSecondaryText
+import com.example.ghostcart.theme.ExpressiveSurfaceHigh
+import com.example.ghostcart.theme.GhostGlass
+import com.example.ghostcart.theme.GhostSubtleBorder
 import com.example.ghostcart.theme.GhostCartTheme
 import com.example.ghostcart.ui.GhostMascotPose
 import com.example.ghostcart.ui.GhostCartWordmark
@@ -1004,42 +1018,84 @@ private fun GhostBottomNav(current: NavKey?, cartItemCount: Int = 0, onNavigate:
         Item(stringResource(R.string.nav_profile), GhostCardSettings, Icons.Filled.Person)
     )
 
-    NavigationBar(containerColor = Paper, tonalElevation = 0.dp) {
-        items.forEach { item ->
-            val selected = current == item.destination
-            NavigationBarItem(
-                selected = selected,
-                onClick = { onNavigate(item.destination) },
-                icon = {
-                    Box(contentAlignment = Alignment.TopEnd, modifier = Modifier.offset(y = 6.dp)) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .navigationBarsPadding(),
+        shape = RoundedCornerShape(32.dp),
+        color = GhostGlass,
+        contentColor = ExpressivePrimaryText,
+        tonalElevation = 4.dp,
+        shadowElevation = 6.dp,
+        border = BorderStroke(1.dp, GhostSubtleBorder)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 6.dp, vertical = 5.dp)
+        ) {
+            items.forEach { item ->
+                val selected = current == item.destination
+                val indicatorColor by animateColorAsState(
+                    targetValue = when {
+                        item.central -> GhostGreen
+                        selected -> GhostGreen
+                        else -> Color.Transparent
+                    },
+                    animationSpec = spring(dampingRatio = 0.78f, stiffness = 560f),
+                    label = "navIndicator"
+                )
+                val iconColor by animateColorAsState(
+                    targetValue = if (selected) Color(0xFF071006) else ExpressiveSecondaryText,
+                    animationSpec = spring(dampingRatio = 0.78f, stiffness = 560f),
+                    label = "navIconColor"
+                )
+                val indicatorWidth by animateDpAsState(
+                    targetValue = if (selected || item.central) 50.dp else 40.dp,
+                    animationSpec = spring(dampingRatio = 0.72f, stiffness = 520f),
+                    label = "navIndicatorWidth"
+                )
+                val iconScale by animateFloatAsState(
+                    targetValue = if (selected) 1.08f else 1f,
+                    animationSpec = spring(dampingRatio = 0.68f, stiffness = 480f),
+                    label = "navIconScale"
+                )
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(62.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .clickable(role = Role.Tab) { onNavigate(item.destination) }
+                        .padding(vertical = 4.dp)
+                ) {
+                    Box(contentAlignment = Alignment.TopEnd) {
                         Box(
                             modifier = Modifier
-                                .size(if (item.central) 48.dp else 34.dp)
-                                .clip(CircleShape)
-                                .background(if (item.central) GhostGreen else Color.Transparent),
+                                .width(indicatorWidth)
+                                .height(if (item.central) 46.dp else 34.dp)
+                                .clip(if (item.central) CircleShape else RoundedCornerShape(18.dp))
+                                .background(indicatorColor)
+                                .graphicsLayer { scaleX = iconScale; scaleY = iconScale },
                             contentAlignment = Alignment.Center
                         ) {
                             if (item.central) {
-                                // This button now IS the cart entry point (GhostCartList), so the
-                                // cart-shaped mascot is accurate again, not confusable with a
-                                // different affordance - there's only one cart icon now.
-                                GhostMascotPose(
-                                    poseName = "cart",
-                                    modifier = Modifier.size(40.dp)
-                                )
+                                GhostMascotPose(poseName = "cart", modifier = Modifier.size(38.dp))
                             } else {
                                 Icon(
                                     item.icon,
                                     contentDescription = item.label,
-                                    tint = if (selected) GhostGreen else MutedText,
-                                    modifier = Modifier.size(26.dp)
+                                    tint = iconColor,
+                                    modifier = Modifier.size(23.dp)
                                 )
                             }
                         }
                         if (item.central && cartItemCount > 0) {
                             Box(
                                 modifier = Modifier
-                                    .padding(top = 2.dp, end = 2.dp)
+                                    .offset(x = 4.dp, y = (-2).dp)
                                     .size(18.dp)
                                     .clip(CircleShape)
                                     .background(Color(0xFFE4342F)),
@@ -1054,12 +1110,17 @@ private fun GhostBottomNav(current: NavKey?, cartItemCount: Int = 0, onNavigate:
                             }
                         }
                     }
-                },
-                label = if (item.central) null else {
-                    { Text(item.label, color = if (selected) Ink else MutedText, fontSize = 9.sp) }
-                },
-                colors = NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent)
-            )
+                    if (!item.central) {
+                        Text(
+                            item.label,
+                            color = if (selected) ExpressivePrimaryText else ExpressiveSecondaryText,
+                            fontSize = 9.sp,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
         }
     }
 }

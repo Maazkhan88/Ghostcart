@@ -2,6 +2,8 @@ package com.example.ghostcart.ui.common
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -40,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -151,9 +154,16 @@ fun GhostCategoryChip(
         label = "categoryForeground",
     )
     val elevation by animateDpAsState(if (selected) 3.dp else 0.dp, label = "categoryElevation")
+    val scale by animateFloatAsState(
+        targetValue = if (selected) 1.04f else 1f,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = 520f),
+        label = "categoryScale",
+    )
     Surface(
         onClick = onClick,
-        modifier = modifier.height(48.dp),
+        modifier = modifier
+            .height(48.dp)
+            .graphicsLayer { scaleX = scale; scaleY = scale },
         shape = RoundedCornerShape(24.dp),
         color = container,
         contentColor = foreground,
@@ -196,12 +206,18 @@ private fun RowScope.GhostSegment(label: String, selected: Boolean, onClick: () 
         if (selected) GhostOnGreen else ExpressiveSecondaryText,
         label = "segmentForeground",
     )
+    val scale by animateFloatAsState(
+        targetValue = if (selected) 1f else 0.96f,
+        animationSpec = spring(dampingRatio = 0.78f, stiffness = 600f),
+        label = "segmentScale",
+    )
     Box(
         modifier = Modifier
             .weight(1f)
             .height(44.dp)
             .clip(RoundedCornerShape(22.dp))
             .background(container)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -211,6 +227,49 @@ private fun RowScope.GhostSegment(label: String, selected: Boolean, onClick: () 
         contentAlignment = Alignment.Center,
     ) {
         Text(label, color = foreground, style = MaterialTheme.typography.labelLarge)
+    }
+}
+
+@Composable
+fun GhostActionPill(
+    label: String,
+    icon: ImageVector,
+    active: Boolean = false,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val container by animateColorAsState(
+        targetValue = if (active) GhostGreen else ExpressiveSurfaceHigh,
+        animationSpec = spring(dampingRatio = 0.78f, stiffness = 560f),
+        label = "actionPillContainer",
+    )
+    val content by animateColorAsState(
+        targetValue = if (active) GhostOnGreen else ExpressivePrimaryText,
+        animationSpec = spring(dampingRatio = 0.78f, stiffness = 560f),
+        label = "actionPillContent",
+    )
+    val elevation by animateDpAsState(
+        targetValue = if (active) 3.dp else 1.dp,
+        animationSpec = spring(dampingRatio = 0.78f, stiffness = 560f),
+        label = "actionPillElevation",
+    )
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(44.dp),
+        shape = RoundedCornerShape(22.dp),
+        color = container,
+        contentColor = content,
+        tonalElevation = elevation,
+        border = androidx.compose.foundation.BorderStroke(1.dp, GhostSubtleBorder),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(horizontal = 14.dp),
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+            Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+        }
     }
 }
 
@@ -334,4 +393,3 @@ fun GhostProductCard(
         }
     }
 }
-

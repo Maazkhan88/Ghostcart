@@ -88,6 +88,7 @@ import com.example.ghostcart.ui.ProductPhoto
 import com.example.ghostcart.ui.common.BackButton
 import com.example.ghostcart.ui.common.CoolingDurationDialog
 import com.example.ghostcart.ui.common.ForwardChevron
+import com.example.ghostcart.ui.common.GhostActionPill
 import com.example.ghostcart.ui.common.PrimaryButton
 import com.example.ghostcart.ui.common.RoundIconButton
 import com.example.ghostcart.ui.common.SecondaryButton
@@ -542,9 +543,25 @@ fun CategoryBrowseScreen(
             .padding(horizontal = 20.dp)
             .padding(top = 8.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
             BackButton(onBack = onBack)
             Spacer(modifier = Modifier.weight(1f))
+            GhostActionPill(
+                label = "Sort",
+                icon = Icons.Filled.SwapVert,
+                active = sortOption != ProductSortOption.TRENDING,
+                onClick = { showSortDialog = true }
+            )
+            GhostActionPill(
+                label = "Filter",
+                icon = Icons.Filled.FilterList,
+                active = filtersActive,
+                onClick = { showFiltersDialog = true }
+            )
         }
 
         val (title, subtitle) = when (categoryId) {
@@ -596,7 +613,7 @@ fun CategoryBrowseScreen(
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(top = 16.dp, bottom = 96.dp),
+                contentPadding = PaddingValues(top = 16.dp, bottom = 32.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.weight(1f)
@@ -615,12 +632,6 @@ fun CategoryBrowseScreen(
         }
     }
 
-        SortFilterPill(
-            filtersActive = filtersActive,
-            onSortClick = { showSortDialog = true },
-            onFilterClick = { showFiltersDialog = true },
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 20.dp)
-        )
     }
 
     if (showSortDialog) {
