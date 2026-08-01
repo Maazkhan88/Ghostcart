@@ -351,7 +351,7 @@ private struct MarketplaceProductCard: View {
                         onOpenCart: onOpenCart
                     )
                 } label: {
-                    ProductThumbnail(imageURL: product.imageUrl, systemImage: AlmostBuyCategory(serverName: product.category).systemImage, width: 168, height: 112, cornerRadius: 14)
+                    ProductThumbnail(imageURL: product.imageUrl, systemImage: AlmostBuyCategory(serverName: product.category).systemImage, productName: product.name, width: 168, height: 112, cornerRadius: 14)
                 }
                 .buttonStyle(.plain)
                 Button(action: onToggleFavorite) {
@@ -379,7 +379,7 @@ private struct MarketplaceProductCard: View {
                         .font(.caption.weight(.bold))
                         .foregroundStyle(Color.primary)
                         .lineLimit(2)
-                        .frame(height: 32, alignment: .top)
+                        .frame(minHeight: 32, alignment: .top)
                     if product.priceCents > 0 {
                         DirhamAmount(value: product.priceAmount, font: .caption.weight(.heavy))
                     } else {
@@ -417,32 +417,26 @@ private struct MarketplaceProductCard: View {
 struct GlassCardBackground: ViewModifier {
     var cornerRadius: CGFloat
 
+    // iOS 26's real glassEffect() renders its visual shape without reliably
+    // matching the content's actual padded layout bounds here - text kept
+    // correct layout position but the glass "wall" rendered tighter, making
+    // card text look like it had no left margin. .regularMaterial doesn't
+    // have this failure mode, so it's used unconditionally now rather than
+    // only as a pre-26 fallback.
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content.glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
-        } else {
-            content.background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        }
+        content.background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 }
 
 struct GlassCircleBackground: ViewModifier {
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content.glassEffect(.regular, in: .circle)
-        } else {
-            content.background(.regularMaterial, in: Circle())
-        }
+        content.background(.regularMaterial, in: Circle())
     }
 }
 
 struct GlassPillBackground: ViewModifier {
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content.glassEffect(.regular, in: .capsule)
-        } else {
-            content.background(.regularMaterial, in: Capsule())
-        }
+        content.background(.regularMaterial, in: Capsule())
     }
 }
 
@@ -593,6 +587,7 @@ private struct ProductListingView: View {
                     ProductThumbnail(
                         imageURL: product.imageUrl,
                         systemImage: AlmostBuyCategory(serverName: product.category).systemImage,
+                        productName: product.name,
                         width: 154,
                         height: 112,
                         cornerRadius: 14
@@ -606,7 +601,7 @@ private struct ProductListingView: View {
             NavigationLink { detail(product) } label: {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(product.category).font(.caption2.weight(.bold)).foregroundStyle(Color.ghostGreenColor).lineLimit(1)
-                    Text(product.name).font(.caption.weight(.bold)).foregroundStyle(Color.primary).lineLimit(2).frame(height: 32, alignment: .top)
+                    Text(product.name).font(.caption.weight(.bold)).foregroundStyle(Color.primary).lineLimit(2).frame(minHeight: 32, alignment: .top)
                     if product.priceCents > 0 {
                         DirhamAmount(value: product.priceAmount, font: .caption.weight(.black), iconSize: 10)
                     } else {
@@ -708,6 +703,7 @@ private struct ProductDetailView: View {
                 ProductThumbnail(
                     imageURL: product.imageUrl,
                     systemImage: AlmostBuyCategory(serverName: product.category).systemImage,
+                    productName: product.name,
                     width: 353,
                     height: 230,
                     cornerRadius: 20

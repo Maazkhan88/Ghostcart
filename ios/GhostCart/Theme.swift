@@ -120,30 +120,90 @@ struct SimulationDisclosure: View {
     }
 }
 
+// Mirrors Android's ProductPhoto direct-asset table (Icons.kt:441-479) -
+// bundled marketplace-catalog illustrations, matched by name substring, used
+// as a base layer under any remote imageUrl so catalog items missing a
+// photo (e.g. Coffee & Drinks items with imageUrl = null server-side) still
+// show real art instead of a generic glyph, exactly like Android does.
+func bundledProductPhotoName(for productName: String) -> String? {
+    let name = productName.lowercased().trimmingCharacters(in: .whitespaces)
+    let table: [(String, String)] = [
+        ("spanish latte", "product_marketplace_spanish_latte"),
+        ("midnight burger", "product_marketplace_midnight_burger"),
+        ("blackout burger combo", "product_marketplace_blackout_burger_combo"),
+        ("coffee & croissant combo", "product_marketplace_croissant_coffee"),
+        ("pizza combo", "product_marketplace_pizza_combo"),
+        ("ghost cappuccino", "product_marketplace_ghost_cappuccino"),
+        ("noise cancelling headphones", "product_marketplace_noise_cancelling_headphones"),
+        ("acai bowl", "product_marketplace_acai_bowl"),
+        ("white sneaker", "product_marketplace_white_sneakers"),
+        ("gaming tablet", "product_marketplace_gaming_tablet"),
+        ("minimal smartwatch", "product_marketplace_minimal_smartwatch"),
+        ("wireless earbuds", "product_marketplace_wireless_earbuds"),
+        ("luxury perfume", "product_marketplace_luxury_perfume"),
+        ("smartwatch pro", "product_marketplace_smartwatch_pro"),
+        ("ghost cart phone case", "product_merch_phone_case"),
+        ("ghost cart laptop sleeve", "product_merch_laptop_sleeve"),
+        ("ghost cart travel tumbler", "product_merch_travel_tumbler"),
+        ("ghost cart classic cap", "product_merch_classic_cap"),
+        ("ghost cart tote bag", "product_merch_tote_bag"),
+        ("ghost cart steel bottle", "product_merch_steel_bottle"),
+        ("ghost cart notebook", "product_merch_notebook"),
+        ("ghost cart pen", "product_merch_pen"),
+        ("ghost cart ceramic mug", "product_merch_ceramic_mug"),
+        ("ghost cart lunch box", "product_merch_lunch_box"),
+        ("ghost cart running sneakers", "product_merch_running_sneakers"),
+        ("ghost cart logo t-shirt", "product_merch_logo_tshirt"),
+        ("ghost cart protein shaker", "product_merch_protein_shaker"),
+        ("ghost cart backpack", "product_merch_backpack"),
+        ("ghost cart bucket hat", "product_merch_bucket_hat"),
+        ("ghost cart minimal watch", "product_merch_minimal_watch"),
+        ("ghost cart gym duffel", "product_merch_gym_duffel"),
+        ("ghost cart supplement jar", "product_merch_supplement_jar"),
+        ("ghost cart logo hoodie", "product_merch_logo_hoodie"),
+        ("ghost cart beanie", "product_merch_beanie"),
+        ("headphone", "product_marketplace_headphones"),
+        ("tablet", "product_marketplace_tablet"),
+    ]
+    if let match = table.first(where: { name.contains($0.0) }) { return match.1 }
+    if name.contains("perfume") || name.contains("cologne") { return "product_perfume" }
+    return nil
+}
+
 // Shared product-thumbnail: real remote image when the item has one (Coil's
 // AsyncImage equivalent), category glyph fallback otherwise. Used anywhere
 // an AlmostBuy/CommunityProduct thumbnail appears (Home, Cooldowns).
+// `productName`, when supplied, additionally checks the bundled marketplace
+// illustration table below before falling back to the category glyph -
+// only Marketplace call sites pass this (see MarketplaceSection.swift).
 struct ProductThumbnail: View {
     let imageURL: String?
     let systemImage: String
+    var productName: String? = nil
     var width: CGFloat = 44
     var height: CGFloat = 44
     var cornerRadius: CGFloat = 14
 
-    init(imageURL: String?, systemImage: String, size: CGFloat = 44, cornerRadius: CGFloat = 14) {
+    init(imageURL: String?, systemImage: String, productName: String? = nil, size: CGFloat = 44, cornerRadius: CGFloat = 14) {
         self.imageURL = imageURL
         self.systemImage = systemImage
+        self.productName = productName
         self.width = size
         self.height = size
         self.cornerRadius = cornerRadius
     }
 
-    init(imageURL: String?, systemImage: String, width: CGFloat, height: CGFloat, cornerRadius: CGFloat = 14) {
+    init(imageURL: String?, systemImage: String, productName: String? = nil, width: CGFloat, height: CGFloat, cornerRadius: CGFloat = 14) {
         self.imageURL = imageURL
         self.systemImage = systemImage
+        self.productName = productName
         self.width = width
         self.height = height
         self.cornerRadius = cornerRadius
+    }
+
+    private var bundledPhotoName: String? {
+        productName.flatMap(bundledProductPhotoName(for:))
     }
 
     var body: some View {
@@ -154,6 +214,15 @@ struct ProductThumbnail: View {
                 // The former green tint remained visible around contained
                 // images and made the product art look color-cast.
                 .fill(Color.white)
+            // Bundled illustration as a base layer under any remote image,
+            // matching Android's ProductPhoto z-order (Icons.kt) - catalog
+            // items with no imageUrl still show real art, not just a glyph.
+            if let bundledPhotoName, UIImage(named: bundledPhotoName) != nil {
+                Image(bundledPhotoName).resizable().scaledToFit().padding(min(width, height) * 0.08)
+            } else {
+                Image(systemName: systemImage)
+                    .foregroundStyle(Color.ghostGreenColor)
+            }
             if let imageURL, let url = URL(string: imageURL) {
                 AsyncImage(url: url) { phase in
                     switch phase {
@@ -164,13 +233,9 @@ struct ProductThumbnail: View {
                         image.resizable().scaledToFit().padding(min(width, height) * 0.08)
                             .background(Color.white)
                     default:
-                        Image(systemName: systemImage)
-                            .foregroundStyle(Color.ghostGreenColor)
+                        Color.clear
                     }
                 }
-            } else {
-                Image(systemName: systemImage)
-                    .foregroundStyle(Color.ghostGreenColor)
             }
         }
         .font(.headline)
