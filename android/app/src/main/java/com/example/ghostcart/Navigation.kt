@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -72,7 +73,12 @@ import com.example.ghostcart.data.shareGhostItem
 import com.example.ghostcart.data.toGhostShareItem
 import com.ghostcart.app.R
 import com.example.ghostcart.theme.FaintBorder
+import com.example.ghostcart.theme.ExpressiveBackground
+import com.example.ghostcart.theme.ExpressivePrimaryText
+import com.example.ghostcart.theme.GhostGlass
 import com.example.ghostcart.theme.GhostGreen
+import com.example.ghostcart.theme.GhostSubtleBorder
+import com.example.ghostcart.theme.GreenTint
 import com.example.ghostcart.theme.DarkGray
 import com.example.ghostcart.theme.Ink
 import com.example.ghostcart.theme.MutedText
@@ -757,42 +763,69 @@ private fun GhostBottomNav(current: NavKey?, onNavigate: (NavKey) -> Unit) {
         Item(stringResource(R.string.nav_profile), GhostCardSettings, Icons.Filled.Person)
     )
 
-    NavigationBar(containerColor = Paper, tonalElevation = 0.dp) {
-        items.forEach { item ->
-            val selected = current == item.destination
-            NavigationBarItem(
-                selected = selected,
-                onClick = { onNavigate(item.destination) },
-                icon = {
-                    Box(contentAlignment = Alignment.TopEnd, modifier = Modifier.offset(y = 6.dp)) {
-                        Box(
-                            modifier = Modifier
-                                .size(if (item.central) 48.dp else 34.dp)
-                                .clip(CircleShape)
-                                .background(if (item.central) GhostGreen else Color.Transparent),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (item.central) {
-                                GhostMascotPose(
-                                    poseName = "cart",
-                                    modifier = Modifier.size(40.dp)
-                                )
-                            } else {
-                                Icon(
-                                    item.icon,
-                                    contentDescription = item.label,
-                                    tint = if (selected) GhostGreen else MutedText,
-                                    modifier = Modifier.size(26.dp)
-                                )
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(ExpressiveBackground)
+            .navigationBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+    ) {
+        NavigationBar(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(30.dp))
+                .border(1.dp, GhostSubtleBorder, RoundedCornerShape(30.dp)),
+            containerColor = GhostGlass,
+            tonalElevation = 6.dp,
+            windowInsets = WindowInsets(0, 0, 0, 0),
+        ) {
+            items.forEach { item ->
+                val selected = current == item.destination
+                NavigationBarItem(
+                    selected = selected,
+                    onClick = { onNavigate(item.destination) },
+                    icon = {
+                        Box(contentAlignment = Alignment.Center) {
+                            Box(
+                                modifier = Modifier
+                                    .size(if (item.central) 52.dp else 40.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        when {
+                                            item.central -> GhostGreen
+                                            selected -> GreenTint
+                                            else -> Color.Transparent
+                                        }
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (item.central) {
+                                    GhostMascotPose(
+                                        poseName = "cart",
+                                        modifier = Modifier.size(42.dp)
+                                    )
+                                } else {
+                                    Icon(
+                                        item.icon,
+                                        contentDescription = item.label,
+                                        tint = if (selected) GhostGreen else MutedText,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             }
                         }
-                    }
-                },
-                label = if (item.central) null else {
-                    { Text(item.label, color = if (selected) Ink else MutedText, fontSize = 9.sp) }
-                },
-                colors = NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent)
-            )
+                    },
+                    label = {
+                        Text(
+                            item.label,
+                            color = if (selected || item.central) ExpressivePrimaryText else MutedText,
+                            fontSize = 10.sp,
+                            fontWeight = if (selected || item.central) FontWeight.Bold else FontWeight.Medium,
+                        )
+                    },
+                    colors = NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent)
+                )
+            }
         }
     }
 }

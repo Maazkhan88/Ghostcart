@@ -100,6 +100,7 @@ import com.example.ghostcart.data.ProductImportState
 import com.example.ghostcart.data.WalletConfig
 import com.example.ghostcart.data.progressSummary
 import com.example.ghostcart.theme.DangerRed
+import com.example.ghostcart.theme.ExpressiveBackground
 import com.example.ghostcart.theme.FaintBorder
 import com.example.ghostcart.theme.GhostGreen
 import com.example.ghostcart.theme.GreenTint
@@ -170,9 +171,9 @@ fun GhostHomeScreen(
         modifier = modifier.fillMaxSize()
     ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize().background(Paper),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp, 20.dp, 20.dp, 28.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+        modifier = Modifier.fillMaxSize().background(ExpressiveBackground),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(18.dp, 18.dp, 18.dp, 32.dp),
+        verticalArrangement = Arrangement.spacedBy(22.dp)
     ) {
         item {
             ProductDiscoverySection(

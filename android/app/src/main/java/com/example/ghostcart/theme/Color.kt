@@ -23,6 +23,23 @@ val FaintBorder: Color get() = if (GhostPaletteState.darkMode) Color(0xFF343432)
 val GreenTint: Color get() = if (GhostPaletteState.darkMode) Color(0xFF18301A) else Color(0xFFE3F6DE)
 val DangerRed = Color(0xFFE0453C)
 
+/**
+ * Material 3 Expressive-inspired semantic tokens.
+ *
+ * Keep these centralized so dark surfaces, tonal controls, and the restrained
+ * "Ghost Glass" treatment are consistent. They deliberately remain plain
+ * Compose colors: no blur/native dependency is required.
+ */
+val ExpressiveBackground: Color get() = if (GhostPaletteState.darkMode) Color(0xFF080909) else Color(0xFFF7F8F6)
+val ExpressiveSurface: Color get() = if (GhostPaletteState.darkMode) Color(0xFF151716) else Color(0xFFFFFFFF)
+val ExpressiveSurfaceHigh: Color get() = if (GhostPaletteState.darkMode) Color(0xFF202320) else Color(0xFFF0F2EE)
+val GhostGlass: Color get() = if (GhostPaletteState.darkMode) Color(0xD1161817) else Color(0xEFFFFFFF)
+val GhostGlassHighlight: Color get() = if (GhostPaletteState.darkMode) Color(0x1FFFFFFF) else Color(0x14050505)
+val GhostSubtleBorder: Color get() = if (GhostPaletteState.darkMode) Color(0x14FFFFFF) else Color(0x14050505)
+val ExpressivePrimaryText: Color get() = if (GhostPaletteState.darkMode) Color(0xFFF7F8F6) else Color(0xFF101210)
+val ExpressiveSecondaryText: Color get() = if (GhostPaletteState.darkMode) Color(0xFFA9ADA7) else Color(0xFF626761)
+val GhostOnGreen = Color(0xFF0A0B0A)
+
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)
 val Pink80 = Color(0xFFEFB8C8)

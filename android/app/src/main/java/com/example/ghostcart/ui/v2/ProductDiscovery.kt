@@ -26,15 +26,8 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -66,6 +59,13 @@ import com.example.ghostcart.theme.Paper
 import com.example.ghostcart.theme.SoftGray
 import com.example.ghostcart.ui.GhostMascotPose
 import com.example.ghostcart.ui.ProductPhoto
+import com.example.ghostcart.ui.common.GhostCategoryChip
+import com.example.ghostcart.ui.common.GhostGlassSurface
+import com.example.ghostcart.ui.common.GhostIconButton
+import com.example.ghostcart.ui.common.GhostProductCard
+import com.example.ghostcart.ui.common.GhostSearchField
+import com.example.ghostcart.ui.common.GhostSectionHeader
+import com.example.ghostcart.ui.common.GhostSegmentedControl
 import kotlinx.coroutines.delay
 
 @Composable
@@ -99,41 +99,39 @@ fun ProductDiscoverySection(
             (query.isBlank() || it.name.contains(query, ignoreCase = true) || it.category.contains(query, ignoreCase = true))
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Box(modifier = Modifier.fillMaxWidth().height(40.dp)) {
-            com.example.ghostcart.ui.GhostCartWordmark(
-                modifier = Modifier.align(Alignment.Center).width(132.dp).height(32.dp),
-                tint = Ink
-            )
-            GhostPeekMascot(modifier = Modifier.align(Alignment.CenterStart))
-            IconButton(onClick = onNotifications, modifier = Modifier.align(Alignment.CenterEnd)) {
-                Icon(Icons.Filled.Notifications, contentDescription = "Notifications", tint = Ink)
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        GhostGlassSurface(modifier = Modifier.fillMaxWidth().height(60.dp)) {
+            Box(modifier = Modifier.fillMaxSize().padding(horizontal = 6.dp)) {
+                com.example.ghostcart.ui.GhostCartWordmark(
+                    modifier = Modifier.align(Alignment.Center).width(132.dp).height(32.dp),
+                    tint = Ink
+                )
+                GhostPeekMascot(modifier = Modifier.align(Alignment.CenterStart))
+                GhostIconButton(
+                    icon = Icons.Filled.Notifications,
+                    contentDescription = "Notifications",
+                    onClick = onNotifications,
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                )
             }
         }
         PromoBannerCarousel(banners = homeBanners)
-        OutlinedTextField(
+        GhostSearchField(
             value = query,
             onValueChange = { query = it.take(80) },
-            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, tint = MutedText) },
-            placeholder = { Text("Search products") },
-            singleLine = true,
-            shape = RoundedCornerShape(16.dp),
+            placeholder = "Search products",
             modifier = Modifier.fillMaxWidth()
         )
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(Marketplace.browseCategories.filterNot { it.id == "food" }, key = { it.id }) { category ->
-                FilterChip(
+                GhostCategoryChip(
                     selected = categoryId == category.id,
                     onClick = { categoryId = category.id },
-                    label = { Text(category.label) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = Ink,
-                        selectedLabelColor = Paper
-                    )
+                    label = category.label,
                 )
             }
         }
-        DiscoverySectionHeader(
+        GhostSectionHeader(
             title = "Food & delivery",
             subtitle = "Ghost lunch, dinner or a delivery craving",
             onViewAll = { onViewAllCatalog("food") }
@@ -152,7 +150,7 @@ fun ProductDiscoverySection(
         } else {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(foodProducts.take(12), key = { "food_${it.id}" }) { product ->
-                    DiscoveryProductCard(
+                    GhostProductCard(
                         title = product.name,
                         category = product.category,
                         priceCents = product.price.toLong() * 100,
@@ -177,25 +175,16 @@ fun ProductDiscoverySection(
                 }
             }
         }
-        DiscoverySectionHeader(
+        GhostSectionHeader(
             title = "Marketplace products",
             subtitle = "browse every temptation",
             onViewAll = { onViewAllCatalog(categoryId) }
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(
-                selected = !userGhostedOnly,
-                onClick = { userGhostedOnly = false },
-                label = { Text("All") },
-                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Ink, selectedLabelColor = Paper)
-            )
-            FilterChip(
-                selected = userGhostedOnly,
-                onClick = { userGhostedOnly = true },
-                label = { Text("User Ghosted") },
-                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Ink, selectedLabelColor = Paper)
-            )
-        }
+        GhostSegmentedControl(
+            options = listOf("All", "User Ghosted"),
+            selectedIndex = if (userGhostedOnly) 1 else 0,
+            onSelect = { userGhostedOnly = it == 1 },
+        )
         if (userGhostedOnly && communityProductsLoading && visibleCatalog.none { it.isUserGhosted }) {
             Box(Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(18.dp)).background(SoftGray))
         } else if (visibleCatalog.isEmpty()) {
@@ -211,7 +200,7 @@ fun ProductDiscoverySection(
         } else {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(visibleCatalog.take(12), key = { it.id }) { product ->
-                    DiscoveryProductCard(
+                    GhostProductCard(
                         title = product.name,
                         category = product.category,
                         priceCents = product.price.toLong() * 100,
@@ -237,7 +226,7 @@ fun ProductDiscoverySection(
             }
         }
 
-        DiscoverySectionHeader(
+        GhostSectionHeader(
             title = "Your favorites",
             subtitle = "saved for a calmer decision",
             onViewAll = onViewAllFavorites
@@ -252,7 +241,7 @@ fun ProductDiscoverySection(
         } else {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(visibleFavorites, key = { "favorite_${it.id}" }) { product ->
-                    DiscoveryProductCard(
+                    GhostProductCard(
                         title = product.name,
                         category = product.category,
                         priceCents = product.price.toLong() * 100,
@@ -280,34 +269,6 @@ fun ProductDiscoverySection(
     }
 
 }
-
-@Composable
-private fun DiscoverySectionHeader(
-    title: String,
-    subtitle: String,
-    onViewAll: () -> Unit
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = Ink, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
-            Text(subtitle, color = MutedText, fontSize = 10.sp)
-        }
-        Text(
-            text = "View all",
-            color = GhostGreen,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.ExtraBold,
-            modifier = Modifier
-                .clip(RoundedCornerShape(999.dp))
-                .clickable(onClick = onViewAll)
-                .padding(horizontal = 10.dp, vertical = 8.dp)
-        )
-    }
-}
-
 private val PROMO_BANNER_DRAWABLES = listOf(
     R.drawable.home_banner_1,
     R.drawable.home_banner_2,
@@ -343,28 +304,44 @@ private fun PromoBannerCarousel(
         }
     }
 
-    HorizontalPager(
-        state = pagerState,
-        modifier = modifier.fillMaxWidth().aspectRatio(3f)
-    ) { page ->
-        if (banners.isNotEmpty()) {
-            coil3.compose.AsyncImage(
-                model = banners[page].imageUrl,
-                contentDescription = null,
-                contentScale = ContentScale.FillWidth,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(16.dp))
-            )
-        } else {
-            androidx.compose.foundation.Image(
-                painter = androidx.compose.ui.res.painterResource(PROMO_BANNER_DRAWABLES[page]),
-                contentDescription = null,
-                contentScale = ContentScale.FillWidth,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(16.dp))
-            )
+    Column(modifier = modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxWidth().aspectRatio(3f)
+        ) { page ->
+            if (banners.isNotEmpty()) {
+                coil3.compose.AsyncImage(
+                    model = banners[page].imageUrl,
+                    contentDescription = "Promotion ${page + 1} of $bannerCount",
+                    contentScale = ContentScale.FillWidth,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(22.dp))
+                )
+            } else {
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(PROMO_BANNER_DRAWABLES[page]),
+                    contentDescription = "Promotion ${page + 1} of $bannerCount",
+                    contentScale = ContentScale.FillWidth,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(22.dp))
+                )
+            }
+        }
+        Row(
+            modifier = Modifier.padding(top = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            repeat(bannerCount) { index ->
+                Box(
+                    modifier = Modifier
+                        .width(if (pagerState.currentPage == index) 18.dp else 6.dp)
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(if (pagerState.currentPage == index) GhostGreen else FaintBorder)
+                )
+            }
         }
     }
 }
@@ -470,79 +447,4 @@ private fun GhostPeekMascot(modifier: Modifier = Modifier) {
     ) {
         GhostMascotPose(poseName = "peek", modifier = Modifier.size(28.dp))
     }
-}
-
-@Composable
-private fun DiscoveryProductCard(
-    title: String,
-    category: String,
-    priceCents: Long,
-    isFavorite: Boolean,
-    image: @Composable () -> Unit,
-    onOpen: () -> Unit,
-    onToggleFavorite: () -> Unit,
-    onGhost: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .width(188.dp)
-            .height(294.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(Paper)
-            .border(1.dp, FaintBorder, RoundedCornerShape(20.dp))
-            .clickable(onClick = onOpen)
-            .padding(12.dp)
-    ) {
-        Box(
-            modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(14.dp)).background(Color.White),
-            contentAlignment = Alignment.Center
-        ) {
-            image()
-            IconButton(
-                onClick = onToggleFavorite,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(2.dp)
-                    .size(32.dp)
-            ) {
-                Icon(
-                    imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                    contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
-                    tint = Color.Black,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        }
-        Text(category, color = GhostGreen, fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.padding(top = 9.dp))
-        Text(title, color = Ink, fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.height(36.dp).padding(top = 2.dp))
-        if (priceCents > 0) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 3.dp)) {
-                com.example.ghostcart.ui.DirhamGlyph(tint = Ink, modifier = Modifier.size(12.dp))
-                Text(formatProductPrice(priceCents), color = Ink, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(start = 4.dp))
-            }
-        } else {
-            Text(formatProductPrice(priceCents), color = Ink, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 3.dp))
-        }
-        Box(Modifier.weight(1f))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(44.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(GhostGreen)
-                .clickable(onClick = onGhost),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Ghost it", color = Color(0xFF0A0A0A), fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                Text("24-hour cooldown", color = Color(0xFF0A0A0A).copy(alpha = 0.68f), fontSize = 9.sp)
-            }
-        }
-    }
-}
-
-private fun formatProductPrice(priceCents: Long): String = if (priceCents > 0) {
-    "%,.2f".format(java.util.Locale.US, priceCents / 100.0)
-} else {
-    "Add price"
 }
