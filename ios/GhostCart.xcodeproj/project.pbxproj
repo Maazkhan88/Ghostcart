@@ -46,6 +46,7 @@
 		C10000000000000000000002 /* CommunityLeaderboardOptInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000002 /* CommunityLeaderboardOptInView.swift */; };
 		C10000000000000000000003 /* LegalDocumentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000003 /* LegalDocumentsView.swift */; };
 		C10000000000000000000004 /* DeleteAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000004 /* DeleteAccountView.swift */; };
+		C10000000000000000000005 /* AvatarPresetPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000005 /* AvatarPresetPickerView.swift */; };
 		A20000000000000000000001 /* FirebaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000001 /* FirebaseService.swift */; };
 		A20000000000000000000002 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = P20000000000000000000002 /* FirebaseAnalytics */; };
 		A20000000000000000000003 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = P20000000000000000000003 /* FirebaseMessaging */; };
@@ -129,6 +130,7 @@
 		C20000000000000000000002 /* CommunityLeaderboardOptInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommunityLeaderboardOptInView.swift; sourceTree = "<group>"; };
 		C20000000000000000000003 /* LegalDocumentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalDocumentsView.swift; sourceTree = "<group>"; };
 		C20000000000000000000004 /* DeleteAccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeleteAccountView.swift; sourceTree = "<group>"; };
+		C20000000000000000000005 /* AvatarPresetPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarPresetPickerView.swift; sourceTree = "<group>"; };
 		B20000000000000000000001 /* FirebaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseService.swift; sourceTree = "<group>"; };
 		B20000000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B20000000000000000000003 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
@@ -218,6 +220,7 @@
 				C20000000000000000000002 /* CommunityLeaderboardOptInView.swift */,
 				C20000000000000000000003 /* LegalDocumentsView.swift */,
 				C20000000000000000000004 /* DeleteAccountView.swift */,
+				C20000000000000000000005 /* AvatarPresetPickerView.swift */,
 				B20000000000000000000001 /* FirebaseService.swift */,
 				B20000000000000000000002 /* Info.plist */,
 				B20000000000000000000003 /* GoogleService-Info.plist */,
@@ -425,6 +428,7 @@
 				C10000000000000000000002 /* CommunityLeaderboardOptInView.swift in Sources */,
 				C10000000000000000000003 /* LegalDocumentsView.swift in Sources */,
 				C10000000000000000000004 /* DeleteAccountView.swift in Sources */,
+				C10000000000000000000005 /* AvatarPresetPickerView.swift in Sources */,
 				A20000000000000000000001 /* FirebaseService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

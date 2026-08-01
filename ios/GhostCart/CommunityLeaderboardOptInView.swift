@@ -16,10 +16,13 @@ struct CommunityLeaderboardOptInView: View {
     @State private var editingUsername = false
     @State private var saving = false
     @State private var errorMessage: String?
+    @State private var showAvatarPicker = false
 
     var body: some View {
         GhostCard {
             VStack(alignment: .leading, spacing: 12) {
+                avatarRow
+
                 Text("Display name").font(.caption.weight(.bold)).foregroundStyle(Color.secondary)
                 TextField("Display name", text: $displayNameDraft)
                     .ghostTextField()
@@ -50,6 +53,40 @@ struct CommunityLeaderboardOptInView: View {
         }
         .onAppear { syncDrafts() }
         .onChange(of: profile) { _ in syncDrafts() }
+        .sheet(isPresented: $showAvatarPicker) {
+            AvatarPresetPickerView(selectedPresetId: profile?.avatarPresetId) { presetId in
+                Task { await setAvatarPreset(presetId) }
+            }
+        }
+    }
+
+    private var avatarRow: some View {
+        HStack(spacing: 12) {
+            let preset = AvatarPreset.byId(profile?.avatarPresetId)
+            Button { showAvatarPicker = true } label: {
+                ZStack {
+                    Circle().fill(Color.ghostGreenColor.opacity(0.12))
+                    if let preset {
+                        Image(preset.imageName).resizable().scaledToFit().padding(6)
+                    } else {
+                        Text((profile?.displayName?.first).map(String.init) ?? "?")
+                            .font(.headline.weight(.black))
+                            .foregroundStyle(Color.inkColor)
+                    }
+                }
+                .frame(width: 56, height: 56)
+            }
+            .buttonStyle(.plain)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Tap photo to choose an avatar").font(.caption2).foregroundStyle(Color.secondary)
+                Button("Choose a Ghost avatar") { showAvatarPicker = true }
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(Color.ghostGreenColor)
+                Text("Shown on the Community Leaderboard if you opt in.")
+                    .font(.system(size: 9))
+                    .foregroundStyle(Color.secondary)
+            }
+        }
     }
 
     private var optedInContent: some View {
@@ -164,6 +201,16 @@ struct CommunityLeaderboardOptInView: View {
             profile = try await CommunityProfileService.update(showRecentActivityPublicly: value)
         } catch {
             errorMessage = (error as? ApiError)?.message ?? "Could not update this setting."
+        }
+    }
+
+    @MainActor
+    private func setAvatarPreset(_ presetId: String) async {
+        errorMessage = nil
+        do {
+            profile = try await CommunityProfileService.update(avatarPresetId: presetId)
+        } catch {
+            errorMessage = (error as? ApiError)?.message ?? "Could not update your avatar."
         }
     }
 }

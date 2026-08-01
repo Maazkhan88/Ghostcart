@@ -31,13 +31,15 @@ enum CommunityProfileService {
         displayName: String? = nil,
         username: String? = nil,
         communityConsent: Bool? = nil,
-        showRecentActivityPublicly: Bool? = nil
+        showRecentActivityPublicly: Bool? = nil,
+        avatarPresetId: String? = nil
     ) async throws -> CommunityProfile {
         var body: [String: Any] = [:]
         if let displayName { body["displayName"] = displayName }
         if let username { body["username"] = username }
         if let communityConsent { body["communityConsent"] = communityConsent }
         if let showRecentActivityPublicly { body["showRecentActivityPublicly"] = showRecentActivityPublicly }
+        if let avatarPresetId { body["avatarPresetId"] = avatarPresetId }
         let response = try await AuthService.shared.authorizedPatch(path: "/api/me/profile", body: body)
         guard let profile = response["profile"] as? [String: Any], let parsed = parse(profile) else {
             throw ApiError(message: "Could not update profile.")
