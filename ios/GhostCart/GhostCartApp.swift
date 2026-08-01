@@ -14,6 +14,12 @@ struct GhostCartApp: App {
                 .environmentObject(onboarding)
                 .environmentObject(auth)
                 .preferredColorScheme(store.preferences.appearance.colorScheme)
+                // Nothing in this app was designed against unbounded Dynamic
+                // Type - fixed-height text frames (e.g. product card titles)
+                // silently misbehave past this cap on real devices with a
+                // large system text size. Android has no equivalent unbounded
+                // scale either, so this doesn't cost parity.
+                .dynamicTypeSize(...DynamicTypeSize.accessibility1)
                 .task { await auth.restoreSession() }
         }
     }

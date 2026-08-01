@@ -116,6 +116,12 @@ struct ProfileView: View {
                     }
                 }
             }
+            // AuthView's card is always Color.paperColor (fixed white, not
+            // dark-mode-adaptive) by design, matching the onboarding
+            // presentation - force the sheet chrome (nav bar/Close button)
+            // to match instead of following the system Dark preference,
+            // which otherwise clashed with the always-white content below it.
+            .preferredColorScheme(.light)
             .environmentObject(auth)
         }
     }
