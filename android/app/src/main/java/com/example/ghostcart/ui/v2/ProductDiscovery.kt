@@ -66,6 +66,14 @@ import com.example.ghostcart.theme.Paper
 import com.example.ghostcart.theme.SoftGray
 import com.example.ghostcart.ui.GhostMascotPose
 import com.example.ghostcart.ui.ProductPhoto
+import com.example.ghostcart.ui.common.GhostCategoryChip
+import com.example.ghostcart.ui.common.GhostGlassSurface
+import com.example.ghostcart.ui.common.GhostIconButton
+import com.example.ghostcart.ui.common.GhostProductCard
+import com.example.ghostcart.ui.common.GhostSearchField
+import com.example.ghostcart.ui.common.GhostSectionHeader
+import com.example.ghostcart.ui.common.GhostSegmentedControl
+import com.example.ghostcart.theme.ExpressivePrimaryText
 import kotlinx.coroutines.delay
 
 @Composable
@@ -100,58 +108,47 @@ fun ProductDiscoverySection(
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Box(modifier = Modifier.fillMaxWidth().height(40.dp)) {
-            com.example.ghostcart.ui.GhostCartWordmark(
-                modifier = Modifier.align(Alignment.Center).width(132.dp).height(32.dp),
-                tint = Ink
-            )
-            GhostPeekMascot(modifier = Modifier.align(Alignment.CenterStart))
-            IconButton(onClick = onNotifications, modifier = Modifier.align(Alignment.CenterEnd)) {
-                Icon(Icons.Filled.Notifications, contentDescription = "Notifications", tint = Ink)
+        GhostGlassSurface(modifier = Modifier.fillMaxWidth().height(64.dp)) {
+            Box(modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp)) {
+                com.example.ghostcart.ui.GhostCartWordmark(
+                    modifier = Modifier.align(Alignment.Center).width(132.dp).height(32.dp),
+                    tint = ExpressivePrimaryText
+                )
+                GhostPeekMascot(modifier = Modifier.align(Alignment.CenterStart))
+                GhostIconButton(
+                    icon = Icons.Filled.Notifications,
+                    contentDescription = "Notifications",
+                    onClick = onNotifications,
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                )
             }
         }
         PromoBannerCarousel(banners = homeBanners)
-        OutlinedTextField(
+        GhostSearchField(
             value = query,
             onValueChange = { query = it.take(80) },
-            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, tint = MutedText) },
-            placeholder = { Text("Search products") },
-            singleLine = true,
-            shape = RoundedCornerShape(16.dp),
+            placeholder = "Search products",
             modifier = Modifier.fillMaxWidth()
         )
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(Marketplace.browseCategories.filterNot { it.id == "food" }, key = { it.id }) { category ->
-                FilterChip(
+                GhostCategoryChip(
                     selected = categoryId == category.id,
                     onClick = { categoryId = category.id },
-                    label = { Text(category.label) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = Ink,
-                        selectedLabelColor = Paper
-                    )
+                    label = category.label
                 )
             }
         }
-        DiscoverySectionHeader(
+        GhostSectionHeader(
             title = "Marketplace products",
             subtitle = "browse every temptation",
             onViewAll = { onViewAllCatalog(categoryId) }
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(
-                selected = !userGhostedOnly,
-                onClick = { userGhostedOnly = false },
-                label = { Text("All") },
-                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Ink, selectedLabelColor = Paper)
-            )
-            FilterChip(
-                selected = userGhostedOnly,
-                onClick = { userGhostedOnly = true },
-                label = { Text("User Ghosted") },
-                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Ink, selectedLabelColor = Paper)
-            )
-        }
+        GhostSegmentedControl(
+            options = listOf("All", "User Ghosted"),
+            selectedIndex = if (userGhostedOnly) 1 else 0,
+            onSelect = { userGhostedOnly = it == 1 }
+        )
         if (userGhostedOnly && communityProductsLoading && visibleCatalog.none { it.isUserGhosted }) {
             Box(Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(18.dp)).background(SoftGray))
         } else if (visibleCatalog.isEmpty()) {
@@ -167,7 +164,7 @@ fun ProductDiscoverySection(
         } else {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(visibleCatalog.take(12), key = { it.id }) { product ->
-                    DiscoveryProductCard(
+                    GhostProductCard(
                         title = product.name,
                         category = product.category,
                         priceCents = product.price.toLong() * 100,
@@ -192,7 +189,7 @@ fun ProductDiscoverySection(
                 }
             }
         }
-        DiscoverySectionHeader(
+        GhostSectionHeader(
             title = "Food & delivery",
             subtitle = "Ghost lunch, dinner or a delivery craving",
             onViewAll = { onViewAllCatalog("food") }
@@ -206,7 +203,7 @@ fun ProductDiscoverySection(
         } else {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(foodProducts.take(12), key = { "food_${it.id}" }) { product ->
-                    DiscoveryProductCard(
+                    GhostProductCard(
                         title = product.name,
                         category = product.category,
                         priceCents = product.price.toLong() * 100,
@@ -232,7 +229,7 @@ fun ProductDiscoverySection(
             }
         }
 
-        DiscoverySectionHeader(
+        GhostSectionHeader(
             title = "Your favorites",
             subtitle = "saved for a calmer decision",
             onViewAll = onViewAllFavorites
@@ -247,7 +244,7 @@ fun ProductDiscoverySection(
         } else {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(visibleFavorites, key = { "favorite_${it.id}" }) { product ->
-                    DiscoveryProductCard(
+                    GhostProductCard(
                         title = product.name,
                         category = product.category,
                         priceCents = product.price.toLong() * 100,
