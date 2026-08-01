@@ -41,6 +41,7 @@
 		A1000000000000000000003A /* MarketplaceSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000003A /* MarketplaceSection.swift */; };
 		T10000000000000000000002 /* GhostCartStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T10000000000000000000001 /* GhostCartStoreTests.swift */; };
 		A1000000000000000000003B /* AvatarPresets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000003B /* AvatarPresets.swift */; };
+		S10000000000000000000001 /* AlmostBuySyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = S20000000000000000000001 /* AlmostBuySyncService.swift */; };
 		A20000000000000000000001 /* FirebaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000001 /* FirebaseService.swift */; };
 		A20000000000000000000002 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = P20000000000000000000002 /* FirebaseAnalytics */; };
 		A20000000000000000000003 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = P20000000000000000000003 /* FirebaseMessaging */; };
@@ -119,6 +120,7 @@
 		T10000000000000000000000 /* GhostCartTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GhostCartTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		T10000000000000000000001 /* GhostCartStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhostCartStoreTests.swift; sourceTree = "<group>"; };
 		B1000000000000000000003B /* AvatarPresets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarPresets.swift; sourceTree = "<group>"; };
+		S20000000000000000000001 /* AlmostBuySyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlmostBuySyncService.swift; sourceTree = "<group>"; };
 		B20000000000000000000001 /* FirebaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseService.swift; sourceTree = "<group>"; };
 		B20000000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B20000000000000000000003 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
@@ -203,6 +205,7 @@
 				B10000000000000000000039 /* ContentBlocks.swift */,
 				B1000000000000000000003A /* MarketplaceSection.swift */,
 				B1000000000000000000003B /* AvatarPresets.swift */,
+				S20000000000000000000001 /* AlmostBuySyncService.swift */,
 				B20000000000000000000001 /* FirebaseService.swift */,
 				B20000000000000000000002 /* Info.plist */,
 				B20000000000000000000003 /* GoogleService-Info.plist */,
@@ -401,6 +404,7 @@
 				A10000000000000000000039 /* ContentBlocks.swift in Sources */,
 				A1000000000000000000003A /* MarketplaceSection.swift in Sources */,
 				A1000000000000000000003B /* AvatarPresets.swift in Sources */,
+				S10000000000000000000001 /* AlmostBuySyncService.swift in Sources */,
 				A20000000000000000000001 /* FirebaseService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

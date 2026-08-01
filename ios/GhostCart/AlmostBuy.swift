@@ -132,6 +132,11 @@ struct AlmostBuy: Identifiable, Codable, Hashable {
     var decisionAt: Date?
     var resolvedAt: Date?
     var state: AlmostBuyState
+    // Set once this item has a counterpart on the backend (mirrors
+    // Android's AlmostBuy.serverId in AlmostBuySync.kt). nil means either
+    // never synced (guest, offline, or sync just hasn't run yet) - local
+    // storage stays the source of truth for the UI either way.
+    var serverId: String?
 
     init(
         id: UUID = UUID(),
@@ -145,7 +150,8 @@ struct AlmostBuy: Identifiable, Codable, Hashable {
         capturedAt: Date = Date(),
         decisionAt: Date? = nil,
         resolvedAt: Date? = nil,
-        state: AlmostBuyState = .captured
+        state: AlmostBuyState = .captured,
+        serverId: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -159,6 +165,7 @@ struct AlmostBuy: Identifiable, Codable, Hashable {
         self.decisionAt = decisionAt
         self.resolvedAt = resolvedAt
         self.state = state
+        self.serverId = serverId
     }
 
     func isReady(at date: Date = Date()) -> Bool {

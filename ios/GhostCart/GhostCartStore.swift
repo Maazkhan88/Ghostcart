@@ -32,6 +32,9 @@ final class GhostCartStore: ObservableObject {
         isLoading = false
         notificationService.applyRoutinePreferences(preferences.reminders)
         refreshCoolingNotifications()
+        NotificationCenter.default.addObserver(forName: .ghostCartDidSignIn, object: nil, queue: .main) { [weak self] _ in
+            Task { await self?.syncFromServer() }
+        }
     }
 
     var progress: ProgressSnapshot {
@@ -83,6 +86,7 @@ final class GhostCartStore: ObservableObject {
         )
         items.insert(item, at: 0)
         save()
+        syncCreateInBackground(item)
         return item.id
     }
 
@@ -200,6 +204,7 @@ final class GhostCartStore: ObservableObject {
         }
         guard let item = item(id: id) else { return }
         notificationService.scheduleCoolingComplete(for: item, enabled: preferences.reminders.coolingCompleteEnabled)
+        syncExtendOrCreateInBackground(item)
     }
 
     func resolve(id: UUID, outcome: AlmostBuyState) {
@@ -209,6 +214,8 @@ final class GhostCartStore: ObservableObject {
             item.resolvedAt = Date()
         }
         notificationService.cancelCoolingComplete(for: id)
+        guard let item = item(id: id) else { return }
+        syncResolveInBackground(item)
     }
 
     func snooze(id: UUID, minutes: Int) {
@@ -219,6 +226,67 @@ final class GhostCartStore: ObservableObject {
         }
         guard let item = item(id: id) else { return }
         notificationService.scheduleCoolingComplete(for: item, enabled: preferences.reminders.coolingCompleteEnabled)
+        syncExtendOrCreateInBackground(item)
+    }
+
+    // MARK: - Server sync (best-effort, never blocks the caller)
+
+    private func syncCreateInBackground(_ item: AlmostBuy) {
+        Task { @MainActor [weak self] in
+            guard let serverId = await AlmostBuySyncService.syncCreate(item) else { return }
+            self?.attachServerId(serverId, to: item.id)
+        }
+    }
+
+    private func syncExtendOrCreateInBackground(_ item: AlmostBuy) {
+        Task { @MainActor [weak self] in
+            if let serverId = item.serverId {
+                await AlmostBuySyncService.syncExtend(serverId: serverId, decisionAt: item.decisionAt ?? Date())
+            } else if let serverId = await AlmostBuySyncService.syncCreate(item) {
+                self?.attachServerId(serverId, to: item.id)
+            }
+        }
+    }
+
+    private func syncResolveInBackground(_ item: AlmostBuy) {
+        Task { @MainActor [weak self] in
+            if let serverId = item.serverId {
+                await AlmostBuySyncService.syncResolve(serverId: serverId, outcome: item.state)
+            } else if let serverId = await AlmostBuySyncService.syncResolvedBackfill(item) {
+                self?.attachServerId(serverId, to: item.id)
+            }
+        }
+    }
+
+    private func attachServerId(_ serverId: String, to id: UUID) {
+        updateItem(id: id) { $0.serverId = serverId }
+    }
+
+    // Called after sign-in (see AuthService's .ghostCartDidSignIn
+    // notification, observed in init below). Purely additive: pulls the
+    // account's server history and adds any item this install doesn't
+    // already have (matched by serverId) - never deletes or overwrites a
+    // local item, so a failed/partial fetch can never lose data. Also
+    // best-effort backfills local resolved items that predate this
+    // account/session having a serverId, mirroring Android's
+    // syncResolvedBackfill call site.
+    func syncFromServer() async {
+        if let remoteItems = await AlmostBuySyncService.fetchRemote() {
+            await MainActor.run {
+                let knownServerIds = Set(items.compactMap(\.serverId))
+                let newItems = remoteItems.filter { !knownServerIds.contains($0.serverId ?? "") }
+                guard !newItems.isEmpty else { return }
+                items.append(contentsOf: newItems)
+                items.sort { $0.capturedAt > $1.capturedAt }
+                save()
+            }
+        }
+        let unsyncedResolved = await MainActor.run {
+            items.filter { $0.serverId == nil && $0.state.isResolved }
+        }
+        for item in unsyncedResolved {
+            syncResolveInBackground(item)
+        }
     }
 
     func delete(id: UUID) {

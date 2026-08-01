@@ -1,6 +1,13 @@
 import Foundation
 import Security
 
+extension Notification.Name {
+    // Fired after any successful sign-in (password, Google, or Apple) or a
+    // restored session on launch - GhostCartStore observes this to pull
+    // server-side almost-buy history down (AlmostBuySyncService.fetchRemote).
+    static let ghostCartDidSignIn = Notification.Name("ghostcart.didSignIn")
+}
+
 // Mirrors Android's AuthRepository: opaque bearer tokens against
 // /api/auth/{signup,signin,session,signout} (docs/backend-v2.md). Token is
 // kept in the Keychain (a credential, unlike the rest of the app's local
@@ -84,6 +91,7 @@ final class AuthService: ObservableObject {
             if let user = Self.parseUser(object["user"] as? [String: Any]) {
                 state = .signedIn(user)
                 await FirebaseService.shared.registerStoredTokenIfSignedIn()
+                NotificationCenter.default.post(name: .ghostCartDidSignIn, object: nil)
             } else {
                 accessToken = nil
             }
@@ -117,6 +125,7 @@ final class AuthService: ObservableObject {
         state = .signedIn(user)
         GhostAnalytics.signIn(method: analyticsMethod)
         await FirebaseService.shared.registerStoredTokenIfSignedIn()
+        NotificationCenter.default.post(name: .ghostCartDidSignIn, object: nil)
     }
 
     private static func parseUser(_ object: [String: Any]?) -> AuthUser? {
