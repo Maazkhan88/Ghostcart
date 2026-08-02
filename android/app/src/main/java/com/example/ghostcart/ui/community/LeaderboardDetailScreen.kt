@@ -49,10 +49,21 @@ import com.example.ghostcart.theme.Ink
 import com.example.ghostcart.theme.MutedText
 import com.example.ghostcart.theme.Paper
 import com.example.ghostcart.theme.SoftGray
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 import java.util.concurrent.TimeUnit
 
 private fun relativeTime(iso: String): String {
-    val millis = runCatching { java.time.Instant.parse(iso).toEpochMilli() }.getOrNull() ?: return ""
+    val millis = listOf("yyyy-MM-dd'T'HH:mm:ss.SSSX", "yyyy-MM-dd'T'HH:mm:ssX")
+        .firstNotNullOfOrNull { pattern ->
+            runCatching {
+                SimpleDateFormat(pattern, Locale.US).apply {
+                    timeZone = TimeZone.getTimeZone("UTC")
+                    isLenient = false
+                }.parse(iso)?.time
+            }.getOrNull()
+        } ?: return ""
     val diff = System.currentTimeMillis() - millis
     if (diff < 0) return "just now"
     val hours = TimeUnit.MILLISECONDS.toHours(diff)

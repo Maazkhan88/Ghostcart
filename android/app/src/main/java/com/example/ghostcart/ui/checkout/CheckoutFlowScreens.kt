@@ -78,6 +78,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -116,7 +117,6 @@ import com.example.ghostcart.ui.tutorial.TutorialGuideSpec
 import coil3.compose.AsyncImage
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 private const val SERVICE_FEE_RATE = 0.05f
 private const val VAT_RATE = 0.05f
@@ -140,6 +140,7 @@ fun GhostCartListScreen(
     onTutorialCooldownDismiss: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val hasProducts = products.isNotEmpty()
     val subtotal = products.sumOf { (product, qty) -> product.price * qty }
     var pendingCoolProductId by remember { mutableStateOf<String?>(null) }
     var rootPosition by remember { mutableStateOf(Offset.Zero) }
@@ -159,14 +160,16 @@ fun GhostCartListScreen(
                 start = 20.dp,
                 top = 16.dp,
                 end = 20.dp,
-                bottom = 112.dp
+                bottom = if (hasProducts) 112.dp else 24.dp
             )
         ) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     BackButton(onBack = onBack)
                     Text(text = "Ghost Cart", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f).padding(start = 10.dp))
-                    RoundIconButton(icon = Icons.Filled.Delete, onClick = onClearAll)
+                    if (hasProducts) {
+                        RoundIconButton(icon = Icons.Filled.Delete, onClick = onClearAll)
+                    }
                 }
 
                 GhostMascotPose(poseName = "wave", modifier = Modifier.size(56.dp).padding(top = 16.dp))
@@ -281,46 +284,50 @@ fun GhostCartListScreen(
                 }
             }
 
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 12.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .border(1.dp, FaintBorder, RoundedCornerShape(16.dp))
-                        .padding(16.dp)
-                ) {
-                    SummaryLine("Subtotal", "${Marketplace.currency} $subtotal")
-                    SummaryLine("Small Win Fee", "${Marketplace.currency} 0")
-                    SummaryLine("Real amount charged", "${Marketplace.currency} 0", valueColor = GhostGreen)
-                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).height(1.dp).background(FaintBorder))
-                    SummaryLine("Total you almost spent:", "${Marketplace.currency} $subtotal", bold = true)
+            if (hasProducts) {
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .border(1.dp, FaintBorder, RoundedCornerShape(16.dp))
+                            .padding(16.dp)
+                    ) {
+                        SummaryLine("Subtotal", "${Marketplace.currency} $subtotal")
+                        SummaryLine("Small Win Fee", "${Marketplace.currency} 0")
+                        SummaryLine("Real amount charged", "${Marketplace.currency} 0", valueColor = GhostGreen)
+                        Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).height(1.dp).background(FaintBorder))
+                        SummaryLine("Total you almost spent:", "${Marketplace.currency} $subtotal", bold = true)
+                    }
+                    SecondaryButton(text = "Clear Ghost Cart", onClick = onClearAll, modifier = Modifier.padding(top = 12.dp, bottom = 8.dp))
                 }
-                SecondaryButton(text = "Clear Ghost Cart", onClick = onClearAll, modifier = Modifier.padding(top = 12.dp, bottom = 8.dp))
             }
         }
 
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .background(Paper)
-                .border(width = 1.dp, color = FaintBorder)
-                .padding(horizontal = 20.dp, vertical = 12.dp)
-        ) {
-            PrimaryButton(
-                text = "Proceed to Ghost Checkout",
-                onClick = onCheckout,
-                modifier = Modifier.then(
-                    if (tutorialGuide != null) {
-                        Modifier.onGloballyPositioned { coordinates ->
-                            tutorialTarget = coordinates.boundsInRoot().translate(
-                                Offset(-rootPosition.x, -rootPosition.y)
-                            )
-                        }
-                    } else Modifier
+        if (hasProducts) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(Paper)
+                    .border(width = 1.dp, color = FaintBorder)
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
+            ) {
+                PrimaryButton(
+                    text = "Proceed to Ghost Checkout",
+                    onClick = onCheckout,
+                    modifier = Modifier.then(
+                        if (tutorialGuide != null) {
+                            Modifier.onGloballyPositioned { coordinates ->
+                                tutorialTarget = coordinates.boundsInRoot().translate(
+                                    Offset(-rootPosition.x, -rootPosition.y)
+                                )
+                            }
+                        } else Modifier
+                    )
                 )
-            )
+            }
         }
 
         tutorialGuide?.let {
@@ -965,6 +972,10 @@ private fun InvoiceCard(
     onShareInvoice: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val locale = LocalConfiguration.current.locales[0]
+    val placedAtText = remember(placedAtMillis, locale) {
+        SimpleDateFormat("d MMM yyyy, h:mm a", locale).format(Date(placedAtMillis))
+    }
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -989,7 +1000,7 @@ private fun InvoiceCard(
                 Column(horizontalAlignment = Alignment.End) {
                     Text(text = "DATE & TIME", color = MutedText, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                     Text(
-                        text = SimpleDateFormat("d MMM yyyy, h:mm a", Locale.getDefault()).format(Date(placedAtMillis)),
+                        text = placedAtText,
                         color = Ink,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
@@ -1101,7 +1112,8 @@ fun FakeDeliveryTrackingScreen(
         )
     }
 
-    val deviceTime = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
+    val locale = LocalConfiguration.current.locales[0]
+    val deviceTime = remember(locale) { SimpleDateFormat("h:mm a", locale) }
     val baseTime = orderPlacedAtMillis.takeIf { it > 0L } ?: System.currentTimeMillis()
     val intervalMillis = simulationIntervalMinutes.coerceAtLeast(1) * 60_000L
     val steps = listOf(
@@ -1114,61 +1126,7 @@ fun FakeDeliveryTrackingScreen(
         Triple(title, caption, deviceTime.format(Date(baseTime + index * intervalMillis)))
     }
 
-    val context = LocalContext.current
-    val hasLocationPermission = remember {
-        androidx.core.content.ContextCompat.checkSelfPermission(
-            context,
-            android.Manifest.permission.ACCESS_COARSE_LOCATION
-        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-    }
-
-    var locationMethod by remember { mutableStateOf(if (hasLocationPermission) "permission" else "none") }
-    var selectedArea by remember { mutableStateOf<String?>(if (hasLocationPermission) "Approximate Location" else null) }
-    var showAreaDialog by remember { mutableStateOf(false) }
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { isGranted ->
-            if (isGranted) {
-                locationMethod = "permission"
-                selectedArea = "Approximate Location"
-            } else {
-                showAreaDialog = true
-            }
-        }
-    )
-
-    val areas = listOf("Dubai Marina", "Downtown Dubai", "Deira", "Jumeirah", "Abu Dhabi", "Sharjah")
-
-    if (showAreaDialog) {
-        AlertDialog(
-            onDismissRequest = { showAreaDialog = false },
-            title = { Text("Select General Area", fontWeight = FontWeight.Bold, color = Ink) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    areas.forEach { area ->
-                        Text(
-                            text = area,
-                            color = Ink,
-                            fontSize = 14.sp,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    locationMethod = "manual"
-                                    selectedArea = area
-                                    showAreaDialog = false
-                                }
-                                .padding(vertical = 10.dp)
-                        )
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showAreaDialog = false }) { Text("Cancel", color = Ink) }
-            }
-        )
-    }
+    val selectedArea = "Fictional Ghost route"
 
     Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
@@ -1243,63 +1201,10 @@ fun FakeDeliveryTrackingScreen(
             }
         }
 
-        if (locationMethod == "none") {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = SoftGray),
-                shape = RoundedCornerShape(18.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 18.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Filled.LocationOn,
-                            contentDescription = null,
-                            tint = GhostGreen,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            text = "Customize Delivery Simulation",
-                            color = Ink,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
-                    }
-                    Text(
-                        text = "To simulate your delivery path, choose to use approximate location or select a general area manually. This is a simulated route, never precise GPS.",
-                        color = MutedText,
-                        fontSize = 11.sp,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 14.dp)
-                    )
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Box(modifier = Modifier.weight(1f)) {
-                            SecondaryButton(
-                                text = "Approximate",
-                                onClick = {
-                                    permissionLauncher.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION)
-                                }
-                            )
-                        }
-                        Box(modifier = Modifier.weight(1f)) {
-                            SecondaryButton(
-                                text = "Select Area",
-                                onClick = { showAreaDialog = true }
-                            )
-                        }
-                    }
-                }
-            }
-        } else {
-            SimulatedGhostRiderRoute(
-                deliveryStep = deliveryStep,
-                selectedArea = selectedArea ?: "Approximate Location"
-            )
-        }
+        SimulatedGhostRiderRoute(
+            deliveryStep = deliveryStep,
+            selectedArea = selectedArea
+        )
 
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
             Box(modifier = Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)).background(SoftGray), contentAlignment = Alignment.Center) {
