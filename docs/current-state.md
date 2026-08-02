@@ -2437,8 +2437,8 @@ Work is on `agent/ghost-delivery-v1`. This entry supersedes older notes that des
 - New source icon: `design/brand/ghost-cart-app-icon-source.jpg`.
 - New splash reference: `design/brand/ghost-cart-splash-reference.jpg`.
 - Android launcher icons now use the opaque black square with the supplied white ghost-cart mark across adaptive, round, and legacy density assets.
-- Android 12+ system splash uses the transparent supplied mark on the black theme background.
-- The Compose cold-start screen is now the approved static black GhostCart lockup and tagline. The random Story splash has been removed.
+- Android 12+ system splash uses the full padded supplied black-square icon on a black system splash background. Do not crop this icon again.
+- The Compose cold-start screen now renders `design/brand/ghost-cart-splash-reference.jpg` directly via `ghost_cart_splash_reference`, preserving the black background, white GhostCart lockup, and tagline exactly as supplied. The random Story splash has been removed.
 - In-app brand icon resources and the center Ghost Cart navigation identity use the new mark.
 - Push notifications use a dedicated Android-compliant monochrome white silhouette. Expanded delivery notifications use the full new icon as their large icon fallback.
 - iOS was deliberately left untouched. Claude's exact iOS implementation instructions are in `docs/claude-ios-handoff-brand-icon.md`.
@@ -2456,3 +2456,10 @@ Work is on `agent/ghost-delivery-v1`. This entry supersedes older notes that des
 - `:app:assembleDebug`: passed; new APK generated successfully.
 - Resource/manifest processing passed for all launcher, adaptive-icon, splash, and notification resources.
 - Connected tablet installation was intentionally not forced because its installed closed-testing build is Play-signed and the local debug APK has a different signature. Android rejected the in-place update with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`; preserving the tablet's signed app data is safer than uninstalling it.
+
+## 2026-08-02 follow-up: icon padding and inverted splash correction
+
+- Regenerated Android launcher/icon resources from `design/brand/ghost-cart-app-icon-source.jpg` as a full square so the original black padding is preserved.
+- Kept the Android notification small icon as a transparent monochrome silhouette because Android status-bar notification icons cannot use a full black-square bitmap.
+- Added `android/app/src/main/res/drawable-nodpi/ghost_cart_splash_reference.jpg` from the supplied splash reference and changed `SplashContent()` to render that exact black splash artwork.
+- Changed `Theme.GhostCart` from a light base theme to a dark/no-action-bar base with black window, status-bar, navigation-bar, and Android 12+ splash backgrounds to prevent the white pre-Compose flash.

@@ -4,8 +4,14 @@
      it defaults to a bare black rectangle - this is the "black screen for a
      couple seconds before the app appears" users see on cold start. -->
 <resources>
-    <style name="Theme.GhostCart" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:windowSplashScreenBackground">#0C0C0C</item>
+    <style name="Theme.GhostCart" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#000000</item>
+        <item name="android:colorAccent">#64D64A</item>
+        <item name="android:navigationBarColor">#000000</item>
+        <item name="android:statusBarColor">#000000</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowSplashScreenBackground">#000000</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/ghost_cart_app_icon_foreground</item>
     </style>
 </resources>

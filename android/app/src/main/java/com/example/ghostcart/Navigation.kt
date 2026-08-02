@@ -59,6 +59,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -994,16 +995,13 @@ fun MainNavigation(
 
 @Composable
 private fun SplashContent() {
-    Box(Modifier.fillMaxSize().background(Ink), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            GhostCartWordmark(modifier = Modifier.width(270.dp).height(76.dp), tint = Paper)
-            Spacer(Modifier.height(18.dp))
-            Text(
-                "For everything you almost bought",
-                color = Paper.copy(alpha = 0.68f),
-                fontSize = 15.sp
-            )
-        }
+    Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+        Image(
+            painter = painterResource(R.drawable.ghost_cart_splash_reference),
+            contentDescription = "GhostCart. For everything you almost bought",
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
 
