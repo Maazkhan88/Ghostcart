@@ -198,7 +198,7 @@ fun GhostGiftRevealScreen(
                 Text(revealed.disclosure, color = MutedText, fontSize = 11.sp, lineHeight = 16.sp, modifier = Modifier.padding(top = 5.dp))
             }
             PrimaryButton(
-                text = "Ghost it too â€” start 24-hour cooldown",
+                text = "Ghost it too — add to Ghost Cart",
                 onClick = { onGhostGift(revealed) },
                 containerColor = GhostGreen,
                 contentColor = Ink,

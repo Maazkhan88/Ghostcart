@@ -463,7 +463,7 @@ fun GhostCheckoutScreen(
 
             if (sendAsGift) {
                 Text(
-                    "No gift is purchased or delivered. The selected item still enters your normal 24-hour cooldown.",
+                    "No gift is purchased or delivered. The selected item still follows your normal Ghost Order flow.",
                     color = Ink,
                     fontSize = 11.sp,
                     lineHeight = 16.sp,
@@ -568,7 +568,7 @@ fun GhostCheckoutScreen(
 
             if (sendAsGift) {
                 Text(
-                    "No gift is purchased or delivered. The selected item still enters your normal 24-hour cooldown.",
+                    "No gift is purchased or delivered. The selected item still follows your normal Ghost Order flow.",
                     color = Ink,
                     fontSize = 11.sp,
                     lineHeight = 16.sp,

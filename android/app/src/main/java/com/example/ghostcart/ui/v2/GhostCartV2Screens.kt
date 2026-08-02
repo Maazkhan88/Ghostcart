@@ -573,10 +573,10 @@ fun CaptureAlmostBuyScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(GreenTint).padding(14.dp)
             ) {
-                Icon(Icons.Filled.Timer, contentDescription = null, tint = GhostGreen)
+                Icon(Icons.Filled.ShoppingBag, contentDescription = null, tint = GhostGreen)
                 Column(Modifier.padding(start = 12.dp)) {
-                    Text("24-hour cooldown", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("We’ll remind you by push, email and in the app when it’s time to decide.", color = MutedText, fontSize = 10.sp)
+                    Text("Ghost Cart first", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("Add it to your Ghost Cart now. Choose Ghost Delivery time at checkout.", color = MutedText, fontSize = 10.sp)
                 }
             }
         }
@@ -604,11 +604,10 @@ fun CaptureAlmostBuyScreen(
                 text = "Ghost it",
                 onClick = {
                     validatedDraft()?.let {
-                        requestNotifications()
                         onGhostIt(it)
                     }
                 },
-                leadingIcon = Icons.Filled.Timer,
+                leadingIcon = Icons.Filled.ShoppingBag,
                 containerColor = GhostGreen,
                 contentColor = Color(0xFF050505)
             )

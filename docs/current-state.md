@@ -1,5 +1,9 @@
 # Current State
 
+> Current UX supersession (2026-08-02): `Ghost it` now means **add to Ghost Cart**. Users choose **Ghost Delivery time** only when placing the Ghost Order at checkout. Older notes below that describe primary `Ghost it` starting a cooldown are historical context only.
+>
+> Latest Codex handoff for Claude/iOS: read `docs/claude-ios-handoff-android-ux-delta-2026-08-02.md`. It lists the exact Android cart-first UX cleanup and SwiftUI parity requirements.
+
 Last updated: 2026-07-27 (Antigravity — daily gifting limits increased to 10 sends/receives, Resend API integration with verified domain theghostcart.com & DMARC authentication, live gift email delivery verified end-to-end, teaser image fallback deployed, debug APK v2.10.0-68 published on GitHub releases, signed release APK & AAB built, ADB tablet automation).
 
 > ## STATUS REPORT (Antigravity, 2026-07-27)

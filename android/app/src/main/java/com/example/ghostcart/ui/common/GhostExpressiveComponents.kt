@@ -454,7 +454,7 @@ fun GhostProductCard(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Ghost it", style = MaterialTheme.typography.labelLarge)
-                    Text("Choose Ghost Delivery time", fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                    Text("Add to Ghost Cart", fontSize = 9.sp, fontWeight = FontWeight.Medium)
                 }
             }
         }

@@ -663,7 +663,7 @@ private fun DiscoveryProductCard(
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Ghost it", color = Color(0xFF0A0A0A), fontSize = 13.sp, lineHeight = 15.sp, fontWeight = FontWeight.Bold)
-                Text("Choose Ghost Delivery time", color = Color(0xFF0A0A0A).copy(alpha = 0.68f), fontSize = 9.sp, lineHeight = 11.sp)
+                Text("Add to Ghost Cart", color = Color(0xFF0A0A0A).copy(alpha = 0.68f), fontSize = 9.sp, lineHeight = 11.sp)
             }
         }
     }
