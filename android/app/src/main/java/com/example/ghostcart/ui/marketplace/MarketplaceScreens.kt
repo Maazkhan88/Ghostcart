@@ -1115,7 +1115,7 @@ fun ProductDetailScreen(
                 .padding(vertical = 16.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            HighlightPoint(Icons.Filled.ShoppingBag, "Ghost it", "Choose when your\ndecision arrives.")
+            HighlightPoint(Icons.Filled.ShoppingBag, "Ghost it", "Add it to your\nGhost Cart.")
             HighlightPoint(Icons.Filled.Notifications, "Get reminded", "Push, email and\nin-app reminder.")
             HighlightPoint(Icons.Filled.Shield, "Decide calmly", "Skip, buy, record,\nor restart.")
         }
@@ -1142,10 +1142,12 @@ fun ProductDetailScreen(
             text = when {
                 coolingComplete -> "Make your decision"
                 coolingActive -> "View cooldown"
+                isInCart -> "View Ghost Cart"
                 else -> "Ghost it"
             },
             onClick = when {
                 coolingUntilMillis != null -> onOpenCooldown
+                isInCart -> onOpenCart
                 else -> onGhost
             },
             modifier = Modifier.padding(top = 18.dp),
@@ -1154,7 +1156,7 @@ fun ProductDetailScreen(
         )
         if (tutorialGuide == null) Text(
             text = if (coolingUntilMillis == null) {
-                "Choose a Ghost Delivery time. Nothing will be purchased or physically delivered."
+                "Add this item to your Ghost Cart. You will choose a Ghost Delivery time at checkout."
             } else if (coolingComplete) {
                 "Your item is ready. Skip it, visit the source, record it as bought, or restart the timer."
             } else {

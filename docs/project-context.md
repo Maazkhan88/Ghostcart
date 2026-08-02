@@ -6,11 +6,11 @@ Primary line: **Add to cart. Checkout. Keep your money.**
 
 Positioning: **The cooling-off app for everything you almost bought.**
 
-Core loop: temptation -> discover or share -> Ghost -> automatic 24-hour cooldown -> reminder -> decide -> learn.
+Core loop: temptation -> discover or share -> Ghost it into the cart -> Fake Checkout -> choose Ghost Delivery time -> simulated delivery/cooling -> reminder -> decide -> learn.
 
-One Ghosted item always equals one item whose cooldown was started. This definition is shared by item counts, personal progress, public aggregate activity, and the opt-in leaderboard; later outcomes do not retroactively add or remove a Ghost.
+One Ghosted item always equals one cart item included in a placed Ghost Order, because placing the order is when its cooldown and Ghost Delivery simulation start. Adding an item to the cart alone is not counted. This definition is shared by item counts, personal progress, public aggregate activity, and the opt-in leaderboard; later outcomes do not retroactively add or remove a Ghost.
 
-“Ghost it” is the single primary action across catalogue, link import, manual capture, product detail, and bulk review. It always starts a 24-hour cooldown by default. Duration selection is a secondary action used only when a customer restarts a completed cooldown.
+“Ghost it” is the single primary product action across catalogue, link import, manual capture, product detail, and bulk review. It adds the product to the Ghost Cart without starting a timer. The customer chooses one Ghost Delivery time during checkout; confirming the Ghost Order then starts cooling and the simulation. Duration selection also appears when a customer restarts a completed cooldown.
 
 Product discovery is a visual entry point, not a storefront. Users can browse a curated photo-first catalogue or share any safe public HTTPS product link into Ghost Cart. Open Graph, Twitter Card and Product structured metadata are best-effort and always editable; Android also performs an isolated on-device browser pass when the cloud preview is incomplete.
 

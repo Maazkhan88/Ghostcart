@@ -2410,3 +2410,49 @@ section-alignment instructions (still current). For the asset situation:
 - Imported product images are retained in cart and checkout.
 - Profile contains a persistent app appearance setting: System, Light, or Dark.
 - The app remains simulation-only: real amount charged is always zero and simulated checkout is not automatically counted as confirmed Money Kept.
+# 2026-08-02 — Ghost Order flow correction, delivered decisions, and new app identity
+
+Work is on `agent/ghost-delivery-v1`. This entry supersedes older notes that describe `Ghost it` as immediately opening the delivery-duration picker or describe the random Story splash as the current cold-start experience.
+
+## Corrected Ghost Order flow
+
+- `Ghost it` now adds the selected product to the real Ghost Cart only.
+- The user reviews the cart and proceeds to Fake Checkout.
+- Ghost Delivery time is selected at checkout, immediately before placing the simulated order.
+- The six-stage Ghost Delivery simulation is created only after checkout confirmation.
+- The chosen duration is applied to every item in that checkout; the cart is cleared only after the simulated order is created.
+- Product details show `View Ghost Cart` when that item is already present.
+- The normal flow no longer exposes per-item cooling shortcuts inside the cart.
+
+## Orders and delivered decisions
+
+- Past-order titles are limited to two lines with ellipsis.
+- `Skipped · counted as Money Kept` is constrained to one line.
+- Profile and leaderboard avatar fallbacks now use black backgrounds rather than green.
+- `Make a decision` is plain section text, not a navigation button.
+- Delivered orders show the resolution actions directly: Skip the purchase, Buy it from source, I bought it already, Send it around again, and Ask a friend.
+
+## Approved app icon and splash
+
+- New source icon: `design/brand/ghost-cart-app-icon-source.jpg`.
+- New splash reference: `design/brand/ghost-cart-splash-reference.jpg`.
+- Android launcher icons now use the opaque black square with the supplied white ghost-cart mark across adaptive, round, and legacy density assets.
+- Android 12+ system splash uses the transparent supplied mark on the black theme background.
+- The Compose cold-start screen is now the approved static black GhostCart lockup and tagline. The random Story splash has been removed.
+- In-app brand icon resources and the center Ghost Cart navigation identity use the new mark.
+- Push notifications use a dedicated Android-compliant monochrome white silhouette. Expanded delivery notifications use the full new icon as their large icon fallback.
+- iOS was deliberately left untouched. Claude's exact iOS implementation instructions are in `docs/claude-ios-handoff-brand-icon.md`.
+
+## Windows/Gradle JDK fix
+
+- The laptop-local `C:/Users/Admin/.gradle/gradle.properties` now pins `org.gradle.java.home=C:/Program Files/Android/Android Studio/jbr` so Gradle no longer fails when PowerShell exposes the legacy Java 8 launcher. The absolute Windows path is deliberately not committed to the shared repository, preserving GitHub Actions and other developer environments.
+- The Windows user-level `JAVA_HOME` and user `Path` were also updated to Android Studio's bundled JBR for future terminals.
+- Verified from a plain shell with no temporary override: the Gradle launcher may still report the legacy Java executable in the current already-running Codex process, but the Gradle daemon correctly selects the pinned Android Studio JBR and the build succeeds.
+
+## Validation
+
+- `:app:compileDebugKotlin`: passed.
+- `:app:testDebugUnitTest`: passed.
+- `:app:assembleDebug`: passed; new APK generated successfully.
+- Resource/manifest processing passed for all launcher, adaptive-icon, splash, and notification resources.
+- Connected tablet installation was intentionally not forced because its installed closed-testing build is Play-signed and the local debug APK has a different signature. Android rejected the in-place update with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`; preserving the tablet's signed app data is safer than uninstalling it.

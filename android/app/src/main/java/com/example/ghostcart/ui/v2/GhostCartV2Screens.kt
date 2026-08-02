@@ -92,6 +92,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -965,7 +966,7 @@ private fun ProfileCommunitySection(
                 modifier = Modifier
                     .size(56.dp)
                     .clip(CircleShape)
-                    .background(GreenTint)
+                    .background(Ink)
                     .clickable { avatarPicker.launch("image/*") },
                 contentAlignment = Alignment.Center
             ) {
@@ -982,7 +983,7 @@ private fun ProfileCommunitySection(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize().clip(CircleShape)
                     )
-                    else -> Text((displayName.ifBlank { "?" }).take(1).uppercase(), color = Ink, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+                    else -> Text((displayName.ifBlank { "?" }).take(1).uppercase(), color = Paper, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
                 }
             }
             Column(modifier = Modifier.padding(start = 12.dp)) {
@@ -1610,12 +1611,14 @@ private fun CooldownDecisionCard(
                     modifier = Modifier.fillMaxWidth().padding(top = 14.dp).height(7.dp).clip(RoundedCornerShape(999.dp))
                 )
             }
-            Button(
-                onClick = { onTrack(item.id) },
-                colors = ButtonDefaults.buttonColors(containerColor = GhostGreen, contentColor = Color(0xFF050505)),
-                modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
-            ) {
-                Text(if (deliverySnapshot.state == GhostDeliveryState.DELIVERED) "Make a decision" else "Track Ghost Delivery", fontWeight = FontWeight.Bold)
+            if (deliverySnapshot.state != GhostDeliveryState.DELIVERED) {
+                Button(
+                    onClick = { onTrack(item.id) },
+                    colors = ButtonDefaults.buttonColors(containerColor = GhostGreen, contentColor = Color(0xFF050505)),
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
+                ) {
+                    Text("Track Ghost Delivery", fontWeight = FontWeight.Bold)
+                }
             }
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp, bottom = 14.dp)) {
                 Icon(if (hasCooled) Icons.Filled.CheckCircle else Icons.Filled.AccessTime, null, tint = if (hasCooled) GhostGreen else MutedText, modifier = Modifier.size(17.dp))
@@ -1628,12 +1631,12 @@ private fun CooldownDecisionCard(
                 )
             }
             if (hasCooled) {
-                Text("What did you decide?", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                Text("Make a decision", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
                 Button(
                     onClick = { onResolve(item.id, AlmostBuyResolution.SKIPPED) },
                     colors = ButtonDefaults.buttonColors(containerColor = Ink, contentColor = Paper),
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                ) { Text("Skip the item") }
+                ) { Text("Skip the purchase") }
                 item.sourceUrl?.let { source ->
                     OutlinedButton(
                         onClick = { onOpenSource(source) },
@@ -1649,8 +1652,15 @@ private fun CooldownDecisionCard(
                         modifier = Modifier.weight(1f)
                     ) { Text("Bought it already", fontSize = 11.sp) }
                     OutlinedButton(onClick = { showRestartDialog = true }, modifier = Modifier.weight(1f)) {
-                        Text("Restart cooldown", fontSize = 11.sp)
+                        Text("Send it around again", fontSize = 11.sp)
                     }
+                }
+                OutlinedButton(
+                    onClick = { onShare(item) },
+                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+                ) {
+                    Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(17.dp))
+                    Text("Ask a friend", modifier = Modifier.padding(start = 7.dp))
                 }
                 Text(stringResource(R.string.resolve_disclosure), color = MutedText, fontSize = 9.sp, modifier = Modifier.padding(top = 10.dp))
             } else {
@@ -1751,11 +1761,20 @@ private fun ResolvedRow(
             modifier = Modifier.size(16.dp).padding(start = 6.dp)
         )
         Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
-            Text(item.name, color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text(
+                text = item.name,
+                color = Ink,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
             Text(
                 if (item.status == AlmostBuyStatus.SKIPPED) stringResource(R.string.skipped_money_kept) else stringResource(R.string.bought_not_counted),
                 color = MutedText,
-                fontSize = 10.sp
+                fontSize = 9.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
         IconButton(onClick = { onShare(item) }, modifier = Modifier.size(36.dp)) {

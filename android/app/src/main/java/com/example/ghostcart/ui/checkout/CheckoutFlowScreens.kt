@@ -125,12 +125,10 @@ private const val PROMO_RATE = 0.10f
 @Composable
 fun GhostCartListScreen(
     products: List<Pair<MarketplaceProduct, Int>>,
-    coolingUntilByProductId: Map<String, Long>,
     onBack: () -> Unit,
     onAdd: (String) -> Unit,
     onRemove: (String) -> Unit,
     onClearAll: () -> Unit,
-    onStartCooling: (id: String, durationMillis: Long, durationLabel: String) -> Unit,
     onOpenProduct: (String) -> Unit,
     onShareProduct: (MarketplaceProduct) -> Unit,
     onCheckout: () -> Unit,
@@ -142,7 +140,6 @@ fun GhostCartListScreen(
 ) {
     val hasProducts = products.isNotEmpty()
     val subtotal = products.sumOf { (product, qty) -> product.price * qty }
-    var pendingCoolProductId by remember { mutableStateOf<String?>(null) }
     var rootPosition by remember { mutableStateOf(Offset.Zero) }
     var tutorialTarget by remember { mutableStateOf<Rect?>(null) }
 
@@ -174,13 +171,13 @@ fun GhostCartListScreen(
 
                 GhostMascotPose(poseName = "wave", modifier = Modifier.size(56.dp).padding(top = 16.dp))
                 Text(
-                    text = "The craving disappeared.\nThe money stayed.",
+                    text = "Your almost-buys are\nready to Ghost.",
                     color = Ink,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.ExtraBold,
                     modifier = Modifier.padding(top = 12.dp)
                 )
-                Text(text = "Nothing here is charged or delivered.", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                Text(text = "Review the cart, then choose one Ghost Delivery time at checkout.", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)) {
                     Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = GhostGreen, modifier = Modifier.size(14.dp))
@@ -230,17 +227,12 @@ fun GhostCartListScreen(
                         ) {
                             Text(text = product.name, color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                             com.example.ghostcart.ui.DirhamAmount("${product.price}", tint = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Normal, glyphSize = 9.dp)
-                            val coolingUntil = coolingUntilByProductId[product.id]
                             Text(
-                                text = when {
-                                    coolingUntil == null -> "Start cooling"
-                                    coolingUntil <= System.currentTimeMillis() -> "Cooled off — review now"
-                                    else -> "Cooling active"
-                                },
-                                color = GhostGreen,
+                                text = "Delivery time chosen at checkout",
+                                color = MutedText,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(top = 4.dp).clickable { pendingCoolProductId = product.id }
+                                modifier = Modifier.padding(top = 4.dp)
                             )
                         }
                         Row(
@@ -339,16 +331,6 @@ fun GhostCartListScreen(
         }
     }
 
-    pendingCoolProductId?.let { productId ->
-        CoolingDurationDialog(
-            onConfirm = { option ->
-                onStartCooling(productId, option.durationMillis, option.label)
-                pendingCoolProductId = null
-            },
-            onDismiss = { pendingCoolProductId = null }
-        )
-    }
-
     if (tutorialCooldownMode) {
         CoolingDurationDialog(
             onConfirm = onTutorialCooldownSelected,
@@ -380,8 +362,6 @@ private fun SummaryLine(label: String, value: String, valueColor: Color = Ink, b
 fun GhostCheckoutScreen(
     products: List<Pair<MarketplaceProduct, Int>>,
     walletBalance: Int,
-    simulationIntervalMinutes: Int,
-    onSelectInterval: (Int) -> Unit,
     onBack: () -> Unit,
     onOpenWallet: () -> Unit,
     onPlaceOrder: (Int, GhostGiftDraft?, String) -> Unit,
@@ -664,37 +644,6 @@ fun GhostCheckoutScreen(
             }
         }
 
-        Text(text = "Simulation Speed (per step)", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 18.dp))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(SoftGray)
-                .padding(4.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            listOf(1, 2, 5, 10).forEach { mins ->
-                val selected = simulationIntervalMinutes == mins
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(if (selected) Ink else Color.Transparent)
-                        .clickable { onSelectInterval(mins) }
-                        .padding(vertical = 10.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "$mins min",
-                        color = if (selected) Paper else Ink,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
-
         Column(modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
             Text(text = "Order Summary", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
             products.forEach { (product, qty) ->
@@ -745,8 +694,8 @@ fun GhostCheckoutScreen(
             PrimaryButton(
                 text = primaryButtonLabel ?: when {
                     !hasEnoughSimulatedBalance -> "Add simulated balance"
-                    sendAsGift -> "Complete Fake Checkout & Send Gift"
-                    else -> "Place Fake Order"
+                    sendAsGift -> "Choose time & send gift"
+                    else -> "Choose Ghost Delivery time"
                 },
                 onClick = {
                     if (!hasEnoughSimulatedBalance) {

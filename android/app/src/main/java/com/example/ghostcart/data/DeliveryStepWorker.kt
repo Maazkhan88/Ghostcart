@@ -91,7 +91,7 @@ class DeliveryStepWorker(
     }
 
     private fun decodeLocalPlaceholder(context: Context): Bitmap? =
-        runCatching { BitmapFactory.decodeResource(context.resources, R.drawable.mascot_cart) }.getOrNull()
+        runCatching { BitmapFactory.decodeResource(context.resources, R.drawable.ghost_cart_app_icon) }.getOrNull()
 
     private fun letterboxToSquare(source: Bitmap): Bitmap {
         if (source.width == source.height) return source
@@ -129,7 +129,7 @@ class DeliveryStepWorker(
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         val builder = NotificationCompat.Builder(context, GHOST_DELIVERY_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ghost_cart_icon)
+            .setSmallIcon(R.drawable.notification_ghost_icon)
             .setContentTitle(title)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))

@@ -49,7 +49,7 @@ Android may defer exact notification wall-clock delivery for battery optimizatio
 ## User experience
 
 - Product cards keep images, title, AED price, source, favorite, sharing and honest review-empty states, with `Ghost it` as the dominant action.
-- Tapping `Ghost it` opens a food-aware or marketplace-aware Ghost Delivery duration picker with standard and custom choices.
+- Tapping `Ghost it` adds the product to Ghost Cart without starting a timer. Placing the order from Fake Checkout opens the food-aware or marketplace-aware Ghost Delivery duration picker. Confirmation creates one grouped Ghost Order and starts the simulation for every cart item.
 - Home shows marketplace, food/delivery and favorites plus the nearest active Ghost Delivery.
 - Ghost Orders shows active, delivered-awaiting-decision and resolved records.
 - The tracker shows product context, ETA, route progress, a moving Ghost Rider, accessible textual route status, timeline, source link and permanent simulation disclosure.

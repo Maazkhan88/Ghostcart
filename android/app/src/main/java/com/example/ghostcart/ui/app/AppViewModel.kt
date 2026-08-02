@@ -1065,78 +1065,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * [durationLabel] is currently unused for messaging (createAlmostBuy owns the
-     * confirmation toast) but kept in the signature since every call site already
-     * passes it and it documents intent at the call site.
-     *
-     * Was previously a completely separate, parallel system from
-     * AlmostBuyRepository: it only ever wrote to coolingUntilByProductId (a
-     * per-product "already cooling" map read by ProductDetailScreen/product
-     * cards) and never created a real AlmostBuy - so nothing cooled this way
-     * ever showed up on the Cooldowns page, synced to the server, or counted
-     * toward the leaderboard, even though every call site immediately
-     * navigates to Cooldowns right after calling this expecting exactly that.
-     * Now does both: keeps the per-product map (still needed for the
-     * product-card "cooling until" badge) and creates a real AlmostBuy via
-     * the same path manual capture uses.
-     */
-    fun startCoolingPeriod(productId: String, durationMillis: Long, @Suppress("UNUSED_PARAMETER") durationLabel: String) {
-        if (!requireSignIn()) return
-        val product = findProduct(productId) ?: return
-        val coolingUntil = System.currentTimeMillis() + durationMillis
-        val updatedPeriods = _uiState.value.coolingUntilByProductId + (productId to coolingUntil)
-        persistCoolingPeriods(updatedPeriods)
-        _uiState.update { it.copy(coolingUntilByProductId = updatedPeriods) }
-
-        createAlmostBuy(
-            AlmostBuyDraft(
-                name = product.name,
-                amountCents = product.price.toLong() * 100,
-                category = product.category,
-                trigger = "",
-                coolingDurationMillis = durationMillis,
-                sourceUrl = product.sourceUrl,
-                imageUrl = product.imageUrl,
-                sourceKind = "catalog",
-                activityKey = product.id,
-                productId = product.id,
-                sourceMerchant = product.sourceDomain ?: product.brand
-            )
-        )
-    }
-
-    fun placeGhostOrder(
-        productId: String,
-        deliveryDurationMillis: Long,
-        onPlaced: (AlmostBuy) -> Unit = {}
-    ) {
-        if (!requireSignIn()) return
-        val product = findProduct(productId) ?: return
-        Analytics.logGhostOrderEvent(getApplication(), "ghost_it_tapped")
-        Analytics.logGhostOrderEvent(
-            getApplication(),
-            "delivery_duration_selected",
-            durationMillis = deliveryDurationMillis
-        )
-        createAlmostBuy(
-            AlmostBuyDraft(
-                name = product.name,
-                amountCents = product.price.toLong() * 100L,
-                category = normalizeCategory(product.category),
-                trigger = "",
-                coolingDurationMillis = deliveryDurationMillis.coerceAtLeast(TimeUnit.MINUTES.toMillis(15)),
-                sourceUrl = product.sourceUrl,
-                imageUrl = product.imageUrl,
-                sourceKind = "catalog",
-                activityKey = product.id,
-                productId = product.id,
-                sourceMerchant = product.sourceDomain ?: product.brand
-            ),
-            onCreated = onPlaced
-        )
-    }
-
     private fun loadCoolingPeriods(): Map<String, Long> =
         sharedPrefs.getStringSet("cooling_periods", emptySet())
             .orEmpty()
@@ -1458,6 +1386,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun placeSimulatedOrder(
+        deliveryDurationMillis: Long,
         checkoutTotal: Int = cartSubtotal(),
         ghostGift: GhostGiftDraft? = null,
         deliveryAddress: String = ""
@@ -1486,6 +1415,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         updateWalletConfig { it.copy(startingBalance = simulatedBalance - total) }
         val orderId = "GHOST-${10000 + Random.nextInt(90000)}"
         val placedAt = System.currentTimeMillis()
+        val safeDeliveryDuration = deliveryDurationMillis.coerceAtLeast(TimeUnit.MINUTES.toMillis(15))
         val itemsWithQty = cartProductsWithQuantities()
         val ghostedProducts = itemsWithQty.map { it.first }.distinctBy { it.id }
         val ghostedItemCount = itemsWithQty.sumOf { it.second }
@@ -1493,7 +1423,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val orderPromoDiscount = (orderSubtotal * CHECKOUT_PROMO_RATE).toInt()
         val orderServiceFee = ((orderSubtotal - orderPromoDiscount) * CHECKOUT_SERVICE_FEE_RATE).toInt()
         val orderVat = ((orderSubtotal - orderPromoDiscount) * CHECKOUT_VAT_RATE).toInt()
-        val orderGroupId = "GO-${UUID.randomUUID()}"
+        val orderGroupId = orderId
+        Analytics.logGhostOrderEvent(
+            getApplication(),
+            "delivery_duration_selected",
+            orderGroupId,
+            GhostDeliveryState.PLACED.name,
+            safeDeliveryDuration
+        )
         ghostedProducts.forEach { product ->
             val giftForProduct = ghostGift?.takeIf { it.productId == product.id }
             createAlmostBuy(
@@ -1502,12 +1439,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     amountCents = product.price.toLong() * 100,
                     category = normalizeCategory(product.category),
                     trigger = "FOMO",
-                    coolingDurationMillis = 24L * 60L * 60L * 1000L,
+                    coolingDurationMillis = safeDeliveryDuration,
                     sourceUrl = product.sourceUrl,
                     imageUrl = product.imageUrl,
                     sourceKind = "catalog",
                     ghostOrderId = orderGroupId,
-                    activityKey = product.id
+                    activityKey = product.id,
+                    productId = product.id,
+                    sourceMerchant = product.sourceDomain ?: product.brand
                 ),
                 onServerSynced = { serverId ->
                     if (giftForProduct != null) {
@@ -1523,6 +1462,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 }
             )
         }
+        val updatedCoolingPeriods = _uiState.value.coolingUntilByProductId +
+            ghostedProducts.associate { it.id to (placedAt + safeDeliveryDuration) }
+        persistCoolingPeriods(updatedCoolingPeriods)
         persistCartQuantities(emptyMap())
         _uiState.update {
             it.copy(
@@ -1536,7 +1478,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 lastOrderPromoDiscount = orderPromoDiscount,
                 lastOrderServiceFee = orderServiceFee,
                 lastOrderVat = orderVat,
-                deliveryStep = 0,
+                deliveryStep = -1,
+                coolingUntilByProductId = updatedCoolingPeriods,
                 cartProductIds = emptyList(),
                 cartQuantities = emptyMap()
             )
@@ -1546,7 +1489,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             .putInt("last_order_total", total)
             .putLong("last_order_placed_at", placedAt)
             .apply()
-        beginDeliveryClock()
         Analytics.logCheckoutCompleted(getApplication(), ghostedItemCount, total * 100)
         showToast(if (ghostGift == null) "Fake Checkout complete" else "Fake Checkout complete. Sending gift…")
 

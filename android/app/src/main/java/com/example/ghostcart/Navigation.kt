@@ -1,13 +1,11 @@
 package com.example.ghostcart
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
@@ -38,7 +36,6 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -60,9 +57,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -73,14 +71,12 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
-import coil3.compose.SubcomposeAsyncImage
 import com.example.ghostcart.data.AlmostBuyResolution
 import com.example.ghostcart.data.AlmostBuyStatus
 import com.example.ghostcart.data.AlmostBuy
-import com.example.ghostcart.data.AlmostBuyDraft
 import com.example.ghostcart.data.GhostOrderResolution
 import com.example.ghostcart.data.GhostDeliveryState
-import com.example.ghostcart.data.ContentBlockItem
+import com.example.ghostcart.data.GhostGiftDraft
 import com.example.ghostcart.data.Marketplace
 import com.example.ghostcart.data.openProductSource
 import com.example.ghostcart.data.shareGhostItem
@@ -138,6 +134,14 @@ import kotlinx.coroutines.delay
 
 private val onboardingDestinations: Set<NavKey> = setOf(Splash, Auth, ProfileSelect, Personalization, Tutorial)
 
+private data class PendingGhostCheckout(
+    val total: Int,
+    val gift: GhostGiftDraft?,
+    val deliveryAddress: String,
+    val itemLabel: String,
+    val category: String
+)
+
 private fun selectedBottomDestination(current: NavKey?): NavKey = when (current) {
     Cooldowns -> Cooldowns
     Progress -> Progress
@@ -186,8 +190,7 @@ fun MainNavigation(
     val showBottomNav = current != null && current !in onboardingDestinations && !tutorialActive
     var showTutorialExitDialog by remember { mutableStateOf(false) }
     var dismissedOrderId by remember { mutableStateOf<String?>(null) }
-    var pendingGhostProductId by remember { mutableStateOf<String?>(null) }
-    var pendingGhostDraft by remember { mutableStateOf<AlmostBuyDraft?>(null) }
+    var pendingGhostCheckout by remember { mutableStateOf<PendingGhostCheckout?>(null) }
     val requestDeliveryNotifications = rememberNotificationPermissionRequest()
     // Full-screen story viewer overlay state - lives here (not inside
     // GhostHomeScreen) so it renders above the bottom nav/Scaffold entirely,
@@ -338,7 +341,7 @@ fun MainNavigation(
                 if (showBottomNav) {
                     Column {
                         if (showDeliveryBanner) {
-                            val (order, snapshot) = activeBannerOrder!!
+                            val (order, snapshot) = activeBannerOrder
                             DeliveryTrackingBanner(
                                 order = order,
                                 state = snapshot.state,
@@ -363,8 +366,7 @@ fun MainNavigation(
                 onBack = { backStack.removeLastOrNull() },
                 entryProvider = entryProvider {
                     entry<Splash> {
-                        RandomStorySplashScreen(
-                            stories = state.ghostCartStories,
+                        OfficialBrandSplashScreen(
                             onFinished = {
                                 backStack.clear()
                                 if (tutorialViewModel.shouldAutoLaunch()) {
@@ -497,7 +499,7 @@ fun MainNavigation(
                             onOpenCooldowns = { backStack.add(Cooldowns) },
                             onTrackDelivery = { id -> backStack.add(GhostDeliveryTracker(id)) },
                             onOpenProgress = { backStack.add(Progress) },
-                            onGhost = { id -> pendingGhostProductId = id },
+                            onGhost = appViewModel::addToCart,
                             onOpen = { id -> backStack.add(ProductDetail(id)) },
                             onToggleFavorite = appViewModel::toggleFavorite,
                             onShareProduct = { product -> shareGhostItem(context, product.toGhostShareItem()) },
@@ -546,7 +548,7 @@ fun MainNavigation(
                             onToggleFavorite = appViewModel::toggleFavorite,
                             onBack = { backStack.removeLastOrNull() },
                             onOpenProduct = { id -> backStack.add(ProductDetail(id)) },
-                            onGhostProduct = { id -> pendingGhostProductId = id },
+                            onGhostProduct = appViewModel::addToCart,
                             onShareProduct = { product -> shareGhostItem(context, product.toGhostShareItem()) },
                             onReviews = { id ->
                                 Analytics.logGhostOrderEvent(context, "product_reviews_opened")
@@ -583,7 +585,12 @@ fun MainNavigation(
                                     appViewModel.clearCaptureSeed()
                                     backStack.removeLastOrNull()
                                 },
-                                onGhostIt = { draft -> pendingGhostDraft = draft },
+                                onGhostIt = { draft ->
+                                    appViewModel.addDraftToCart(draft)
+                                    appViewModel.clearCaptureSeed()
+                                    backStack.removeLastOrNull()
+                                    backStack.add(GhostCartList)
+                                },
                                 onAddListingToCart = { items ->
                                     appViewModel.addListingItemsToCart(items)
                                     appViewModel.clearCaptureSeed()
@@ -655,7 +662,7 @@ fun MainNavigation(
                                 onToggleFavorite = { if (!tutorialProductScreen) appViewModel.toggleFavorite(product.id) },
                                 onGhost = {
                                     if (tutorialProductScreen) tutorialViewModel.addPracticeItemToCart()
-                                    else pendingGhostProductId = product.id
+                                    else appViewModel.addToCart(product.id)
                                 },
                                 isInCart = if (tutorialProductScreen) tutorialState.practiceItemInCart else product.id in state.cartQuantities,
                                 onOpenCart = {
@@ -686,17 +693,10 @@ fun MainNavigation(
                         val cartProducts = if (tutorialCartScreen) listOf(tutorialProduct to 1) else appViewModel.cartProductsWithQuantities()
                         GhostCartListScreen(
                             products = cartProducts,
-                            coolingUntilByProductId = if (tutorialCartScreen) emptyMap() else state.coolingUntilByProductId,
                             onBack = { if (tutorialCartScreen) showTutorialExitDialog = true else if (backStack.size > 1) backStack.removeLastOrNull() else backStack.add(Home) },
                             onAdd = { id -> if (!tutorialCartScreen) appViewModel.addToCart(id) },
                             onRemove = { id -> if (!tutorialCartScreen) appViewModel.removeFromCart(id) },
                             onClearAll = { if (!tutorialCartScreen) appViewModel.clearCart() },
-                            onStartCooling = { id, durationMillis, durationLabel ->
-                                if (!tutorialCartScreen) {
-                                    appViewModel.startCoolingPeriod(id, durationMillis, durationLabel)
-                                    backStack.add(Cooldowns)
-                                }
-                            },
                             onOpenProduct = { id -> if (!tutorialCartScreen) backStack.add(ProductDetail(id)) },
                             onShareProduct = { product -> if (!tutorialCartScreen) shareGhostItem(context, product.toGhostShareItem()) },
                             onCheckout = {
@@ -730,8 +730,6 @@ fun MainNavigation(
                         GhostCheckoutScreen(
                             products = if (tutorialCheckoutScreen) listOf(tutorialProduct to 1) else appViewModel.cartProductsWithQuantities(),
                             walletBalance = if (tutorialCheckoutScreen) 10_000 else state.walletConfig.startingBalance,
-                            simulationIntervalMinutes = if (tutorialCheckoutScreen) 1 else state.simulationIntervalMinutes,
-                            onSelectInterval = { mins -> if (!tutorialCheckoutScreen) appViewModel.setSimulationInterval(mins) },
                             onBack = { if (tutorialCheckoutScreen) showTutorialExitDialog = true else backStack.removeLastOrNull() },
                             onOpenWallet = { if (!tutorialCheckoutScreen) backStack.add(Progress) },
                             onPlaceOrder = { total, ghostGift, deliveryAddress ->
@@ -739,8 +737,22 @@ fun MainNavigation(
                                     tutorialViewModel.completeFakeCheckout()
                                     backStack.clear()
                                     backStack.add(Tutorial)
-                                } else if (appViewModel.placeSimulatedOrder(total, ghostGift, deliveryAddress)) {
-                                    backStack.add(OrderGhostedSuccess)
+                                } else {
+                                    val checkoutProducts = appViewModel.cartProductsWithQuantities()
+                                    val distinctProducts = checkoutProducts.map { it.first }.distinctBy { it.id }
+                                    val allFood = distinctProducts.isNotEmpty() && distinctProducts.all { product ->
+                                        product.category.contains("food", ignoreCase = true) ||
+                                            product.category.contains("coffee", ignoreCase = true) ||
+                                            product.category.contains("delivery", ignoreCase = true)
+                                    }
+                                    pendingGhostCheckout = PendingGhostCheckout(
+                                        total = total,
+                                        gift = ghostGift,
+                                        deliveryAddress = deliveryAddress,
+                                        itemLabel = distinctProducts.singleOrNull()?.name
+                                            ?: "${distinctProducts.size} Ghost Cart items",
+                                        category = if (allFood) "Food & delivery" else "Marketplace"
+                                    )
                                 }
                             },
                             tutorialMode = tutorialCheckoutScreen,
@@ -771,8 +783,7 @@ fun MainNavigation(
                             amountAvoided = state.lastOrderTotal,
                             sourceProducts = state.lastOrderProducts,
                             onTrackDelivery = {
-                                appViewModel.startDeliveryTracking()
-                                backStack.add(FakeDeliveryTracking)
+                                backStack.add(GhostDeliveryTracker(state.lastOrderId))
                             },
                             onViewSavings = {
                                 backStack.clear()
@@ -889,40 +900,23 @@ fun MainNavigation(
             )
         }
 
-        pendingGhostProductId?.let { productId ->
-            appViewModel.findProduct(productId)?.let { product ->
-                GhostDeliveryTimeDialog(
-                    productName = product.name,
-                    category = product.category,
-                    onDismiss = { pendingGhostProductId = null },
-                    onConfirm = { duration ->
-                        pendingGhostProductId = null
-                        appViewModel.placeGhostOrder(product.id, duration) { created ->
-                            requestDeliveryNotifications()
-                            backStack.add(GhostDeliveryTracker(created.id))
-                        }
-                    }
-                )
-            }
-        }
-
-        pendingGhostDraft?.let { draft ->
+        pendingGhostCheckout?.let { checkout ->
             GhostDeliveryTimeDialog(
-                productName = draft.name,
-                category = draft.category,
-                onDismiss = { pendingGhostDraft = null },
+                productName = checkout.itemLabel,
+                category = checkout.category,
+                onDismiss = { pendingGhostCheckout = null },
                 onConfirm = { duration ->
-                    pendingGhostDraft = null
-                    appViewModel.createAlmostBuy(
-                        draft = draft.copy(coolingDurationMillis = duration.coerceAtLeast(java.util.concurrent.TimeUnit.MINUTES.toMillis(15))),
-                        onCreated = { created ->
-                        appViewModel.clearCaptureSeed()
+                    pendingGhostCheckout = null
+                    if (appViewModel.placeSimulatedOrder(
+                            checkoutTotal = checkout.total,
+                            ghostGift = checkout.gift,
+                            deliveryAddress = checkout.deliveryAddress,
+                            deliveryDurationMillis = duration
+                        )
+                    ) {
                         requestDeliveryNotifications()
-                        backStack.clear()
-                        backStack.add(Home)
-                        backStack.add(GhostDeliveryTracker(created.id))
-                        }
-                    )
+                        backStack.add(OrderGhostedSuccess)
+                    }
                 }
             )
         }
@@ -1000,85 +994,28 @@ fun MainNavigation(
 
 @Composable
 private fun SplashContent() {
-    Box(Modifier.fillMaxSize().background(Paper), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize().background(Ink), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            GhostCartWordmark(modifier = Modifier.width(220.dp).height(72.dp), tint = Ink)
-            Spacer(Modifier.height(12.dp))
-            Text("For everything you almost bought.", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+            GhostCartWordmark(modifier = Modifier.width(270.dp).height(76.dp), tint = Paper)
+            Spacer(Modifier.height(18.dp))
+            Text(
+                "For everything you almost bought",
+                color = Paper.copy(alpha = 0.68f),
+                fontSize = 15.sp
+            )
         }
     }
 }
 
-private const val SPLASH_SKIP_BUTTON_DELAY_MS = 3_000L
-private const val SPLASH_AUTO_ADVANCE_MS = 5_000L
-private const val SPLASH_FALLBACK_MS = 1_200L
+private const val BRAND_SPLASH_DURATION_MS = 1_200L
 
-/**
- * Cold-start splash: picks one random Ghost Cart Story to show full-bleed
- * (the same admin-managed content the Stories rail uses), with a Skip button
- * that appears after 3s and an automatic advance at 5s regardless. Falls
- * back to the plain wordmark splash (old behavior, ~1.2s) if no story is
- * available yet - stories are fetched async on app start and may not have
- * arrived by the time this renders, especially on a cold/slow connection.
- */
 @Composable
-private fun RandomStorySplashScreen(stories: List<ContentBlockItem>, onFinished: () -> Unit) {
-    // Image stories only - autoplaying a video (with audio) on cold start,
-    // on top of the fixed 3s/5s skip timing below, isn't a good splash
-    // experience. Video stories still play in full in the regular viewer.
-    val imageStories = remember(stories) { stories.filter { it.mediaType != "video" } }
-    val story = remember(imageStories.isNotEmpty()) { imageStories.randomOrNull() }
-    var showSkip by remember { mutableStateOf(false) }
-    var finished by remember { mutableStateOf(false) }
-    val finish = {
-        if (!finished) {
-            finished = true
-            onFinished()
-        }
+private fun OfficialBrandSplashScreen(onFinished: () -> Unit) {
+    LaunchedEffect(Unit) {
+        delay(BRAND_SPLASH_DURATION_MS)
+        onFinished()
     }
-
-    if (story == null) {
-        LaunchedEffect(Unit) {
-            delay(SPLASH_FALLBACK_MS)
-            finish()
-        }
-        SplashContent()
-        return
-    }
-
-    LaunchedEffect(story) {
-        delay(SPLASH_SKIP_BUTTON_DELAY_MS)
-        showSkip = true
-        delay(SPLASH_AUTO_ADVANCE_MS - SPLASH_SKIP_BUTTON_DELAY_MS)
-        finish()
-    }
-
-    Box(Modifier.fillMaxSize()) {
-        // The story image is fetched over the network and may take a moment
-        // on a cold start with no cache - show the branded wordmark while it
-        // loads instead of a flat black rectangle with nothing on it.
-        SubcomposeAsyncImage(
-            model = story.imageUrl,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-            loading = { SplashContent() },
-            error = { SplashContent() }
-        )
-        AnimatedVisibility(
-            visible = showSkip,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(24.dp).navigationBarsPadding(),
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            TextButton(
-                onClick = { finish() },
-                colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
-            ) {
-                Text("Skip", fontWeight = FontWeight.Bold)
-            }
-        }
-    }
+    SplashContent()
 }
 
 @Composable
@@ -1191,7 +1128,12 @@ private fun GhostBottomNav(current: NavKey?, cartItemCount: Int = 0, onNavigate:
                             contentAlignment = Alignment.Center
                         ) {
                             if (item.central) {
-                                GhostMascotPose(poseName = "cart", modifier = Modifier.size(38.dp))
+                                Image(
+                                    painter = painterResource(R.drawable.ghost_cart_icon),
+                                    contentDescription = item.label,
+                                    colorFilter = ColorFilter.tint(Ink),
+                                    modifier = Modifier.size(32.dp)
+                                )
                             } else {
                                 Icon(
                                     item.icon,

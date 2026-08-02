@@ -203,7 +203,7 @@ fun LeaderboardDetailScreen(
             ) {
                 Row(verticalAlignment = Alignment.Top) {
                     Box(
-                        modifier = Modifier.size(56.dp).clip(CircleShape).background(FaintBorder),
+                        modifier = Modifier.size(56.dp).clip(CircleShape).background(Ink),
                         contentAlignment = Alignment.Center
                     ) {
                         val preset = avatarPresetById(detail.avatarPresetId)
@@ -219,7 +219,7 @@ fun LeaderboardDetailScreen(
                                 contentDescription = null,
                                 modifier = Modifier.fillMaxSize().clip(CircleShape)
                             )
-                            else -> Text(detail.username.take(1).uppercase(), color = Ink, fontWeight = FontWeight.ExtraBold)
+                            else -> Text(detail.username.take(1).uppercase(), color = Paper, fontWeight = FontWeight.ExtraBold)
                         }
                     }
                     Column(modifier = Modifier.weight(1f).padding(start = 14.dp)) {

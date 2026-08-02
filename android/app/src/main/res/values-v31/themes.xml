@@ -6,6 +6,6 @@
 <resources>
     <style name="Theme.GhostCart" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowSplashScreenBackground">#0C0C0C</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/mascot_wave</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ghost_cart_app_icon_foreground</item>
     </style>
 </resources>

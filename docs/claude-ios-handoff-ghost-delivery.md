@@ -9,7 +9,9 @@ This branch is an Android implementation reference for the iOS Ghost Cart work. 
 
 The primary loop is now:
 
-`Discover → Ghost it → choose Ghost Delivery time → six-stage simulation → Delivered decision → Ghost Receipt`
+`Discover → Ghost it into cart → Fake Checkout → choose Ghost Delivery time → place Ghost Order → six-stage simulation → Delivered decision → Ghost Receipt`
+
+Important parity rule: `Ghost it` is an add-to-cart action. It must never open the delivery-time picker or start a simulation directly. The picker appears only when the user places the Ghost Order from checkout. A multi-item cart receives one selected duration and one shared opaque Ghost Order ID.
 
 Terminology:
 
