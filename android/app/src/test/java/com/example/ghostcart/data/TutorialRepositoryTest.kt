@@ -19,7 +19,6 @@ class TutorialRepositoryTest {
     @Test fun completedTutorialDoesNotShowAgain() {
         val repo = repository()
         driveToComplete(repo)
-        repo.startTutorialDelivery()
         repo.complete()
         assertFalse(repo.shouldAutoLaunch())
     }
@@ -55,6 +54,7 @@ class TutorialRepositoryTest {
         repo.start()
         repo.advance(TutorialStep.WELCOME, TutorialStep.PRACTICE_INTRO)
         repo.advance(TutorialStep.PRACTICE_INTRO, TutorialStep.PRODUCT)
+        repeat(4) { repo.advanceMarketplaceSpotlight() }
         repo.addPracticeItemToCart()
         assertEquals(TutorialStep.PRODUCT, repo.load().currentStep)
         repo.openTutorialCart()
@@ -74,7 +74,6 @@ class TutorialRepositoryTest {
         val store = MemoryTutorialStore()
         val repo = repository(store)
         driveToComplete(repo)
-        repo.startTutorialDelivery()
         val completed = repo.complete()
         assertFalse(completed.practiceItemInCart)
         assertNull(completed.sessionId)
@@ -143,7 +142,7 @@ class TutorialRepositoryTest {
         val repo = repository()
         driveToCheckout(repo)
         val cooling = repo.completeFakeCheckout()
-        assertEquals(TutorialStep.COOLING, cooling.currentStep)
+        assertEquals(TutorialStep.DELIVERY, cooling.currentStep)
         assertEquals(TUTORIAL_COOLDOWN_MILLIS, cooling.coolingEndsAt!! - cooling.startedAt!!)
     }
 
@@ -166,6 +165,7 @@ class TutorialRepositoryTest {
         repo.start()
         repo.advance(TutorialStep.WELCOME, TutorialStep.PRACTICE_INTRO)
         repo.advance(TutorialStep.PRACTICE_INTRO, TutorialStep.PRODUCT)
+        repeat(4) { repo.advanceMarketplaceSpotlight() }
         repo.addPracticeItemToCart()
         repo.openTutorialCart()
         repo.advance(TutorialStep.CART, TutorialStep.COOLDOWN)
@@ -176,8 +176,7 @@ class TutorialRepositoryTest {
     private fun driveToReceipt(repo: TutorialRepository) {
         driveToCheckout(repo)
         repo.completeFakeCheckout()
-        repo.finishCooling()
-        repo.chooseDecision(TutorialDecision.GHOSTED)
+        repo.resolveTutorialDelivery(TutorialDecision.GHOSTED)
     }
 
     private fun driveToComplete(repo: TutorialRepository) {
@@ -208,6 +207,7 @@ private class MemoryTutorialStore(
 
 private val tutorialSessionKeys = setOf(
     "tutorial_session_id",
+    "tutorial_marketplace_spotlight",
     "tutorial_item_in_cart",
     "tutorial_cooldown_millis",
     "tutorial_cooling_ends_at",

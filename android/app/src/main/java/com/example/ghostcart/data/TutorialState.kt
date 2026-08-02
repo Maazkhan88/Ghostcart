@@ -36,6 +36,7 @@ data class TutorialState(
     val completedAt: Long? = null,
     val installationId: String = "",
     val sessionId: String? = null,
+    val marketplaceSpotlightStep: Int = 0,
     val practiceItemInCart: Boolean = false,
     val selectedCooldownMillis: Long? = null,
     val coolingEndsAt: Long? = null,
@@ -119,7 +120,14 @@ class TutorialRepository(
     fun addPracticeItemToCart(): TutorialState {
         val current = load()
         require(current.currentStep == TutorialStep.PRODUCT && current.status == TutorialStatus.IN_PROGRESS)
+        require(current.marketplaceSpotlightStep >= 4) { "Marketplace coach marks are not complete" }
         return persist(current.copy(practiceItemInCart = true))
+    }
+
+    fun advanceMarketplaceSpotlight(): TutorialState {
+        val current = load()
+        require(current.currentStep == TutorialStep.PRODUCT && current.status == TutorialStatus.IN_PROGRESS)
+        return persist(current.copy(marketplaceSpotlightStep = (current.marketplaceSpotlightStep + 1).coerceAtMost(4)))
     }
 
     fun openTutorialCart(): TutorialState {
@@ -147,8 +155,20 @@ class TutorialRepository(
         require(current.practiceItemInCart && current.selectedCooldownMillis == TUTORIAL_COOLDOWN_MILLIS)
         return persist(
             current.copy(
-                currentStep = TutorialStep.COOLING,
+                currentStep = TutorialStep.DELIVERY,
                 coolingEndsAt = now() + TUTORIAL_COOLDOWN_MILLIS
+            )
+        )
+    }
+
+    fun resolveTutorialDelivery(decision: TutorialDecision): TutorialState {
+        val current = load()
+        require(current.currentStep == TutorialStep.DELIVERY && current.status == TutorialStatus.IN_PROGRESS)
+        return persist(
+            current.copy(
+                currentStep = TutorialStep.GHOST_RECEIPT,
+                coolingEndsAt = null,
+                decision = decision
             )
         )
     }
@@ -165,11 +185,9 @@ class TutorialRepository(
         return persist(current.copy(currentStep = TutorialStep.GHOST_RECEIPT, decision = decision))
     }
 
-    fun startTutorialDelivery(): TutorialState = advance(TutorialStep.COMPLETE, TutorialStep.DELIVERY)
-
     fun complete(): TutorialState {
         val current = load()
-        require(current.currentStep == TutorialStep.DELIVERY && current.status == TutorialStatus.IN_PROGRESS)
+        require(current.currentStep == TutorialStep.COMPLETE && current.status == TutorialStatus.IN_PROGRESS)
         val terminal = current.copy(status = TutorialStatus.COMPLETED, completedAt = now())
         clearTutorialSession()
         return persist(terminal.withoutSessionObjects())
@@ -231,6 +249,7 @@ class TutorialRepository(
             completedAt = store.read(KEY_COMPLETED_AT)?.toLongOrNull(),
             installationId = store.read(KEY_INSTALLATION_ID).orEmpty().ifBlank { installationId },
             sessionId = store.read(KEY_SESSION_ID),
+            marketplaceSpotlightStep = store.read(KEY_MARKETPLACE_SPOTLIGHT)?.toIntOrNull()?.coerceIn(0, 4) ?: 0,
             practiceItemInCart = store.read(KEY_IN_CART)?.toBooleanStrictOrNull() ?: false,
             selectedCooldownMillis = store.read(KEY_COOLDOWN_MILLIS)?.toLongOrNull(),
             coolingEndsAt = store.read(KEY_COOLING_ENDS_AT)?.toLongOrNull(),
@@ -270,6 +289,8 @@ class TutorialRepository(
                 KEY_COMPLETED_AT to state.completedAt?.toString(),
                 KEY_INSTALLATION_ID to state.installationId.ifBlank { installationId },
                 KEY_SESSION_ID to state.sessionId,
+                KEY_MARKETPLACE_SPOTLIGHT to state.marketplaceSpotlightStep.toString()
+                    .takeIf { state.status == TutorialStatus.IN_PROGRESS },
                 KEY_IN_CART to state.practiceItemInCart.toString()
                     .takeIf { state.status == TutorialStatus.IN_PROGRESS },
                 KEY_COOLDOWN_MILLIS to state.selectedCooldownMillis?.toString(),
@@ -296,6 +317,7 @@ class TutorialRepository(
 
     private fun TutorialState.withoutSessionObjects() = copy(
         sessionId = null,
+        marketplaceSpotlightStep = 0,
         practiceItemInCart = false,
         selectedCooldownMillis = null,
         coolingEndsAt = null,
@@ -313,6 +335,7 @@ class TutorialRepository(
         private const val KEY_COMPLETED_AT = "tutorial_completed_at"
         private const val KEY_INSTALLATION_ID = "tutorial_installation_id"
         private const val KEY_SESSION_ID = "tutorial_session_id"
+        private const val KEY_MARKETPLACE_SPOTLIGHT = "tutorial_marketplace_spotlight"
         private const val KEY_IN_CART = "tutorial_item_in_cart"
         private const val KEY_COOLDOWN_MILLIS = "tutorial_cooldown_millis"
         private const val KEY_COOLING_ENDS_AT = "tutorial_cooling_ends_at"
@@ -321,6 +344,7 @@ class TutorialRepository(
 
         private val SESSION_KEYS = setOf(
             KEY_SESSION_ID,
+            KEY_MARKETPLACE_SPOTLIGHT,
             KEY_IN_CART,
             KEY_COOLDOWN_MILLIS,
             KEY_COOLING_ENDS_AT,
@@ -334,11 +358,11 @@ class TutorialRepository(
             TutorialStep.PRODUCT to setOf(TutorialStep.CART),
             TutorialStep.CART to setOf(TutorialStep.COOLDOWN),
             TutorialStep.COOLDOWN to setOf(TutorialStep.FAKE_CHECKOUT),
-            TutorialStep.FAKE_CHECKOUT to setOf(TutorialStep.COOLING),
+            TutorialStep.FAKE_CHECKOUT to setOf(TutorialStep.DELIVERY),
             TutorialStep.COOLING to setOf(TutorialStep.DECISION),
             TutorialStep.DECISION to setOf(TutorialStep.GHOST_RECEIPT),
             TutorialStep.GHOST_RECEIPT to setOf(TutorialStep.COMPLETE),
-            TutorialStep.COMPLETE to setOf(TutorialStep.DELIVERY)
+            TutorialStep.DELIVERY to setOf(TutorialStep.GHOST_RECEIPT)
         )
 
         fun create(context: Context): TutorialRepository = TutorialRepository(

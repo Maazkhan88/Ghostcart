@@ -2,8 +2,10 @@ package com.example.ghostcart.ui.v2
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -99,6 +101,8 @@ import com.example.ghostcart.data.AlmostBuy
 import com.example.ghostcart.data.AlmostBuyDraft
 import com.example.ghostcart.data.AlmostBuyResolution
 import com.example.ghostcart.data.AlmostBuyStatus
+import com.example.ghostcart.data.GhostDeliveryState
+import com.example.ghostcart.data.ghostDeliverySnapshot
 import com.example.ghostcart.data.AVATAR_PRESETS
 import com.example.ghostcart.data.avatarPresetById
 import com.example.ghostcart.data.defaultAvatarPresetIdForGender
@@ -145,10 +149,12 @@ fun GhostHomeScreen(
     communityProductsLoading: Boolean,
     onGhostSomething: () -> Unit,
     onOpenCooldowns: () -> Unit,
+    onTrackDelivery: (String) -> Unit,
     onOpenProgress: () -> Unit,
     onGhost: (String) -> Unit,
     onOpen: (String) -> Unit,
     onToggleFavorite: (String) -> Unit,
+    onShareProduct: (MarketplaceProduct) -> Unit,
     onNotifications: () -> Unit,
     onViewAllCatalog: (String) -> Unit,
     onViewAllFavorites: () -> Unit,
@@ -158,22 +164,14 @@ fun GhostHomeScreen(
     ghostCartStories: List<com.example.ghostcart.data.ContentBlockItem> = emptyList(),
     onOpenLeaderboard: () -> Unit = {},
     onOpenStory: (Int) -> Unit = {},
+    tutorialProductId: String? = null,
+    tutorialSpotlightStep: Int = 0,
+    onTutorialAdvance: () -> Unit = {},
+    onTutorialGhost: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val summary = items.progressSummary()
     val active = items.filter { it.status == AlmostBuyStatus.COOLING }.sortedBy { it.coolingUntilMillis }
-
-    // Ask for notification permission every time Home is reached while it's still not granted
-    // (covers both the guest and signed-up onboarding paths, and anyone who dismissed/denied it
-    // before) - rememberNotificationPermissionRequest() already no-ops if permission is already
-    // granted or the OS is below API 33, so this never nags someone who already said yes. A
-    // previous version only asked once ever, tracked via a persisted SharedPreferences flag -
-    // that flag could get stuck `true` from an old build/denial and then silently never ask
-    // again for the lifetime of the install. Don't reintroduce that pattern.
-    val requestNotificationsOnFirstRun = rememberNotificationPermissionRequest(onGranted = onNotificationsGranted)
-    LaunchedEffect(Unit) {
-        requestNotificationsOnFirstRun()
-    }
 
     PullToRefreshBox(
         isRefreshing = communityProductsLoading,
@@ -194,9 +192,16 @@ fun GhostHomeScreen(
                 onGhost = onGhost,
                 onOpen = onOpen,
                 onToggleFavorite = onToggleFavorite,
+                onShareProduct = onShareProduct,
                 onNotifications = onNotifications,
                 onViewAllCatalog = onViewAllCatalog,
                 onViewAllFavorites = onViewAllFavorites,
+                activeDelivery = active.firstOrNull(),
+                onTrackDelivery = onTrackDelivery,
+                tutorialProductId = tutorialProductId,
+                tutorialSpotlightStep = tutorialSpotlightStep,
+                onTutorialAdvance = onTutorialAdvance,
+                onTutorialGhost = onTutorialGhost,
                 homeBanners = homeBanners
             )
         }
@@ -233,29 +238,6 @@ fun GhostHomeScreen(
         }
 
         item { ProgressStrip(summary = summary, onOpenProgress = onOpenProgress) }
-
-        item {
-            SectionHeader(
-                title = stringResource(R.string.active_cooldowns),
-                action = if (active.isEmpty()) null else stringResource(R.string.view_all),
-                onAction = onOpenCooldowns
-            )
-        }
-
-        if (active.isEmpty()) {
-            item {
-                EmptyPanel(
-                    title = stringResource(R.string.no_active_cooldowns),
-                    body = stringResource(R.string.no_active_cooldowns_body),
-                    action = stringResource(R.string.add_almost_buy),
-                    onAction = onGhostSomething
-                )
-            }
-        } else {
-            items(active.take(3), key = { it.id }) { item ->
-                CooldownSummaryCard(item = item, onClick = onOpenCooldowns)
-            }
-        }
 
         item {
             Text(
@@ -647,6 +629,7 @@ fun CooldownsScreen(
     onMoreTime: (String, Long) -> Unit,
     onShare: (AlmostBuy) -> Unit,
     onOpenSource: (String) -> Unit,
+    onTrack: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -669,8 +652,8 @@ fun CooldownsScreen(
         item {
             Row(verticalAlignment = Alignment.Bottom) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.cooldowns), color = Ink, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(stringResource(R.string.cooldowns_body), color = MutedText, fontSize = 12.sp)
+                    Text("Ghost Orders", color = Ink, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("Track active Ghost Deliveries and decide when they arrive.", color = MutedText, fontSize = 12.sp)
                 }
                 AssistChip(onClick = onGhostSomething, label = { Text(stringResource(R.string.add)) }, leadingIcon = { Icon(Icons.Filled.Add, null) })
             }
@@ -686,7 +669,7 @@ fun CooldownsScreen(
                 )
             }
         } else {
-            item { SectionHeader("Active cooldowns") }
+            item { SectionHeader("Active Ghost Deliveries") }
             activeGroups.forEach { (groupId, groupItems) ->
                 if (groupItems.size > 1) {
                     item(key = "active_group_$groupId") {
@@ -698,7 +681,7 @@ fun CooldownsScreen(
                     }
                 }
                 items(groupItems, key = { "active_${it.id}" }) { item ->
-                    CooldownDecisionCard(item, now, onResolve, onMoreTime, onShare, onOpenSource)
+                    CooldownDecisionCard(item, now, onResolve, onMoreTime, onShare, onOpenSource, onTrack)
                 }
             }
         }
@@ -706,7 +689,7 @@ fun CooldownsScreen(
         val resolved = almostBuys.filter { it.status != AlmostBuyStatus.COOLING }
             .sortedByDescending { it.resolvedAtMillis ?: it.createdAtMillis }
         if (resolved.isNotEmpty()) {
-            item { SectionHeader(stringResource(R.string.recent_decisions)) }
+            item { SectionHeader("Past Ghost Orders") }
             resolved.take(20).groupBy { it.ghostOrderId ?: it.id }.forEach { (groupId, groupItems) ->
                 if (groupItems.size > 1) {
                     item(key = "past_group_$groupId") {
@@ -734,7 +717,7 @@ fun ProgressScreen(
     var editName by remember { mutableStateOf(false) }
     var addBalance by remember { mutableStateOf(false) }
     val summary = almostBuys.progressSummary()
-    val keptItems = almostBuys.filter { it.status == AlmostBuyStatus.SKIPPED }
+    val keptItems = almostBuys.filter { it.status == AlmostBuyStatus.SKIPPED && !it.tutorialOnly }
     val categoriesByKept = keptItems.groupBy { it.category }
         .mapValues { (_, values) -> values.sumOf { it.amountCents } }
         .toList().sortedByDescending { it.second }
@@ -802,6 +785,19 @@ fun ProgressScreen(
                 DirhamAmount(formatDirhams(summary.confirmedMoneyKeptCents), tint = GhostGreen, fontSize = 35.sp, glyphSize = 26.dp)
                 Text(stringResource(R.string.only_skipped_counts), color = Paper.copy(alpha = 0.65f), fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp))
             }
+        }
+        item {
+            Text(
+                "Money Kept is the listed value of items you confirmed you skipped. It is not cash or a bank balance.",
+                color = MutedText,
+                fontSize = 11.sp,
+                lineHeight = 16.sp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(SoftGray)
+                    .padding(14.dp)
+            )
         }
         item { SectionHeader("Your progress") }
         item { ProgressStrip(summary) }
@@ -1167,6 +1163,7 @@ fun ProfileScreen(
 ) {
     var confirmDelete by remember { mutableStateOf(false) }
     var showTutorialDebug by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
     val requestNotifications = rememberNotificationPermissionRequest()
 
     LazyColumn(
@@ -1240,6 +1237,15 @@ fun ProfileScreen(
             }
         }
         item { SectionHeader(stringResource(R.string.reminders)) }
+        item {
+            LegalRow("Manage notification categories") {
+                context.startActivity(
+                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                    }
+                )
+            }
+        }
         item {
             NotificationPreferenceRow(
                 title = stringResource(R.string.cooling_complete_notifications),
@@ -1537,7 +1543,8 @@ private fun CooldownDecisionCard(
     onResolve: (String, AlmostBuyResolution) -> Unit,
     onMoreTime: (String, Long) -> Unit,
     onShare: (AlmostBuy) -> Unit,
-    onOpenSource: (String) -> Unit
+    onOpenSource: (String) -> Unit,
+    onTrack: (String) -> Unit
 ) {
     val hasCooled = now >= item.coolingUntilMillis
     val remainingMillis = (item.coolingUntilMillis - now).coerceAtLeast(0L)
@@ -1545,6 +1552,12 @@ private fun CooldownDecisionCard(
     val coolingProgress = if (hasCooled) 1f else {
         (1f - remainingMillis.toFloat() / expectedDuration.toFloat()).coerceIn(0f, 1f)
     }
+    val deliverySnapshot = ghostDeliverySnapshot(
+        nowMillis = now,
+        startMillis = item.deliveryStartedAtMillis ?: item.createdAtMillis,
+        endMillis = item.deliveryEndsAtMillis ?: item.coolingUntilMillis,
+        persistedState = item.deliveryState
+    )
     var imageLoadFailed by remember(item.imageUrl) { mutableStateOf(false) }
     var showRestartDialog by remember(item.id) { mutableStateOf(false) }
     Card(
@@ -1596,6 +1609,13 @@ private fun CooldownDecisionCard(
                     trackColor = FaintBorder,
                     modifier = Modifier.fillMaxWidth().padding(top = 14.dp).height(7.dp).clip(RoundedCornerShape(999.dp))
                 )
+            }
+            Button(
+                onClick = { onTrack(item.id) },
+                colors = ButtonDefaults.buttonColors(containerColor = GhostGreen, contentColor = Color(0xFF050505)),
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
+            ) {
+                Text(if (deliverySnapshot.state == GhostDeliveryState.DELIVERED) "Make a decision" else "Track Ghost Delivery", fontWeight = FontWeight.Bold)
             }
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp, bottom = 14.dp)) {
                 Icon(if (hasCooled) Icons.Filled.CheckCircle else Icons.Filled.AccessTime, null, tint = if (hasCooled) GhostGreen else MutedText, modifier = Modifier.size(17.dp))
@@ -1874,7 +1894,7 @@ private fun ghostTextFieldColors() = OutlinedTextFieldDefaults.colors(
 )
 
 @Composable
-private fun rememberNotificationPermissionRequest(onGranted: () -> Unit = {}): () -> Unit {
+fun rememberNotificationPermissionRequest(onGranted: () -> Unit = {}): () -> Unit {
     val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) onGranted()

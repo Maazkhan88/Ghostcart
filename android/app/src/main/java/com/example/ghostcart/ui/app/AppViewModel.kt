@@ -31,7 +31,9 @@ import com.example.ghostcart.data.Marketplace
 import com.example.ghostcart.data.MarketplaceProduct
 import com.example.ghostcart.data.WalletConfig
 import com.example.ghostcart.data.WalletDemoData
-import com.example.ghostcart.data.DeliveryStepWorker
+import com.example.ghostcart.data.GhostDeliveryScheduler
+import com.example.ghostcart.data.GhostDeliveryState
+import com.example.ghostcart.data.GhostOrderResolution
 import com.example.ghostcart.data.GhostActivityRepository
 import com.example.ghostcart.data.GhostRanking
 import com.example.ghostcart.data.GhostCardImageExporter
@@ -202,6 +204,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         syncDailyGhostReminder("dinner", 20, _uiState.value.walletConfig.dinnerReminderEnabled)
         if (_uiState.value.deliveryStep in 0..3) beginDeliveryClock()
         viewModelScope.launch {
+            GhostDeliveryScheduler.restore(application, almostBuyRepository.items.first())
+        }
+        viewModelScope.launch {
             almostBuyRepository.items.collect { items ->
                 _uiState.update { it.copy(almostBuys = items) }
             }
@@ -304,6 +309,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 .apply()
             current.copy(favoriteProductIds = next)
         }
+        if (nowFavorited) Analytics.logGhostOrderEvent(getApplication(), "product_favorited")
         // Best-effort - a signed-out user's favorites stay local-only, and a
         // failed request here just means the next sign-in's merge catches up.
         viewModelScope.launch {
@@ -1092,8 +1098,42 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 coolingDurationMillis = durationMillis,
                 sourceUrl = product.sourceUrl,
                 imageUrl = product.imageUrl,
-                sourceKind = "catalog"
+                sourceKind = "catalog",
+                activityKey = product.id,
+                productId = product.id,
+                sourceMerchant = product.sourceDomain ?: product.brand
             )
+        )
+    }
+
+    fun placeGhostOrder(
+        productId: String,
+        deliveryDurationMillis: Long,
+        onPlaced: (AlmostBuy) -> Unit = {}
+    ) {
+        if (!requireSignIn()) return
+        val product = findProduct(productId) ?: return
+        Analytics.logGhostOrderEvent(getApplication(), "ghost_it_tapped")
+        Analytics.logGhostOrderEvent(
+            getApplication(),
+            "delivery_duration_selected",
+            durationMillis = deliveryDurationMillis
+        )
+        createAlmostBuy(
+            AlmostBuyDraft(
+                name = product.name,
+                amountCents = product.price.toLong() * 100L,
+                category = normalizeCategory(product.category),
+                trigger = "",
+                coolingDurationMillis = deliveryDurationMillis.coerceAtLeast(TimeUnit.MINUTES.toMillis(15)),
+                sourceUrl = product.sourceUrl,
+                imageUrl = product.imageUrl,
+                sourceKind = "catalog",
+                activityKey = product.id,
+                productId = product.id,
+                sourceMerchant = product.sourceDomain ?: product.brand
+            ),
+            onCreated = onPlaced
         )
     }
 
@@ -1289,7 +1329,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             } else draft
             val item = almostBuyRepository.create(groupedDraft)
             Analytics.logCoolingStarted(getApplication(), groupedDraft.sourceKind, groupedDraft.category)
-            scheduleCoolingNotification(item)
+            Analytics.logGhostOrderEvent(
+                getApplication(),
+                "ghost_order_placed",
+                item.ghostOrderId ?: item.id,
+                GhostDeliveryState.PLACED.name,
+                item.selectedDeliveryDurationMillis
+            )
+            GhostDeliveryScheduler.schedule(getApplication(), item)
             groupedDraft.activityKey?.takeIf { it.isNotBlank() }?.let { activityKey ->
                 launch {
                     GhostActivityRepository.recordGhostStart(
@@ -1303,7 +1350,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     .onSuccess { refreshCommunityProducts() }
                     .onFailure { showToast("Item is cooling; anonymous sharing could not be completed") }
             }
-            showToast("${item.name} is cooling")
+            showToast("Ghost Order placed · ${item.name}")
             onCreated(item)
             // Best-effort: mirrors this cooldown to the backend so the server-side
             // sweep can push a notification when it expires. No-ops silently when
@@ -1327,6 +1374,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             Analytics.logCooldownResolved(getApplication(), resolution.name.lowercase())
             WorkManager.getInstance(getApplication<Application>())
                 .cancelUniqueWork("ghost_cooling_${item.id}")
+            GhostDeliveryScheduler.cancel(getApplication(), item.id)
             item.serverId?.let { serverId ->
                 launch { AlmostBuySync.syncResolve(getApplication(), serverId, resolution) }
             }
@@ -1343,13 +1391,56 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun extendAlmostBuy(id: String, durationMillis: Long) {
         viewModelScope.launch {
             val item = almostBuyRepository.extendCooling(id, durationMillis) ?: return@launch
-            scheduleCoolingNotification(item)
+            Analytics.logGhostOrderEvent(
+                getApplication(),
+                "decision_restarted",
+                item.ghostOrderId ?: item.id,
+                GhostDeliveryState.RESTARTED.name,
+                durationMillis
+            )
+            GhostDeliveryScheduler.schedule(getApplication(), item)
             item.serverId?.let { serverId ->
                 launch { AlmostBuySync.syncExtend(getApplication(), serverId, item.coolingUntilMillis) }
             }
             showToast("Cooldown restarted")
         }
     }
+
+    fun resolveGhostDelivery(id: String, resolution: GhostOrderResolution) {
+        viewModelScope.launch {
+            val item = almostBuyRepository.resolveDelivery(id, resolution) ?: return@launch
+            Analytics.logGhostOrderEvent(
+                getApplication(),
+                when (resolution) {
+                    GhostOrderResolution.SKIPPED -> "decision_skipped"
+                    GhostOrderResolution.BUY_FROM_SOURCE -> "decision_buy_from_source"
+                    GhostOrderResolution.BOUGHT_ALREADY -> "decision_bought_already"
+                },
+                item.ghostOrderId ?: item.id,
+                item.deliveryState.name
+            )
+            GhostDeliveryScheduler.cancel(getApplication(), item.id)
+            WorkManager.getInstance(getApplication<Application>()).cancelUniqueWork("ghost_cooling_${item.id}")
+            item.serverId?.let { serverId ->
+                val legacyResolution = if (resolution == GhostOrderResolution.SKIPPED) {
+                    AlmostBuyResolution.SKIPPED
+                } else {
+                    AlmostBuyResolution.BOUGHT_INTENTIONALLY
+                }
+                launch { AlmostBuySync.syncResolve(getApplication(), serverId, legacyResolution) }
+            }
+            showToast(
+                when (resolution) {
+                    GhostOrderResolution.SKIPPED -> "Added to confirmed Money Kept"
+                    GhostOrderResolution.BUY_FROM_SOURCE -> "Opening the original source"
+                    GhostOrderResolution.BOUGHT_ALREADY -> "Decision recorded without adding Money Kept"
+                }
+            )
+        }
+    }
+
+    fun findGhostOrder(id: String): AlmostBuy? =
+        _uiState.value.almostBuys.firstOrNull { it.id == id || it.ghostOrderId == id }
 
     private fun scheduleCoolingNotification(item: AlmostBuy) {
         if (!_uiState.value.walletConfig.coolingNotificationsEnabled) return
@@ -1455,12 +1546,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             .putInt("last_order_total", total)
             .putLong("last_order_placed_at", placedAt)
             .apply()
-        scheduleDeliveryWorkers(
-            orderId,
-            total,
-            _uiState.value.simulationIntervalMinutes,
-            productImageUrl = ghostedProducts.firstOrNull()?.imageUrl
-        )
         beginDeliveryClock()
         Analytics.logCheckoutCompleted(getApplication(), ghostedItemCount, total * 100)
         showToast(if (ghostGift == null) "Fake Checkout complete" else "Fake Checkout complete. Sending gift…")
@@ -1496,7 +1581,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteAccountAndLocalData() {
         WorkManager.getInstance(getApplication<Application>()).cancelAllWorkByTag("ghost_cooling_reminder")
         WorkManager.getInstance(getApplication<Application>()).cancelAllWorkByTag("ghost_daily_reminder")
-        WorkManager.getInstance(getApplication<Application>()).cancelAllWorkByTag("ghost_delivery_simulation")
+        GhostDeliveryScheduler.cancelAll(getApplication())
         sharedPrefs.edit().clear().commit()
         sharedCartProducts.clear()
         _uiState.value = AppUiState(walletConfig = loadWalletConfig())
@@ -1512,12 +1597,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val placedAt = System.currentTimeMillis()
             sharedPrefs.edit().putLong("last_order_placed_at", placedAt).apply()
             _uiState.update { it.copy(lastOrderPlacedAtMillis = placedAt, deliveryStep = 0) }
-            scheduleDeliveryWorkers(
-                orderId,
-                amountSaved,
-                intervalMinutes,
-                productImageUrl = _uiState.value.lastOrderProducts.firstOrNull()?.imageUrl
-            )
         }
         beginDeliveryClock()
     }
@@ -1566,31 +1645,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                         it.copy(productImportState = ProductImportState.Error(error.message ?: "Shared item is unavailable"))
                     }
                 }
-        }
-    }
-
-    private fun scheduleDeliveryWorkers(
-        orderId: String,
-        amountSaved: Int,
-        intervalMinutes: Int,
-        productImageUrl: String? = null
-    ) {
-        val context = getApplication<Application>()
-        val workManager = WorkManager.getInstance(context)
-        workManager.cancelAllWorkByTag("ghost_delivery_simulation")
-        for (step in 1..4) {
-            val delaySeconds = step * intervalMinutes * 60L
-            val workRequest = OneTimeWorkRequestBuilder<DeliveryStepWorker>()
-                .setInputData(workDataOf(
-                    "orderId" to orderId,
-                    "amountSaved" to amountSaved,
-                    "stepIndex" to step,
-                    "productImageUrl" to productImageUrl
-                ))
-                .setInitialDelay(delaySeconds, TimeUnit.SECONDS)
-                .addTag("ghost_delivery_simulation")
-                .build()
-            workManager.enqueue(workRequest)
         }
     }
 

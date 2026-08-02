@@ -23,6 +23,7 @@ import kotlinx.serialization.Serializable
 @Serializable data object GhostCheckout : NavKey
 @Serializable data object OrderGhostedSuccess : NavKey
 @Serializable data object FakeDeliveryTracking : NavKey
+@Serializable data class GhostDeliveryTracker(val itemId: String) : NavKey
 @Serializable data object PayWithGhostCard : NavKey
 @Serializable data object OrderProtected : NavKey
 @Serializable data class GhostGiftReveal(val token: String) : NavKey
