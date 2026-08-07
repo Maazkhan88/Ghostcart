@@ -145,28 +145,29 @@ struct ProgressView: View {
                             } label: {
                                 HStack(spacing: 13) {
                                     Image(systemName: "doc.text")
-                                        .foregroundStyle(Color.ghostGreenColor)
+                                        .foregroundStyle(item.state == .resolvedSkipped ? Color.ghostGreenColor : Color.paperColor.opacity(0.6))
                                         .frame(width: 40, height: 40)
-                                        .background(Color.ghostGreenColor.opacity(0.12))
+                                        .background(Color.paperColor.opacity(0.1))
                                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                                     VStack(alignment: .leading, spacing: 3) {
                                         Text(item.name)
                                             .font(.subheadline.weight(.bold))
-                                            .foregroundStyle(Color.primary)
+                                            .foregroundStyle(Color.paperColor)
+                                            .lineLimit(2)
                                         Text("\(item.state.title) · \((item.resolvedAt ?? item.capturedAt).formatted(date: .abbreviated, time: .omitted))")
                                             .font(.caption)
-                                            .foregroundStyle(Color.secondary)
+                                            .foregroundStyle(Color.paperColor.opacity(0.6))
                                     }
                                     Spacer()
                                     Text(AmountFormatter.string(item.amount))
                                         .font(.subheadline.weight(.black))
-                                        .foregroundStyle(item.state == .resolvedSkipped ? Color.ghostGreenColor : Color.primary)
+                                        .foregroundStyle(item.state == .resolvedSkipped ? Color.ghostGreenColor : Color.paperColor)
                                     Image(systemName: "chevron.right")
                                         .font(.caption.weight(.bold))
-                                        .foregroundStyle(Color.secondary)
+                                        .foregroundStyle(Color.paperColor.opacity(0.5))
                                 }
                                 .padding(14)
-                                .background(Color.primary.opacity(0.04))
+                                .background(Color.inkColor)
                                 .clipShape(RoundedRectangle(cornerRadius: 17, style: .continuous))
                             }
                             .buttonStyle(.plain)

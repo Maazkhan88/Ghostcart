@@ -104,6 +104,42 @@ export type PushMessage = {
 
 export type PushResult = { token: string; ok: boolean; shouldRemoveToken: boolean; error?: string };
 
+// TEMPORARY diagnostic export - returns FCM's raw HTTP status/body instead of
+// the classified PushResult, so a debug route can surface exactly what
+// Google's servers said (message resource name, full error detail) rather
+// than our own summarized ok/error. Remove alongside app/api/admin/debug-push.
+export async function sendPushRaw(
+  rawServiceAccountJson: string | undefined,
+  message: PushMessage,
+): Promise<{ status: number; body: string } | { error: string }> {
+  const serviceAccount = readServiceAccount(rawServiceAccountJson);
+  if (!serviceAccount) return { error: "FCM_SERVICE_ACCOUNT_JSON is not configured" };
+
+  const accessToken = await getAccessToken(serviceAccount);
+  const response = await fetch(
+    `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: {
+          token: message.token,
+          notification: { title: message.title, body: message.body },
+          data: message.data ?? {},
+          apns: {
+            headers: { "apns-priority": "10", "apns-push-type": "alert" },
+            payload: { aps: { alert: { title: message.title, body: message.body }, sound: "default" } },
+          },
+        },
+      }),
+    },
+  );
+  return { status: response.status, body: await response.text() };
+}
+
 // Sends one push per call (FCM's HTTP v1 API has no true batch endpoint) and
 // classifies failures so the caller knows whether to prune the token
 // (UNREGISTERED/INVALID_ARGUMENT - the token is dead) or just log and retry
@@ -133,6 +169,22 @@ export async function sendPush(
             notification: { title: message.title, body: message.body },
             data: message.data ?? {},
             android: { priority: "high" },
+            // Without an explicit apns block, FCM's default cross-platform
+            // translation can land at a normal (5) apns-priority, which iOS
+            // is allowed to silently defer/coalesce rather than deliver
+            // immediately - indistinguishable from "nothing sent" from the
+            // caller's side since FCM still returns 200. Setting priority 10
+            // + explicit aps.alert/sound matches what a real alert-visible
+            // push needs.
+            apns: {
+              headers: { "apns-priority": "10", "apns-push-type": "alert" },
+              payload: {
+                aps: {
+                  alert: { title: message.title, body: message.body },
+                  sound: "default",
+                },
+              },
+            },
           },
         }),
       },

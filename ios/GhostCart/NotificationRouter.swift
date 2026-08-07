@@ -51,7 +51,21 @@ final class GhostCartAppDelegate: NSObject, UIApplicationDelegate, UNUserNotific
         _ application: UIApplication,
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
     ) {
+        let tokenHex = deviceToken.map { String(format: "%02x", $0) }.joined()
+        PushDebugLog.log("APNs registration SUCCESS. Device token: \(tokenHex)")
         Messaging.messaging().apnsToken = deviceToken
+    }
+
+    // Previously unimplemented - a silent APNs registration failure (wrong
+    // aps-environment, missing capability, provisioning mismatch, etc.) had
+    // zero visibility with no handler here. FCM can still mint a token via
+    // its own Instance ID system even when this fires, so "we have an FCM
+    // token" alone never proved APNs registration actually succeeded.
+    func application(
+        _ application: UIApplication,
+        didFailToRegisterForRemoteNotificationsWithError error: Error
+    ) {
+        PushDebugLog.log("APNs registration FAILED: \(error.localizedDescription)")
     }
 
     func application(
@@ -71,7 +85,18 @@ final class GhostCartAppDelegate: NSObject, UIApplicationDelegate, UNUserNotific
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
+        let isRemote = notification.request.trigger is UNPushNotificationTrigger
+        PushDebugLog.log("Notification RECEIVED (foreground, \(isRemote ? "remote" : "local")): \(notification.request.content.title) / \(notification.request.content.userInfo)")
         completionHandler([.banner, .sound])
+    }
+
+    func application(
+        _ application: UIApplication,
+        didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+    ) {
+        PushDebugLog.log("Notification RECEIVED (background/silent): \(userInfo)")
+        completionHandler(.newData)
     }
 
     func userNotificationCenter(
@@ -79,6 +104,7 @@ final class GhostCartAppDelegate: NSObject, UIApplicationDelegate, UNUserNotific
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
+        PushDebugLog.log("Notification TAPPED, action=\(response.actionIdentifier): \(response.notification.request.content.userInfo)")
         let userInfo = response.notification.request.content.userInfo
         if response.actionIdentifier != UNNotificationDefaultActionIdentifier,
            response.actionIdentifier != UNNotificationDismissActionIdentifier,

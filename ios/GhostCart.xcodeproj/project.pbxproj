@@ -58,6 +58,8 @@
 		490D0DE98A6B160B131C57A8 /* GhostDeliveryTrackerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B3395F8CFF91755763D1762 /* GhostDeliveryTrackerView.swift */; };
 		016CD08E3F88599600A9AE75 /* GhostDeliveryDecisionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDA842EBD267E0610B62B628 /* GhostDeliveryDecisionView.swift */; };
 		67F277451BAF627FA53F2A69 /* ProductReviews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B334EEFF5A554ECF6DB97D7 /* ProductReviews.swift */; };
+		3E6F6DA571C93E237BC3D1F7 /* InAppMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5C09287D0081D7688510CDB /* InAppMessage.swift */; };
+		00D3B7226C180750EBB5D899 /* PushDebugLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72D4BF8CA3C2B32C9B24944F /* PushDebugLog.swift */; };
 		A20000000000000000000001 /* FirebaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000001 /* FirebaseService.swift */; };
 		A20000000000000000000002 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = P20000000000000000000002 /* FirebaseAnalytics */; };
 		A20000000000000000000003 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = P20000000000000000000003 /* FirebaseMessaging */; };
@@ -153,6 +155,8 @@
 		4B3395F8CFF91755763D1762 /* GhostDeliveryTrackerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhostDeliveryTrackerView.swift; sourceTree = "<group>"; };
 		BDA842EBD267E0610B62B628 /* GhostDeliveryDecisionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhostDeliveryDecisionView.swift; sourceTree = "<group>"; };
 		7B334EEFF5A554ECF6DB97D7 /* ProductReviews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductReviews.swift; sourceTree = "<group>"; };
+		B5C09287D0081D7688510CDB /* InAppMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppMessage.swift; sourceTree = "<group>"; };
+		72D4BF8CA3C2B32C9B24944F /* PushDebugLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushDebugLog.swift; sourceTree = "<group>"; };
 		B20000000000000000000001 /* FirebaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseService.swift; sourceTree = "<group>"; };
 		B20000000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B20000000000000000000003 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
@@ -254,6 +258,8 @@
 				4B3395F8CFF91755763D1762 /* GhostDeliveryTrackerView.swift */,
 				BDA842EBD267E0610B62B628 /* GhostDeliveryDecisionView.swift */,
 				7B334EEFF5A554ECF6DB97D7 /* ProductReviews.swift */,
+				B5C09287D0081D7688510CDB /* InAppMessage.swift */,
+				72D4BF8CA3C2B32C9B24944F /* PushDebugLog.swift */,
 				B20000000000000000000001 /* FirebaseService.swift */,
 				B20000000000000000000002 /* Info.plist */,
 				B20000000000000000000003 /* GoogleService-Info.plist */,
@@ -472,6 +478,8 @@
 				490D0DE98A6B160B131C57A8 /* GhostDeliveryTrackerView.swift in Sources */,
 				016CD08E3F88599600A9AE75 /* GhostDeliveryDecisionView.swift in Sources */,
 				67F277451BAF627FA53F2A69 /* ProductReviews.swift in Sources */,
+				3E6F6DA571C93E237BC3D1F7 /* InAppMessage.swift in Sources */,
+				00D3B7226C180750EBB5D899 /* PushDebugLog.swift in Sources */,
 				A20000000000000000000001 /* FirebaseService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -548,7 +556,7 @@
 				CODE_SIGN_ENTITLEMENTS = GhostCart/GhostCart.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 2A5Q764W66;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = GhostCart/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Ghost Cart";
@@ -577,7 +585,7 @@
 				CODE_SIGN_STYLE = Manual;
 				PROVISIONING_PROFILE_SPECIFIER = "GhostCart App Store";
 				DEVELOPMENT_TEAM = 2A5Q764W66;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = GhostCart/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Ghost Cart";
@@ -603,7 +611,7 @@
 				CODE_SIGN_ENTITLEMENTS = GhostCartShare/GhostCartShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 2A5Q764W66;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = GhostCartShare/Info.plist;
@@ -628,7 +636,7 @@
 				CODE_SIGN_STYLE = Manual;
 				PROVISIONING_PROFILE_SPECIFIER = "GhostCart Share App Store";
 				DEVELOPMENT_TEAM = 2A5Q764W66;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = GhostCartShare/Info.plist;
@@ -650,7 +658,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 2A5Q764W66;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MARKETING_VERSION = 1.0;
@@ -671,7 +679,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 2A5Q764W66;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MARKETING_VERSION = 1.0;

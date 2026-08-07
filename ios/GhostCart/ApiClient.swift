@@ -142,6 +142,20 @@ struct ApiClient {
         )
     }
 
+    func deleteJSON(
+        path: String,
+        bearerToken: String? = nil,
+        additionalHeaders: [String: String] = [:]
+    ) async throws -> [String: Any] {
+        try await sendJSON(
+            path: path,
+            method: "DELETE",
+            body: nil,
+            bearerToken: bearerToken,
+            additionalHeaders: additionalHeaders
+        )
+    }
+
     private func sendJSON(
         path: String,
         method: String,

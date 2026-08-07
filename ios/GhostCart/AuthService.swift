@@ -116,6 +116,11 @@ final class AuthService: ObservableObject {
         return try await ApiClient.shared.patchJSON(path: path, body: body, bearerToken: accessToken)
     }
 
+    func authorizedDelete(path: String) async throws -> [String: Any] {
+        guard let accessToken else { throw ApiError(message: "Sign in to continue.") }
+        return try await ApiClient.shared.deleteJSON(path: path, bearerToken: accessToken)
+    }
+
     // For endpoints that work signed-out but attach the current session when
     // one exists (e.g. gift reveal, which links the gift to the recipient's
     // account only if they happen to be signed in with a matching email).

@@ -68,17 +68,22 @@ export async function POST(request: Request) {
     const totalCents = readNonNegativeInteger(payload.totalCents, "totalCents");
     if (totalCents.error) return jsonNoStore({ error: totalCents.error }, { status: 400 });
 
-    const sent = await sendOrderInvoiceEmail(env.EMAIL as EmailBinding | undefined, session.email, {
-      orderId: orderId.value!,
-      placedAtMillis: placedAtMillis.value ?? Date.now(),
-      deliveryAddress: deliveryAddress.value ?? "",
-      items,
-      subtotalCents: subtotalCents.value ?? 0,
-      promoDiscountCents: promoDiscountCents.value ?? 0,
-      serviceFeeCents: serviceFeeCents.value ?? 0,
-      vatCents: vatCents.value ?? 0,
-      totalCents: totalCents.value ?? 0,
-    });
+    const sent = await sendOrderInvoiceEmail(
+      env.EMAIL as EmailBinding | undefined,
+      session.email,
+      {
+        orderId: orderId.value!,
+        placedAtMillis: placedAtMillis.value ?? Date.now(),
+        deliveryAddress: deliveryAddress.value ?? "",
+        items,
+        subtotalCents: subtotalCents.value ?? 0,
+        promoDiscountCents: promoDiscountCents.value ?? 0,
+        serviceFeeCents: serviceFeeCents.value ?? 0,
+        vatCents: vatCents.value ?? 0,
+        totalCents: totalCents.value ?? 0,
+      },
+      (env as any).RESEND_API_KEY,
+    );
 
     return jsonNoStore({ sent: sent.ok });
   } catch {

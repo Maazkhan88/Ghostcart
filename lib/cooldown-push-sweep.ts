@@ -18,6 +18,7 @@ export async function sweepExpiredCooldowns(
   fcmServiceAccountJson: string | undefined,
   email: EmailBinding | undefined,
   emailUnsubscribeSecret: string | undefined,
+  resendApiKey?: string,
 ): Promise<{ swept: number; pushed: number; prunedTokens: number; emailed: number }> {
   const now = new Date().toISOString();
   const expired = await db
@@ -69,6 +70,7 @@ export async function sweepExpiredCooldowns(
         row.userId,
         row.id,
         emailUnsubscribeSecret,
+        resendApiKey,
       );
       if (emailResult.ok) emailed += 1;
     }

@@ -12,7 +12,9 @@ enum AppTab: Hashable {
 struct ContentView: View {
     @EnvironmentObject private var store: GhostCartStore
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.openURL) private var openURL
     @State private var selectedTab: AppTab = .home
+    @State private var activeInAppMessage: InAppMessage?
 
     init() {
         #if DEBUG
@@ -49,10 +51,32 @@ struct ContentView: View {
         .onAppear {
             handleSharedImport()
             handleNotificationAction()
+            Task { activeInAppMessage = await InAppMessageService.nextToShow() }
         }
         .onChange(of: scenePhase) { phase in
             if phase == .active { handleSharedImport() }
         }
+        .overlay {
+            if let activeInAppMessage {
+                Color.black.opacity(0.4).ignoresSafeArea()
+                    .onTapGesture { dismissInAppMessage(activeInAppMessage) }
+                InAppMessageAlertView(
+                    message: activeInAppMessage,
+                    onDismiss: { dismissInAppMessage(activeInAppMessage) },
+                    onOpenLink: { url in
+                        dismissInAppMessage(activeInAppMessage)
+                        openURL(url)
+                    }
+                )
+                .transition(.opacity)
+            }
+        }
+        .animation(.default, value: activeInAppMessage)
+    }
+
+    private func dismissInAppMessage(_ message: InAppMessage) {
+        InAppMessageService.dismiss(message.id)
+        activeInAppMessage = nil
     }
 
     private func handleNotificationAction() {
@@ -465,6 +489,8 @@ private struct GhostCheckoutView: View {
     // Duration is chosen once, here at checkout - "Ghost it" itself only
     // adds to cart. One duration applies to the whole order.
     @State private var selectedDuration: Int = 60
+    @State private var customDuration: Int?
+    @State private var showCustomDurationSheet = false
     private var isFoodOrder: Bool { store.cartItems.contains { AlmostBuyCategory(serverName: $0.category) == .food } }
     private var durationPresets: [GhostDeliveryDuration] {
         GhostDeliveryDuration.presets(for: isFoodOrder ? .food : .other)
@@ -557,19 +583,46 @@ private struct GhostCheckoutView: View {
                 ForEach(durationPresets) { duration in
                     if let minutes = duration.totalMinutes {
                         Button {
+                            customDuration = nil
                             selectedDuration = minutes
                         } label: {
                             Text(duration.label)
                                 .font(.subheadline.weight(.bold))
-                                .foregroundStyle(selectedDuration == minutes ? Color.inkColor : Color.primary)
+                                .foregroundStyle(selectedDuration == minutes && customDuration == nil ? Color.inkColor : Color.primary)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
-                                .background(selectedDuration == minutes ? Color.ghostGreenColor : Color.primary.opacity(0.055))
+                                .background(selectedDuration == minutes && customDuration == nil ? Color.ghostGreenColor : Color.primary.opacity(0.055))
                                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        // .custom - opens CustomDurationSheet for free-text
+                        // minutes/hours/days entry instead of a fixed preset.
+                        Button {
+                            showCustomDurationSheet = true
+                        } label: {
+                            Text(customDuration != nil ? GhostDeliveryDuration.formattedCustomLabel(minutes: selectedDuration) : duration.label)
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(customDuration != nil ? Color.inkColor : Color.primary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(customDuration != nil ? Color.ghostGreenColor : Color.primary.opacity(0.055))
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .stroke(Color.primary.opacity(0.15), lineWidth: customDuration != nil ? 0 : 1)
+                                }
                         }
                         .buttonStyle(.plain)
                     }
                 }
+            }
+        }
+        .sheet(isPresented: $showCustomDurationSheet) {
+            CustomDurationSheet(initialMinutes: customDuration ?? selectedDuration) { minutes in
+                customDuration = minutes
+                selectedDuration = minutes
+                showCustomDurationSheet = false
             }
         }
     }

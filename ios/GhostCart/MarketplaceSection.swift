@@ -374,7 +374,7 @@ private struct MarketplaceProductCard: View {
                         .font(.subheadline)
                         .foregroundStyle(Color.inkColor)
                         .padding(7)
-                        .modifier(GlassCircleBackground())
+                        .modifier(LightGlassCircleBackground())
                 }
                 .padding(6)
                 .accessibilityLabel(isFavorite ? "Remove from favorites" : "Add to favorites")
@@ -436,7 +436,7 @@ private struct MarketplaceProductCard: View {
                         .font(.subheadline)
                         .foregroundStyle(Color.inkColor)
                         .frame(width: 34, height: 34)
-                        .modifier(GlassCircleBackground())
+                        .modifier(LightGlassCircleBackground())
                 }
                 .simultaneousGesture(TapGesture().onEnded {
                     GhostAnalytics.productShared(product.id)
@@ -473,6 +473,21 @@ struct GlassCardBackground: ViewModifier {
 struct GlassCircleBackground: ViewModifier {
     func body(content: Content) -> some View {
         content.background(.regularMaterial, in: Circle())
+    }
+}
+
+// Forces the frosted circle to its light variant regardless of the app's
+// color scheme - for heart/share controls that sit on product photography
+// (always a fixed white tile) or a card that can be dark-mode-black, and
+// need to read the same everywhere rather than turning into a dark blur
+// that blends into a dark card. Not used by GlassCircleBackground itself,
+// since other callers (e.g. the story viewer's white dismiss icon on a dark
+// backdrop) need the opposite - a dark circle so a light icon stays visible.
+struct LightGlassCircleBackground: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .background(.regularMaterial, in: Circle())
+            .environment(\.colorScheme, .light)
     }
 }
 
@@ -641,7 +656,7 @@ private struct ProductListingView: View {
                 }.buttonStyle(.plain)
                 Button { toggleFavorite(product) } label: {
                     Image(systemName: favoriteIds.contains(product.id) ? "heart.fill" : "heart")
-                        .foregroundStyle(Color.inkColor).padding(7).modifier(GlassCircleBackground())
+                        .foregroundStyle(Color.inkColor).padding(7).modifier(LightGlassCircleBackground())
                 }.padding(5)
             }
             NavigationLink { detail(product) } label: {
@@ -677,7 +692,7 @@ private struct ProductListingView: View {
                         .font(.subheadline)
                         .foregroundStyle(Color.inkColor)
                         .frame(width: 34, height: 34)
-                        .modifier(GlassCircleBackground())
+                        .modifier(LightGlassCircleBackground())
                 }
                 .simultaneousGesture(TapGesture().onEnded {
                     GhostAnalytics.productShared(product.id)

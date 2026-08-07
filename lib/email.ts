@@ -40,6 +40,36 @@ async function signUnsubscribeToken(userId: number, secret: string): Promise<str
     .join("");
 }
 
+// Shared send path: try Resend first (works regardless of the Cloudflare
+// Email Sending onboarding step, which was never completed - see the
+// EmailBinding comment above), fall back to the Cloudflare binding so
+// nothing regresses if a Resend key isn't configured. Mirrors the pattern
+// already proven out for sendGhostGiftEmail, applied to the other two
+// transactional email types that were still Cloudflare-binding-only (and
+// therefore silently never sending, per that same onboarding gap).
+async function sendEmailPreferResend(
+  resendApiKey: string | undefined,
+  email: EmailBinding | undefined,
+  to: string,
+  subject: string,
+  html: string,
+  text: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const apiKey = resendApiKey || (typeof process !== "undefined" ? process.env.RESEND_API_KEY : undefined);
+  if (apiKey) {
+    const resendResult = await sendViaResend(apiKey, to, subject, html, text);
+    if (resendResult.ok) return { ok: true };
+  }
+
+  if (!email) return { ok: false, error: "No email binding configured" };
+  try {
+    await email.send({ to, from: FROM, subject, html, text });
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err?.message || String(err) };
+  }
+}
+
 export async function sendCooldownResolvedEmail(
   email: EmailBinding | undefined,
   to: string,
@@ -47,23 +77,24 @@ export async function sendCooldownResolvedEmail(
   userId: number,
   almostBuyId: string,
   unsubscribeSecret: string | undefined,
+  resendApiKey?: string,
 ): Promise<{ ok: boolean }> {
-  if (!email) return { ok: false };
-
   try {
     const openUrl = `https://theghostcart.com/app/cooldown/${encodeURIComponent(almostBuyId)}`;
     const unsubscribeUrl = unsubscribeSecret
       ? `https://theghostcart.com/api/email/unsubscribe?u=${userId}&t=${await signUnsubscribeToken(userId, unsubscribeSecret)}`
       : null;
-    await email.send({
+    const result = await sendEmailPreferResend(
+      resendApiKey,
+      email,
       to,
-      from: FROM,
-      subject: `Cooling complete: ${itemTitle}`,
-      html: cooldownResolvedHtml(itemTitle, openUrl, unsubscribeUrl),
-      text: `${itemTitle} has finished cooling off. Open Ghost Cart to decide if you still want it.\n\n${openUrl}` +
+      `Cooling complete: ${itemTitle}`,
+      cooldownResolvedHtml(itemTitle, openUrl, unsubscribeUrl),
+      `${itemTitle} has finished cooling off. Open Ghost Cart to decide if you still want it.\n\n${openUrl}` +
         (unsubscribeUrl ? `\n\nUnsubscribe from these emails: ${unsubscribeUrl}` : ""),
-    });
-    return { ok: true };
+    );
+    if (!result.ok) console.error("cooldown email send failed", result.error);
+    return { ok: result.ok };
   } catch (err) {
     console.error("cooldown email send failed", err);
     return { ok: false };
@@ -193,19 +224,20 @@ export async function sendOrderInvoiceEmail(
   email: EmailBinding | undefined,
   to: string,
   invoice: OrderInvoiceDetails,
+  resendApiKey?: string,
 ): Promise<{ ok: boolean }> {
-  if (!email) return { ok: false };
-
   try {
-    await email.send({
+    const result = await sendEmailPreferResend(
+      resendApiKey,
+      email,
       to,
-      from: FROM,
-      subject: `Your Ghost Cart invoice: ${invoice.orderId}`,
-      html: orderInvoiceHtml(invoice),
-      text: `Your Ghost Cart invoice (${invoice.orderId}) is ready. Total: AED ${(invoice.totalCents / 100).toFixed(2)}. ` +
+      `Your Ghost Cart invoice: ${invoice.orderId}`,
+      orderInvoiceHtml(invoice),
+      `Your Ghost Cart invoice (${invoice.orderId}) is ready. Total: AED ${(invoice.totalCents / 100).toFixed(2)}. ` +
         `This is a simulation only: no real payment was collected and no order was placed.`,
-    });
-    return { ok: true };
+    );
+    if (!result.ok) console.error("order invoice email send failed", result.error);
+    return { ok: result.ok };
   } catch (err) {
     console.error("order invoice email send failed", err);
     return { ok: false };

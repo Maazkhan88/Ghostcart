@@ -314,6 +314,9 @@ struct ReminderSettingsView: View {
                 if let feedbackMessage {
                     Text(feedbackMessage).font(.caption).foregroundStyle(Color.secondary)
                 }
+                NavigationLink("View push debug log") {
+                    PushDebugLogView()
+                }
             } header: {
                 Text("Permission & test")
             }

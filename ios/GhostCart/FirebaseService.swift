@@ -19,41 +19,71 @@ final class FirebaseService {
 
     @discardableResult
     func configure() -> Bool {
-        guard !Self.isConfigured else { return true }
+        guard !Self.isConfigured else {
+            PushDebugLog.log("FirebaseApp.configure() skipped - already configured")
+            return true
+        }
         guard let path = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"),
               let options = FirebaseOptions(contentsOfFile: path) else {
-            #if DEBUG
-            print("[Firebase] GoogleService-Info.plist is missing; Firebase is not configured.")
-            #endif
+            PushDebugLog.log("FirebaseApp.configure() FAILED - GoogleService-Info.plist missing or unreadable")
             return false
         }
 
         FirebaseApp.configure(options: options)
         Self.isConfigured = true
         Messaging.messaging().delegate = FirebaseMessagingDelegate.shared
+        PushDebugLog.log("FirebaseApp.configure() SUCCESS - bundle=\(options.bundleID) gcmSenderID=\(options.gcmSenderID) projectID=\(options.projectID ?? "nil")")
         return true
     }
 
     func receivedFCMToken(_ token: String) {
+        let previous = UserDefaults.standard.string(forKey: tokenKey)
+        PushDebugLog.log(previous == token ? "FCM token unchanged: \(token)" : "FCM token REFRESHED. New: \(token) Previous: \(previous ?? "none")")
         UserDefaults.standard.set(token, forKey: tokenKey)
         Task { await registerStoredTokenIfSignedIn() }
     }
 
     func registerStoredTokenIfSignedIn() async {
-        guard AuthService.shared.isSignedIn,
-              let token = UserDefaults.standard.string(forKey: tokenKey),
-              !token.isEmpty else { return }
+        guard AuthService.shared.isSignedIn else {
+            PushDebugLog.log("Backend token upload SKIPPED - not signed in")
+            return
+        }
+        guard let token = UserDefaults.standard.string(forKey: tokenKey), !token.isEmpty else {
+            PushDebugLog.log("Backend token upload SKIPPED - no FCM token stored yet")
+            return
+        }
 
-        _ = try? await AuthService.shared.authorizedPost(
-            path: "/api/me/device-tokens",
-            body: ["token": token, "platform": "ios"]
-        )
+        do {
+            _ = try await AuthService.shared.authorizedPost(
+                path: "/api/me/device-tokens",
+                body: ["token": token, "platform": "ios"]
+            )
+            PushDebugLog.log("Backend token upload SUCCESS: \(token)")
+        } catch {
+            PushDebugLog.log("Backend token upload FAILED: \(error.localizedDescription)")
+        }
     }
 
     func registerForRemoteNotificationsIfAuthorized() async {
         let settings = await UNUserNotificationCenter.current().notificationSettings()
-        guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else { return }
+        let status = Self.describe(settings.authorizationStatus)
+        guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else {
+            PushDebugLog.log("registerForRemoteNotifications() SKIPPED - authorization status: \(status)")
+            return
+        }
+        PushDebugLog.log("Calling UIApplication.registerForRemoteNotifications() - authorization status: \(status)")
         UIApplication.shared.registerForRemoteNotifications()
+    }
+
+    private static func describe(_ status: UNAuthorizationStatus) -> String {
+        switch status {
+        case .authorized: return "authorized"
+        case .denied: return "denied"
+        case .notDetermined: return "notDetermined"
+        case .provisional: return "provisional"
+        case .ephemeral: return "ephemeral"
+        @unknown default: return "unknown(\(status.rawValue))"
+        }
     }
 }
 
@@ -61,7 +91,10 @@ final class FirebaseMessagingDelegate: NSObject, MessagingDelegate {
     static let shared = FirebaseMessagingDelegate()
 
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
-        guard let fcmToken else { return }
+        guard let fcmToken else {
+            PushDebugLog.log("didReceiveRegistrationToken called with nil token")
+            return
+        }
         Task { @MainActor in
             FirebaseService.shared.receivedFCMToken(fcmToken)
         }

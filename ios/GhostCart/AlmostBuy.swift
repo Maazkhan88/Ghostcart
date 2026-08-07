@@ -199,6 +199,7 @@ struct GhostCartItem: Identifiable, Codable, Hashable {
     var category: String
     var priceCents: Int
     var imageURL: String?
+    var sourceURL: String?
     var quantity: Int
     var cooldownMinutes: Int
 

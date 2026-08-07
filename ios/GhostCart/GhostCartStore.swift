@@ -119,6 +119,7 @@ final class GhostCartStore: ObservableObject {
                 category: product.category,
                 priceCents: max(0, product.priceCents),
                 imageURL: product.imageUrl,
+                sourceURL: product.sourceURL,
                 quantity: 1,
                 cooldownMinutes: mappedCategory.recommendedCooldownMinutes
             ))
@@ -198,7 +199,7 @@ final class GhostCartStore: ObservableObject {
                     category: AlmostBuyCategory(serverName: cartItem.category),
                     trigger: .other,
                     source: .manual,
-                    sourceURL: nil,
+                    sourceURL: cartItem.sourceURL,
                     imageURL: cartItem.imageURL,
                     ghostOrderId: ghostOrderId,
                     onServerId: attachGift ? { serverId in

@@ -68,13 +68,14 @@ final class GhostDeliveryTests: XCTestCase {
         XCTAssertNotEqual(routeA.origin.latitude, routeB.origin.latitude)
     }
 
-    func testDeliveryDurationPresetsAreFoodSensitive() {
+    func testDeliveryDurationPresetsMatchAndroid() {
+        // Same five options regardless of category (matches Android's live
+        // preset set: 15 minutes, 1 hour, 24 hours, 1 week, Custom).
         let food = GhostDeliveryDuration.presets(for: .food).compactMap(\.totalMinutes)
         let other = GhostDeliveryDuration.presets(for: .electronics).compactMap(\.totalMinutes)
-        XCTAssertTrue(food.contains(15))
-        XCTAssertTrue(food.contains(30))
-        XCTAssertFalse(other.contains(30))
-        XCTAssertTrue(other.contains(7 * 24 * 60))
+        XCTAssertEqual(food, [15, 60, 24 * 60, 7 * 24 * 60])
+        XCTAssertEqual(other, [15, 60, 24 * 60, 7 * 24 * 60])
+        XCTAssertTrue(GhostDeliveryDuration.presets(for: .food).contains { $0.id == "custom" })
     }
 
     func testRestartGhostDeliveryDoesNotDuplicateMoneyKept() {

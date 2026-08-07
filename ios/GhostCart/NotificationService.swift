@@ -47,15 +47,19 @@ final class NotificationService {
         let settings = await center.notificationSettings()
         switch settings.authorizationStatus {
         case .authorized, .provisional, .ephemeral:
+            PushDebugLog.log("Notification permission: already authorized")
             await FirebaseService.shared.registerForRemoteNotificationsIfAuthorized()
             return true
         case .notDetermined:
+            PushDebugLog.log("Notification permission: requesting (was notDetermined)")
             let granted = (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
+            PushDebugLog.log("Notification permission: request result = \(granted ? "GRANTED" : "DENIED")")
             if granted {
                 await FirebaseService.shared.registerForRemoteNotificationsIfAuthorized()
             }
             return granted
         default:
+            PushDebugLog.log("Notification permission: denied/restricted, not requesting")
             return false
         }
     }

@@ -1,5 +1,6 @@
 import Foundation
 import CoreLocation
+import SwiftUI
 
 // The Ghost Delivery state machine: purely a function of elapsed time
 // between an item's coolingStartedAt and decisionAt (its Ghost Delivery
@@ -207,22 +208,115 @@ enum GhostDeliveryDuration: Identifiable {
         return nil
     }
 
-    // Food/immediate-delivery categories surface short durations first;
-    // everything else leads with the longer, more deliberate options.
+    static func formattedCustomLabel(minutes: Int) -> String {
+        if minutes < 60 { return "\(minutes) min" }
+        if minutes < 24 * 60 {
+            let hours = minutes / 60
+            return "\(hours) hour\(hours == 1 ? "" : "s")"
+        }
+        let days = minutes / (24 * 60)
+        return "\(days) day\(days == 1 ? "" : "s")"
+    }
+
+    // Matches Android's real live preset set (confirmed against a device
+    // screenshot, not source - the checked-in Android source this repo has
+    // is behind what's actually shipping): the same five options regardless
+    // of category, with Custom actually functional (see
+    // GhostCheckoutView.deliveryTimeSection / CustomDurationSheet).
     static func presets(for category: AlmostBuyCategory) -> [GhostDeliveryDuration] {
-        let short: [GhostDeliveryDuration] = [
+        [
             .minutes(15, label: "15 minutes"),
-            .minutes(30, label: "30 minutes"),
-            .minutes(60, label: "1 hour"),
-            .minutes(24 * 60, label: "24 hours"),
-            .custom,
-        ]
-        let long: [GhostDeliveryDuration] = [
             .minutes(60, label: "1 hour"),
             .minutes(24 * 60, label: "24 hours"),
             .minutes(7 * 24 * 60, label: "1 week"),
             .custom,
         ]
-        return category == .food ? short : long
+    }
+}
+
+private enum CustomDurationUnit: String, CaseIterable, Identifiable {
+    case minutes, hours, days
+    var id: String { rawValue }
+    var label: String { rawValue.capitalized }
+    var minutesPerUnit: Int {
+        switch self {
+        case .minutes: return 1
+        case .hours: return 60
+        case .days: return 24 * 60
+        }
+    }
+}
+
+// Custom Ghost Delivery duration entry - a number + unit picker, since a
+// bare minutes text field is unfriendly for "1 week"-scale durations.
+// Bounds match the app's existing presets range (1 minute to 30 days) so a
+// custom value can't produce a nonsensical or unbounded cooldown.
+struct CustomDurationSheet: View {
+    let onConfirm: (Int) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var value: Int
+    @State private var unit: CustomDurationUnit
+
+    init(initialMinutes: Int, onConfirm: @escaping (Int) -> Void) {
+        self.onConfirm = onConfirm
+        if initialMinutes % (24 * 60) == 0 && initialMinutes >= 24 * 60 {
+            _value = State(initialValue: initialMinutes / (24 * 60))
+            _unit = State(initialValue: .days)
+        } else if initialMinutes % 60 == 0 && initialMinutes >= 60 {
+            _value = State(initialValue: initialMinutes / 60)
+            _unit = State(initialValue: .hours)
+        } else {
+            _value = State(initialValue: max(1, initialMinutes))
+            _unit = State(initialValue: .minutes)
+        }
+    }
+
+    private var totalMinutes: Int { value * unit.minutesPerUnit }
+    private var maxValue: Int {
+        switch unit {
+        case .minutes: return 59
+        case .hours: return 23
+        case .days: return 30
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                Text("Custom Ghost Delivery time").font(.title3.weight(.black))
+                Text("Choose exactly how long this order should cool off before you decide.")
+                    .font(.caption)
+                    .foregroundStyle(Color.secondary)
+                    .multilineTextAlignment(.center)
+
+                Picker("Value", selection: $value) {
+                    ForEach(1...maxValue, id: \.self) { number in
+                        Text("\(number)").tag(number)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .onChange(of: unit) { _ in value = min(value, maxValue) }
+
+                Picker("Unit", selection: $unit) {
+                    ForEach(CustomDurationUnit.allCases) { option in
+                        Text(option.label).tag(option)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                Button("Use \(value) \(unit.label.lowercased())") {
+                    onConfirm(totalMinutes)
+                }
+                .buttonStyle(GhostPrimaryButtonStyle())
+            }
+            .padding(24)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 }

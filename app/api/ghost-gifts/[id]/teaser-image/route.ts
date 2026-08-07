@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { getD1 } from "../../../../../db";
-import { getContentMediaBucket } from "../../../../../lib/content-media";
+import { getContentMediaBucket, isValidContentMediaKey } from "../../../../../lib/content-media";
 import { hashGiftToken, isGiftToken } from "../../../../../lib/ghost-gifts";
 import { isValidProductImageKey } from "../../../../../lib/product-image-rehost";
 import { isAllowedProductImageUrl } from "../../../../../lib/product-link-preview";
@@ -14,6 +14,20 @@ async function readSourceImage(imageUrl: string): Promise<ReadableStream> {
     if (!isValidProductImageKey(key)) throw new Error("invalid stored product image key");
     const object = await getContentMediaBucket().get(`product-images/${key}`);
     if (!object?.body) throw new Error("stored product image unavailable");
+    return object.body;
+  }
+
+  // Catalog-sourced items (the majority of real gifts - anything captured
+  // via "Ghost it" on a marketplace product) use this shape, not
+  // /api/product-images/. It was missing entirely, so teaser-image 404'd for
+  // most real gifts even though the reveal endpoint itself (which returns
+  // the raw imageUrl directly rather than proxying it) worked fine - the gap
+  // only showed up in the pre-reveal blurred preview on the web landing page.
+  if (isGhostCartHost && url.pathname.startsWith("/api/content-blocks/image/")) {
+    const key = decodeURIComponent(url.pathname.slice("/api/content-blocks/image/".length));
+    if (!isValidContentMediaKey(key)) throw new Error("invalid content-block image key");
+    const object = await getContentMediaBucket().get(key);
+    if (!object?.body) throw new Error("stored content-block image unavailable");
     return object.body;
   }
 
