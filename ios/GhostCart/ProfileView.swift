@@ -77,6 +77,16 @@ struct ProfileView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 12) {
+                    SectionHeading(title: "Gifts")
+                    NavigationLink {
+                        GiftsView()
+                    } label: {
+                        SettingsRow(image: "gift", title: "Received and sent gifts", subtitle: "Private gifts you received and simulated gifts you sent")
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                VStack(alignment: .leading, spacing: 12) {
                     SectionHeading(title: "Privacy & trust")
                     GhostCard {
                         VStack(alignment: .leading, spacing: 12) {
@@ -137,6 +147,7 @@ struct ProfileView: View {
             // to match instead of following the system Dark preference,
             // which otherwise clashed with the always-white content below it.
             .preferredColorScheme(.light)
+            .environment(\.colorScheme, .light)
             .environmentObject(auth)
         }
     }
@@ -316,6 +327,15 @@ struct ReminderSettingsView: View {
             }
 
             Section {
+                Toggle("Ghost Delivery stages", isOn: deliveryStagesBinding)
+                Toggle("Ghost Order delivered", isOn: deliveredBinding)
+            } header: {
+                Text("Ghost Delivery notifications")
+            } footer: {
+                Text("Placed, being prepared, Ghost Rider picking up, out for delivery, and Ghost Rider nearby share one toggle. \"Delivered\" is controlled separately.")
+            }
+
+            Section {
                 ReminderTimeRow(title: "Lunch", isOn: lunchBinding, hour: lunchHourBinding)
                 ReminderTimeRow(title: "Dinner", isOn: dinnerBinding, hour: dinnerHourBinding)
                 ReminderTimeRow(title: "Late night", isOn: lateNightBinding, hour: lateNightHourBinding)
@@ -401,6 +421,16 @@ struct ReminderSettingsView: View {
     private var coolingBinding: Binding<Bool> {
         boolBinding(\.coolingCompleteEnabled) { _ in
             store.refreshCoolingNotifications()
+        }
+    }
+    private var deliveryStagesBinding: Binding<Bool> {
+        boolBinding(\.deliveryStagesEnabled) { _ in
+            store.refreshDeliveryStageNotifications()
+        }
+    }
+    private var deliveredBinding: Binding<Bool> {
+        boolBinding(\.deliveredEnabled) { _ in
+            store.refreshDeliveryStageNotifications()
         }
     }
     private var lunchBinding: Binding<Bool> { boolBinding(\.lunchEnabled) }

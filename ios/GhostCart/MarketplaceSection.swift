@@ -147,6 +147,12 @@ struct MarketplaceSection: View {
     let onToggleFavorite: (MarketplaceProduct) -> Void
     let onAddToCart: (MarketplaceProduct) -> Void
     let onOpenCart: () -> Void
+    // Tutorial support: products in this set render with a "Tutorial item"
+    // badge and route their "Ghost it" tap through onGhostItDirect (a
+    // straight-to-cooling path) instead of the normal add-to-cart/checkout
+    // flow - the tutorial never touches real cart/checkout state.
+    var tutorialProductIDs: Set<String> = []
+    var onGhostItDirect: ((MarketplaceProduct) -> Void)? = nil
 
     @State private var query = ""
     @State private var category: BrowseCategory = .all
@@ -309,7 +315,9 @@ struct MarketplaceSection: View {
                                 isFavorite: favoriteIds.contains(product.id),
                                 onToggleFavorite: { onToggleFavorite(product) },
                                 onAddToCart: { onAddToCart(product) },
-                                onOpenCart: onOpenCart
+                                onOpenCart: onOpenCart,
+                                isTutorial: tutorialProductIDs.contains(product.id),
+                                onGhostItDirect: tutorialProductIDs.contains(product.id) ? { onGhostItDirect?(product) } : nil
                             )
                         }
                     }
@@ -335,6 +343,13 @@ private struct MarketplaceProductCard: View {
     let onToggleFavorite: () -> Void
     let onAddToCart: () -> Void
     let onOpenCart: () -> Void
+    var isTutorial: Bool = false
+    var onGhostItDirect: (() -> Void)? = nil
+
+    private var shareText: String {
+        if let source = product.sourceURL, !source.isEmpty { return "Check this out on Ghost Cart:\n\(source)" }
+        return "Check out \(product.name) on Ghost Cart."
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -362,6 +377,17 @@ private struct MarketplaceProductCard: View {
                         .modifier(GlassCircleBackground())
                 }
                 .padding(6)
+                .accessibilityLabel(isFavorite ? "Remove from favorites" : "Add to favorites")
+
+                if isTutorial {
+                    Text("Tutorial item")
+                        .font(.system(size: 8, weight: .black))
+                        .foregroundStyle(Color.inkColor)
+                        .padding(.horizontal, 6).padding(.vertical, 3)
+                        .background(Color.ghostGreenColor, in: Capsule())
+                        .padding(6)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                }
             }
 
             NavigationLink {
@@ -389,18 +415,33 @@ private struct MarketplaceProductCard: View {
             }
             .buttonStyle(.plain)
 
-            Button(action: onAddToCart) {
-                VStack(spacing: 1) {
-                    Text("Add to cart").font(.caption.weight(.bold))
-                    Text("Cooldown starts at checkout").font(.system(size: 9)).opacity(0.68)
+            HStack(spacing: 6) {
+                Button {
+                    if let onGhostItDirect { onGhostItDirect() } else { onAddToCart() }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "cart").font(.caption.weight(.bold))
+                        Text("Ghost it").font(.caption.weight(.bold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
+                .foregroundStyle(Color.inkColor)
+                .background(Color.ghostGreenColor)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .accessibilityHint("Starts a simulated Ghost Order for this item")
+
+                ShareLink(item: shareText) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.inkColor)
+                        .frame(width: 34, height: 34)
+                        .modifier(GlassCircleBackground())
+                }
+                .simultaneousGesture(TapGesture().onEnded {
+                    GhostAnalytics.productShared(product.id)
+                })
             }
-            .frame(maxWidth: .infinity)
-            .foregroundStyle(Color.inkColor)
-            .background(Color.ghostGreenColor)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .padding(12)
         .frame(width: 168)
@@ -564,7 +605,7 @@ private struct ProductListingView: View {
                         message: kind == .favorites ? "Tap the heart on a product to save it here." : "Try clearing a filter or searching for something else."
                     )
                 } else {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 12)], spacing: 12) {
                         ForEach(visibleProducts) { product in
                             listingCard(product)
                         }
@@ -577,6 +618,11 @@ private struct ProductListingView: View {
         .background(Color(.systemBackground))
         .navigationTitle("Ghost Cart")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func shareText(for product: MarketplaceProduct) -> String {
+        if let source = product.sourceURL, !source.isEmpty { return "Check this out on Ghost Cart:\n\(source)" }
+        return "Check out \(product.name) on Ghost Cart."
     }
 
     private func listingCard(_ product: MarketplaceProduct) -> some View {
@@ -609,15 +655,34 @@ private struct ProductListingView: View {
                     }
                 }
             }.buttonStyle(.plain)
-            Button {
-                onAddToCart(product)
-                recentlyAdded.insert(product.id)
-            } label: {
-                Text(recentlyAdded.contains(product.id) ? "Added ✓" : "Add to cart")
-                    .font(.caption.weight(.bold)).frame(maxWidth: .infinity).padding(.vertical, 10)
+
+            HStack(spacing: 6) {
+                Button {
+                    onAddToCart(product)
+                    recentlyAdded.insert(product.id)
+                } label: {
+                    HStack(spacing: 6) {
+                        if !recentlyAdded.contains(product.id) {
+                            Image(systemName: "cart").font(.caption.weight(.bold))
+                        }
+                        Text(recentlyAdded.contains(product.id) ? "Added ✓" : "Ghost it").font(.caption.weight(.bold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                }
+                .foregroundStyle(Color.inkColor).background(Color.ghostGreenColor, in: RoundedRectangle(cornerRadius: 12))
+
+                ShareLink(item: shareText(for: product)) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.inkColor)
+                        .frame(width: 34, height: 34)
+                        .modifier(GlassCircleBackground())
+                }
+                .simultaneousGesture(TapGesture().onEnded {
+                    GhostAnalytics.productShared(product.id)
+                })
             }
-            .frame(maxWidth: .infinity)
-            .foregroundStyle(Color.inkColor).background(Color.ghostGreenColor, in: RoundedRectangle(cornerRadius: 12))
         }
         .padding(10)
         .modifier(GlassCardBackground(cornerRadius: 18))
@@ -684,6 +749,9 @@ private struct ProductDetailView: View {
                     ShareLink(item: shareText) {
                         Image(systemName: "square.and.arrow.up").detailRoundButton()
                     }
+                    .simultaneousGesture(TapGesture().onEnded {
+                        GhostAnalytics.productShared(product.id)
+                    })
                     Button {
                         isFavorite.toggle(); onToggleFavorite()
                     } label: {

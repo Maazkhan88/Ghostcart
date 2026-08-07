@@ -88,6 +88,7 @@ struct TutorialView: View {
             }
         }
         .preferredColorScheme(.light)
+        .environment(\.colorScheme, .light)
         .alert("Leave the tutorial?", isPresented: $showExitDialog) {
             Button("Continue tutorial", role: .cancel) {}
             Button("Exit tutorial", role: .destructive) { finish() }

@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 
 const PACKAGE_NAME = "com.ghostcart.app";
 const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${PACKAGE_NAME}`;
+const APP_STORE_ID = "6796950263";
+const APP_STORE_URL = `https://apps.apple.com/app/id${APP_STORE_ID}`;
 
 function isAppleMobileDevice() {
   const userAgent = navigator.userAgent;
@@ -29,11 +31,16 @@ export function GiftHandoffActions({ token }: { token: string }) {
   }, [intentUrl]);
 
   if (isAppleMobile) {
+    // Getting here at all means the OS didn't already hand this tap straight
+    // to the app via Universal Links (app not installed, or an in-app
+    // browser that doesn't honor them) - there's no reliable client-side
+    // retry for that on iOS the way Android's intent:// fallback works, so
+    // just point at the store.
     return (
-      <aside className="gc-gift-apple" aria-label="Apple availability">
-        <strong>Ghost Cart for Apple is coming.</strong>
-        <p>Our Ghost devs are working very hard to bring Ghost Cart to Apple devices.</p>
-      </aside>
+      <div className="gc-gift-actions">
+        <a className="gc-button gc-button-green" href={APP_STORE_URL}>Get Ghost Cart on the App Store</a>
+        <p>After installing, return to the email and tap the gift link again.</p>
+      </div>
     );
   }
 

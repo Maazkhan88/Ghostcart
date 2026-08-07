@@ -85,6 +85,7 @@ enum SpendingTrigger: String, Codable, CaseIterable, Identifiable {
     case reward
     case lateNight = "late_night"
     case practicalNeed = "practical_need"
+    case gift = "Gift"
     case other
 
     var id: String { rawValue }
@@ -98,6 +99,7 @@ enum SpendingTrigger: String, Codable, CaseIterable, Identifiable {
         case .reward: return "Reward"
         case .lateNight: return "Late-night scrolling"
         case .practicalNeed: return "Practical need"
+        case .gift: return "Gift"
         case .other: return "Other"
         }
     }
@@ -131,12 +133,23 @@ struct AlmostBuy: Identifiable, Codable, Hashable {
     var capturedAt: Date
     var decisionAt: Date?
     var resolvedAt: Date?
+    // When cooling actually began (distinct from capturedAt, which can predate
+    // cooling if the item sat "captured" first). Powers the timestamp-based
+    // Ghost Delivery stage machine (GhostDelivery.swift) - nil on records
+    // captured before this field existed, which safely falls back to
+    // capturedAt for stage math. Reset on "Send it around again" so a
+    // restarted cycle gets its own fresh six-stage delivery.
+    var coolingStartedAt: Date?
     var state: AlmostBuyState
     // Set once this item has a counterpart on the backend (mirrors
     // Android's AlmostBuy.serverId in AlmostBuySync.kt). nil means either
     // never synced (guest, offline, or sync just hasn't run yet) - local
     // storage stays the source of truth for the UI either way.
     var serverId: String?
+    // Groups items Ghosted together from one share-queue bulk confirm, so
+    // Orders/Cooldowns can later resolve a multi-item batch item-by-item.
+    // Mirrors Android's AlmostBuy.ghostOrderId (AlmostBuyModels.kt).
+    var ghostOrderId: String?
 
     init(
         id: UUID = UUID(),
@@ -150,8 +163,10 @@ struct AlmostBuy: Identifiable, Codable, Hashable {
         capturedAt: Date = Date(),
         decisionAt: Date? = nil,
         resolvedAt: Date? = nil,
+        coolingStartedAt: Date? = nil,
         state: AlmostBuyState = .captured,
-        serverId: String? = nil
+        serverId: String? = nil,
+        ghostOrderId: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -163,9 +178,11 @@ struct AlmostBuy: Identifiable, Codable, Hashable {
         self.imageURL = imageURL
         self.capturedAt = capturedAt
         self.decisionAt = decisionAt
+        self.coolingStartedAt = coolingStartedAt
         self.resolvedAt = resolvedAt
         self.state = state
         self.serverId = serverId
+        self.ghostOrderId = ghostOrderId
     }
 
     func isReady(at date: Date = Date()) -> Bool {
@@ -246,6 +263,11 @@ enum AppearancePreference: String, Codable, CaseIterable, Identifiable {
 
 struct ReminderPreferences: Codable, Equatable {
     var coolingCompleteEnabled = true
+    // Ghost Delivery stage notifications: the five in-progress stages
+    // (placed/preparing/picking up/out for delivery/nearby) toggle together;
+    // the "delivered" notification stays separately controllable per spec.
+    var deliveryStagesEnabled = true
+    var deliveredEnabled = true
     var lunchEnabled = false
     var dinnerEnabled = false
     var lateNightEnabled = false

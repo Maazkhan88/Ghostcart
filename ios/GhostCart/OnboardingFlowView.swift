@@ -80,5 +80,6 @@ struct OnboardingFlowView: View {
         // their light-mode values instead of flipping to unreadable white
         // text on a white background under system dark mode.
         .preferredColorScheme(.light)
+        .environment(\.colorScheme, .light)
     }
 }

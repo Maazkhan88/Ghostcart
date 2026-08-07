@@ -240,23 +240,72 @@ struct ProductThumbnail: View {
                     .foregroundStyle(Color.ghostGreenColor)
             }
             if let imageURL, let url = URL(string: imageURL) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        // Contained, not cropped - matches Android's
-                        // DiscoveryProductCard (ContentScale.Fit against a
-                        // white box), not a cover/fill crop.
-                        image.resizable().scaledToFit().padding(min(width, height) * 0.08)
-                            .background(Color.white)
-                    default:
-                        Color.clear
-                    }
+                RetryingRemoteImage(url: url) { image in
+                    // Contained, not cropped - matches Android's
+                    // DiscoveryProductCard (ContentScale.Fit against a
+                    // white box), not a cover/fill crop.
+                    image.resizable().scaledToFit().padding(min(width, height) * 0.08)
+                        .background(Color.white)
                 }
             }
         }
         .font(.headline)
         .modifier(ProductThumbnailFrame(fillWidth: fillWidth, width: width, height: height))
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+    }
+}
+
+// Plain AsyncImage never retries a failed/timed-out load - it just sits on
+// .empty forever. Product photos from the backend run 1.5-2.8MB each, and a
+// scrolling grid can kick off a dozen of those at once, so a handful
+// reliably fail under URLSession's per-host connection limit and never
+// recover, even though the URL is perfectly valid (confirmed via direct
+// fetch - this is a client load-order issue, not missing/broken backend
+// data). Retries a few times with backoff before giving up, so the caller's
+// bundled-photo/icon fallback underneath only shows for a genuinely dead URL.
+private struct RetryingRemoteImage<Content: View>: View {
+    let url: URL
+    @ViewBuilder let content: (Image) -> Content
+
+    @State private var loadedImage: Image?
+    @State private var attempt = 0
+
+    private let maxAttempts = 4
+
+    var body: some View {
+        Group {
+            if let loadedImage {
+                content(loadedImage)
+            } else {
+                Color.clear
+            }
+        }
+        .task(id: url) {
+            loadedImage = nil
+            attempt = 0
+            await load()
+        }
+    }
+
+    private func load() async {
+        while attempt < maxAttempts {
+            attempt += 1
+            do {
+                let (data, response) = try await URLSession.shared.data(from: url)
+                if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+                    throw URLError(.badServerResponse)
+                }
+                if let uiImage = UIImage(data: data) {
+                    loadedImage = Image(uiImage: uiImage)
+                    return
+                }
+            } catch {
+                // fall through to retry
+            }
+            if attempt < maxAttempts {
+                try? await Task.sleep(nanoseconds: UInt64(300_000_000 * attempt))
+            }
+        }
     }
 }
 

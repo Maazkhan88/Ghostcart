@@ -12,5 +12,9 @@
 	<array>
 		<string>group.com.ghostcart.app</string>
 	</array>
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:theghostcart.com</string>
+	</array>
 </dict>
 </plist>

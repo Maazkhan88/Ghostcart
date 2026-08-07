@@ -6,6 +6,7 @@ struct GhostCartApp: App {
     @StateObject private var store = GhostCartStore()
     @StateObject private var onboarding = OnboardingState()
     @StateObject private var auth = AuthService.shared
+    @StateObject private var deepLinks = DeepLinkRouter()
 
     var body: some Scene {
         WindowGroup {
@@ -13,6 +14,7 @@ struct GhostCartApp: App {
                 .environmentObject(store)
                 .environmentObject(onboarding)
                 .environmentObject(auth)
+                .environmentObject(deepLinks)
                 .preferredColorScheme(store.preferences.appearance.colorScheme)
                 // Nothing in this app was designed against unbounded Dynamic
                 // Type - fixed-height text frames (e.g. product card titles)
@@ -21,6 +23,23 @@ struct GhostCartApp: App {
                 // scale either, so this doesn't cost parity.
                 .dynamicTypeSize(...DynamicTypeSize.accessibility1)
                 .task { await auth.restoreSession() }
+                // A theghostcart.com/gift/{token} Universal Link. Mirrors
+                // Android's MainActivity.captureGhostGiftLink - reveal works
+                // signed-out, so this is handled independent of onboarding
+                // state, same as Android bypassing its normal nav graph entry.
+                .onOpenURL { deepLinks.handle($0) }
+                .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+                    if let url = activity.webpageURL { deepLinks.handle(url) }
+                }
+                .fullScreenCover(isPresented: Binding(
+                    get: { deepLinks.pendingGiftToken != nil },
+                    set: { if !$0 { deepLinks.pendingGiftToken = nil } }
+                )) {
+                    if let token = deepLinks.pendingGiftToken {
+                        GhostGiftRevealView(token: token, onDismiss: { deepLinks.pendingGiftToken = nil })
+                            .environmentObject(store)
+                    }
+                }
         }
     }
 }
@@ -59,18 +78,23 @@ private struct RootView: View {
     }
 }
 
+// Matches the approved brand handoff (docs/claude-ios-handoff-brand-icon.md):
+// solid black background, the white horizontal GhostCart lockup, and the
+// supporting line at ~68% white with no trailing period. Fixed to this
+// exact look regardless of system light/dark mode, same as Android's launch
+// screen.
 private struct BrandedLaunchView: View {
     var body: some View {
         ZStack {
-            Color.paperColor.ignoresSafeArea()
+            Color.black.ignoresSafeArea()
             VStack(spacing: 12) {
-                GhostCartLogoView().frame(width: 220, height: 72)
-                Text("For everything you almost bought.")
+                GhostCartLogoView(tint: .white).frame(width: 220, height: 72)
+                Text("For everything you almost bought")
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(Color.white.opacity(0.68))
             }
         }
-        .preferredColorScheme(.light)
+        .preferredColorScheme(.dark)
     }
 }
 
@@ -97,6 +121,7 @@ private struct ConsentLoadFailureView: View {
         .padding(24)
         .background(Color.paperColor.ignoresSafeArea())
         .preferredColorScheme(.light)
+        .environment(\.colorScheme, .light)
     }
 }
 
@@ -115,7 +140,8 @@ private struct StorySplashView: View {
             if let story {
                 AsyncImage(url: story.imageURL) { phase in
                     if case .success(let image) = phase {
-                        image.resizable().scaledToFill()
+                        image.resizable().scaledToFit()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                 }
                 .ignoresSafeArea()

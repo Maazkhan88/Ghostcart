@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "2A5Q764W66.com.ghostcart.app",
+        "paths": ["/gift/*"]
+      }
+    ]
+  }
+}

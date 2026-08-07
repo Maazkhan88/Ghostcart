@@ -120,8 +120,8 @@ struct CaptureView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 12) {
-                    CaptureFieldLabel(title: "Cooling period", required: true)
-                    Text("Recommended for \(category.title.lowercased()): \(cooldownLabel(category.recommendedCooldownMinutes))")
+                    CaptureFieldLabel(title: "Ghost Delivery time", required: true)
+                    Text("Your Ghost Delivery time is your cooling period. Nothing will be purchased or physically delivered.")
                         .font(.caption)
                         .foregroundStyle(Color.secondary)
 
@@ -148,7 +148,7 @@ struct CaptureView: View {
                 }
 
                 VStack(spacing: 11) {
-                    Button("Capture and start cooling") { submit(startCooling: true) }
+                    Button("Ghost it") { submit(startCooling: true) }
                         .buttonStyle(GhostPrimaryButtonStyle())
                         .disabled(!canSubmit)
                         .opacity(canSubmit ? 1 : 0.45)
@@ -405,8 +405,11 @@ struct CaptureView: View {
         amount == amount.rounded() ? String(Int(amount)) : String(amount)
     }
 
+    // Category-sensitive Ghost Delivery time presets: food leads with short
+    // durations (15/30 min), everything else leads with longer ones.
     private var cooldownOptions: [Int] {
-        Array(Set([category.recommendedCooldownMinutes, 30, 24 * 60, 48 * 60, 7 * 24 * 60])).sorted()
+        let presetMinutes = GhostDeliveryDuration.presets(for: category).compactMap { $0.totalMinutes }
+        return Array(Set(presetMinutes + [category.recommendedCooldownMinutes])).sorted()
     }
 
     private func cooldownLabel(_ minutes: Int) -> String {
@@ -417,6 +420,8 @@ struct CaptureView: View {
 
     private func submit(startCooling: Bool) {
         guard let amount = parsedAmount, canSubmit else { return }
+        GhostAnalytics.ghostItTapped(category: category.rawValue)
+        if startCooling { GhostAnalytics.deliveryDurationSelected(minutes: cooldownMinutes) }
         let capturedURL = source == .url && !trimmedSourceURL.isEmpty ? trimmedSourceURL : nil
         let id = store.capture(
             name: name,

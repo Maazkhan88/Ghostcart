@@ -174,6 +174,10 @@ struct ProgressView: View {
                     }
                 }
 
+                Text("Money Kept is the listed value of items you confirmed you skipped. It is not cash or a bank balance.")
+                    .font(.caption2)
+                    .foregroundStyle(Color.secondary)
+
                 SimulationDisclosure()
             }
             .padding(20)
@@ -181,6 +185,7 @@ struct ProgressView: View {
         }
         .background(Color(.systemBackground))
         .navigationBarHidden(true)
+        .onAppear { GhostAnalytics.walletOpened() }
         .sheet(isPresented: $showAddBalance) {
             AddSimulatedBalanceView { amount in
                 simulatedBalance = min(simulatedBalance + amount, 1_000_000)

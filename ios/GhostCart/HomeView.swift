@@ -8,6 +8,7 @@ struct HomeView: View {
     @State private var products: [MarketplaceProduct] = []
     @State private var favoriteIds: Set<String> = FavoritesStore.load()
     @State private var showLeaderboard = false
+    @State private var trackingItemID: UUID?
     let onGhostSomething: () -> Void
     let onOpenCart: () -> Void
     let onViewCooldowns: () -> Void
@@ -15,6 +16,14 @@ struct HomeView: View {
 
     private var nextItems: [AlmostBuy] {
         Array((store.readyItems + store.coolingItems).prefix(3))
+    }
+
+    // The single most-imminent active Ghost Delivery, if any - surfaced as a
+    // hero card per the product spec's Home section order (right after the
+    // promo banner, before Marketplace). store.coolingItems is already
+    // sorted by decisionAt ascending.
+    private var activeGhostDelivery: AlmostBuy? {
+        store.coolingItems.first
     }
 
     var body: some View {
@@ -49,6 +58,12 @@ struct HomeView: View {
 
                 if !banners.isEmpty {
                     PromoBannerCarousel(banners: banners)
+                }
+
+                if let activeGhostDelivery {
+                    ActiveGhostDeliveryCard(item: activeGhostDelivery) {
+                        trackingItemID = activeGhostDelivery.id
+                    }
                 }
 
                 MarketplaceSection(
@@ -173,6 +188,16 @@ struct HomeView: View {
                 LeaderboardView()
             }
         }
+        .fullScreenCover(isPresented: Binding(
+            get: { trackingItemID != nil },
+            set: { if !$0 { trackingItemID = nil } }
+        )) {
+            if let trackingItemID {
+                NavigationStack {
+                    GhostDeliveryTrackerView(itemID: trackingItemID, onClose: { self.trackingItemID = nil })
+                }
+            }
+        }
     }
 
     private func loadContentBlocks() async {
@@ -187,12 +212,16 @@ struct HomeView: View {
     }
 
     private func toggleFavorite(_ product: MarketplaceProduct) {
+        let nowFavorited: Bool
         if favoriteIds.contains(product.id) {
             favoriteIds.remove(product.id)
+            nowFavorited = false
         } else {
             favoriteIds.insert(product.id)
+            nowFavorited = true
         }
         FavoritesStore.save(favoriteIds)
+        GhostAnalytics.productFavorited(product.id, favorited: nowFavorited)
     }
 
     private func addToCart(_ product: MarketplaceProduct) {
@@ -639,6 +668,7 @@ struct LeaderboardView: View {
         }
         .task { await load() }
         .refreshable { await load() }
+        .onAppear { GhostAnalytics.leaderboardOpened() }
     }
 
     private func load() async {
@@ -797,6 +827,53 @@ private struct ProgressMiniMetric: View {
                 .foregroundStyle(Color.secondary)
         }
         .frame(maxWidth: .infinity)
+    }
+}
+
+// The Home hero card for the single most-imminent active Ghost Delivery.
+// Mirrors the product spec's example: "YOUR GHOST DELIVERY / [title] / Out
+// for Ghost Delivery · 6h 20m / Track".
+private struct ActiveGhostDeliveryCard: View {
+    let item: AlmostBuy
+    let onTrack: () -> Void
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 30)) { context in
+            let stage = item.deliveryStage(at: context.date) ?? .placed
+            HStack(spacing: 14) {
+                ProductThumbnail(imageURL: item.imageURL, systemImage: item.category.systemImage, size: 50, cornerRadius: 14)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("YOUR GHOST DELIVERY")
+                        .font(.system(size: 10, weight: .black))
+                        .foregroundStyle(Color.ghostGreenColor)
+                    Text(item.name).font(.subheadline.weight(.bold)).lineLimit(1)
+                    Text("\(stage.title) · \(remainingLabel(item, at: context.date))")
+                        .font(.caption)
+                        .foregroundStyle(Color.secondary)
+                }
+                Spacer()
+                Button("Track", action: onTrack)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color.inkColor)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Color.ghostGreenColor, in: Capsule())
+            }
+            .padding(16)
+            .background(Color.primary.opacity(0.04))
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .accessibilityElement(children: .combine)
+        }
+    }
+
+    private func remainingLabel(_ item: AlmostBuy, at date: Date) -> String {
+        guard let decisionAt = item.decisionAt else { return "" }
+        let seconds = max(0, Int(decisionAt.timeIntervalSince(date)))
+        if seconds < 60 { return "under a minute" }
+        let hours = seconds / 3600
+        let minutes = (seconds % 3600) / 60
+        if hours > 0 { return "\(hours)h \(minutes)m" }
+        return "\(minutes)m"
     }
 }
 

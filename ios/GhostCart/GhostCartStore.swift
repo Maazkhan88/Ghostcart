@@ -9,6 +9,10 @@ final class GhostCartStore: ObservableObject {
     // Transient (not persisted): a community tap or a shared link stages a
     // pre-filled capture that the Ghost + screen picks up on appear.
     @Published var captureSeed: CaptureSeed?
+    // Persisted separately (see ShareQueue.swift) - mirrors Android's
+    // "share_queue" SharedPreferences entry. Populated once a second share
+    // arrives while an earlier one hasn't been confirmed yet.
+    @Published var shareQueue: [ShareQueueItem] = []
     @Published var membership: MembershipProfile {
         didSet { save() }
     }
@@ -29,6 +33,7 @@ final class GhostCartStore: ObservableObject {
         self.membership = .fresh()
         self.preferences = GhostCartPreferences()
         restore()
+        loadShareQueue()
         expireAbandonedDecisions()
         isLoading = false
         notificationService.applyRoutinePreferences(preferences.reminders)
@@ -74,7 +79,9 @@ final class GhostCartStore: ObservableObject {
         trigger: SpendingTrigger,
         source: CaptureSource,
         sourceURL: String?,
-        imageURL: String? = nil
+        imageURL: String? = nil,
+        ghostOrderId: String? = nil,
+        onServerId: ((String) -> Void)? = nil
     ) -> UUID {
         let item = AlmostBuy(
             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -83,11 +90,12 @@ final class GhostCartStore: ObservableObject {
             trigger: trigger,
             source: source,
             sourceURL: sourceURL?.trimmingCharacters(in: .whitespacesAndNewlines),
-            imageURL: imageURL
+            imageURL: imageURL,
+            ghostOrderId: ghostOrderId
         )
         items.insert(item, at: 0)
         save()
-        syncCreateInBackground(item)
+        syncCreateInBackground(item, onServerId: onServerId)
         return item.id
     }
 
@@ -134,19 +142,29 @@ final class GhostCartStore: ObservableObject {
         save()
     }
 
-    func setCartCooldown(id: String, minutes: Int) {
-        guard let index = cartItems.firstIndex(where: { $0.id == id }) else { return }
-        cartItems[index].cooldownMinutes = max(1, minutes)
-        save()
-    }
-
     func clearCart() {
         cartItems.removeAll()
         save()
     }
 
+    // giftCartItemId/giftRecipientName/giftRecipientEmail mirror Android's
+    // "Send as a gift" checkbox inside Fake Checkout (CheckoutFlowScreens.kt):
+    // the chosen cart product is captured like any other, and only once its
+    // server sync round-trip returns a serverId does the gift POST fire -
+    // there's no separate "pick an existing item" gifting flow.
+    //
+    // ghostDeliveryMinutes is the single duration chosen once at checkout
+    // (the "When should your Ghost Order be delivered?" prompt) and applies
+    // to every item in the order under one shared ghostOrderId - "Ghost it"
+    // itself never asks for a duration, only adds to cart. Mirrors the
+    // Android product contract in docs/claude-ios-handoff-ghost-delivery.md.
     @discardableResult
-    func completeSimulatedCheckout() -> SimulatedOrder? {
+    func completeSimulatedCheckout(
+        ghostDeliveryMinutes: Int,
+        giftCartItemId: String? = nil,
+        giftRecipientName: String? = nil,
+        giftRecipientEmail: String? = nil
+    ) -> SimulatedOrder? {
         guard !cartItems.isEmpty else { return nil }
         let subtotal = cartSubtotalCents
         let promo = Int((Double(subtotal) * 0.10).rounded(.down))
@@ -165,8 +183,15 @@ final class GhostCartStore: ObservableObject {
             deliveryStep: 0
         )
 
+        let ghostOrderId = "GO-\(UUID().uuidString)"
+        var giftAlreadyAttached = false
         for cartItem in cartItems {
             for _ in 0..<cartItem.quantity {
+                let attachGift = !giftAlreadyAttached && cartItem.id == giftCartItemId
+                    && giftRecipientName != nil && giftRecipientEmail != nil
+                if attachGift { giftAlreadyAttached = true }
+                let recipientName = giftRecipientName
+                let recipientEmail = giftRecipientEmail
                 let id = capture(
                     name: cartItem.name,
                     amount: Double(cartItem.priceCents) / 100,
@@ -174,9 +199,20 @@ final class GhostCartStore: ObservableObject {
                     trigger: .other,
                     source: .manual,
                     sourceURL: nil,
-                    imageURL: cartItem.imageURL
+                    imageURL: cartItem.imageURL,
+                    ghostOrderId: ghostOrderId,
+                    onServerId: attachGift ? { serverId in
+                        guard let recipientName, let recipientEmail else { return }
+                        Task {
+                            try? await GhostGiftService.create(
+                                almostBuyId: serverId,
+                                recipientName: recipientName,
+                                recipientEmail: recipientEmail
+                            )
+                        }
+                    } : nil
                 )
-                startCooling(id: id, minutes: cartItem.cooldownMinutes)
+                startCooling(id: id, minutes: ghostDeliveryMinutes)
             }
         }
         cartItems.removeAll()
@@ -198,14 +234,31 @@ final class GhostCartStore: ObservableObject {
     }
 
     func startCooling(id: UUID, minutes: Int) {
+        let now = Date()
         updateItem(id: id) { item in
             item.state = .cooling
-            item.decisionAt = Calendar.current.date(byAdding: .minute, value: max(1, minutes), to: Date())
+            item.coolingStartedAt = now
+            item.decisionAt = Calendar.current.date(byAdding: .minute, value: max(1, minutes), to: now)
             item.resolvedAt = nil
         }
         guard let item = item(id: id) else { return }
         notificationService.scheduleCoolingComplete(for: item, enabled: preferences.reminders.coolingCompleteEnabled)
+        notificationService.scheduleDeliveryStages(
+            for: item,
+            stagesEnabled: preferences.reminders.deliveryStagesEnabled,
+            deliveredEnabled: preferences.reminders.deliveredEnabled
+        )
+        GhostAnalytics.ghostOrderPlaced(category: item.category.rawValue, minutes: minutes)
         syncExtendOrCreateInBackground(item)
+    }
+
+    // "Send it around again": a fresh Ghost Delivery cycle for the same item.
+    // The prior cycle's resolution (if any) is not touched here - callers
+    // that want history preserve it themselves before calling this. Never
+    // adds Money Kept.
+    func restartGhostDelivery(id: UUID, minutes: Int) {
+        notificationService.cancelDeliveryStages(for: id)
+        startCooling(id: id, minutes: minutes)
     }
 
     func resolve(id: UUID, outcome: AlmostBuyState) {
@@ -215,6 +268,7 @@ final class GhostCartStore: ObservableObject {
             item.resolvedAt = Date()
         }
         notificationService.cancelCoolingComplete(for: id)
+        notificationService.cancelDeliveryStages(for: id)
         guard let item = item(id: id) else { return }
         syncResolveInBackground(item)
     }
@@ -232,10 +286,11 @@ final class GhostCartStore: ObservableObject {
 
     // MARK: - Server sync (best-effort, never blocks the caller)
 
-    private func syncCreateInBackground(_ item: AlmostBuy) {
+    private func syncCreateInBackground(_ item: AlmostBuy, onServerId: ((String) -> Void)? = nil) {
         Task { @MainActor [weak self] in
             guard let serverId = await AlmostBuySyncService.syncCreate(item) else { return }
             self?.attachServerId(serverId, to: item.id)
+            onServerId?(serverId)
         }
     }
 
@@ -293,6 +348,7 @@ final class GhostCartStore: ObservableObject {
     func delete(id: UUID) {
         items.removeAll { $0.id == id }
         notificationService.cancelCoolingComplete(for: id)
+        notificationService.cancelDeliveryStages(for: id)
         save()
     }
 
@@ -317,6 +373,16 @@ final class GhostCartStore: ObservableObject {
     func refreshCoolingNotifications() {
         for item in items where item.state.isWaiting {
             notificationService.scheduleCoolingComplete(for: item, enabled: preferences.reminders.coolingCompleteEnabled)
+        }
+    }
+
+    func refreshDeliveryStageNotifications() {
+        for item in items where item.state.isWaiting {
+            notificationService.scheduleDeliveryStages(
+                for: item,
+                stagesEnabled: preferences.reminders.deliveryStagesEnabled,
+                deliveredEnabled: preferences.reminders.deliveredEnabled
+            )
         }
     }
 
@@ -355,6 +421,7 @@ final class GhostCartStore: ObservableObject {
         UNUserNotificationCenter.current().removeAllDeliveredNotifications()
         UserDefaults.standard.removeObject(forKey: persistenceKey)
         UserDefaults.standard.removeObject(forKey: "ghostcart.v2.favorite-product-ids")
+        clearShareQueue()
         items = []
         cartItems = []
         activeOrder = nil

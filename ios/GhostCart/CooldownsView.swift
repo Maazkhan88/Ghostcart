@@ -2,8 +2,8 @@ import SwiftUI
 
 struct CooldownsView: View {
     @EnvironmentObject private var store: GhostCartStore
-    @State private var snoozeTarget: AlmostBuy?
     @State private var deleteTarget: AlmostBuy?
+    @State private var trackingItemID: UUID?
 
     private var expiredItems: [AlmostBuy] {
         store.items.filter { $0.state == .expired }
@@ -29,12 +29,7 @@ struct CooldownsView: View {
                 if !store.readyItems.isEmpty {
                     CooldownSection(title: "Ready to decide", count: store.readyItems.count) {
                         ForEach(store.readyItems) { item in
-                            ReadyDecisionCard(
-                                item: item,
-                                onSkipped: { store.resolve(id: item.id, outcome: .resolvedSkipped) },
-                                onBought: { store.resolve(id: item.id, outcome: .resolvedBought) },
-                                onMoreTime: { snoozeTarget = item }
-                            )
+                            ReadyDecisionCard(item: item, onOpenDecision: { trackingItemID = item.id })
                         }
                     }
                 }
@@ -42,7 +37,7 @@ struct CooldownsView: View {
                 if !store.coolingItems.isEmpty {
                     CooldownSection(title: "Cooling now", count: store.coolingItems.count) {
                         ForEach(store.coolingItems) { item in
-                            CoolingCard(item: item, onDelete: { deleteTarget = item })
+                            CoolingCard(item: item, onDelete: { deleteTarget = item }, onTrack: { trackingItemID = item.id })
                         }
                     }
                 }
@@ -88,18 +83,15 @@ struct CooldownsView: View {
         }
         .background(Color(.systemBackground))
         .navigationBarHidden(true)
-        .confirmationDialog(
-            "How much more time?",
-            isPresented: Binding(
-                get: { snoozeTarget != nil },
-                set: { if !$0 { snoozeTarget = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            Button("1 hour") { snooze(minutes: 60) }
-            Button("24 hours") { snooze(minutes: 24 * 60) }
-            Button("3 days") { snooze(minutes: 3 * 24 * 60) }
-            Button("Cancel", role: .cancel) { snoozeTarget = nil }
+        .fullScreenCover(isPresented: Binding(
+            get: { trackingItemID != nil },
+            set: { if !$0 { trackingItemID = nil } }
+        )) {
+            if let trackingItemID {
+                NavigationStack {
+                    GhostDeliveryTrackerView(itemID: trackingItemID, onClose: { self.trackingItemID = nil })
+                }
+            }
         }
         .confirmationDialog(
             "Remove this almost-buy?",
@@ -115,11 +107,6 @@ struct CooldownsView: View {
             }
             Button("Cancel", role: .cancel) { deleteTarget = nil }
         }
-    }
-
-    private func snooze(minutes: Int) {
-        if let snoozeTarget { store.snooze(id: snoozeTarget.id, minutes: minutes) }
-        snoozeTarget = nil
     }
 }
 
@@ -152,28 +139,17 @@ private struct CooldownSection<Content: View>: View {
 
 private struct ReadyDecisionCard: View {
     let item: AlmostBuy
-    let onSkipped: () -> Void
-    let onBought: () -> Void
-    let onMoreTime: () -> Void
+    let onOpenDecision: () -> Void
 
     var body: some View {
         GhostCard {
             VStack(alignment: .leading, spacing: 15) {
-                ItemSummary(item: item, stateText: "Cooling complete", accent: true)
-                Text("What did you decide?")
+                ItemSummary(item: item, stateText: "Delivered", accent: true)
+                Text("Your decision has arrived")
                     .font(.headline.weight(.bold))
-
-                Button("I skipped it", action: onSkipped)
+                Button("Skip, buy, or decide", action: onOpenDecision)
                     .buttonStyle(GhostPrimaryButtonStyle())
-
-                HStack(spacing: 10) {
-                    Button("Bought intentionally", action: onBought)
-                        .buttonStyle(GhostSecondaryButtonStyle())
-                    Button("More time", action: onMoreTime)
-                        .buttonStyle(GhostSecondaryButtonStyle())
-                }
-
-                Text("Only “I skipped it” contributes to Money Kept.")
+                Text("Only a confirmed skip contributes to Money Kept.")
                     .font(.caption)
                     .foregroundStyle(Color.secondary)
             }
@@ -184,6 +160,7 @@ private struct ReadyDecisionCard: View {
 private struct CoolingCard: View {
     let item: AlmostBuy
     let onDelete: () -> Void
+    let onTrack: () -> Void
 
     var body: some View {
         GhostCard {
@@ -191,11 +168,13 @@ private struct CoolingCard: View {
                 ItemSummary(item: item, stateText: item.state.title, accent: false)
                 if let decisionAt = item.decisionAt {
                     TimelineView(.periodic(from: .now, by: 60)) { context in
-                        Text(decisionAt > context.date ? "Decision opens \(decisionAt.relativeDescription(from: context.date))" : "Ready now")
+                        Text(decisionAt > context.date ? "Ghost Delivery arrives \(decisionAt.relativeDescription(from: context.date))" : "Ready now")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(decisionAt > context.date ? Color.secondary : Color.ghostGreenColor)
                     }
                 }
+                Button("Track Ghost Delivery", action: onTrack)
+                    .buttonStyle(GhostSecondaryButtonStyle())
                 Button("Remove almost-buy", role: .destructive, action: onDelete)
                     .font(.caption.weight(.bold))
             }

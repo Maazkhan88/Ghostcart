@@ -72,6 +72,11 @@ struct CaptureSeed: Equatable {
     // Whether to preselect the anonymous community opt-in. Community-origin
     // items are already public, so re-sharing them defaults off.
     var offerCommunityShare: Bool
+    // Marks a seed built from the OS share sheet (mirrors Android's
+    // AlmostBuyDraft.sourceKind == "share"). Used to decide whether a second
+    // incoming share should migrate this seed into the share queue instead
+    // of silently overwriting it.
+    var isFromShare: Bool = false
 }
 
 // MARK: - Shared-metadata merge (ported from Android)

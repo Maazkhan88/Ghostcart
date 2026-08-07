@@ -105,6 +105,75 @@ final class NotificationService {
         center.removePendingNotificationRequests(withIdentifiers: [coolingIdentifier(for: id)])
     }
 
+    // Schedules all six Ghost Delivery stage notifications at once, each as
+    // its own time-interval trigger fired at that stage's threshold fraction
+    // of the total duration - no repeating/recurring timer, no background
+    // process. "delivered" reuses the same identifier space as the existing
+    // cooling-complete notification's category/actions so the OS presents
+    // one coherent notification, not two, when the timing coincides.
+    private var deliveryStageTasks: [UUID: Task<Void, Never>] = [:]
+
+    func scheduleDeliveryStages(for item: AlmostBuy, stagesEnabled: Bool, deliveredEnabled: Bool) {
+        cancelDeliveryStages(for: item.id)
+        guard stagesEnabled || deliveredEnabled, let decisionAt = item.decisionAt, decisionAt > Date() else { return }
+        let start = item.coolingStartedAt ?? item.capturedAt
+        let total = decisionAt.timeIntervalSince(start)
+        guard total > 0 else { return }
+        let durationLabel = Self.durationLabel(minutes: Int((total / 60).rounded()))
+
+        deliveryStageTasks[item.id] = Task { [weak self] in
+            guard let self else { return }
+            guard await requestAuthorizationIfNeeded() else { return }
+            guard !Task.isCancelled else { return }
+
+            for stage in DeliveryStage.allCases {
+                let stageEnabled = stage == .delivered ? deliveredEnabled : stagesEnabled
+                guard stageEnabled else { continue }
+                let fireAt = start.addingTimeInterval(total * stage.thresholdFraction)
+                let interval = fireAt.timeIntervalSinceNow
+                guard interval > 0 else { continue }
+
+                let content = UNMutableNotificationContent()
+                content.title = stage.notificationTitle
+                content.body = stage.notificationBody(itemName: item.name, durationLabel: durationLabel)
+                content.sound = .default
+                if stage == .delivered {
+                    content.categoryIdentifier = Self.coolingCategoryIdentifier
+                }
+                content.userInfo = [
+                    "destination": "cooldowns",
+                    "almostBuyID": item.id.uuidString,
+                    "deliveryStage": stage.rawValue,
+                ]
+                let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
+                let request = UNNotificationRequest(
+                    identifier: deliveryStageIdentifier(for: item.id, stage: stage),
+                    content: content,
+                    trigger: trigger
+                )
+                try? await center.add(request)
+            }
+            deliveryStageTasks[item.id] = nil
+        }
+    }
+
+    func cancelDeliveryStages(for id: UUID) {
+        deliveryStageTasks[id]?.cancel()
+        deliveryStageTasks[id] = nil
+        let identifiers = DeliveryStage.allCases.map { deliveryStageIdentifier(for: id, stage: $0) }
+        center.removePendingNotificationRequests(withIdentifiers: identifiers)
+    }
+
+    private func deliveryStageIdentifier(for id: UUID, stage: DeliveryStage) -> String {
+        "ghostcart.delivery.\(id.uuidString).\(stage.rawValue)"
+    }
+
+    private static func durationLabel(minutes: Int) -> String {
+        if minutes < 60 { return "\(minutes) min" }
+        if minutes < 24 * 60 { return "\(minutes / 60) hr" }
+        return "\(minutes / (24 * 60)) day\(minutes == 24 * 60 ? "" : "s")"
+    }
+
     func applyRoutinePreferences(_ preferences: ReminderPreferences) {
         let identifiers = ["ghostcart.lunch", "ghostcart.dinner", "ghostcart.late-night", "ghostcart.salary-day"]
         routineTask?.cancel()

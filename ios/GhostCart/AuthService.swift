@@ -116,6 +116,13 @@ final class AuthService: ObservableObject {
         return try await ApiClient.shared.patchJSON(path: path, body: body, bearerToken: accessToken)
     }
 
+    // For endpoints that work signed-out but attach the current session when
+    // one exists (e.g. gift reveal, which links the gift to the recipient's
+    // account only if they happen to be signed in with a matching email).
+    func optionallyAuthorizedPost(path: String, body: [String: Any]) async throws -> [String: Any] {
+        try await ApiClient.shared.postJSON(path: path, body: body, bearerToken: accessToken)
+    }
+
     private func authenticate(
         path: String,
         body: [String: Any],

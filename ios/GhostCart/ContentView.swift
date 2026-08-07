@@ -88,7 +88,13 @@ struct ContentView: View {
         case .cart:
             NavigationStack { CartFlowView(onViewProgress: { selectedTab = .progress }) }
         case .capture:
-            NavigationStack { CaptureView(onComplete: { selectedTab = .cooldowns }) }
+            NavigationStack {
+                if store.shareQueue.isEmpty {
+                    CaptureView(onComplete: { selectedTab = .cooldowns })
+                } else {
+                    ShareQueueReviewView(onComplete: { selectedTab = .cooldowns })
+                }
+            }
         case .progress:
             NavigationStack { ProgressView() }
         case .profile:
@@ -98,7 +104,10 @@ struct ContentView: View {
 
     // A link shared into the GhostCartShare extension is written to the App
     // Group container. When the app becomes active we consume it once, preview
-    // it, and stage a pre-filled capture on the Ghost + tab.
+    // it, and stage a pre-filled capture on the Ghost + tab. The first share
+    // still opens the familiar single-item form; only once a second share
+    // arrives while the first hasn't been confirmed yet does this become a
+    // queue - mirrors Android's importSharedProduct (AppViewModel.kt:655-739).
     private func handleSharedImport() {
         guard let pending = SharedImportBridge.takePending() else { return }
         Task {
@@ -109,7 +118,19 @@ struct ContentView: View {
             )
             let seed = Self.seed(from: pending, result: result)
             await MainActor.run {
-                store.stageCapture(seed)
+                if store.hasPendingShare {
+                    store.migratePendingCaptureSeedToQueue()
+                    store.appendToShareQueue(ShareQueueItem(
+                        name: seed.name,
+                        amount: seed.amount ?? 0,
+                        category: seed.category,
+                        imageURL: seed.imageURL,
+                        sourceURL: seed.sourceURL,
+                        sourceDomain: seed.sourceDomain
+                    ))
+                } else {
+                    store.stageCapture(seed)
+                }
                 selectedTab = .capture
             }
         }
@@ -127,7 +148,8 @@ struct ContentView: View {
                 sourceDomain: product.sourceDomain,
                 retailer: product.retailer,
                 note: product.note,
-                offerCommunityShare: true
+                offerCommunityShare: true,
+                isFromShare: true
             )
         }
         // Listing pages and failed previews still open the capture form with the
@@ -141,7 +163,8 @@ struct ContentView: View {
             sourceDomain: nil,
             retailer: nil,
             note: nil,
-            offerCommunityShare: true
+            offerCommunityShare: true,
+            isFromShare: true
         )
     }
 }
@@ -279,7 +302,6 @@ private struct CartFlowView: View {
     @EnvironmentObject private var store: GhostCartStore
     let onViewProgress: () -> Void
     @State private var stage: CartFlowStage = .cart
-    @State private var cooldownItem: GhostCartItem?
 
     var body: some View {
         Group {
@@ -308,13 +330,6 @@ private struct CartFlowView: View {
                     cartView
                 }
             }
-        }
-        .sheet(item: $cooldownItem) { item in
-            CartCooldownPicker(item: item) { minutes in
-                store.setCartCooldown(id: item.id, minutes: minutes)
-                cooldownItem = nil
-            }
-            .presentationDetents([.medium])
         }
     }
 
@@ -386,8 +401,6 @@ private struct CartFlowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.name).font(.subheadline.weight(.bold)).lineLimit(2)
                 DirhamAmount(value: Double(item.priceCents) / 100, font: .caption, iconSize: 9, color: Color.secondary)
-                Button(cooldownLabel(item.cooldownMinutes)) { cooldownItem = item }
-                    .font(.caption2.weight(.bold)).foregroundStyle(Color.ghostGreenColor)
             }
             Spacer()
             HStack(spacing: 10) {
@@ -431,59 +444,31 @@ private struct CartFlowView: View {
         }
     }
 
-    private func cooldownLabel(_ minutes: Int) -> String {
-        if minutes < 60 { return "Cooldown: \(minutes) min" }
-        if minutes < 1440 { return "Cooldown: \(minutes / 60) hr" }
-        return "Cooldown: \(minutes / 1440) day\(minutes == 1440 ? "" : "s")"
-    }
-}
-
-private struct CartCooldownPicker: View {
-    let item: GhostCartItem
-    let onSelect: (Int) -> Void
-    @Environment(\.dismiss) private var dismiss
-    private let options = [30, 24 * 60, 48 * 60, 7 * 24 * 60]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Capsule().fill(Color.secondary.opacity(0.3)).frame(width: 38, height: 5).frame(maxWidth: .infinity)
-            Text("Choose a cooldown").font(.title2.weight(.black))
-            Text("Give \(item.name) time before you decide.").font(.caption).foregroundStyle(Color.secondary)
-            ForEach(options, id: \.self) { minutes in
-                Button {
-                    onSelect(minutes)
-                } label: {
-                    HStack {
-                        Image(systemName: item.cooldownMinutes == minutes ? "largecircle.fill.circle" : "circle")
-                        Text(label(minutes)).font(.subheadline.weight(.bold))
-                        Spacer()
-                    }
-                    .padding(14)
-                    .foregroundStyle(Color.primary)
-                    .background(item.cooldownMinutes == minutes ? Color.ghostGreenColor.opacity(0.18) : Color.primary.opacity(0.05))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                }
-                .buttonStyle(.plain)
-            }
-            Button("Cancel") { dismiss() }.frame(maxWidth: .infinity)
-        }
-        .padding(20)
-    }
-
-    private func label(_ minutes: Int) -> String {
-        switch minutes {
-        case 30: return "30 minutes"
-        case 1440: return "24 hours"
-        case 2880: return "2 days"
-        default: return "7 days"
-        }
-    }
 }
 
 private struct GhostCheckoutView: View {
     @EnvironmentObject private var store: GhostCartStore
     let onBack: () -> Void
     let onPlaced: () -> Void
+
+    // "Send as a gift" mirrors Android's Fake Checkout checkbox
+    // (CheckoutFlowScreens.kt): pick which cart product becomes the gift
+    // (only shown when more than one is in the cart), then recipient details
+    // and consent. The chosen product still enters the same Ghost Delivery
+    // time as the rest of the order - gifting never skips capture.
+    @State private var sendAsGift = false
+    @State private var giftProductId: String?
+    @State private var recipientName = ""
+    @State private var recipientEmail = ""
+    @State private var giftConsent = false
+
+    // Duration is chosen once, here at checkout - "Ghost it" itself only
+    // adds to cart. One duration applies to the whole order.
+    @State private var selectedDuration: Int = 60
+    private var isFoodOrder: Bool { store.cartItems.contains { AlmostBuyCategory(serverName: $0.category) == .food } }
+    private var durationPresets: [GhostDeliveryDuration] {
+        GhostDeliveryDuration.presets(for: isFoodOrder ? .food : .other)
+    }
 
     private var subtotal: Int { store.cartSubtotalCents }
     private var promo: Int { Int((Double(subtotal) * 0.10).rounded(.down)) }
@@ -528,10 +513,25 @@ private struct GhostCheckoutView: View {
                     }
                 }
 
+                deliveryTimeSection
+
+                giftSection
+
                 Button("Place Ghost Order") {
-                    if store.completeSimulatedCheckout() != nil { onPlaced() }
+                    let giftId = sendAsGift ? (giftProductId ?? store.cartItems.first?.id) : nil
+                    if store.completeSimulatedCheckout(
+                        ghostDeliveryMinutes: selectedDuration,
+                        giftCartItemId: giftId,
+                        giftRecipientName: sendAsGift ? recipientName : nil,
+                        giftRecipientEmail: sendAsGift ? recipientEmail : nil
+                    ) != nil {
+                        GhostAnalytics.deliveryDurationSelected(minutes: selectedDuration)
+                        onPlaced()
+                    }
                 }
                 .buttonStyle(GhostPrimaryButtonStyle())
+                .disabled(sendAsGift && giftValidationError != nil)
+                .opacity(sendAsGift && giftValidationError != nil ? 0.5 : 1)
                 Text("By continuing, you confirm this is only a spending-decision simulation.")
                     .font(.caption2).foregroundStyle(Color.secondary).multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
@@ -539,6 +539,109 @@ private struct GhostCheckoutView: View {
             .padding(20).padding(.bottom, 24)
         }
         .background(Color(.systemBackground)).navigationBarHidden(true)
+        .onAppear {
+            if let first = durationPresets.first?.totalMinutes { selectedDuration = first }
+        }
+    }
+
+    // "When should your Ghost Order be delivered?" - the one place duration
+    // is chosen, applied to the whole order at once. Never shown at "Ghost
+    // it" (add to cart) time.
+    private var deliveryTimeSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("When should your Ghost Order be delivered?").font(.headline.weight(.bold))
+            Text("Your Ghost Delivery time is your cooling period. Nothing will be purchased or physically delivered.")
+                .font(.caption)
+                .foregroundStyle(Color.secondary)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 100), spacing: 10)], spacing: 10) {
+                ForEach(durationPresets) { duration in
+                    if let minutes = duration.totalMinutes {
+                        Button {
+                            selectedDuration = minutes
+                        } label: {
+                            Text(duration.label)
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(selectedDuration == minutes ? Color.inkColor : Color.primary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(selectedDuration == minutes ? Color.ghostGreenColor : Color.primary.opacity(0.055))
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    private var giftValidationError: String? {
+        guard sendAsGift else { return nil }
+        if store.cartItems.count > 1 && giftProductId == nil { return "Choose one gift" }
+        let trimmedName = recipientName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedName.isEmpty || trimmedName.count > 80 { return "Recipient name is invalid" }
+        let trimmedEmail = recipientEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedEmail.range(of: #"^[^\s@]+@[^\s@]+\.[^\s@]+$"#, options: .regularExpression) != nil else {
+            return "Recipient email is invalid"
+        }
+        guard giftConsent else { return "Confirm that the recipient expects this email" }
+        return nil
+    }
+
+    private var giftSection: some View {
+        GhostCard {
+            VStack(alignment: .leading, spacing: 14) {
+                Toggle(isOn: $sendAsGift) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Send as a gift").font(.subheadline.weight(.bold))
+                        Text("No gift is purchased or delivered. The selected item still enters the same Ghost Delivery time as the rest of this order.")
+                            .font(.caption)
+                            .foregroundStyle(Color.secondary)
+                    }
+                }
+                .tint(Color.ghostGreenColor)
+
+                if sendAsGift {
+                    if store.cartItems.count > 1 {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Choose one gift").font(.caption.weight(.bold))
+                            ForEach(store.cartItems) { item in
+                                Button {
+                                    giftProductId = item.id
+                                } label: {
+                                    HStack {
+                                        Image(systemName: giftProductId == item.id ? "largecircle.fill.circle" : "circle")
+                                        Text(item.name).font(.caption.weight(.semibold))
+                                        Spacer()
+                                    }
+                                    .foregroundStyle(Color.primary)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+
+                    TextField("Recipient name", text: $recipientName).ghostTextField()
+                    TextField("Recipient email", text: $recipientEmail)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .ghostTextField()
+
+                    Button {
+                        giftConsent.toggle()
+                    } label: {
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: giftConsent ? "checkmark.square.fill" : "square")
+                                .foregroundStyle(giftConsent ? Color.ghostGreenColor : Color.secondary)
+                            Text("The recipient expects this email and I have their permission to send it.")
+                                .font(.caption2)
+                                .foregroundStyle(Color.primary)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
     }
 
     private func infoRow(_ icon: String, title: String, subtitle: String, action: String) -> some View {

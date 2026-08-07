@@ -95,6 +95,36 @@ enum GhostAnalytics {
         event("notification_opened", parameters: ["type": type])
     }
 
+    // Ghost Delivery / tutorial event set (product spec's required minimum).
+    static func tutorialStarted() { event("tutorial_started") }
+    static func tutorialStepViewed(_ step: String) { event("tutorial_step_viewed", parameters: ["step": step]) }
+    static func tutorialCompleted() { event("tutorial_completed") }
+    static func tutorialSkipped(atStep step: String) { event("tutorial_skipped", parameters: ["step": step]) }
+    static func tutorialReplayed() { event("tutorial_replayed") }
+    static func productFavorited(_ productID: String, favorited: Bool) {
+        event("product_favorited", parameters: ["product_id": productID, "favorited": favorited])
+    }
+    static func productShared(_ productID: String) { event("product_shared", parameters: ["product_id": productID]) }
+    static func productReviewsOpened(_ productID: String) { event("product_reviews_opened", parameters: ["product_id": productID]) }
+    static func ghostItTapped(category: String) { event("ghost_it_tapped", parameters: ["category": category]) }
+    static func deliveryDurationSelected(minutes: Int) { event("delivery_duration_selected", parameters: ["minutes": minutes]) }
+    static func ghostOrderPlaced(category: String, minutes: Int) {
+        event("ghost_order_placed", parameters: ["category": category, "minutes": minutes])
+    }
+    static func ghostStageReached(_ stage: String) { event("ghost_stage_reached", parameters: ["stage": stage]) }
+    static func ghostNotificationOpened(_ stage: String) { event("ghost_notification_opened", parameters: ["stage": stage]) }
+    static func trackerOpened() { event("tracker_opened") }
+    static func sourceOpenedDuringCooling() { event("source_opened_during_cooling") }
+    static func ghostOrderDelivered() { event("ghost_order_delivered") }
+    static func decisionSkipped() { event("decision_skipped") }
+    static func decisionRestarted() { event("decision_restarted") }
+    static func decisionBuyFromSource() { event("decision_buy_from_source") }
+    static func decisionBoughtAlready() { event("decision_bought_already") }
+    static func askFriendStarted() { event("ask_friend_started") }
+    static func ghostReceiptShared() { event("ghost_receipt_shared") }
+    static func walletOpened() { event("wallet_opened") }
+    static func leaderboardOpened() { event("leaderboard_opened") }
+
     static func storyViewed(index: Int) {
         event("story_viewed", parameters: ["index": index])
     }

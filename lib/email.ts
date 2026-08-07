@@ -294,7 +294,7 @@ function ghostGiftHtml(
             <p style="margin:0 0 22px;font-size:15px;line-height:1.55;color:#3a3a3a;">The product picture is blurred here. Reveal it privately in the Ghost Cart app.</p>
             <img src="${teaserUrl}" width="416" height="250" alt="Blurred gift preview" style="display:block;width:100%;height:250px;object-fit:cover;border-radius:16px;background:#f4f4f4;" />
             <a href="${revealUrl}" style="display:block;margin-top:22px;background:#64d64a;color:#050505;font-weight:800;font-size:15px;text-align:center;text-decoration:none;padding:15px 24px;border-radius:999px;">Reveal gift in Ghost Cart</a>
-            <p style="margin:18px 0 0;font-size:12px;line-height:1.5;color:#666660;">If Ghost Cart is installed, this opens the app. Otherwise, get it from Google Play and then tap this email link again.</p>
+            <p style="margin:18px 0 0;font-size:12px;line-height:1.5;color:#666660;">If Ghost Cart is installed, this opens the app. Otherwise, get it from Google Play or the App Store and then tap this email link again.</p>
           </td></tr>
           <tr><td style="padding:18px 32px 28px;border-top:1px solid #eeeeea;">
             <p style="margin:0;font-size:11px;line-height:1.5;color:#888882;"><strong>Simulation only.</strong> No gift was purchased or sent. No real payment or delivery occurred.</p>
