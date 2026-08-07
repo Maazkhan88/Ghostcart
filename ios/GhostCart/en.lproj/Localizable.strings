@@ -1,0 +1,12 @@
+/* Bottom tab bar - the single most universally-visible text in the app,
+   localized first as the concrete starting point for real Arabic support
+   (matches Android's app/src/main/res/values{,-ar}/strings.xml, which is
+   itself only a partial localization - nav_home/nav_cooldowns/nav_profile
+   are the three keys confirmed to still match current English wording;
+   Android's nav_progress ("Progress") is stale against iOS's current
+   "Wallet" label, so that one intentionally stays English-only here rather
+   than guessing at an unverified translation - see GhostCartApp.swift /
+   ContentView.swift comments at each localized call site). */
+"nav.home" = "Home";
+"nav.orders" = "Orders";
+"nav.profile" = "Profile";

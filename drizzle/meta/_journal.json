@@ -183,6 +183,13 @@
       "when": 1785534600108,
       "tag": "0025_purple_mauler",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1786140187704,
+      "tag": "0026_glamorous_hitman",
+      "breakpoints": true
     }
   ]
 }

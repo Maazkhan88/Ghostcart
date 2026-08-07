@@ -1,0 +1,6 @@
+/* Reused verbatim from Android's app/src/main/res/values-ar/strings.xml
+   (nav_home, nav_cooldowns, nav_profile) for cross-platform consistency,
+   not re-translated independently. */
+"nav.home" = "الرئيسية";
+"nav.orders" = "فترات الانتظار";
+"nav.profile" = "الملف الشخصي";

@@ -634,6 +634,30 @@ export const favoriteProducts = sqliteTable(
   ],
 );
 
+// Cross-device product reviews. Was on-device-only via UserDefaults on iOS
+// (ProductReviews.swift) with no Android equivalent and no backend at all -
+// this is the real table, matching favoriteProducts' text-productId
+// convention above for the same reason (catalog vs community product ids
+// share one string id space, not both FK-able to the same table).
+export const productReviews = sqliteTable(
+  "product_reviews",
+  {
+    id: text("id").primaryKey(),
+    productId: text("product_id").notNull(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    rating: integer("rating").notNull(),
+    text: text("text").notNull().default(""),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    check("product_reviews_rating_check", sql`${table.rating} BETWEEN 1 AND 5`),
+    index("product_reviews_product_idx").on(table.productId, table.createdAt),
+    index("product_reviews_user_idx").on(table.userId),
+  ],
+);
+
 // A completed marketplace-cart simulated checkout ("ghosted" it, in this
 // app's vocabulary - finished the process, as opposed to cooling off and
 // keeping the money). Deliberately separate from the anonymous, hashed-actor

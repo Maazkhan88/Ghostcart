@@ -227,7 +227,7 @@ private struct GhostBottomNav: View {
 
     private var barContent: some View {
         HStack(spacing: 0) {
-            navItem(.home, icon: "HomeIcon", label: "Home")
+            navItem(.home, icon: "HomeIcon", label: String(localized: "nav.home", defaultValue: "Home"))
             // No badge here - mirror plan slice 4 fix. This tab previously
             // carried a "ready to decide" count badge, but Android's badge
             // on this row is cart-item count, on the CENTER tab, not this
@@ -239,10 +239,16 @@ private struct GhostBottomNav: View {
             // device screenshot - Android's actual displayed string is
             // "Orders" (R.string.nav_cooldowns = "Orders", not "Cooldowns"
             // despite the key name), so no label change was made here.
-            navItem(.cooldowns, icon: "OrdersIcon", label: "Orders")
+            navItem(.cooldowns, icon: "OrdersIcon", label: String(localized: "nav.orders", defaultValue: "Orders"))
             cartItem
+            // Intentionally not localized yet: Android's translated string
+            // for this key ("nav_progress") is for its old "Progress"
+            // label, not the current "Wallet" wording - see
+            // en.lproj/Localizable.strings' header comment. Localize once a
+            // verified-current Arabic translation for "Wallet" exists,
+            // rather than guessing at one here.
             navItem(.progress, icon: "WalletIcon", label: "Wallet")
-            navItem(.profile, icon: "ProfileIcon", label: "Profile")
+            navItem(.profile, icon: "ProfileIcon", label: String(localized: "nav.profile", defaultValue: "Profile"))
         }
         .padding(.horizontal, 8)
         // Keep the capsule compact. The previous 10pt top + 26pt bottom

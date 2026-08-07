@@ -330,11 +330,9 @@ final class GhostCartStore: ObservableObject {
     func syncFromServer() async {
         if let remoteItems = await AlmostBuySyncService.fetchRemote() {
             await MainActor.run {
-                let knownServerIds = Set(items.compactMap(\.serverId))
-                let newItems = remoteItems.filter { !knownServerIds.contains($0.serverId ?? "") }
-                guard !newItems.isEmpty else { return }
-                items.append(contentsOf: newItems)
-                items.sort { $0.capturedAt > $1.capturedAt }
+                let merged = Self.mergeRemoteItems(local: items, remote: remoteItems)
+                guard merged.count != items.count else { return }
+                items = merged
                 save()
             }
         }
@@ -344,6 +342,19 @@ final class GhostCartStore: ObservableObject {
         for item in unsyncedResolved {
             syncResolveInBackground(item)
         }
+    }
+
+    // Pure, side-effect-free merge: purely additive, pulls the account's
+    // server history in and adds any item this install doesn't already have
+    // (matched by serverId) - never deletes or overwrites a local item, so a
+    // failed/partial fetch can never lose data. Extracted from
+    // syncFromServer so the actual dedup/sort logic is unit-testable without
+    // mocking the network layer.
+    static func mergeRemoteItems(local: [AlmostBuy], remote: [AlmostBuy]) -> [AlmostBuy] {
+        let knownServerIds = Set(local.compactMap(\.serverId))
+        let newItems = remote.filter { !knownServerIds.contains($0.serverId ?? "") }
+        guard !newItems.isEmpty else { return local }
+        return (local + newItems).sorted { $0.capturedAt > $1.capturedAt }
     }
 
     func delete(id: UUID) {

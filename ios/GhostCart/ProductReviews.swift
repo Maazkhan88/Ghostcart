@@ -1,27 +1,28 @@
 import SwiftUI
 
-// Local-only reviews/comments. There is no backend reviews table or API
-// route yet (confirmed by inspection: no /api/*review*/*comment* endpoint
-// exists anywhere in this repo). Rather than fabricate content or invent
-// unreviewed backend schema/endpoints on the fly, this stores each device's
-// own reviews locally, per product, and is honest about that scope in its
-// own UI copy. Real cross-device reviews need the backend work documented
-// in the project's build summary (see: PENDING_BACKEND_REVIEWS.md-equivalent
-// notes in the final implementation summary) before this can sync.
+// Cross-device reviews via GET/POST/DELETE /api/products/:id/reviews(+/:reviewId)
+// when signed in - the backend + table didn't exist before this pass (see
+// docs/claude-ios-ghost-delivery-parity.md's known-gaps list). Guests keep
+// the original on-device-only behavior (ProductReviewStore, unchanged)
+// since posting requires an account server-side and the rest of the app
+// already draws that same guest/signed-in line for account-gated features
+// (e.g. favorites).
 struct ProductReview: Identifiable, Codable, Equatable {
-    let id: UUID
+    let id: String
     var productID: String
     var rating: Int
     var text: String
     var createdAt: Date
+    var authorName: String?
     var isOwn: Bool
 
-    init(id: UUID = UUID(), productID: String, rating: Int, text: String, createdAt: Date = Date(), isOwn: Bool = true) {
+    init(id: String = UUID().uuidString, productID: String, rating: Int, text: String, createdAt: Date = Date(), authorName: String? = nil, isOwn: Bool = true) {
         self.id = id
         self.productID = productID
         self.rating = rating
         self.text = text
         self.createdAt = createdAt
+        self.authorName = authorName
         self.isOwn = isOwn
     }
 }
@@ -45,7 +46,7 @@ enum ProductReviewStore {
         save(current)
     }
 
-    static func delete(id: UUID) {
+    static func delete(id: String) {
         save(all().filter { $0.id != id })
     }
 
@@ -55,17 +56,81 @@ enum ProductReviewStore {
     }
 }
 
+enum ProductReviewService {
+    private static let iso: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    static func fetchReviews(productID: String) async -> [ProductReview]? {
+        // Called only when signed in (see ProductReviewsSheet.loadReviews) -
+        // authorizedGet attaches the bearer token so the backend can mark
+        // isOwn on the caller's own reviews; the route itself is public
+        // (works signed-out too, just without isOwn) if this is ever called
+        // from a guest context in the future.
+        guard let response = try? await AuthService.shared.authorizedGet(path: "/api/products/\(productID)/reviews"),
+              let rows = response["reviews"] as? [[String: Any]] else { return nil }
+        return rows.compactMap { row -> ProductReview? in
+            guard let id = row["id"] as? String,
+                  let rating = row["rating"] as? Int,
+                  let text = row["text"] as? String else { return nil }
+            let createdAtString = row["createdAt"] as? String ?? ""
+            let createdAt = iso.date(from: createdAtString)
+                ?? ISO8601DateFormatter().date(from: createdAtString)
+                ?? sqliteDateFormatter.date(from: createdAtString)
+                ?? Date()
+            return ProductReview(
+                id: id,
+                productID: productID,
+                rating: rating,
+                text: text,
+                createdAt: createdAt,
+                authorName: row["authorName"] as? String,
+                isOwn: (row["isOwn"] as? Bool) ?? false
+            )
+        }
+    }
+
+    @discardableResult
+    static func postReview(productID: String, rating: Int, text: String) async -> Bool {
+        (try? await AuthService.shared.authorizedPost(
+            path: "/api/products/\(productID)/reviews",
+            body: ["rating": rating, "text": text]
+        )) != nil
+    }
+
+    @discardableResult
+    static func deleteReview(productID: String, reviewID: String) async -> Bool {
+        (try? await AuthService.shared.authorizedDelete(
+            path: "/api/products/\(productID)/reviews/\(reviewID)"
+        )) != nil
+    }
+
+    private static let sqliteDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        return formatter
+    }()
+}
+
 // The "rating/review/comment action" required on every marketplace card.
 // Never fabricates content - shows a real empty state when there's nothing
 // to show yet, per spec ("No reviews yet" rather than fake content).
 struct ProductReviewsSheet: View {
     let product: MarketplaceProduct
+    @EnvironmentObject private var auth: AuthService
     @Environment(\.dismiss) private var dismiss
 
     @State private var reviews: [ProductReview] = []
     @State private var draftRating = 5
     @State private var draftText = ""
     @State private var deleteTarget: ProductReview?
+    @State private var isPosting = false
+    @State private var isLoading = false
+
+    private var isSignedIn: Bool { auth.isSignedIn }
 
     private var averageRating: Double? {
         guard !reviews.isEmpty else { return nil }
@@ -90,7 +155,7 @@ struct ProductReviewsSheet: View {
                         } else {
                             Text("No reviews yet").font(.subheadline).foregroundStyle(Color.secondary)
                         }
-                        Text("Reviews are stored on this device only.")
+                        Text(isSignedIn ? "Reviews are visible to everyone on Ghost Cart." : "Sign in to post a review others can see. Showing this device's local reviews only.")
                             .font(.caption2)
                             .foregroundStyle(Color.secondary)
                     }
@@ -122,9 +187,9 @@ struct ProductReviewsSheet: View {
                             TextField("What did you think?", text: $draftText, axis: .vertical)
                                 .lineLimit(3...5)
                                 .ghostTextField()
-                            Button("Post review") { addReview() }
+                            Button(isPosting ? "Posting..." : "Post review") { Task { await addReview() } }
                                 .buttonStyle(GhostPrimaryButtonStyle())
-                                .disabled(draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                                .disabled(draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isPosting)
                         }
                     }
 
@@ -147,8 +212,8 @@ struct ProductReviewsSheet: View {
                     Button("Close") { dismiss() }
                 }
             }
-            .onAppear {
-                reviews = ProductReviewStore.reviews(for: product.id)
+            .task {
+                await loadReviews()
                 GhostAnalytics.productReviewsOpened(product.id)
             }
             .confirmationDialog("Delete this review?", isPresented: Binding(
@@ -156,12 +221,21 @@ struct ProductReviewsSheet: View {
                 set: { if !$0 { deleteTarget = nil } }
             ), titleVisibility: .visible) {
                 Button("Delete", role: .destructive) {
-                    if let deleteTarget { ProductReviewStore.delete(id: deleteTarget.id) }
-                    reviews = ProductReviewStore.reviews(for: product.id)
+                    if let deleteTarget { Task { await removeReview(deleteTarget) } }
                     deleteTarget = nil
                 }
                 Button("Cancel", role: .cancel) {}
             }
+        }
+    }
+
+    private func loadReviews() async {
+        if isSignedIn {
+            isLoading = true
+            reviews = await ProductReviewService.fetchReviews(productID: product.id) ?? []
+            isLoading = false
+        } else {
+            reviews = ProductReviewStore.reviews(for: product.id)
         }
     }
 
@@ -180,6 +254,9 @@ struct ProductReviewsSheet: View {
                     .font(.caption2)
                     .foregroundStyle(Color.secondary)
             }
+            if let authorName = review.authorName, !review.isOwn {
+                Text(authorName).font(.caption2.weight(.bold)).foregroundStyle(Color.secondary)
+            }
             Text(review.text).font(.caption)
             if review.isOwn {
                 Button("Delete", role: .destructive) { deleteTarget = review }
@@ -192,12 +269,30 @@ struct ProductReviewsSheet: View {
         .accessibilityElement(children: .combine)
     }
 
-    private func addReview() {
+    private func addReview() async {
         let trimmed = draftText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        ProductReviewStore.add(ProductReview(productID: product.id, rating: draftRating, text: trimmed))
-        reviews = ProductReviewStore.reviews(for: product.id)
+        if isSignedIn {
+            isPosting = true
+            let ok = await ProductReviewService.postReview(productID: product.id, rating: draftRating, text: trimmed)
+            isPosting = false
+            guard ok else { return }
+            await loadReviews()
+        } else {
+            ProductReviewStore.add(ProductReview(productID: product.id, rating: draftRating, text: trimmed))
+            reviews = ProductReviewStore.reviews(for: product.id)
+        }
         draftText = ""
         draftRating = 5
+    }
+
+    private func removeReview(_ review: ProductReview) async {
+        if isSignedIn {
+            guard await ProductReviewService.deleteReview(productID: product.id, reviewID: review.id) else { return }
+            await loadReviews()
+        } else {
+            ProductReviewStore.delete(id: review.id)
+            reviews = ProductReviewStore.reviews(for: product.id)
+        }
     }
 }

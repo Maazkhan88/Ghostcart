@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		075A942A6CADD1DBC3577585 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 11E095E8AF4EEAD4AAC4881E /* Localizable.strings */; };
 		A10000000000000000000001 /* GhostCartApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000001 /* GhostCartApp.swift */; };
 		A10000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000002 /* ContentView.swift */; };
 		A10000000000000000000003 /* AlmostBuy.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* AlmostBuy.swift */; };
@@ -160,7 +161,21 @@
 		B20000000000000000000001 /* FirebaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseService.swift; sourceTree = "<group>"; };
 		B20000000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B20000000000000000000003 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		48AE7D87BDECBB92D7DF436E /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		8EDD9662FCE7F0F7242571C1 /* ar */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ar; path = ar.lproj/Localizable.strings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXVariantGroup section */
+		11E095E8AF4EEAD4AAC4881E /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				48AE7D87BDECBB92D7DF436E /* en */,
+				8EDD9662FCE7F0F7242571C1 /* ar */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		C10000000000000000000001 /* Frameworks */ = {
@@ -265,6 +280,7 @@
 				B20000000000000000000003 /* GoogleService-Info.plist */,
 				B10000000000000000000013 /* GhostCart.entitlements */,
 				B1000000000000000000000F /* Assets.xcassets */,
+				11E095E8AF4EEAD4AAC4881E /* Localizable.strings */,
 			);
 			path = GhostCart;
 			sourceTree = "<group>";
@@ -384,6 +400,7 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				ar,
 				Base,
 			);
 			mainGroup = C10000000000000000000002;
@@ -409,6 +426,7 @@
 			files = (
 				A1000000000000000000000F /* Assets.xcassets in Resources */,
 				A20000000000000000000005 /* GoogleService-Info.plist in Resources */,
+				075A942A6CADD1DBC3577585 /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
