@@ -4,16 +4,18 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject private var store: GhostCartStore
     @EnvironmentObject private var tutorialCoordinator: TutorialCoordinator
+    @EnvironmentObject private var auth: AuthService
     @State private var banners: [ContentBlock] = []
     @State private var stories: [ContentBlock] = []
     @State private var products: [MarketplaceProduct] = []
     @State private var favoriteIds: Set<String> = FavoritesStore.load()
     @State private var showLeaderboard = false
+    @State private var showNotifications = false
+    @State private var hasUnreadNotification = false
     @State private var trackingItemID: UUID?
     let onGhostSomething: () -> Void
     let onOpenCart: () -> Void
     let onViewCooldowns: () -> Void
-    let onOpenProfile: () -> Void
 
     private var nextItems: [AlmostBuy] {
         Array((store.readyItems + store.coolingItems).prefix(3))
@@ -67,10 +69,10 @@ struct HomeView: View {
                                     .clipShape(Capsule())
                             }
                         }
-                        Button(action: onOpenProfile) {
+                        Button(action: { showNotifications = true }) {
                             Image(systemName: "bell")
                                 .font(.title3)
-                                .foregroundStyle(Color.primary)
+                                .foregroundStyle(hasUnreadNotification ? Color.ghostGreenColor : Color.primary)
                                 .frame(width: 36, height: 36)
                                 .contentShape(Circle())
                         }
@@ -208,11 +210,17 @@ struct HomeView: View {
             // said yes or no - don't gate this behind a persisted
             // "already asked" flag, which can get stuck true.
             Task { await NotificationService.shared.requestAuthorizationIfNeeded() }
+            Task { await refreshUnreadNotificationState() }
         }
         .refreshable { await loadContentBlocks() }
         .sheet(isPresented: $showLeaderboard) {
             NavigationStack {
                 LeaderboardView()
+            }
+        }
+        .sheet(isPresented: $showNotifications) {
+            NavigationStack {
+                NotificationsView(onMarkedSeen: { hasUnreadNotification = false })
             }
         }
         .fullScreenCover(isPresented: Binding(
@@ -225,6 +233,16 @@ struct HomeView: View {
                 }
             }
         }
+    }
+
+    // Fetches the full feed just to compare its newest row against the
+    // local "last seen" cursor - matches the backend contract (there is no
+    // separate unread-count endpoint, deliberately, per the notifications
+    // handoff) and Android's own AppViewModel.refreshNotifications.
+    private func refreshUnreadNotificationState() async {
+        guard auth.isSignedIn else { hasUnreadNotification = false; return }
+        guard let items = await NotificationsService.fetch() else { return }
+        hasUnreadNotification = NotificationsSeenCursor.hasUnread(newest: items.first?.createdAt)
     }
 
     private func loadContentBlocks() async {

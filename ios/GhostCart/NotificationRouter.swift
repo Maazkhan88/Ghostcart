@@ -87,7 +87,27 @@ final class GhostCartAppDelegate: NSObject, UIApplicationDelegate, UNUserNotific
     ) {
         let isRemote = notification.request.trigger is UNPushNotificationTrigger
         PushDebugLog.log("Notification RECEIVED (foreground, \(isRemote ? "remote" : "local")): \(notification.request.content.title) / \(notification.request.content.userInfo)")
+        mirrorDeliveryStageToFeedIfNeeded(notification.request.content)
         completionHandler([.banner, .sound])
+    }
+
+    // Mirrors a Ghost Delivery stage local notification into the
+    // backend-synced notifications feed right as it fires, per the
+    // notifications handoff. Only hooked here (willPresent, foreground) and
+    // deliberately not also in didReceive (tap) - a single notification can
+    // trigger both callbacks and would double-post. This means a stage
+    // update that fires while the app is backgrounded and never gets tapped
+    // is not mirrored - unlike Android's WorkManager, iOS local
+    // notifications have no guaranteed background-execution callback to
+    // hook into without new infrastructure (e.g. BGTaskScheduler polling),
+    // which this fire-and-forget feature doesn't warrant.
+    private func mirrorDeliveryStageToFeedIfNeeded(_ content: UNNotificationContent) {
+        guard content.userInfo["deliveryStage"] != nil else { return }
+        NotificationsService.postDeliveryUpdate(
+            title: content.title,
+            body: content.body,
+            link: (content.userInfo["almostBuyID"] as? String).map { "cooldown/\($0)" }
+        )
     }
 
     func application(

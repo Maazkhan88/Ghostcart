@@ -60,6 +60,7 @@
 		67F277451BAF627FA53F2A69 /* ProductReviews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B334EEFF5A554ECF6DB97D7 /* ProductReviews.swift */; };
 		3E6F6DA571C93E237BC3D1F7 /* InAppMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5C09287D0081D7688510CDB /* InAppMessage.swift */; };
 		00D3B7226C180750EBB5D899 /* PushDebugLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72D4BF8CA3C2B32C9B24944F /* PushDebugLog.swift */; };
+		EFDE03B0C61BE73EDDFE4673 /* Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 803A2067821F164A8C222658 /* Notifications.swift */; };
 		7772615819590E73AF15A434 /* TutorialState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73424F0E399BA9DE7A8BBC82 /* TutorialState.swift */; };
 		0CDD45DDDF816F783E040706 /* TutorialGuideOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 969EC399491870DF1C6D44BC /* TutorialGuideOverlay.swift */; };
 		6AA0357F1AA96382EA126B7E /* TutorialCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50E26C365F682923834CF2CA /* TutorialCoordinator.swift */; };
@@ -173,6 +174,7 @@
 		7B334EEFF5A554ECF6DB97D7 /* ProductReviews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductReviews.swift; sourceTree = "<group>"; };
 		B5C09287D0081D7688510CDB /* InAppMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppMessage.swift; sourceTree = "<group>"; };
 		72D4BF8CA3C2B32C9B24944F /* PushDebugLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushDebugLog.swift; sourceTree = "<group>"; };
+		803A2067821F164A8C222658 /* Notifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notifications.swift; sourceTree = "<group>"; };
 		73424F0E399BA9DE7A8BBC82 /* TutorialState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialState.swift; sourceTree = "<group>"; };
 		969EC399491870DF1C6D44BC /* TutorialGuideOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialGuideOverlay.swift; sourceTree = "<group>"; };
 		50E26C365F682923834CF2CA /* TutorialCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialCoordinator.swift; sourceTree = "<group>"; };
@@ -316,6 +318,7 @@
 				7B334EEFF5A554ECF6DB97D7 /* ProductReviews.swift */,
 				B5C09287D0081D7688510CDB /* InAppMessage.swift */,
 				72D4BF8CA3C2B32C9B24944F /* PushDebugLog.swift */,
+				803A2067821F164A8C222658 /* Notifications.swift */,
 				73424F0E399BA9DE7A8BBC82 /* TutorialState.swift */,
 				969EC399491870DF1C6D44BC /* TutorialGuideOverlay.swift */,
 				50E26C365F682923834CF2CA /* TutorialCoordinator.swift */,
@@ -575,6 +578,7 @@
 				67F277451BAF627FA53F2A69 /* ProductReviews.swift in Sources */,
 				3E6F6DA571C93E237BC3D1F7 /* InAppMessage.swift in Sources */,
 				00D3B7226C180750EBB5D899 /* PushDebugLog.swift in Sources */,
+				EFDE03B0C61BE73EDDFE4673 /* Notifications.swift in Sources */,
 				7772615819590E73AF15A434 /* TutorialState.swift in Sources */,
 				0CDD45DDDF816F783E040706 /* TutorialGuideOverlay.swift in Sources */,
 				6AA0357F1AA96382EA126B7E /* TutorialCoordinator.swift in Sources */,

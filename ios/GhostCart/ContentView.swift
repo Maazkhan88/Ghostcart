@@ -146,8 +146,7 @@ struct ContentView: View {
                 HomeView(
                     onGhostSomething: { selectedTab = .capture },
                     onOpenCart: { selectedTab = .cart },
-                    onViewCooldowns: { selectedTab = .cooldowns },
-                    onOpenProfile: { selectedTab = .profile }
+                    onViewCooldowns: { selectedTab = .cooldowns }
                 )
             }
         case .cooldowns:
