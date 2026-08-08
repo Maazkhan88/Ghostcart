@@ -1,5 +1,4 @@
 import UIKit
-import Social
 import UniformTypeIdentifiers
 
 // Share Extension entry point. Ghost Cart registers as a share target for
@@ -7,30 +6,65 @@ import UniformTypeIdentifiers
 // cart, sign in, or buy anything: it only writes the shared link into the
 // App Group container so the main app can turn it into a cooling-off capture
 // the next time it is opened.
-final class ShareViewController: SLComposeServiceViewController {
-    override func isContentValid() -> Bool { true }
+//
+// A plain UIViewController rather than SLComposeServiceViewController on
+// purpose: the system-provided "Cancel/Post" compose template requires an
+// explicit user tap to complete, which put a confusing, unbranded extra
+// step (indistinguishable from e.g. X's own "Post" share sheet) between
+// sharing and Ghost Cart's own capture screen. Android's equivalent
+// (MainActivity.captureSharedProduct, an ACTION_SEND intent filter) has no
+// such intermediate step - it resolves the link and hands off immediately.
+// This mirrors that: resolve the shared URL and complete automatically,
+// with only a brief branded "Saving to Ghost Cart" spinner while that
+// resolution (typically well under a second) runs.
+final class ShareViewController: UIViewController {
+    private static let ghostGreen = UIColor(red: 0.39, green: 0.84, blue: 0.29, alpha: 1)
 
-    override func configurationItems() -> [Any]! { [] }
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = .systemBackground
+        setUpSavingUI()
 
-    override func presentationAnimationDidFinish() {
-        placeholder = "Add a note (optional)"
-        textView.text = ""
-    }
-
-    override func didSelectPost() {
-        let caption = contentText?.trimmingCharacters(in: .whitespacesAndNewlines)
         resolveSharedURL { [weak self] resolvedURL in
             if let resolvedURL {
                 SharedImportBridge.save(
-                    PendingSharedImport(
-                        sourceURL: resolvedURL,
-                        sharedTitle: (caption?.isEmpty == false) ? caption : nil,
-                        sharedImageURL: nil
-                    )
+                    PendingSharedImport(sourceURL: resolvedURL, sharedTitle: nil, sharedImageURL: nil)
                 )
             }
-            self?.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+            DispatchQueue.main.async {
+                self?.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+            }
         }
+    }
+
+    private func setUpSavingUI() {
+        let icon = UILabel()
+        icon.text = "👻"
+        icon.font = .systemFont(ofSize: 40)
+        icon.translatesAutoresizingMaskIntoConstraints = false
+
+        let label = UILabel()
+        label.text = "Saving to Ghost Cart…"
+        label.font = .systemFont(ofSize: 15, weight: .semibold)
+        label.textColor = .label
+        label.translatesAutoresizingMaskIntoConstraints = false
+
+        let spinner = UIActivityIndicatorView(style: .medium)
+        spinner.color = Self.ghostGreen
+        spinner.startAnimating()
+        spinner.translatesAutoresizingMaskIntoConstraints = false
+
+        let stack = UIStackView(arrangedSubviews: [icon, spinner, label])
+        stack.axis = .vertical
+        stack.alignment = .center
+        stack.spacing = 14
+        stack.translatesAutoresizingMaskIntoConstraints = false
+
+        view.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            stack.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+        ])
     }
 
     // MARK: - URL extraction

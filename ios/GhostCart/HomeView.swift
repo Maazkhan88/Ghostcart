@@ -58,6 +58,13 @@ struct HomeView: View {
                         .frame(width: 142, height: 42)
                     HStack {
                         Spacer()
+                        // One bell, two signals: a green "N ready" pill when
+                        // items are waiting for a decision (still opens
+                        // Cooldowns directly - that's a more useful action
+                        // than the notifications list for something this
+                        // time-sensitive), otherwise a plain bell that opens
+                        // the notifications feed and turns Ghost Green when
+                        // there's something unread there.
                         if !store.readyItems.isEmpty {
                             Button(action: onViewCooldowns) {
                                 Label("\(store.readyItems.count) ready", systemImage: "bell.badge.fill")
@@ -68,13 +75,14 @@ struct HomeView: View {
                                     .background(Color.ghostGreenColor)
                                     .clipShape(Capsule())
                             }
-                        }
-                        Button(action: { showNotifications = true }) {
-                            Image(systemName: "bell")
-                                .font(.title3)
-                                .foregroundStyle(hasUnreadNotification ? Color.ghostGreenColor : Color.primary)
-                                .frame(width: 36, height: 36)
-                                .contentShape(Circle())
+                        } else {
+                            Button(action: { showNotifications = true }) {
+                                Image(systemName: "bell")
+                                    .font(.title3)
+                                    .foregroundStyle(hasUnreadNotification ? Color.ghostGreenColor : Color.primary)
+                                    .frame(width: 36, height: 36)
+                                    .contentShape(Circle())
+                            }
                         }
                     }
                 }
