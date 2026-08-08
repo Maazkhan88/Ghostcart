@@ -57,7 +57,20 @@ struct ContentView: View {
             if tutorialCoordinator.shouldAutoLaunch { tutorialCoordinator.startIfNeeded() }
         }
         .onChange(of: scenePhase) { phase in
-            if phase == .active { handleSharedImport() }
+            guard phase == .active else { return }
+            handleSharedImport()
+            // Server-side changes made while the app wasn't in the
+            // foreground (the share extension's mini-capture now creates a
+            // real almost-buy directly server-side, another signed-in
+            // device, etc.) were previously only ever pulled down by
+            // AuthService.restoreSession()'s one-time .ghostCartDidSignIn
+            // notification on cold launch - simply backgrounding the app,
+            // sharing something, then returning to it (without a full
+            // force-quit/relaunch) never re-synced, so a share-extension
+            // save could be real and permanent on the server yet invisible
+            // in the app until the next cold launch. No-ops safely for
+            // guests (AlmostBuySyncService.fetchRemote checks isSignedIn).
+            Task { await store.syncFromServer() }
         }
         .overlay {
             if let activeInAppMessage {
