@@ -40,3 +40,23 @@ The bell icon in the Home header previously routed to Profile - there was no act
 - `android/app/src/main/java/com/example/ghostcart/data/DeliveryStepWorker.kt` (the fire-and-forget POST hook)
 - `android/app/src/main/java/com/example/ghostcart/ui/app/AppViewModel.kt` (`refreshNotifications`, `markNotificationsSeen`, `hasUnreadNotifications` state)
 - `android/app/src/main/java/com/example/ghostcart/ui/v2/ProductDiscovery.kt`, `GhostCartV2Screens.kt` (bell icon tint wiring)
+
+---
+
+## Also needed: default "share with community" on for shared-link imports
+
+Date: 2026-08-08
+
+Reported bug: a user shared an Amazon product into Ghost Cart via the iOS share sheet and ghosted it, but it never showed up under "User Ghosted" anywhere (Android, web, or iOS itself). This is not a backend bug and cannot be fixed server-side - the gating happens entirely client-side, before any network request is made.
+
+### Root cause
+
+In `ios/GhostCart/CaptureView.swift`, `@State private var shareWithCommunity = false` defaults off, and `seed(from:)` (around line 396) explicitly resets it to `false` every time a capture is seeded from an imported/shared product, same as a manually-typed one. `submit(startCooling:)` (around line 433) only calls `ProductImportService.publish(...)` - the function that `POST`s to `/api/community-products` and is the *only* thing that makes an item appear under "User Ghosted" - inside `if shareWithCommunity, let capturedURL { ... }`. When the toggle is off, that block never runs, so the backend never even receives a request. There is nothing to change server-side; the request simply doesn't happen.
+
+Android has the same two-step model (a "community checkbox" the user must check at capture time), and defaults off there too - this is a deliberate, existing, consent-gated design (see the "Consent-gated, best-effort" comment already in `CaptureView.swift` at the `publish` call site). Do not remove the consent gate itself or make it silently always-on for every capture - only change the *default* for the specific case below.
+
+### What to change
+
+When a capture is seeded from an already-shared link (the user shared a product **into** Ghost Cart via the share sheet/extension, as opposed to typing a product in manually) - default `shareWithCommunity` to `true` instead of `false` in that one seeding path. The person already made the product public by sharing it externally, so defaulting the in-app "share with community" toggle to match is reasonable; they can still uncheck it before confirming, exactly as today. Manually-typed captures (no incoming shared link) should keep defaulting to `false`, unchanged.
+
+Android does not have this gap - confirmed by reading the code, not assumed: `GhostCartV2Screens.kt` already does `var shareWithCommunity by remember(seed?.sourceUrl) { mutableStateOf(seed?.sourceUrl != null) }`, i.e. it already defaults on exactly when the capture came from a shared link. This iOS change should bring iOS in line with Android's existing, already-correct behavior - not introduce new product behavior.
