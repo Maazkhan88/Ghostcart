@@ -220,7 +220,17 @@ struct HomeView: View {
             Task { await NotificationService.shared.requestAuthorizationIfNeeded() }
             Task { await refreshUnreadNotificationState() }
         }
-        .refreshable { await loadContentBlocks() }
+        .refreshable {
+            // Pulling to refresh reloaded the marketplace/banners/stories
+            // but never re-synced almost-buys - a genuinely new server-side
+            // item (from the share-extension's mini-capture, another
+            // device, etc.) stayed invisible even after an explicit manual
+            // refresh gesture, the same class of gap scenePhase-active
+            // sync just closed for the foreground-resume case.
+            async let content: () = loadContentBlocks()
+            async let sync: () = store.syncFromServer()
+            _ = await (content, sync)
+        }
         .sheet(isPresented: $showLeaderboard) {
             NavigationStack {
                 LeaderboardView()

@@ -83,6 +83,11 @@ struct CooldownsView: View {
         }
         .background(Color(.systemBackground))
         .navigationBarHidden(true)
+        // Had no pull-to-refresh at all - the one screen a genuinely new
+        // server-side item (share-extension mini-capture, another device)
+        // needs to show up on, with no way to ask for fresh data short of
+        // backgrounding/reopening the whole app.
+        .refreshable { await store.syncFromServer() }
         .fullScreenCover(isPresented: Binding(
             get: { trackingItemID != nil },
             set: { if !$0 { trackingItemID = nil } }
