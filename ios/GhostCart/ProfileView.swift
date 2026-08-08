@@ -1,5 +1,7 @@
 import SwiftUI
+#if os(iOS)
 import UIKit
+#endif
 
 struct ProfileView: View {
     @EnvironmentObject private var store: GhostCartStore
@@ -295,7 +297,15 @@ struct ReminderSettingsView: View {
                 }
                 if authorizationState == .denied {
                     Button("Open iPhone Settings") {
+                        #if os(iOS)
                         guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+                        #else
+                        // macOS has no per-app settings deep link the way
+                        // iOS does - this opens System Settings' general
+                        // Notifications pane instead (the closest
+                        // equivalent), same button/label left unchanged.
+                        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.notifications") else { return }
+                        #endif
                         openURL(url)
                     }
                 } else {

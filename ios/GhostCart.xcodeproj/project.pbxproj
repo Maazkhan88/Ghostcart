@@ -85,6 +85,59 @@
 		90B64C079C8F57481698F5A2 /* GhostCartWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BDEDF6455C5D624B8DA711C /* GhostCartWidgetsBundle.swift */; };
 		4A083C50B23B334F54D1FBA4 /* CoolingOffLiveActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70D61CC6272984306BEEFCDF /* CoolingOffLiveActivityView.swift */; };
 		1D7B5DFCC036CFA068BDFB7B /* GhostCartWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = F20796A36B91248FD3BD998C /* GhostCartWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		402A7287E2F15F84E3CFF28E /* GhostCartApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000001 /* GhostCartApp.swift */; };
+		AE49B007A6F45F4A9D5ABA05 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000002 /* ContentView.swift */; };
+		FCB8AFDE9377AEC408FFC8DB /* AlmostBuy.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* AlmostBuy.swift */; };
+		9BF7F167DD13DA0DDC6B6632 /* GhostCartStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000004 /* GhostCartStore.swift */; };
+		5CF9C77C21F259F20EF91617 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000005 /* Theme.swift */; };
+		3766CCAEE82DF8A02D61A6C9 /* BrandAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000006 /* BrandAssets.swift */; };
+		4E8D062E3908B2C506DCD109 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000007 /* HomeView.swift */; };
+		92A94FF57C975AFC98151B9D /* CooldownsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000008 /* CooldownsView.swift */; };
+		9F0343C11BB669A348DFDFB3 /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000009 /* CaptureView.swift */; };
+		64305770933176AAE7BAC096 /* ProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000A /* ProgressView.swift */; };
+		67D8972491C990251FB849BA /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000B /* ProfileView.swift */; };
+		BE64D033C3F5A7C32429E26E /* MembershipCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000C /* MembershipCardView.swift */; };
+		CBF0BCF3DB0F5913680039F8 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000D /* NotificationService.swift */; };
+		1E19B835A9279D1CFD16578D /* NotificationRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000E /* NotificationRouter.swift */; };
+		832090BEE2A303A195D2BD4A /* ApiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000010 /* ApiClient.swift */; };
+		898F5F9FFD2F836048CF8992 /* ProductImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000011 /* ProductImport.swift */; };
+		0685D42843E3FC3745BA3EDD /* SharedImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000012 /* SharedImport.swift */; };
+		ABB78BF9217B373B2B60FEE4 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000030 /* AuthService.swift */; };
+		BED429AF37C1CB4BF9EA344B /* OnboardingState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000031 /* OnboardingState.swift */; };
+		A1B0AFDD246FC7C4EDB7762F /* SimulationConsentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000032 /* SimulationConsentView.swift */; };
+		979B6843B7F4B4BB5ED0AAA6 /* OnboardingLandingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000033 /* OnboardingLandingView.swift */; };
+		B11E5E6F1D6B20325F4DC67B /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000034 /* AuthView.swift */; };
+		F80736BDEF53E3F8B37FFBEF /* ProfileSelectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000035 /* ProfileSelectView.swift */; };
+		A20817CB05FABAB3CEEEEFC0 /* PersonalizationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000036 /* PersonalizationView.swift */; };
+		D6BC539D124D5911FD28943B /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000038 /* OnboardingFlowView.swift */; };
+		CF578684A9E9AECDF6D916F2 /* ContentBlocks.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000039 /* ContentBlocks.swift */; };
+		0A1596D84CDCF6B836CB47D3 /* MarketplaceSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000003A /* MarketplaceSection.swift */; };
+		C5E42D3FADBB354D59F4D1C6 /* AvatarPresets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000003B /* AvatarPresets.swift */; };
+		F262DFD0367F3154287969DF /* AlmostBuySyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = S20000000000000000000001 /* AlmostBuySyncService.swift */; };
+		F891AA83A0C1F79AFA8300B7 /* CommunityProfileService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000001 /* CommunityProfileService.swift */; };
+		E864A695F2109B7766C86918 /* CommunityLeaderboardOptInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000002 /* CommunityLeaderboardOptInView.swift */; };
+		46952BC4476079B465EE0508 /* LegalDocumentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000003 /* LegalDocumentsView.swift */; };
+		2BDA8EDC3E6466123CCD648E /* DeleteAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000004 /* DeleteAccountView.swift */; };
+		772FB21884767D778E0E1368 /* AvatarPresetPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000005 /* AvatarPresetPickerView.swift */; };
+		F9C9998248EE2F8ABD363D11 /* ShareQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = E82927B9E45273E1592F2ED2 /* ShareQueue.swift */; };
+		D094B1ED2792202761C1C864 /* ShareQueueReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC777C1F9396E26A64E0F17 /* ShareQueueReviewView.swift */; };
+		81E7888504B7ED683F3FAA46 /* GhostGift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91E60ADEE6BE092B9409BE44 /* GhostGift.swift */; };
+		998A001142BA2818B94F9392 /* GhostGiftRevealView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E3E86ECB5571304F8CEB35 /* GhostGiftRevealView.swift */; };
+		E0B44D2081C209D5BF1F59D3 /* GiftsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46E337A0420C5AE7E20A23E1 /* GiftsView.swift */; };
+		2664517A1DA4C8C4E601EE35 /* GhostDelivery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2132F4C28430EC3DA8A16888 /* GhostDelivery.swift */; };
+		7487A0B7D745C93BDF093BBA /* GhostRouteMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CB166FD272B340C89E3D361 /* GhostRouteMapView.swift */; };
+		BD191B122129CA5DC499ACA4 /* GhostDeliveryTrackerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B3395F8CFF91755763D1762 /* GhostDeliveryTrackerView.swift */; };
+		917DF8AE749DAE74C43456F4 /* GhostDeliveryDecisionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDA842EBD267E0610B62B628 /* GhostDeliveryDecisionView.swift */; };
+		B42B839258F11647108D46F8 /* ProductReviews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B334EEFF5A554ECF6DB97D7 /* ProductReviews.swift */; };
+		E573ED177526E2888C316797 /* InAppMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5C09287D0081D7688510CDB /* InAppMessage.swift */; };
+		5C949C96F8F5B960C8E7A6E9 /* PushDebugLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72D4BF8CA3C2B32C9B24944F /* PushDebugLog.swift */; };
+		0A9336CC13946DB4C5BD9E2E /* Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 803A2067821F164A8C222658 /* Notifications.swift */; };
+		D4ACA59AE202636AB47959D1 /* TutorialState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73424F0E399BA9DE7A8BBC82 /* TutorialState.swift */; };
+		1AAE907276521DD8E458A686 /* TutorialGuideOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 969EC399491870DF1C6D44BC /* TutorialGuideOverlay.swift */; };
+		2C97CFAE77F55458F2B7B274 /* TutorialCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50E26C365F682923834CF2CA /* TutorialCoordinator.swift */; };
+		5B1165C21808B94304EBED26 /* FirebaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000001 /* FirebaseService.swift */; };
+		FA783152F649F4FE83D584B9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000F /* Assets.xcassets */; };
+		3F123F17C25A922069D2BDC2 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 11E095E8AF4EEAD4AAC4881E /* Localizable.strings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -202,6 +255,9 @@
 		70D61CC6272984306BEEFCDF /* CoolingOffLiveActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoolingOffLiveActivityView.swift; sourceTree = "<group>"; };
 		DB97EB70AA1766A5710AA52A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F20796A36B91248FD3BD998C /* GhostCartWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = GhostCartWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		6A916A86E77F80870CC19DAE /* GhostCart.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GhostCart.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E0111629612A306E53F3918F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		06450CB1199158AC747A3D5F /* GhostCartMac.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GhostCartMac.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXVariantGroup section */
@@ -249,6 +305,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		776DFA26511F4A7812529AE9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -257,6 +320,7 @@
 			children = (
 				C10000000000000000000003 /* GhostCart */,
 				C10000000000000000000010 /* GhostCartShare */,
+				0C835BF20F4562E65497AA0E /* GhostCartMac */,
 				754FEA0071A95469D585075A /* GhostCartWidgets */,
 				T10000000000000000000004 /* GhostCartTests */,
 				C10000000000000000000004 /* Products */,
@@ -365,11 +429,21 @@
 			isa = PBXGroup;
 			children = (
 				B10000000000000000000000 /* GhostCart.app */,
+				6A916A86E77F80870CC19DAE /* GhostCart.app */,
 				B10000000000000000000024 /* GhostCartShare.appex */,
 				F20796A36B91248FD3BD998C /* GhostCartWidgets.appex */,
 				T10000000000000000000000 /* GhostCartTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		0C835BF20F4562E65497AA0E /* GhostCartMac */ = {
+			isa = PBXGroup;
+			children = (
+				E0111629612A306E53F3918F /* Info.plist */,
+				06450CB1199158AC747A3D5F /* GhostCartMac.entitlements */,
+			);
+			path = GhostCartMac;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -453,6 +527,23 @@
 			productReference = F20796A36B91248FD3BD998C /* GhostCartWidgets.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		FCFE59E4401D627EE7D87416 /* GhostCartMac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FD4683617FE86450C6FE2A97 /* Build configuration list for PBXNativeTarget "GhostCartMac" */;
+			buildPhases = (
+				F58FDB17E6B97DCCE9116922 /* Sources */,
+				776DFA26511F4A7812529AE9 /* Frameworks */,
+				14A1D3822B973A61A33A4E99 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = GhostCartMac;
+			productName = GhostCartMac;
+			productReference = 6A916A86E77F80870CC19DAE /* GhostCart.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -469,6 +560,11 @@
 						ProvisioningStyle = Automatic;
 					};
 					D10000000000000000000010 = {
+						CreatedOnToolsVersion = 15.0;
+						DevelopmentTeam = 2A5Q764W66;
+						ProvisioningStyle = Automatic;
+					};
+					FCFE59E4401D627EE7D87416 = {
 						CreatedOnToolsVersion = 15.0;
 						DevelopmentTeam = 2A5Q764W66;
 						ProvisioningStyle = Automatic;
@@ -505,6 +601,7 @@
 				D10000000000000000000001 /* GhostCart */,
 				D10000000000000000000010 /* GhostCartShare */,
 				D8D2B148F1C8D0ED0CB8F7D8 /* GhostCartWidgets */,
+				FCFE59E4401D627EE7D87416 /* GhostCartMac */,
 				T10000000000000000000006 /* GhostCartTests */,
 			);
 		};
@@ -539,6 +636,15 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		14A1D3822B973A61A33A4E99 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FA783152F649F4FE83D584B9 /* Assets.xcassets in Resources */,
+				3F123F17C25A922069D2BDC2 /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -639,6 +745,64 @@
 			files = (
 				T10000000000000000000002 /* GhostCartStoreTests.swift in Sources */,
 				EAA56575901C785D7AFB51D0 /* GhostDeliveryTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F58FDB17E6B97DCCE9116922 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				402A7287E2F15F84E3CFF28E /* GhostCartApp.swift in Sources */,
+				AE49B007A6F45F4A9D5ABA05 /* ContentView.swift in Sources */,
+				FCB8AFDE9377AEC408FFC8DB /* AlmostBuy.swift in Sources */,
+				9BF7F167DD13DA0DDC6B6632 /* GhostCartStore.swift in Sources */,
+				5CF9C77C21F259F20EF91617 /* Theme.swift in Sources */,
+				3766CCAEE82DF8A02D61A6C9 /* BrandAssets.swift in Sources */,
+				4E8D062E3908B2C506DCD109 /* HomeView.swift in Sources */,
+				92A94FF57C975AFC98151B9D /* CooldownsView.swift in Sources */,
+				9F0343C11BB669A348DFDFB3 /* CaptureView.swift in Sources */,
+				64305770933176AAE7BAC096 /* ProgressView.swift in Sources */,
+				67D8972491C990251FB849BA /* ProfileView.swift in Sources */,
+				BE64D033C3F5A7C32429E26E /* MembershipCardView.swift in Sources */,
+				CBF0BCF3DB0F5913680039F8 /* NotificationService.swift in Sources */,
+				1E19B835A9279D1CFD16578D /* NotificationRouter.swift in Sources */,
+				832090BEE2A303A195D2BD4A /* ApiClient.swift in Sources */,
+				898F5F9FFD2F836048CF8992 /* ProductImport.swift in Sources */,
+				0685D42843E3FC3745BA3EDD /* SharedImport.swift in Sources */,
+				ABB78BF9217B373B2B60FEE4 /* AuthService.swift in Sources */,
+				BED429AF37C1CB4BF9EA344B /* OnboardingState.swift in Sources */,
+				A1B0AFDD246FC7C4EDB7762F /* SimulationConsentView.swift in Sources */,
+				979B6843B7F4B4BB5ED0AAA6 /* OnboardingLandingView.swift in Sources */,
+				B11E5E6F1D6B20325F4DC67B /* AuthView.swift in Sources */,
+				F80736BDEF53E3F8B37FFBEF /* ProfileSelectView.swift in Sources */,
+				A20817CB05FABAB3CEEEEFC0 /* PersonalizationView.swift in Sources */,
+				D6BC539D124D5911FD28943B /* OnboardingFlowView.swift in Sources */,
+				CF578684A9E9AECDF6D916F2 /* ContentBlocks.swift in Sources */,
+				0A1596D84CDCF6B836CB47D3 /* MarketplaceSection.swift in Sources */,
+				C5E42D3FADBB354D59F4D1C6 /* AvatarPresets.swift in Sources */,
+				F262DFD0367F3154287969DF /* AlmostBuySyncService.swift in Sources */,
+				F891AA83A0C1F79AFA8300B7 /* CommunityProfileService.swift in Sources */,
+				E864A695F2109B7766C86918 /* CommunityLeaderboardOptInView.swift in Sources */,
+				46952BC4476079B465EE0508 /* LegalDocumentsView.swift in Sources */,
+				2BDA8EDC3E6466123CCD648E /* DeleteAccountView.swift in Sources */,
+				772FB21884767D778E0E1368 /* AvatarPresetPickerView.swift in Sources */,
+				F9C9998248EE2F8ABD363D11 /* ShareQueue.swift in Sources */,
+				D094B1ED2792202761C1C864 /* ShareQueueReviewView.swift in Sources */,
+				81E7888504B7ED683F3FAA46 /* GhostGift.swift in Sources */,
+				998A001142BA2818B94F9392 /* GhostGiftRevealView.swift in Sources */,
+				E0B44D2081C209D5BF1F59D3 /* GiftsView.swift in Sources */,
+				2664517A1DA4C8C4E601EE35 /* GhostDelivery.swift in Sources */,
+				7487A0B7D745C93BDF093BBA /* GhostRouteMapView.swift in Sources */,
+				BD191B122129CA5DC499ACA4 /* GhostDeliveryTrackerView.swift in Sources */,
+				917DF8AE749DAE74C43456F4 /* GhostDeliveryDecisionView.swift in Sources */,
+				B42B839258F11647108D46F8 /* ProductReviews.swift in Sources */,
+				E573ED177526E2888C316797 /* InAppMessage.swift in Sources */,
+				5C949C96F8F5B960C8E7A6E9 /* PushDebugLog.swift in Sources */,
+				0A9336CC13946DB4C5BD9E2E /* Notifications.swift in Sources */,
+				D4ACA59AE202636AB47959D1 /* TutorialState.swift in Sources */,
+				1AAE907276521DD8E458A686 /* TutorialGuideOverlay.swift in Sources */,
+				2C97CFAE77F55458F2B7B274 /* TutorialCoordinator.swift in Sources */,
+				5B1165C21808B94304EBED26 /* FirebaseService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -883,6 +1047,71 @@
 			};
 			name = Release;
 		};
+		426C89C7F5EEA399BBBAD7BE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = GhostCartMac/GhostCartMac.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 2A5Q764W66;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = GhostCartMac/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Ghost Cart";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "\u00a9 Ghost Cart";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ghostcart.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				GCC_OPTIMIZATION_LEVEL = 0;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_HARDENED_RUNTIME = YES;
+			};
+			name = Debug;
+		};
+		70811B3DF0F9EE26BE815958 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = GhostCartMac/GhostCartMac.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 2A5Q764W66;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = GhostCartMac/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Ghost Cart";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "\u00a9 Ghost Cart";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ghostcart.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				VALIDATE_PRODUCT = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -927,6 +1156,15 @@
 			buildConfigurations = (
 				FB5A216699DEF1960E071095 /* Debug */,
 				FAA4354A07D1DA7889E0119E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FD4683617FE86450C6FE2A97 /* Build configuration list for PBXNativeTarget "GhostCartMac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				426C89C7F5EEA399BBBAD7BE /* Debug */,
+				70811B3DF0F9EE26BE815958 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

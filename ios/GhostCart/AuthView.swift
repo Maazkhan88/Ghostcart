@@ -2,8 +2,8 @@ import SwiftUI
 import AuthenticationServices
 import CryptoKit
 import Security
-import UIKit
 #if canImport(GoogleSignIn)
+import UIKit
 import GoogleSignIn
 #endif
 
@@ -202,12 +202,14 @@ struct AuthView: View {
         return values[key] as? String
     }
 
+    #if canImport(GoogleSignIn)
     private static var presentingViewController: UIViewController? {
         guard let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first,
               var controller = scene.windows.first(where: \.isKeyWindow)?.rootViewController else { return nil }
         while let presented = controller.presentedViewController { controller = presented }
         return controller
     }
+    #endif
 
     private static func randomNonce(length: Int = 32) -> String {
         precondition(length > 0)

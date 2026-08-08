@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
 
 // The delivered decision screen: shown once a Ghost Delivery reaches 100%.
 // Action hierarchy is intentionally weighted, not five equal buttons -
@@ -16,6 +19,7 @@ struct GhostDeliveryDecisionView: View {
     var onTutorialDecision: ((String) -> Void)? = nil
 
     @EnvironmentObject private var store: GhostCartStore
+    @Environment(\.openURL) private var openURL
     @State private var showSkipConfirm = false
     @State private var showRestartPicker = false
     @State private var showBuyFromSourceDisclosure = false
@@ -180,7 +184,7 @@ struct GhostDeliveryDecisionView: View {
 
     private func openSource() {
         guard let sourceURL = item?.sourceURL, let url = URL(string: sourceURL) else { return }
-        UIApplication.shared.open(url)
+        openURL(url)
         GhostAnalytics.decisionBuyFromSource()
         // Recorded as an outbound action only - never auto-marks as bought.
         // The user confirms that explicitly via "I bought it already".
@@ -196,6 +200,7 @@ struct GhostDeliveryDecisionView: View {
     }
 }
 
+#if os(iOS)
 private struct ActivityShareSheet: UIViewControllerRepresentable {
     let items: [Any]
 
@@ -205,3 +210,25 @@ private struct ActivityShareSheet: UIViewControllerRepresentable {
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
+#elseif os(macOS)
+// macOS has no direct UIActivityViewController equivalent - the standard
+// counterpart is NSSharingServicePicker, shown relative to a view rather
+// than presented as its own screen. Presents itself as soon as its host
+// view appears (this is already reached via a .sheet(...) presentation at
+// the call site, unchanged), and closes that sheet afterward either way.
+private struct ActivityShareSheet: NSViewRepresentable {
+    let items: [Any]
+    @Environment(\.dismiss) private var dismiss
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView(frame: .zero)
+        DispatchQueue.main.async {
+            let picker = NSSharingServicePicker(items: items)
+            picker.show(relativeTo: .zero, of: view, preferredEdge: .minY)
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
+}
+#endif

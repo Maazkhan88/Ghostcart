@@ -1,13 +1,27 @@
 import Foundation
-import UIKit
 import UserNotifications
+#if os(iOS)
+import UIKit
 import FirebaseAnalytics
 import FirebaseCore
 import FirebaseMessaging
+#endif
 
 /// Owns the shared Firebase lifecycle and keeps the FCM token in sync with
 /// Ghost Cart's existing bearer-token backend. Firebase is intentionally not
 /// configured until the Apple-specific GoogleService-Info.plist is present.
+///
+/// macOS: FirebaseAnalytics/FirebaseMessaging (and GoogleSignIn, handled
+/// separately in AuthView.swift/NotificationRouter.swift) don't publish a
+/// macOS platform in their Package.swift - not a choice made here, a real
+/// upstream SDK limitation. Every method below still exists and is safe to
+/// call unconditionally from shared, unmodified call sites elsewhere in the
+/// app (GhostCartAppDelegate, GhostAnalytics.event, etc.) - it just no-ops
+/// on macOS rather than requiring every caller to add its own platform
+/// check. Push notifications and analytics are the actual feature gap on
+/// the Mac build; local UNUserNotificationCenter notifications (the
+/// cooldown/delivery-stage reminders) are unaffected, since those don't
+/// touch Firebase at all.
 @MainActor
 final class FirebaseService {
     static let shared = FirebaseService()
@@ -19,6 +33,7 @@ final class FirebaseService {
 
     @discardableResult
     func configure() -> Bool {
+        #if os(iOS)
         guard !Self.isConfigured else {
             PushDebugLog.log("FirebaseApp.configure() skipped - already configured")
             return true
@@ -34,16 +49,22 @@ final class FirebaseService {
         Messaging.messaging().delegate = FirebaseMessagingDelegate.shared
         PushDebugLog.log("FirebaseApp.configure() SUCCESS - bundle=\(options.bundleID) gcmSenderID=\(options.gcmSenderID) projectID=\(options.projectID ?? "nil")")
         return true
+        #else
+        return false
+        #endif
     }
 
     func receivedFCMToken(_ token: String) {
+        #if os(iOS)
         let previous = UserDefaults.standard.string(forKey: tokenKey)
         PushDebugLog.log(previous == token ? "FCM token unchanged: \(token)" : "FCM token REFRESHED. New: \(token) Previous: \(previous ?? "none")")
         UserDefaults.standard.set(token, forKey: tokenKey)
         Task { await registerStoredTokenIfSignedIn() }
+        #endif
     }
 
     func registerStoredTokenIfSignedIn() async {
+        #if os(iOS)
         guard AuthService.shared.isSignedIn else {
             PushDebugLog.log("Backend token upload SKIPPED - not signed in")
             return
@@ -62,9 +83,11 @@ final class FirebaseService {
         } catch {
             PushDebugLog.log("Backend token upload FAILED: \(error.localizedDescription)")
         }
+        #endif
     }
 
     func registerForRemoteNotificationsIfAuthorized() async {
+        #if os(iOS)
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         let status = Self.describe(settings.authorizationStatus)
         guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else {
@@ -73,6 +96,7 @@ final class FirebaseService {
         }
         PushDebugLog.log("Calling UIApplication.registerForRemoteNotifications() - authorization status: \(status)")
         UIApplication.shared.registerForRemoteNotifications()
+        #endif
     }
 
     private static func describe(_ status: UNAuthorizationStatus) -> String {
@@ -87,6 +111,7 @@ final class FirebaseService {
     }
 }
 
+#if os(iOS)
 final class FirebaseMessagingDelegate: NSObject, MessagingDelegate {
     static let shared = FirebaseMessagingDelegate()
 
@@ -100,24 +125,35 @@ final class FirebaseMessagingDelegate: NSObject, MessagingDelegate {
         }
     }
 }
+#endif
 
 /// iOS counterpart of Android's typed Analytics wrapper. Keeping the event
 /// names identical preserves the existing GA4 funnels across both apps.
+/// Every convenience method below is unconditional and unmodified for
+/// macOS - only `event()` itself (the one place that actually touches the
+/// FirebaseAnalytics SDK) is platform-gated, so no call site anywhere in
+/// the app needs its own macOS check.
 enum GhostAnalytics {
     static func event(_ name: String, parameters: [String: Any]? = nil) {
+        #if os(iOS)
         guard FirebaseService.isConfigured else { return }
         Analytics.logEvent(name, parameters: parameters)
+        #endif
     }
 
     static func signIn(method: String = "app") {
+        #if os(iOS)
         event(AnalyticsEventLogin, parameters: [AnalyticsParameterMethod: method])
+        #endif
     }
 
     static func screen(_ name: String) {
+        #if os(iOS)
         event(AnalyticsEventScreenView, parameters: [
             AnalyticsParameterScreenName: name,
             AnalyticsParameterScreenClass: name,
         ])
+        #endif
     }
 
     static func notificationReceived(type: String) {
@@ -163,6 +199,8 @@ enum GhostAnalytics {
     }
 
     static func shared(contentType: String) {
+        #if os(iOS)
         event(AnalyticsEventShare, parameters: [AnalyticsParameterContentType: contentType])
+        #endif
     }
 }

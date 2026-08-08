@@ -1,5 +1,31 @@
 import Foundation
 import SwiftUI
+#if os(iOS)
+import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
+
+// Small cross-platform seams so the two UIImage-specific spots below (an
+// existence check for a bundled asset, and decoding downloaded image data)
+// don't need their own platform branches inline.
+private func bundledImageExists(_ name: String) -> Bool {
+    #if os(iOS)
+    return UIImage(named: name) != nil
+    #elseif os(macOS)
+    return NSImage(named: name) != nil
+    #endif
+}
+
+private func decodedImage(from data: Data) -> Image? {
+    #if os(iOS)
+    guard let uiImage = UIImage(data: data) else { return nil }
+    return Image(uiImage: uiImage)
+    #elseif os(macOS)
+    guard let nsImage = NSImage(data: data) else { return nil }
+    return Image(nsImage: nsImage)
+    #endif
+}
 
 extension Color {
     static let inkColor = Color(red: 0.02, green: 0.02, blue: 0.02)
@@ -234,7 +260,7 @@ struct ProductThumbnail: View {
             // Bundled illustration as a base layer under any remote image,
             // matching Android's ProductPhoto z-order (Icons.kt) - catalog
             // items with no imageUrl still show real art, not just a glyph.
-            if let bundledPhotoName, UIImage(named: bundledPhotoName) != nil {
+            if let bundledPhotoName, bundledImageExists(bundledPhotoName) {
                 Image(bundledPhotoName).resizable().scaledToFit().padding(min(width, height) * 0.08)
             } else {
                 Image(systemName: systemImage)
@@ -296,8 +322,8 @@ private struct RetryingRemoteImage<Content: View>: View {
                 if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
                     throw URLError(.badServerResponse)
                 }
-                if let uiImage = UIImage(data: data) {
-                    loadedImage = Image(uiImage: uiImage)
+                if let image = decodedImage(from: data) {
+                    loadedImage = image
                     return
                 }
             } catch {

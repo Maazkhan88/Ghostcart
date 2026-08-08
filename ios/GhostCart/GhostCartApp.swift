@@ -2,7 +2,11 @@ import SwiftUI
 
 @main
 struct GhostCartApp: App {
+    #if os(iOS)
     @UIApplicationDelegateAdaptor(GhostCartAppDelegate.self) private var appDelegate
+    #elseif os(macOS)
+    @NSApplicationDelegateAdaptor(GhostCartAppDelegate.self) private var appDelegate
+    #endif
     @StateObject private var store = GhostCartStore()
     @StateObject private var onboarding = OnboardingState()
     @StateObject private var auth = AuthService.shared

@@ -251,7 +251,9 @@ final class GhostCartStore: ObservableObject {
         )
         GhostAnalytics.ghostOrderPlaced(category: item.category.rawValue, minutes: minutes)
         syncExtendOrCreateInBackground(item)
+        #if os(iOS)
         if #available(iOS 16.2, *) { LiveActivityManager.startCoolingOff(for: item) }
+        #endif
     }
 
     // "Send it around again": a fresh Ghost Delivery cycle for the same item.
@@ -273,7 +275,9 @@ final class GhostCartStore: ObservableObject {
         notificationService.cancelDeliveryStages(for: id)
         guard let item = item(id: id) else { return }
         syncResolveInBackground(item)
+        #if os(iOS)
         if #available(iOS 16.2, *) { LiveActivityManager.resolve(itemID: id, outcome: outcome, amount: item.amount) }
+        #endif
     }
 
     func snooze(id: UUID, minutes: Int) {
@@ -285,7 +289,9 @@ final class GhostCartStore: ObservableObject {
         guard let item = item(id: id) else { return }
         notificationService.scheduleCoolingComplete(for: item, enabled: preferences.reminders.coolingCompleteEnabled)
         syncExtendOrCreateInBackground(item)
+        #if os(iOS)
         if #available(iOS 16.2, *) { LiveActivityManager.updateEndTime(for: item) }
+        #endif
     }
 
     // MARK: - Server sync (best-effort, never blocks the caller)
@@ -365,7 +371,9 @@ final class GhostCartStore: ObservableObject {
         notificationService.cancelCoolingComplete(for: id)
         notificationService.cancelDeliveryStages(for: id)
         save()
+        #if os(iOS)
         if #available(iOS 16.2, *) { LiveActivityManager.cancel(itemID: id) }
+        #endif
     }
 
     func updateMembership(displayName: String, theme: MembershipTheme) {

@@ -1,8 +1,12 @@
-import UIKit
 import UserNotifications
+#if os(iOS)
+import UIKit
 import FirebaseMessaging
 #if canImport(GoogleSignIn)
 import GoogleSignIn
+#endif
+#elseif os(macOS)
+import AppKit
 #endif
 
 extension Notification.Name {
@@ -31,12 +35,75 @@ enum NotificationActionBridge {
     }
 }
 
-final class GhostCartAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+// All local/remote notification presentation and tap handling - pure
+// UserNotifications, no UIApplicationDelegate/NSApplicationDelegate
+// conformance, so this exists exactly once and is shared by both
+// platforms' app delegates below rather than duplicated per-platform.
+final class GhostCartNotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
+    static let shared = GhostCartNotificationDelegate()
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        let isRemote = notification.request.trigger is UNPushNotificationTrigger
+        PushDebugLog.log("Notification RECEIVED (foreground, \(isRemote ? "remote" : "local")): \(notification.request.content.title) / \(notification.request.content.userInfo)")
+        mirrorDeliveryStageToFeedIfNeeded(notification.request.content)
+        completionHandler([.banner, .sound])
+    }
+
+    // Mirrors a Ghost Delivery stage local notification into the
+    // backend-synced notifications feed right as it fires, per the
+    // notifications handoff. Only hooked here (willPresent, foreground) and
+    // deliberately not also in didReceive (tap) - a single notification can
+    // trigger both callbacks and would double-post. This means a stage
+    // update that fires while the app is backgrounded and never gets tapped
+    // is not mirrored - unlike Android's WorkManager, iOS local
+    // notifications have no guaranteed background-execution callback to
+    // hook into without new infrastructure (e.g. BGTaskScheduler polling),
+    // which this fire-and-forget feature doesn't warrant.
+    private func mirrorDeliveryStageToFeedIfNeeded(_ content: UNNotificationContent) {
+        guard content.userInfo["deliveryStage"] != nil else { return }
+        NotificationsService.postDeliveryUpdate(
+            title: content.title,
+            body: content.body,
+            link: (content.userInfo["almostBuyID"] as? String).map { "cooldown/\($0)" }
+        )
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        PushDebugLog.log("Notification TAPPED, action=\(response.actionIdentifier): \(response.notification.request.content.userInfo)")
+        let userInfo = response.notification.request.content.userInfo
+        if response.actionIdentifier != UNNotificationDefaultActionIdentifier,
+           response.actionIdentifier != UNNotificationDismissActionIdentifier,
+           let rawID = userInfo["almostBuyID"] as? String,
+           let id = UUID(uuidString: rawID) {
+            let pending = PendingNotificationAction(actionIdentifier: response.actionIdentifier, almostBuyID: id)
+            NotificationActionBridge.stage(pending)
+            NotificationCenter.default.post(name: .ghostCartNotificationAction, object: nil)
+        }
+        GhostAnalytics.notificationOpened(type: userInfo["type"] as? String ?? "cooldown_resolved")
+        NotificationCenter.default.post(
+            name: .ghostCartNotificationDestination,
+            object: nil,
+            userInfo: userInfo
+        )
+        completionHandler()
+    }
+}
+
+#if os(iOS)
+final class GhostCartAppDelegate: NSObject, UIApplicationDelegate {
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        UNUserNotificationCenter.current().delegate = self
+        UNUserNotificationCenter.current().delegate = GhostCartNotificationDelegate.shared
         FirebaseService.shared.configure()
         Task { await FirebaseService.shared.registerForRemoteNotificationsIfAuthorized() }
         #if DEBUG
@@ -80,36 +147,6 @@ final class GhostCartAppDelegate: NSObject, UIApplicationDelegate, UNUserNotific
         #endif
     }
 
-    func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification,
-        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
-    ) {
-        let isRemote = notification.request.trigger is UNPushNotificationTrigger
-        PushDebugLog.log("Notification RECEIVED (foreground, \(isRemote ? "remote" : "local")): \(notification.request.content.title) / \(notification.request.content.userInfo)")
-        mirrorDeliveryStageToFeedIfNeeded(notification.request.content)
-        completionHandler([.banner, .sound])
-    }
-
-    // Mirrors a Ghost Delivery stage local notification into the
-    // backend-synced notifications feed right as it fires, per the
-    // notifications handoff. Only hooked here (willPresent, foreground) and
-    // deliberately not also in didReceive (tap) - a single notification can
-    // trigger both callbacks and would double-post. This means a stage
-    // update that fires while the app is backgrounded and never gets tapped
-    // is not mirrored - unlike Android's WorkManager, iOS local
-    // notifications have no guaranteed background-execution callback to
-    // hook into without new infrastructure (e.g. BGTaskScheduler polling),
-    // which this fire-and-forget feature doesn't warrant.
-    private func mirrorDeliveryStageToFeedIfNeeded(_ content: UNNotificationContent) {
-        guard content.userInfo["deliveryStage"] != nil else { return }
-        NotificationsService.postDeliveryUpdate(
-            title: content.title,
-            body: content.body,
-            link: (content.userInfo["almostBuyID"] as? String).map { "cooldown/\($0)" }
-        )
-    }
-
     func application(
         _ application: UIApplication,
         didReceiveRemoteNotification userInfo: [AnyHashable: Any],
@@ -118,28 +155,16 @@ final class GhostCartAppDelegate: NSObject, UIApplicationDelegate, UNUserNotific
         PushDebugLog.log("Notification RECEIVED (background/silent): \(userInfo)")
         completionHandler(.newData)
     }
-
-    func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        didReceive response: UNNotificationResponse,
-        withCompletionHandler completionHandler: @escaping () -> Void
-    ) {
-        PushDebugLog.log("Notification TAPPED, action=\(response.actionIdentifier): \(response.notification.request.content.userInfo)")
-        let userInfo = response.notification.request.content.userInfo
-        if response.actionIdentifier != UNNotificationDefaultActionIdentifier,
-           response.actionIdentifier != UNNotificationDismissActionIdentifier,
-           let rawID = userInfo["almostBuyID"] as? String,
-           let id = UUID(uuidString: rawID) {
-            let pending = PendingNotificationAction(actionIdentifier: response.actionIdentifier, almostBuyID: id)
-            NotificationActionBridge.stage(pending)
-            NotificationCenter.default.post(name: .ghostCartNotificationAction, object: nil)
-        }
-        GhostAnalytics.notificationOpened(type: userInfo["type"] as? String ?? "cooldown_resolved")
-        NotificationCenter.default.post(
-            name: .ghostCartNotificationDestination,
-            object: nil,
-            userInfo: userInfo
-        )
-        completionHandler()
+}
+#elseif os(macOS)
+// Minimal counterpart to the iOS delegate above - Firebase push/GoogleSignIn
+// aren't linked on macOS (see FirebaseService.swift's doc comment), so this
+// only wires up local notification handling. Local reminders (cooling
+// complete, delivery stages) work unchanged; remote push does not.
+final class GhostCartAppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        UNUserNotificationCenter.current().delegate = GhostCartNotificationDelegate.shared
+        Task { await FirebaseService.shared.registerForRemoteNotificationsIfAuthorized() }
     }
 }
+#endif
