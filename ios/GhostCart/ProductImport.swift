@@ -76,7 +76,13 @@ struct CaptureSeed: Equatable {
 
 // MARK: - Shared-metadata merge (ported from Android)
 
-private let genericShareCaptionPattern = #"^check (this|it) out\b"#
+// Allows one optional word between "this/it" and "out" - Amazon's actual iOS
+// share-sheet default caption is "Check this deal out on Amazon", which the
+// old ^check (this|it) out\b pattern missed (the word "deal" breaks the
+// match), letting that promo text slip through as if it were a real product
+// title. Confirmed against a real share. Mirrored in Android's
+// GENERIC_SHARE_CAPTION_REGEX - keep both in sync.
+private let genericShareCaptionPattern = #"^check (this|it)(\s+\w+)? out\b"#
 
 // Recognizes titles that are share-sheet captions or SKUs rather than a real
 // product name. Mirrors Android's titleLooksLikeFallback, including the

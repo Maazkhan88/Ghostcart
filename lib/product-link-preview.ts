@@ -1,4 +1,11 @@
-const MAX_DOCUMENT_BYTES = 1_500_000;
+// Real Amazon product pages routinely run 2-3MB+ (sponsored placements,
+// personalized carousels, injected recommendation widgets all vary the page
+// weight per-request) - 1.5MB was silently aborting the fetch mid-stream for
+// a large share of genuinely valid, fully-fetchable listings, discarding
+// everything already read and falling back to a guessed title/no image.
+// Confirmed against a real amazon.ae listing (2.3MB, no bot-challenge, valid
+// title/JSON-LD present) that was failing under the old cap.
+const MAX_DOCUMENT_BYTES = 4_000_000;
 const MAX_REDIRECTS = 5;
 const FETCH_TIMEOUT_MS = 12_000;
 const TRACKING_KEYS = /^(utm_.+|fbclid|gclid|msclkid|shareid|tag|ref|ref_|referrer)$/i;

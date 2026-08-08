@@ -199,7 +199,12 @@ internal fun mergeDeviceMetadata(
     )
 }
 
-private val GENERIC_SHARE_CAPTION_REGEX = Regex("""^check (this|it) out\b""", RegexOption.IGNORE_CASE)
+// Allows one optional word between "this/it" and "out" - Amazon's actual iOS
+// share-sheet default caption is "Check this deal out on Amazon", which the
+// old ^check (this|it) out\b pattern missed (the word "deal" breaks the
+// match), letting that promo text slip through as if it were a real product
+// title. Confirmed against a real share.
+private val GENERIC_SHARE_CAPTION_REGEX = Regex("""^check (this|it)(\s+\w+)? out\b""", RegexOption.IGNORE_CASE)
 
 private fun titleLooksLikeFallback(value: String): Boolean =
     value == "Shared product" ||
