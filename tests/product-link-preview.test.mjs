@@ -164,3 +164,20 @@ test("Amazon search-result markup without JSON-LD is detected via data-asin fall
   assert.equal(listing[0].canonicalUrl, "https://www.amazon.ae/dp/B0AAA11111");
   assert.equal(listing[1].title, "Ghost Desk Lamp - Warm White");
 });
+
+test("a single Amazon product page's color/size variant swatches are not misdetected as a listing", () => {
+  // Reproduces the real reported bug: a /dp/{ASIN} product-detail page with
+  // no JSON-LD Product block, but color-variant swatches each carrying
+  // their own data-asin and an alt of just the color name (no price nearby)
+  // - previously misclassified as 4 fake "products" (Blue/Green/Pink/White,
+  // no price). See docs/plans/amazon-product-variations.md.
+  const html = `
+    <div id="variation_color_name">
+      <li data-asin="B0CCC11111"><img alt="Blue" src="https://m.media-amazon.com/images/I/11blue._AC_SL75_.jpg"></li>
+      <li data-asin="B0CCC22222"><img alt="Green" src="https://m.media-amazon.com/images/I/22green._AC_SL75_.jpg"></li>
+      <li data-asin="B0CCC33333"><img alt="Pink" src="https://m.media-amazon.com/images/I/33pink._AC_SL75_.jpg"></li>
+      <li data-asin="B0CCC44444"><img alt="White" src="https://m.media-amazon.com/images/I/44white._AC_SL75_.jpg"></li>
+    </div>`;
+  const listing = extractRetailerListing(html, new URL("https://www.amazon.ae/dp/B0CCC00000"));
+  assert.equal(listing.length, 0);
+});

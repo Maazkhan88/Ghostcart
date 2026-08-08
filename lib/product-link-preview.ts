@@ -575,6 +575,21 @@ function amazonSearchResultItems(html: string, finalUrl: URL): RetailerListingIt
   return items;
 }
 
+// A canonical /dp/{ASIN} (or /gp/product/{ASIN}) URL is definitionally a
+// single-product page, never a real multi-product search-results page
+// (those use a different URL shape, e.g. /s?k=...). amazonSearchResultItems
+// scans the whole page for data-asin attributes, which real search-results
+// cards have - but so do a single product's own color/size variant
+// swatches, each with their own child ASIN and an alt text of just the
+// variant name ("Blue", "Green", ...) and no nearby price. That collision
+// misclassified a single product-with-variants page as a listing of N fake
+// "products" (one per swatch, no price). See docs/plans/amazon-product-
+// variations.md for the full root cause writeup - this is Option 1 from
+// that plan: skip the search-results fallback entirely on a canonical
+// single-product URL, so it silently falls back to normal single-product
+// extraction (real title/price/image, variants just ignored) instead.
+const AMAZON_SINGLE_PRODUCT_PATH = /\/(?:dp|gp\/product)\/[A-Z0-9]{10}(?:[/?]|$)/i;
+
 export function extractRetailerListing(html: string, finalUrl: URL): RetailerListingItem[] {
   const seen = new Set<string>();
   const items: RetailerListingItem[] = [];
@@ -586,7 +601,9 @@ export function extractRetailerListing(html: string, finalUrl: URL): RetailerLis
     items.push(candidate);
   };
   for (const product of jsonLdProducts(html)) add(listingItemFromJsonLdProduct(product, finalUrl));
-  if (items.length < 2) amazonSearchResultItems(html, finalUrl).forEach(add);
+  if (items.length < 2 && !AMAZON_SINGLE_PRODUCT_PATH.test(finalUrl.pathname)) {
+    amazonSearchResultItems(html, finalUrl).forEach(add);
+  }
   return items;
 }
 
