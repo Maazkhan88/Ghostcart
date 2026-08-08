@@ -72,7 +72,15 @@ export async function GET(request: Request) {
           note: "Only the public retailer link is exposed; the person who shared it remains anonymous.",
         },
       },
-      { headers: { "Cache-Control": "public, max-age=30, s-maxage=60" } },
+      // Previously cached at the CDN edge for up to 60s (s-maxage) - this
+      // list is exactly what pull-to-refresh on Home is supposed to
+      // freshen, and a newly-published item (e.g. from another user's
+      // share) could sit invisible behind a stale edge-cached response for
+      // up to a minute even after an explicit manual refresh, only
+      // resolving once that cache entry happened to expire (which read as
+      // "only a full app restart shows it" - restart's timing just
+      // happened to land after expiry, not because it bypassed the cache).
+      { headers: { "Cache-Control": "no-store" } },
     );
   } catch {
     return json({ error: "Community products are temporarily unavailable" }, { status: 503 });
