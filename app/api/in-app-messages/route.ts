@@ -3,6 +3,7 @@ import { getDb } from "../../../db";
 import { inAppMessages } from "../../../db/schema";
 import { toRouteErrorMessage } from "../../../lib/api-helpers";
 import { getGhostCartAdminUser, requireAdminApiUser } from "../../../lib/admin-auth";
+import { createNotification } from "../../../lib/notifications";
 
 const MISSING_TABLE_HINT =
   "The in_app_messages table is unavailable. Generate the migration locally with `npm run db:generate`, then deploy so the platform can apply the generated SQL to the real D1 database.";
@@ -71,6 +72,18 @@ export async function POST(request: Request) {
         isActive: payload.isActive ?? true,
       })
       .returning();
+
+    if (message.isActive) {
+      // Best-effort: a failed feed write must never block publishing the
+      // announcement itself, which is already live via the modal dialog path.
+      createNotification({
+        userId: null,
+        type: "announcement",
+        title: message.title,
+        body: message.body,
+        link: message.linkUrl,
+      }).catch((error) => console.warn("announcement notification failed softly:", error));
+    }
 
     return Response.json({ message }, { status: 201 });
   } catch (error) {

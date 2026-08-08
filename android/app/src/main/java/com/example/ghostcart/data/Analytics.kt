@@ -134,6 +134,23 @@ object Analytics {
         selectedDecision: String? = null
     ) = logTutorialEvent(context, "tutorial_step_completed", version, stepName, selectedDecision = selectedDecision)
 
+    fun logTutorialStepViewed(context: Context, version: Int, stepName: String) =
+        logTutorialEvent(context, "tutorial_step_viewed", version, stepName)
+
+    fun logGhostOrderEvent(
+        context: Context,
+        event: String,
+        orderId: String? = null,
+        stage: String? = null,
+        durationMillis: Long? = null
+    ) {
+        analytics(context).logEvent(event, Bundle().apply {
+            orderId?.let { putString("order_id", it.take(80)) }
+            stage?.let { putString("stage", it.lowercase()) }
+            durationMillis?.let { putLong("duration_millis", it) }
+        })
+    }
+
     fun logTutorialSkipped(context: Context, version: Int, stepName: String) =
         logTutorialEvent(context, "tutorial_skipped", version, stepName, completionStatus = "skipped")
 

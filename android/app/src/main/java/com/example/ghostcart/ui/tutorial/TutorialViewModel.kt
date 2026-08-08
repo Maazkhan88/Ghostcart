@@ -52,6 +52,17 @@ class TutorialViewModel(application: Application) : AndroidViewModel(application
         Analytics.logTutorialStepCompleted(getApplication(), TUTORIAL_VERSION, TutorialStep.PRODUCT.name)
     }
 
+    fun advanceMarketplaceSpotlight() {
+        if (_state.value.currentStep != TutorialStep.PRODUCT) return
+        if (_state.value.marketplaceSpotlightStep >= 4) return
+        _state.value = repository.advanceMarketplaceSpotlight()
+        Analytics.logTutorialStepViewed(
+            getApplication(),
+            TUTORIAL_VERSION,
+            "marketplace_${_state.value.marketplaceSpotlightStep}"
+        )
+    }
+
     fun openTutorialCart() {
         if (_state.value.currentStep != TutorialStep.PRODUCT || !_state.value.practiceItemInCart) return
         _state.value = repository.openTutorialCart()
@@ -84,8 +95,11 @@ class TutorialViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun chooseDecision(decision: TutorialDecision) {
-        if (_state.value.currentStep != TutorialStep.DECISION) return
-        _state.value = repository.chooseDecision(decision)
+        _state.value = when (_state.value.currentStep) {
+            TutorialStep.DELIVERY -> repository.resolveTutorialDelivery(decision)
+            TutorialStep.DECISION -> repository.chooseDecision(decision)
+            else -> return
+        }
         Analytics.logTutorialStepCompleted(
             getApplication(),
             TUTORIAL_VERSION,
@@ -96,10 +110,8 @@ class TutorialViewModel(application: Application) : AndroidViewModel(application
 
     fun continueFromReceipt() = advance(TutorialStep.GHOST_RECEIPT, TutorialStep.COMPLETE)
 
-    fun startTutorialDelivery() = advance(TutorialStep.COMPLETE, TutorialStep.DELIVERY)
-
     fun complete() {
-        if (_state.value.currentStep != TutorialStep.DELIVERY) return
+        if (_state.value.currentStep != TutorialStep.COMPLETE) return
         _state.value = repository.complete()
         Analytics.logTutorialCompleted(getApplication(), TUTORIAL_VERSION)
     }

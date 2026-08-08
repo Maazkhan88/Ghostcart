@@ -30,6 +30,8 @@ Ghost Card is a membership/achievement artifact, never a payment instrument. It 
 
 Use official assets from `public/brand/` and their approved mobile equivalents. Do not approximate or redraw the official logo or UAE Dirham symbol.
 
+The approved mobile app identity as of 2026-08-02 is the white moving ghost-cart mark on an opaque black square. The exact source artwork is stored at `design/brand/ghost-cart-app-icon-source.jpg`; the exact splash reference is `design/brand/ghost-cart-splash-reference.jpg`. Android uses derived platform-safe assets under `android/app/src/main/res/`. iOS must derive its AppIcon and launch-screen artwork from the same source files—never from a screenshot of the Android UI and never by redrawing the mark.
+
 Product imagery in the curated catalogue must be licensed, generic, and stored in an approved project-controlled asset source. For a user-shared public HTTPS link, Ghost Cart may display the source page's Open Graph, Twitter Card or Product structured-data image as editable product metadata. It must never imply affiliation, and imported title, image and price remain editable.
 
 Community cards use the label **User Ghosted**. They never expose the user's name, profile or source URL. Community publication requires a visible, explicit consent control.

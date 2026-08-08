@@ -49,10 +49,21 @@ import com.example.ghostcart.theme.Ink
 import com.example.ghostcart.theme.MutedText
 import com.example.ghostcart.theme.Paper
 import com.example.ghostcart.theme.SoftGray
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 import java.util.concurrent.TimeUnit
 
 private fun relativeTime(iso: String): String {
-    val millis = runCatching { java.time.Instant.parse(iso).toEpochMilli() }.getOrNull() ?: return ""
+    val millis = listOf("yyyy-MM-dd'T'HH:mm:ss.SSSX", "yyyy-MM-dd'T'HH:mm:ssX")
+        .firstNotNullOfOrNull { pattern ->
+            runCatching {
+                SimpleDateFormat(pattern, Locale.US).apply {
+                    timeZone = TimeZone.getTimeZone("UTC")
+                    isLenient = false
+                }.parse(iso)?.time
+            }.getOrNull()
+        } ?: return ""
     val diff = System.currentTimeMillis() - millis
     if (diff < 0) return "just now"
     val hours = TimeUnit.MILLISECONDS.toHours(diff)
@@ -192,7 +203,7 @@ fun LeaderboardDetailScreen(
             ) {
                 Row(verticalAlignment = Alignment.Top) {
                     Box(
-                        modifier = Modifier.size(56.dp).clip(CircleShape).background(FaintBorder),
+                        modifier = Modifier.size(56.dp).clip(CircleShape).background(Ink),
                         contentAlignment = Alignment.Center
                     ) {
                         val preset = avatarPresetById(detail.avatarPresetId)
@@ -208,7 +219,7 @@ fun LeaderboardDetailScreen(
                                 contentDescription = null,
                                 modifier = Modifier.fillMaxSize().clip(CircleShape)
                             )
-                            else -> Text(detail.username.take(1).uppercase(), color = Ink, fontWeight = FontWeight.ExtraBold)
+                            else -> Text(detail.username.take(1).uppercase(), color = Paper, fontWeight = FontWeight.ExtraBold)
                         }
                     }
                     Column(modifier = Modifier.weight(1f).padding(start = 14.dp)) {

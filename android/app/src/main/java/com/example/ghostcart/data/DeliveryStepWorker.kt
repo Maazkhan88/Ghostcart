@@ -1,7 +1,5 @@
 package com.example.ghostcart.data
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -9,7 +7,6 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
-import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.work.CoroutineWorker
@@ -24,6 +21,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 private const val NOTIFICATION_IMAGE_TIMEOUT_MS = 4_000L
+const val GHOST_DELIVERY_WORK_TAG = "ghost_delivery_simulation"
+const val GHOST_DELIVERY_CHANNEL_ID = "ghost_delivery_updates"
 
 class DeliveryStepWorker(
     appContext: Context,
@@ -31,41 +30,48 @@ class DeliveryStepWorker(
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
-        val orderId = inputData.getString("orderId") ?: "GHOST-00000"
-        val amountSaved = inputData.getInt("amountSaved", 0)
-        val stepIndex = inputData.getInt("stepIndex", 1)
-        val productImageUrl = inputData.getString("productImageUrl")
+        val itemId = inputData.getString(KEY_ITEM_ID) ?: return Result.failure()
+        val orderId = inputData.getString(KEY_ORDER_ID) ?: itemId
+        val productName = inputData.getString(KEY_PRODUCT_NAME).orEmpty().ifBlank { "Your item" }
+        val durationLabel = inputData.getString(KEY_DURATION_LABEL).orEmpty().ifBlank { "the selected time" }
+        val state = inputData.getString(KEY_STATE)
+            ?.let { runCatching { GhostDeliveryState.valueOf(it) }.getOrNull() }
+            ?: return Result.failure()
+        val startMillis = inputData.getLong(KEY_START_MILLIS, 0L)
+        val endMillis = inputData.getLong(KEY_END_MILLIS, 0L)
 
-        val steps = listOf(
-            "Preparing imaginary order" to "Our team is carefully doing nothing.",
-            "Ghost Rider is on the way" to "Zooming through the void.",
-            "Rider left absolutely nothing at your doorstep" to "Yep, nothing's there.",
-            "Fake delivery complete" to "Thanks for choosing smart savings. You avoided spending AED $amountSaved!"
-        )
-
-        val (title, text) = if (stepIndex in 1..4) {
-            steps[stepIndex - 1]
-        } else {
-            "Ghost Cart Status" to "Update on order $orderId"
+        val copy = notificationCopy(state, productName, durationLabel) ?: return Result.success()
+        Analytics.logGhostOrderEvent(applicationContext, "ghost_stage_reached", orderId, state.name)
+        val image = loadRemoteProductImage(applicationContext, inputData.getString(KEY_PRODUCT_IMAGE_URL))
+            ?: decodeLocalPlaceholder(applicationContext)
+        showNotification(itemId, orderId, state, copy.first, copy.second, image)
+        if (startMillis > 0L && endMillis > 0L) {
+            GhostDeliveryLiveUpdate.updateStage(applicationContext, itemId, productName, state, startMillis, endMillis)
         }
-
-        // Image loading must never delay or block the notification itself: the plain text
-        // notification always posts below, and a picture is only *additionally* attached when
-        // one is ready within a short timeout, falling back to a local placeholder rather than
-        // no image at all when the remote fetch fails or times out.
-        val largeIcon = if (stepIndex == 4) {
-            // "Delivered" is about the whole order arriving on the doorstep, not a specific
-            // product - use a local placeholder stand-in until a real doorstep photo is
-            // supplied (swap decodeLocalPlaceholder's drawable resource for the real asset).
-            decodeLocalPlaceholder(applicationContext)
-        } else {
-            loadRemoteProductImage(applicationContext, productImageUrl)
-                ?: decodeLocalPlaceholder(applicationContext)
-        }
-
-        showNotification(title, text, largeIcon)
-
+        // Best-effort mirror into the synced notifications feed - never blocks
+        // or fails this worker if it doesn't go through (offline, signed out).
+        NotificationsRepository.postDeliveryUpdate(applicationContext, copy.first, copy.second, "ghostDeliveryTracker/$itemId")
         return Result.success()
+    }
+
+    private fun notificationCopy(
+        state: GhostDeliveryState,
+        productName: String,
+        durationLabel: String
+    ): Pair<String, String>? = when (state) {
+        GhostDeliveryState.PLACED -> "Ghost Order placed" to
+            "$productName is cooling for $durationLabel. Nothing has been purchased."
+        GhostDeliveryState.PREPARING -> "Your Ghost Order is being prepared" to
+            "Giving this almost-buy some space."
+        GhostDeliveryState.RIDER_PICKING_UP -> "Ghost Rider is picking up your order" to
+            "Your decision is still cooling."
+        GhostDeliveryState.OUT_FOR_DELIVERY -> "Out for Ghost Delivery" to
+            "Your $productName decision is on the way."
+        GhostDeliveryState.RIDER_NEARBY -> "Your Ghost Rider is nearby" to
+            "Your decision will be ready soon."
+        GhostDeliveryState.DELIVERED -> "Your Ghost Order has arrived" to
+            "Skip it, buy it, cool it again or ask a friend."
+        else -> null
     }
 
     private suspend fun loadRemoteProductImage(context: Context, imageUrl: String?): Bitmap? {
@@ -73,9 +79,7 @@ class DeliveryStepWorker(
         return withContext(Dispatchers.IO) {
             runCatching {
                 withTimeoutOrNull(NOTIFICATION_IMAGE_TIMEOUT_MS) {
-                    // Cache the decoded bytes on disk keyed by URL so the later delivery steps
-                    // for the same order/product reuse the download instead of refetching.
-                    val cacheFile = File(context.cacheDir, "notif_img_${imageUrl.hashCode()}.png")
+                    val cacheFile = File(context.cacheDir, "delivery_${imageUrl.hashCode()}.png")
                     if (cacheFile.exists()) {
                         BitmapFactory.decodeFile(cacheFile.absolutePath)
                     } else {
@@ -95,72 +99,73 @@ class DeliveryStepWorker(
     }
 
     private fun decodeLocalPlaceholder(context: Context): Bitmap? =
-        runCatching { BitmapFactory.decodeResource(context.resources, R.drawable.mascot_cart) }.getOrNull()
+        runCatching { BitmapFactory.decodeResource(context.resources, R.drawable.ghost_cart_app_icon) }.getOrNull()
 
     private fun letterboxToSquare(source: Bitmap): Bitmap {
         if (source.width == source.height) return source
         val size = maxOf(source.width, source.height)
-        val square = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        Canvas(square).apply {
-            drawColor(Color.WHITE)
-            drawBitmap(source, (size - source.width) / 2f, (size - source.height) / 2f, null)
+        return Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).also { square ->
+            Canvas(square).apply {
+                drawColor(Color.WHITE)
+                drawBitmap(source, (size - source.width) / 2f, (size - source.height) / 2f, null)
+            }
         }
-        return square
     }
 
-    private fun showNotification(title: String, text: String, largeIcon: Bitmap?) {
-        val channelId = "ghost_delivery_channel"
-        val notificationId = 1001 + inputData.getInt("stepIndex", 1)
-
+    private fun showNotification(
+        itemId: String,
+        orderId: String,
+        state: GhostDeliveryState,
+        title: String,
+        text: String,
+        largeIcon: Bitmap?
+    ) {
         val context = applicationContext
-
-        // Create notification channel if on Android O+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Ghost Cart Delivery Updates"
-            val descriptionText = "Notifications for the simulated ghost order delivery steps"
-            val importance = NotificationManager.IMPORTANCE_HIGH
-            val channel = NotificationChannel(channelId, name, importance).apply {
-                description = descriptionText
-            }
-            val notificationManager: NotificationManager =
-                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
-        }
+        ensureGhostNotificationChannels(context)
 
         val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("cooldownId", itemId)
+            putExtra("ghostOrderId", orderId)
+            putExtra("ghostDeliveryState", state.name)
         }
-        val pendingIntent: PendingIntent = PendingIntent.getActivity(
+        val notificationId = stableNotificationId(orderId, state)
+        val pendingIntent = PendingIntent.getActivity(
             context,
-            0,
+            notificationId,
             intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-
-        val builder = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ghost_cart_icon)
+        val builder = NotificationCompat.Builder(context, GHOST_DELIVERY_CHANNEL_ID)
+            .setSmallIcon(R.drawable.notification_ghost_icon)
             .setContentTitle(title)
             .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
+            .setGroup("ghost_delivery_$orderId")
 
-        if (largeIcon != null) {
-            builder
-                // The collapsed-notification icon slot is a fixed square that the system
-                // center-crops non-square bitmaps into, chopping off product artwork - so
-                // letterbox a square version for that slot. BigPictureStyle already renders
-                // the untouched bitmap correctly in the expanded view, so it keeps the original.
-                .setLargeIcon(letterboxToSquare(largeIcon))
-                .setStyle(NotificationCompat.BigPictureStyle().bigPicture(largeIcon))
-        }
-
+        largeIcon?.let { builder.setLargeIcon(letterboxToSquare(it)) }
         try {
-            with(NotificationManagerCompat.from(context)) {
-                notify(notificationId, builder.build())
-            }
-        } catch (e: SecurityException) {
-            // Permission not granted on Android 13+
+            NotificationManagerCompat.from(context).notify(notificationId, builder.build())
+        } catch (_: SecurityException) {
+            // Android 13+ permission is intentionally requested only after the first real order.
         }
+    }
+
+    companion object {
+        const val KEY_ITEM_ID = "itemId"
+        const val KEY_ORDER_ID = "orderId"
+        const val KEY_PRODUCT_NAME = "productName"
+        const val KEY_PRODUCT_IMAGE_URL = "productImageUrl"
+        const val KEY_DURATION_LABEL = "durationLabel"
+        const val KEY_STATE = "state"
+        const val KEY_START_MILLIS = "startMillis"
+        const val KEY_END_MILLIS = "endMillis"
+
+        fun stableNotificationId(orderId: String, state: GhostDeliveryState): Int =
+            ("$orderId:${state.name}".hashCode() and 0x7FFFFFFF).coerceAtLeast(1)
     }
 }

@@ -393,7 +393,16 @@ struct CaptureView: View {
         importedImageURL = seed.imageURL
         importedSourceDomain = seed.sourceDomain
         importedRetailer = seed.retailer
-        shareWithCommunity = false
+        // Defaults on when this capture was seeded from a link the user
+        // already shared into Ghost Cart (they already made the product
+        // public by sharing it externally, so the in-app community toggle
+        // matching that is reasonable) - matches Android's
+        // `mutableStateOf(seed?.sourceUrl != null)` in GhostCartV2Screens.kt.
+        // Manually-typed captures (no seed, or a seed with no source URL)
+        // keep defaulting off; the user can still uncheck this before
+        // confirming either way - the consent gate itself is unchanged.
+        let hasSharedLink = seed.sourceURL?.isEmpty == false
+        shareWithCommunity = hasSharedLink
         if let url = seed.sourceURL, !url.isEmpty {
             source = .url
             sourceURL = url

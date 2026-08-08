@@ -1,5 +1,6 @@
 import { getD1 } from "../../../../db";
 import { hashGiftToken, hashRecipientEmail, isGiftToken } from "../../../../lib/ghost-gifts";
+import { createNotification } from "../../../../lib/notifications";
 import { consumeRateLimit, requestActorHash } from "../../../../lib/rate-limit";
 import { authenticateApiRequest } from "../../../../lib/session-auth";
 
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
     const session = await authenticateApiRequest(request);
     const row = await db.prepare(
       `SELECT g.id, g.status, g.expires_at AS expiresAt,
-              g.recipient_email_hash AS recipientEmailHash,
+              g.recipient_email_hash AS recipientEmailHash, g.sender_user_id AS senderUserId,
               a.title, a.category, a.image_url AS imageUrl,
               a.almost_spent_cents AS amountCents, u.display_name AS senderName
        FROM ghost_gifts g
@@ -36,7 +37,8 @@ export async function POST(request: Request) {
        INNER JOIN users u ON u.id = g.sender_user_id
        WHERE g.token_hash = ? LIMIT 1`,
     ).bind(await hashGiftToken(token)).first<{
-      id: string; status: string; expiresAt: string; recipientEmailHash: string; title: string;
+      id: string; status: string; expiresAt: string; recipientEmailHash: string;
+      senderUserId: number; title: string;
       category: string; imageUrl: string | null; amountCents: number;
       senderName: string | null;
     }>();
@@ -55,6 +57,15 @@ export async function POST(request: Request) {
         `UPDATE ghost_gifts SET status = 'revealed', revealed_at = CURRENT_TIMESTAMP,
          updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'pending'`,
       ).bind(row.id).run();
+      // Best-effort: the sender should hear their gift was opened, but a
+      // notification-write failure must never block the reveal itself.
+      createNotification({
+        userId: row.senderUserId,
+        type: "gift",
+        title: "Your Ghost Gift was opened",
+        body: `Someone opened the ${row.title} gift you sent.`,
+        link: "/gifts",
+      }).catch((error) => console.warn("gift-reveal notification failed softly:", error));
     }
     if (session && await hashRecipientEmail(session.email) === row.recipientEmailHash) {
       await db.prepare(

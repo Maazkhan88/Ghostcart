@@ -684,3 +684,28 @@ export const simulatedOrders = sqliteTable(
     index("simulated_orders_user_idx").on(table.userId),
   ],
 );
+
+// The in-app notifications feed shown on the bell icon. `userId` NULL means
+// a global/broadcast row (an admin announcement, mirroring `inAppMessages`
+// but as a persisted list entry rather than a one-time modal) - every
+// signed-in user sees it. A non-NULL `userId` is a personal notification
+// (Ghost Delivery stage update, gift received). There is deliberately no
+// per-user read-state column: read/unread is derived client-side from a
+// locally stored "last seen" cursor, not synced server-side. Lunch/dinner/
+// cooling-reminder local notifications are intentionally never written
+// here - those stay device-local, per product decision.
+export const notifications = sqliteTable(
+  "notifications",
+  {
+    id: text("id").primaryKey(),
+    userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    link: text("link"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("notifications_user_created_idx").on(table.userId, table.createdAt),
+  ],
+);

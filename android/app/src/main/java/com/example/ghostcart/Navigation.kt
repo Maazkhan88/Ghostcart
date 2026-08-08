@@ -1,15 +1,19 @@
 package com.example.ghostcart
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,7 +36,6 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,6 +43,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -53,9 +57,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -64,18 +72,22 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
-import coil3.compose.SubcomposeAsyncImage
 import com.example.ghostcart.data.AlmostBuyResolution
 import com.example.ghostcart.data.AlmostBuyStatus
-import com.example.ghostcart.data.ContentBlockItem
+import com.example.ghostcart.data.AlmostBuy
+import com.example.ghostcart.data.GhostOrderResolution
+import com.example.ghostcart.data.GhostDeliveryState
+import com.example.ghostcart.data.GhostGiftDraft
 import com.example.ghostcart.data.Marketplace
 import com.example.ghostcart.data.openProductSource
 import com.example.ghostcart.data.shareGhostItem
+import com.example.ghostcart.data.Analytics
 import com.example.ghostcart.data.toGhostShareItem
 import com.example.ghostcart.data.TUTORIAL_PRODUCT_ID
 import com.example.ghostcart.data.TutorialStatus
 import com.example.ghostcart.data.TutorialStep
 import com.example.ghostcart.data.tutorialPracticeProduct
+import com.example.ghostcart.data.ghostDeliverySnapshot
 import com.ghostcart.app.R
 import com.example.ghostcart.theme.FaintBorder
 import com.example.ghostcart.theme.GhostGreen
@@ -83,6 +95,11 @@ import com.example.ghostcart.theme.DarkGray
 import com.example.ghostcart.theme.Ink
 import com.example.ghostcart.theme.MutedText
 import com.example.ghostcart.theme.Paper
+import com.example.ghostcart.theme.ExpressivePrimaryText
+import com.example.ghostcart.theme.ExpressiveSecondaryText
+import com.example.ghostcart.theme.ExpressiveSurfaceHigh
+import com.example.ghostcart.theme.GhostGlass
+import com.example.ghostcart.theme.GhostSubtleBorder
 import com.example.ghostcart.theme.GhostCartTheme
 import com.example.ghostcart.ui.GhostMascotPose
 import com.example.ghostcart.ui.GhostCartWordmark
@@ -91,6 +108,8 @@ import com.example.ghostcart.ui.checkout.FakeDeliveryTrackingScreen
 import com.example.ghostcart.ui.checkout.GhostCartListScreen
 import com.example.ghostcart.ui.checkout.GhostCheckoutScreen
 import com.example.ghostcart.ui.checkout.OrderGhostedSuccessScreen
+import com.example.ghostcart.ui.delivery.GhostDeliveryTimeDialog
+import com.example.ghostcart.ui.delivery.GhostDeliveryTrackerScreen
 import com.example.ghostcart.ui.gifts.GhostGiftRevealScreen
 import com.example.ghostcart.ui.gifts.GiftsScreen
 import com.example.ghostcart.ui.onboarding.AuthScreen
@@ -108,12 +127,21 @@ import com.example.ghostcart.ui.v2.LegalDocumentScreen
 import com.example.ghostcart.ui.v2.ProfileScreen
 import com.example.ghostcart.ui.v2.ProgressScreen
 import com.example.ghostcart.ui.v2.ShareQueueReviewScreen
+import com.example.ghostcart.ui.v2.rememberNotificationPermissionRequest
 import com.example.ghostcart.ui.tutorial.TutorialScreen
 import com.example.ghostcart.ui.tutorial.TutorialGuideSpec
 import com.example.ghostcart.ui.tutorial.TutorialViewModel
 import kotlinx.coroutines.delay
 
 private val onboardingDestinations: Set<NavKey> = setOf(Splash, Auth, ProfileSelect, Personalization, Tutorial)
+
+private data class PendingGhostCheckout(
+    val total: Int,
+    val gift: GhostGiftDraft?,
+    val deliveryAddress: String,
+    val itemLabel: String,
+    val category: String
+)
 
 private fun selectedBottomDestination(current: NavKey?): NavKey = when (current) {
     Cooldowns -> Cooldowns
@@ -123,6 +151,7 @@ private fun selectedBottomDestination(current: NavKey?): NavKey = when (current)
     is LegalDocument, Gifts -> GhostCardSettings
     GhostCartList, CaptureAlmostBuy, GhostCheckout, OrderGhostedSuccess,
     FakeDeliveryTracking, PayWithGhostCard, OrderProtected -> GhostCartList
+    is GhostDeliveryTracker -> Cooldowns
     else -> Home
 }
 
@@ -162,20 +191,34 @@ fun MainNavigation(
     val showBottomNav = current != null && current !in onboardingDestinations && !tutorialActive
     var showTutorialExitDialog by remember { mutableStateOf(false) }
     var dismissedOrderId by remember { mutableStateOf<String?>(null) }
+    var pendingGhostCheckout by remember { mutableStateOf<PendingGhostCheckout?>(null) }
+    val requestDeliveryNotifications = rememberNotificationPermissionRequest()
     // Full-screen story viewer overlay state - lives here (not inside
     // GhostHomeScreen) so it renders above the bottom nav/Scaffold entirely,
     // matching how a real Stories viewer covers the whole screen.
     var openStoryIndex by remember { mutableStateOf<Int?>(null) }
-    val showDeliveryBanner = current != FakeDeliveryTracking &&
-        state.deliveryStep in 0..3 &&
-        state.lastOrderId.isNotBlank() &&
-        dismissedOrderId != state.lastOrderId
+    val activeBannerOrder = state.almostBuys
+        .asSequence()
+        .filter { it.status == AlmostBuyStatus.COOLING && !it.tutorialOnly }
+        .map {
+            it to ghostDeliverySnapshot(
+                nowMillis = System.currentTimeMillis(),
+                startMillis = it.deliveryStartedAtMillis,
+                endMillis = it.deliveryEndsAtMillis,
+                persistedState = it.deliveryState
+            )
+        }
+        .minByOrNull { (item, _) -> item.deliveryEndsAtMillis }
+    val showDeliveryBanner = current !is GhostDeliveryTracker &&
+        activeBannerOrder != null &&
+        dismissedOrderId != activeBannerOrder.first.id
     val darkTheme = when (state.appTheme) {
         "Dark" -> true
         "Light" -> false
         else -> isSystemInDarkTheme()
     }
-    val tutorialProductionRoute = (current is ProductDetail && current.productId == TUTORIAL_PRODUCT_ID) ||
+    val tutorialProductionRoute = (current == Home && tutorialState.currentStep == TutorialStep.PRODUCT) ||
+        (current is ProductDetail && current.productId == TUTORIAL_PRODUCT_ID) ||
         current == GhostCartList || current == GhostCheckout
     BackHandler(enabled = tutorialActive && tutorialProductionRoute) {
         showTutorialExitDialog = true
@@ -186,10 +229,14 @@ fun MainNavigation(
         if (consent?.accepted == true) tutorialViewModel.recordConsentAccepted()
     }
 
-    LaunchedEffect(initialCooldownId) {
-        if (initialCooldownId != null && backStack.lastOrNull() != Cooldowns) {
-            com.example.ghostcart.data.Analytics.logNotificationOpened(context, "cooldown_resolved")
-            backStack.add(Cooldowns)
+    LaunchedEffect(initialCooldownId, state.almostBuys) {
+        val target = initialCooldownId?.let { id ->
+            state.almostBuys.firstOrNull { it.id == id || it.ghostOrderId == id }
+        }
+        if (target != null && backStack.lastOrNull() !is GhostDeliveryTracker) {
+            com.example.ghostcart.data.Analytics.logNotificationOpened(context, "ghost_notification_opened")
+            Analytics.logGhostOrderEvent(context, "ghost_notification_opened", target.ghostOrderId ?: target.id)
+            backStack.add(GhostDeliveryTracker(target.id))
         }
     }
 
@@ -199,7 +246,15 @@ fun MainNavigation(
     // reporting. class simpleName is stable and readable enough to use
     // directly as the screen name (e.g. "Home", "ProductDetail").
     LaunchedEffect(current) {
-        current?.let { com.example.ghostcart.data.Analytics.logScreenView(context, it::class.simpleName ?: "Unknown") }
+        current?.let { destination ->
+            Analytics.logScreenView(context, destination::class.simpleName ?: "Unknown")
+            when (destination) {
+                is GhostDeliveryTracker -> Analytics.logGhostOrderEvent(context, "tracker_opened", destination.itemId)
+                Progress -> Analytics.logGhostOrderEvent(context, "wallet_opened")
+                Leaderboard -> Analytics.logGhostOrderEvent(context, "leaderboard_opened")
+                else -> Unit
+            }
+        }
     }
 
     // Cooling/ghosting/add-to-cart are gated to signed-in accounts
@@ -287,11 +342,12 @@ fun MainNavigation(
                 if (showBottomNav) {
                     Column {
                         if (showDeliveryBanner) {
+                            val (order, snapshot) = activeBannerOrder
                             DeliveryTrackingBanner(
-                                orderId = state.lastOrderId,
-                                deliveryStep = state.deliveryStep,
-                                onClick = { backStack.add(FakeDeliveryTracking) },
-                                onClose = { dismissedOrderId = state.lastOrderId }
+                                order = order,
+                                state = snapshot.state,
+                                onClick = { backStack.add(GhostDeliveryTracker(order.id)) },
+                                onClose = { dismissedOrderId = order.id }
                             )
                         }
                         GhostBottomNav(
@@ -311,8 +367,7 @@ fun MainNavigation(
                 onBack = { backStack.removeLastOrNull() },
                 entryProvider = entryProvider {
                     entry<Splash> {
-                        RandomStorySplashScreen(
-                            stories = state.ghostCartStories,
+                        OfficialBrandSplashScreen(
                             onFinished = {
                                 backStack.clear()
                                 if (tutorialViewModel.shouldAutoLaunch()) {
@@ -333,7 +388,7 @@ fun MainNavigation(
                         )
                         LaunchedEffect(tutorialState.currentStep) {
                             val destination: NavKey? = when (tutorialState.currentStep) {
-                                TutorialStep.PRODUCT -> ProductDetail(TUTORIAL_PRODUCT_ID)
+                                TutorialStep.PRODUCT -> Home
                                 TutorialStep.CART, TutorialStep.COOLDOWN -> GhostCartList
                                 TutorialStep.FAKE_CHECKOUT -> GhostCheckout
                                 else -> null
@@ -355,7 +410,8 @@ fun MainNavigation(
                                 },
                                 onOpenPracticeProduct = {
                                     tutorialViewModel.openPracticeProduct()
-                                    backStack.add(ProductDetail(TUTORIAL_PRODUCT_ID))
+                                    backStack.clear()
+                                    backStack.add(Home)
                                 },
                                 onAddToCart = tutorialViewModel::addPracticeItemToCart,
                                 onOpenCooldown = tutorialViewModel::openCooldownPicker,
@@ -365,7 +421,6 @@ fun MainNavigation(
                                 onFinishCooling = tutorialViewModel::finishCooling,
                                 onChooseDecision = tutorialViewModel::chooseDecision,
                                 onContinueFromReceipt = tutorialViewModel::continueFromReceipt,
-                                onStartDelivery = tutorialViewModel::startTutorialDelivery,
                                 onDeliveryFinished = {
                                     tutorialViewModel.complete()
                                     backStack.clear()
@@ -429,9 +484,12 @@ fun MainNavigation(
                         )
                     }
                     entry<Home> {
+                        val tutorialMarketplace = tutorialActive && tutorialState.currentStep == TutorialStep.PRODUCT
                         GhostHomeScreen(
                             items = state.almostBuys,
-                            unifiedProducts = appViewModel.unifiedMarketplaceProducts(),
+                            unifiedProducts = if (tutorialMarketplace) {
+                                listOf(tutorialProduct) + appViewModel.unifiedMarketplaceProducts().filterNot { it.id == TUTORIAL_PRODUCT_ID }
+                            } else appViewModel.unifiedMarketplaceProducts(),
                             favoriteProducts = state.favoriteProductIds.mapNotNull(appViewModel::findProduct),
                             favoriteProductIds = state.favoriteProductIds,
                             communityProductsLoading = state.communityProductsLoading,
@@ -440,11 +498,14 @@ fun MainNavigation(
                                 backStack.add(CaptureAlmostBuy)
                             },
                             onOpenCooldowns = { backStack.add(Cooldowns) },
+                            onTrackDelivery = { id -> backStack.add(GhostDeliveryTracker(id)) },
                             onOpenProgress = { backStack.add(Progress) },
-                            onGhost = { id -> appViewModel.addToCart(id) },
+                            onGhost = appViewModel::addToCart,
                             onOpen = { id -> backStack.add(ProductDetail(id)) },
                             onToggleFavorite = appViewModel::toggleFavorite,
-                            onNotifications = { backStack.add(GhostCardSettings) },
+                            onShareProduct = { product -> shareGhostItem(context, product.toGhostShareItem()) },
+                            onNotifications = { backStack.add(Notifications) },
+                            hasUnreadNotifications = state.hasUnreadNotifications,
                             onViewAllCatalog = { categoryId -> backStack.add(CategoryBrowse(categoryId)) },
                             onViewAllFavorites = { backStack.add(CategoryBrowse("favorites")) },
                             onNotificationsGranted = appViewModel::enableMealRemindersByDefault,
@@ -457,7 +518,15 @@ fun MainNavigation(
                             homeBanners = state.homeBanners,
                             ghostCartStories = state.ghostCartStories,
                             onOpenLeaderboard = { backStack.add(Leaderboard) },
-                            onOpenStory = { index -> openStoryIndex = index }
+                            onOpenStory = { index -> openStoryIndex = index },
+                            tutorialProductId = TUTORIAL_PRODUCT_ID.takeIf { tutorialMarketplace },
+                            tutorialSpotlightStep = tutorialState.marketplaceSpotlightStep,
+                            onTutorialAdvance = tutorialViewModel::advanceMarketplaceSpotlight,
+                            onTutorialGhost = {
+                                tutorialViewModel.addPracticeItemToCart()
+                                tutorialViewModel.openTutorialCart()
+                                backStack.add(GhostCartList)
+                            }
                         )
                     }
                     entry<CategoryBrowse> { key ->
@@ -481,7 +550,12 @@ fun MainNavigation(
                             onToggleFavorite = appViewModel::toggleFavorite,
                             onBack = { backStack.removeLastOrNull() },
                             onOpenProduct = { id -> backStack.add(ProductDetail(id)) },
-                            onGhostProduct = { id -> appViewModel.addToCart(id) }
+                            onGhostProduct = appViewModel::addToCart,
+                            onShareProduct = { product -> shareGhostItem(context, product.toGhostShareItem()) },
+                            onReviews = { id ->
+                                Analytics.logGhostOrderEvent(context, "product_reviews_opened")
+                                backStack.add(ProductDetail(id))
+                            }
                         )
                     }
                     entry<CaptureAlmostBuy> {
@@ -513,11 +587,11 @@ fun MainNavigation(
                                     appViewModel.clearCaptureSeed()
                                     backStack.removeLastOrNull()
                                 },
-                                onGhostIt = {
-                                    appViewModel.createAlmostBuy(it)
+                                onGhostIt = { draft ->
+                                    appViewModel.addDraftToCart(draft)
                                     appViewModel.clearCaptureSeed()
-                                    backStack.clear()
-                                    backStack.add(Cooldowns)
+                                    backStack.removeLastOrNull()
+                                    backStack.add(GhostCartList)
                                 },
                                 onAddListingToCart = { items ->
                                     appViewModel.addListingItemsToCart(items)
@@ -533,8 +607,27 @@ fun MainNavigation(
                             onResolve = { id, resolution -> appViewModel.resolveAlmostBuy(id, resolution) },
                             onMoreTime = appViewModel::extendAlmostBuy,
                             onShare = { item -> shareGhostItem(context, item.toGhostShareItem()) },
-                            onOpenSource = { url -> openProductSource(context, url) }
+                            onOpenSource = { url -> openProductSource(context, url) },
+                            onTrack = { id -> backStack.add(GhostDeliveryTracker(id)) }
                         )
+                    }
+                    entry<GhostDeliveryTracker> { key ->
+                        val order = state.almostBuys.firstOrNull { it.id == key.itemId || it.ghostOrderId == key.itemId }
+                        if (order == null) {
+                            LaunchedEffect(key.itemId) {
+                                backStack.removeLastOrNull()
+                                if (backStack.lastOrNull() != Cooldowns) backStack.add(Cooldowns)
+                            }
+                        } else {
+                            GhostDeliveryTrackerScreen(
+                                item = order,
+                                onBack = { backStack.removeLastOrNull() },
+                                onResolve = { resolution -> appViewModel.resolveGhostDelivery(order.id, resolution) },
+                                onRestart = { duration -> appViewModel.extendAlmostBuy(order.id, duration) },
+                                onOpenSource = { url -> openProductSource(context, url) },
+                                onShare = { shareGhostItem(context, order.toGhostShareItem()) }
+                            )
+                        }
                     }
                     entry<Progress> {
                         ProgressScreen(
@@ -602,17 +695,10 @@ fun MainNavigation(
                         val cartProducts = if (tutorialCartScreen) listOf(tutorialProduct to 1) else appViewModel.cartProductsWithQuantities()
                         GhostCartListScreen(
                             products = cartProducts,
-                            coolingUntilByProductId = if (tutorialCartScreen) emptyMap() else state.coolingUntilByProductId,
                             onBack = { if (tutorialCartScreen) showTutorialExitDialog = true else if (backStack.size > 1) backStack.removeLastOrNull() else backStack.add(Home) },
                             onAdd = { id -> if (!tutorialCartScreen) appViewModel.addToCart(id) },
                             onRemove = { id -> if (!tutorialCartScreen) appViewModel.removeFromCart(id) },
                             onClearAll = { if (!tutorialCartScreen) appViewModel.clearCart() },
-                            onStartCooling = { id, durationMillis, durationLabel ->
-                                if (!tutorialCartScreen) {
-                                    appViewModel.startCoolingPeriod(id, durationMillis, durationLabel)
-                                    backStack.add(Cooldowns)
-                                }
-                            },
                             onOpenProduct = { id -> if (!tutorialCartScreen) backStack.add(ProductDetail(id)) },
                             onShareProduct = { product -> if (!tutorialCartScreen) shareGhostItem(context, product.toGhostShareItem()) },
                             onCheckout = {
@@ -646,8 +732,6 @@ fun MainNavigation(
                         GhostCheckoutScreen(
                             products = if (tutorialCheckoutScreen) listOf(tutorialProduct to 1) else appViewModel.cartProductsWithQuantities(),
                             walletBalance = if (tutorialCheckoutScreen) 10_000 else state.walletConfig.startingBalance,
-                            simulationIntervalMinutes = if (tutorialCheckoutScreen) 1 else state.simulationIntervalMinutes,
-                            onSelectInterval = { mins -> if (!tutorialCheckoutScreen) appViewModel.setSimulationInterval(mins) },
                             onBack = { if (tutorialCheckoutScreen) showTutorialExitDialog = true else backStack.removeLastOrNull() },
                             onOpenWallet = { if (!tutorialCheckoutScreen) backStack.add(Progress) },
                             onPlaceOrder = { total, ghostGift, deliveryAddress ->
@@ -655,8 +739,22 @@ fun MainNavigation(
                                     tutorialViewModel.completeFakeCheckout()
                                     backStack.clear()
                                     backStack.add(Tutorial)
-                                } else if (appViewModel.placeSimulatedOrder(total, ghostGift, deliveryAddress)) {
-                                    backStack.add(OrderGhostedSuccess)
+                                } else {
+                                    val checkoutProducts = appViewModel.cartProductsWithQuantities()
+                                    val distinctProducts = checkoutProducts.map { it.first }.distinctBy { it.id }
+                                    val allFood = distinctProducts.isNotEmpty() && distinctProducts.all { product ->
+                                        product.category.contains("food", ignoreCase = true) ||
+                                            product.category.contains("coffee", ignoreCase = true) ||
+                                            product.category.contains("delivery", ignoreCase = true)
+                                    }
+                                    pendingGhostCheckout = PendingGhostCheckout(
+                                        total = total,
+                                        gift = ghostGift,
+                                        deliveryAddress = deliveryAddress,
+                                        itemLabel = distinctProducts.singleOrNull()?.name
+                                            ?: "${distinctProducts.size} Ghost Cart items",
+                                        category = if (allFood) "Food & delivery" else "Marketplace"
+                                    )
                                 }
                             },
                             tutorialMode = tutorialCheckoutScreen,
@@ -687,8 +785,7 @@ fun MainNavigation(
                             amountAvoided = state.lastOrderTotal,
                             sourceProducts = state.lastOrderProducts,
                             onTrackDelivery = {
-                                appViewModel.startDeliveryTracking()
-                                backStack.add(FakeDeliveryTracking)
+                                backStack.add(GhostDeliveryTracker(state.lastOrderId))
                             },
                             onViewSavings = {
                                 backStack.clear()
@@ -776,6 +873,14 @@ fun MainNavigation(
                     entry<Gifts> {
                         GiftsScreen(onBack = { backStack.removeLastOrNull() })
                     }
+                    entry<Notifications> {
+                        com.example.ghostcart.ui.notifications.NotificationsScreen(
+                            notifications = state.notifications,
+                            loading = state.notificationsLoading,
+                            onBack = { backStack.removeLastOrNull() },
+                            onOpen = { appViewModel.markNotificationsSeen() }
+                        )
+                    }
                     entry<LegalDocument> { key ->
                         LegalDocumentScreen(docId = key.docId, onBack = { backStack.removeLastOrNull() })
                     }
@@ -800,6 +905,27 @@ fun MainNavigation(
                             isYou = state.profile?.username == key.username,
                             onBack = { backStack.removeLastOrNull() }
                         )
+                    }
+                }
+            )
+        }
+
+        pendingGhostCheckout?.let { checkout ->
+            GhostDeliveryTimeDialog(
+                productName = checkout.itemLabel,
+                category = checkout.category,
+                onDismiss = { pendingGhostCheckout = null },
+                onConfirm = { duration ->
+                    pendingGhostCheckout = null
+                    if (appViewModel.placeSimulatedOrder(
+                            checkoutTotal = checkout.total,
+                            ghostGift = checkout.gift,
+                            deliveryAddress = checkout.deliveryAddress,
+                            deliveryDurationMillis = duration
+                        )
+                    ) {
+                        requestDeliveryNotifications()
+                        backStack.add(OrderGhostedSuccess)
                     }
                 }
             )
@@ -878,97 +1004,37 @@ fun MainNavigation(
 
 @Composable
 private fun SplashContent() {
-    Box(Modifier.fillMaxSize().background(Paper), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            GhostCartWordmark(modifier = Modifier.width(220.dp).height(72.dp), tint = Ink)
-            Spacer(Modifier.height(12.dp))
-            Text("For everything you almost bought.", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
-        }
-    }
-}
-
-private const val SPLASH_SKIP_BUTTON_DELAY_MS = 3_000L
-private const val SPLASH_AUTO_ADVANCE_MS = 5_000L
-private const val SPLASH_FALLBACK_MS = 1_200L
-
-/**
- * Cold-start splash: picks one random Ghost Cart Story to show full-bleed
- * (the same admin-managed content the Stories rail uses), with a Skip button
- * that appears after 3s and an automatic advance at 5s regardless. Falls
- * back to the plain wordmark splash (old behavior, ~1.2s) if no story is
- * available yet - stories are fetched async on app start and may not have
- * arrived by the time this renders, especially on a cold/slow connection.
- */
-@Composable
-private fun RandomStorySplashScreen(stories: List<ContentBlockItem>, onFinished: () -> Unit) {
-    // Image stories only - autoplaying a video (with audio) on cold start,
-    // on top of the fixed 3s/5s skip timing below, isn't a good splash
-    // experience. Video stories still play in full in the regular viewer.
-    val imageStories = remember(stories) { stories.filter { it.mediaType != "video" } }
-    val story = remember(imageStories.isNotEmpty()) { imageStories.randomOrNull() }
-    var showSkip by remember { mutableStateOf(false) }
-    var finished by remember { mutableStateOf(false) }
-    val finish = {
-        if (!finished) {
-            finished = true
-            onFinished()
-        }
-    }
-
-    if (story == null) {
-        LaunchedEffect(Unit) {
-            delay(SPLASH_FALLBACK_MS)
-            finish()
-        }
-        SplashContent()
-        return
-    }
-
-    LaunchedEffect(story) {
-        delay(SPLASH_SKIP_BUTTON_DELAY_MS)
-        showSkip = true
-        delay(SPLASH_AUTO_ADVANCE_MS - SPLASH_SKIP_BUTTON_DELAY_MS)
-        finish()
-    }
-
-    Box(Modifier.fillMaxSize()) {
-        // The story image is fetched over the network and may take a moment
-        // on a cold start with no cache - show the branded wordmark while it
-        // loads instead of a flat black rectangle with nothing on it.
-        SubcomposeAsyncImage(
-            model = story.imageUrl,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-            loading = { SplashContent() },
-            error = { SplashContent() }
+    Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+        Image(
+            painter = painterResource(R.drawable.ghost_cart_splash_reference),
+            contentDescription = "GhostCart. For everything you almost bought",
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.fillMaxSize()
         )
-        AnimatedVisibility(
-            visible = showSkip,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(24.dp).navigationBarsPadding(),
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            TextButton(
-                onClick = { finish() },
-                colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
-            ) {
-                Text("Skip", fontWeight = FontWeight.Bold)
-            }
-        }
     }
 }
 
-private val deliveryStepLabels = listOf(
-    "Order placed",
-    "Preparing imaginary order",
-    "Ghost Rider is on the way",
-    "Rider left absolutely nothing at your doorstep"
-)
+private const val BRAND_SPLASH_DURATION_MS = 1_200L
 
 @Composable
-private fun DeliveryTrackingBanner(orderId: String, deliveryStep: Int, onClick: () -> Unit, onClose: () -> Unit) {
-    val safeStep = deliveryStep.coerceIn(0, deliveryStepLabels.lastIndex)
+private fun OfficialBrandSplashScreen(onFinished: () -> Unit) {
+    LaunchedEffect(Unit) {
+        delay(BRAND_SPLASH_DURATION_MS)
+        onFinished()
+    }
+    SplashContent()
+}
+
+@Composable
+private fun DeliveryTrackingBanner(order: AlmostBuy, state: GhostDeliveryState, onClick: () -> Unit, onClose: () -> Unit) {
+    val status = when (state) {
+        GhostDeliveryState.PLACED -> "Ghost Order placed"
+        GhostDeliveryState.PREPARING -> "Being prepared"
+        GhostDeliveryState.RIDER_PICKING_UP -> "Ghost Rider picking up"
+        GhostDeliveryState.OUT_FOR_DELIVERY -> "Out for Ghost Delivery"
+        GhostDeliveryState.RIDER_NEARBY -> "Ghost Rider nearby"
+        else -> "Ghost Delivery"
+    }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -984,8 +1050,9 @@ private fun DeliveryTrackingBanner(orderId: String, deliveryStep: Int, onClick: 
             GhostMascotPose(poseName = "wave", modifier = Modifier.size(20.dp))
         }
         Column(modifier = Modifier.weight(1f).padding(start = 10.dp)) {
-            Text(text = "Tracking $orderId", color = Color.White.copy(alpha = 0.68f), fontSize = 9.sp)
-            Text(text = deliveryStepLabels[safeStep], color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(text = "YOUR GHOST DELIVERY · SIMULATION", color = GhostGreen, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            Text(text = status, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(text = order.name, color = Color.White.copy(alpha = 0.68f), fontSize = 9.sp, maxLines = 1)
         }
         IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
             Icon(Icons.Filled.Close, contentDescription = "Dismiss", tint = Color.White.copy(alpha = 0.68f), modifier = Modifier.size(16.dp))
@@ -1004,42 +1071,87 @@ private fun GhostBottomNav(current: NavKey?, cartItemCount: Int = 0, onNavigate:
         Item(stringResource(R.string.nav_profile), GhostCardSettings, Icons.Filled.Person)
     )
 
-    NavigationBar(containerColor = Paper, tonalElevation = 0.dp) {
-        items.forEach { item ->
-            val selected = current == item.destination
-            NavigationBarItem(
-                selected = selected,
-                onClick = { onNavigate(item.destination) },
-                icon = {
-                    Box(contentAlignment = Alignment.TopEnd, modifier = Modifier.offset(y = 6.dp)) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .navigationBarsPadding(),
+        shape = RoundedCornerShape(32.dp),
+        color = GhostGlass,
+        contentColor = ExpressivePrimaryText,
+        tonalElevation = 4.dp,
+        shadowElevation = 6.dp,
+        border = BorderStroke(1.dp, GhostSubtleBorder)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 6.dp, vertical = 5.dp)
+        ) {
+            items.forEach { item ->
+                val selected = current == item.destination
+                val indicatorColor by animateColorAsState(
+                    targetValue = when {
+                        item.central -> GhostGreen
+                        selected -> GhostGreen
+                        else -> Color.Transparent
+                    },
+                    animationSpec = spring(dampingRatio = 0.78f, stiffness = 560f),
+                    label = "navIndicator"
+                )
+                val iconColor by animateColorAsState(
+                    targetValue = if (selected) Color(0xFF071006) else ExpressiveSecondaryText,
+                    animationSpec = spring(dampingRatio = 0.78f, stiffness = 560f),
+                    label = "navIconColor"
+                )
+                val indicatorWidth by animateDpAsState(
+                    targetValue = if (selected || item.central) 50.dp else 40.dp,
+                    animationSpec = spring(dampingRatio = 0.72f, stiffness = 520f),
+                    label = "navIndicatorWidth"
+                )
+                val iconScale by animateFloatAsState(
+                    targetValue = if (selected) 1.08f else 1f,
+                    animationSpec = spring(dampingRatio = 0.68f, stiffness = 480f),
+                    label = "navIconScale"
+                )
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(62.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .clickable(role = Role.Tab) { onNavigate(item.destination) }
+                        .padding(vertical = 4.dp)
+                ) {
+                    Box(contentAlignment = Alignment.TopEnd) {
                         Box(
                             modifier = Modifier
-                                .size(if (item.central) 48.dp else 34.dp)
-                                .clip(CircleShape)
-                                .background(if (item.central) GhostGreen else Color.Transparent),
+                                .width(indicatorWidth)
+                                .height(if (item.central) 46.dp else 34.dp)
+                                .clip(if (item.central) CircleShape else RoundedCornerShape(18.dp))
+                                .background(indicatorColor)
+                                .graphicsLayer { scaleX = iconScale; scaleY = iconScale },
                             contentAlignment = Alignment.Center
                         ) {
                             if (item.central) {
-                                // This button now IS the cart entry point (GhostCartList), so the
-                                // cart-shaped mascot is accurate again, not confusable with a
-                                // different affordance - there's only one cart icon now.
                                 GhostMascotPose(
                                     poseName = "cart",
-                                    modifier = Modifier.size(40.dp)
+                                    modifier = Modifier.size(36.dp)
                                 )
                             } else {
                                 Icon(
                                     item.icon,
                                     contentDescription = item.label,
-                                    tint = if (selected) GhostGreen else MutedText,
-                                    modifier = Modifier.size(26.dp)
+                                    tint = iconColor,
+                                    modifier = Modifier.size(23.dp)
                                 )
                             }
                         }
                         if (item.central && cartItemCount > 0) {
                             Box(
                                 modifier = Modifier
-                                    .padding(top = 2.dp, end = 2.dp)
+                                    .offset(x = 4.dp, y = (-2).dp)
                                     .size(18.dp)
                                     .clip(CircleShape)
                                     .background(Color(0xFFE4342F)),
@@ -1054,12 +1166,17 @@ private fun GhostBottomNav(current: NavKey?, cartItemCount: Int = 0, onNavigate:
                             }
                         }
                     }
-                },
-                label = if (item.central) null else {
-                    { Text(item.label, color = if (selected) Ink else MutedText, fontSize = 9.sp) }
-                },
-                colors = NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent)
-            )
+                    if (!item.central) {
+                        Text(
+                            item.label,
+                            color = if (selected) ExpressivePrimaryText else ExpressiveSecondaryText,
+                            fontSize = 9.sp,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
         }
     }
 }

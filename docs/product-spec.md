@@ -35,13 +35,13 @@ Fake Checkout and pretend delivery are optional emotional rituals. They never ch
 4. Progress - Money Kept, outcomes, patterns, and history. Never a bank balance.
 5. Profile - reminders, privacy, accessibility, theme, membership card, and account.
 
-Product discovery is a visual entry point and never a real storefront. Every curated item offers one primary **Ghost it** action. Ghosting always starts the standard 24-hour cooldown; there is no competing cart, checkout, or duration choice in the primary path. Sponsored content must not interrupt cooling or resolution.
+Product discovery is a visual entry point and never a real storefront. Every curated item offers one primary **Ghost it** action, which adds it to the persistent Ghost Cart. It does not start cooling or ask for a duration. At Fake Checkout, the customer chooses one Ghost Delivery time for the cart and confirms the Ghost Order; only then do cooling, delivery simulation, Ghost counts, and notifications start. Sponsored content must not interrupt cooling or resolution.
 
 Food is a separate Home discovery lane rather than being mixed through the general marketplace rail. Ghost Cart accepts public share links from food-delivery services including Noon Food, Keeta, Talabat, Deliveroo, Uber Eats, and Careem Food, while retaining the generic public-HTTPS fallback for other services.
 
 ## Ghost orders and counting
 
-- Starting a cooldown is the canonical Ghost event. Therefore **items Ghosted = items put into cooldown**.
+- Placing a Ghost Order is the canonical Ghost event. Therefore **items Ghosted = cart items whose Ghost Order was placed and whose cooldown started**. Cart additions alone never count.
 - Each item counts once when its cooldown starts. Skipping, buying, or restarting later does not create another Ghost count.
 - The opt-in leaderboard ranks Ghosted item counts from almost-buys, not purchases or Fake Checkout completions.
 - When several items are Ghosted together, they share an opaque Ghost order ID and appear together in Orders.
@@ -97,16 +97,18 @@ Food is a separate Home discovery lane rather than being mixed through the gener
 
 ## Core journey
 
-1. Capture item name, amount, category, trigger, and optional source URL/image.
-2. Tap **Ghost it**. The item immediately enters a 24-hour cooldown.
-3. While cooling, show progress and the remaining time; do not show premature purchase decisions.
-4. At expiry, send transactional email and push reminders and surface an in-app decision prompt.
-5. Resolve with one of four explicit actions: **Skip the item**, **Buy it from source**, **Bought it already**, or **Restart cooldown**.
-6. Buying from source opens the saved retailer URL but does not infer an outcome; the customer records the final outcome explicitly.
-7. Restarting opens the duration picker (15 minutes, 24 hours, 3 days, or 7 days), resets the timer, and reschedules all reminders.
-8. Update Progress only from the confirmed outcome. Only **Skip the item** contributes to Money Kept.
+1. Capture or discover an item with its name, amount, category, trigger, and optional source URL/image.
+2. Tap **Ghost it** to add the item to Ghost Cart. Do not ask for a duration or start a simulation yet.
+3. Review Ghost Cart, continue to Fake Checkout, then choose the Ghost Delivery time while placing the Ghost Order.
+4. Confirm the Ghost Order. Cooling and the simulated delivery begin together for every cart item.
+5. While cooling, show progress and the remaining time; do not show premature purchase decisions.
+6. At expiry, send transactional email and push reminders and surface an in-app decision prompt.
+7. Resolve with one of four explicit actions: **Skip the item**, **Buy it from source**, **Bought it already**, or **Restart cooldown**.
+8. Buying from source opens the saved retailer URL but does not infer an outcome; the customer records the final outcome explicitly.
+9. Restarting opens the duration picker, resets the timer, and reschedules all reminders.
+10. Update Progress only from the confirmed outcome. Only **Skip the item** contributes to Money Kept.
 
-Fake Checkout and pretend delivery remain optional secondary rituals and are not part of the default Ghost journey.
+Fake Checkout, delivery-time selection, and the simulated Ghost Delivery are the standard order-placement journey. They remain visibly simulation-only and never create a real payment, purchase, courier, or delivery.
 
 ## Trust rules
 
