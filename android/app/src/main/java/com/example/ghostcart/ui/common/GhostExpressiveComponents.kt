@@ -437,26 +437,23 @@ fun GhostProductCard(
                 }
             }
             Box(modifier = Modifier.weight(1f))
-            Button(
-                onClick = onGhost,
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(44.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(GhostGreen)
+                    .clickable(onClick = onGhost)
                     .then(
                         if (spotlightTarget == ProductCardSpotlightTarget.GHOST && onSpotlightBounds != null) {
                             Modifier.onGloballyPositioned { onSpotlightBounds(it.boundsInWindow()) }
                         } else Modifier
                     ),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = GhostGreen,
-                    contentColor = GhostOnGreen,
-                ),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Icon(Icons.Filled.ShoppingCart, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Text("Ghost it", style = MaterialTheme.typography.labelLarge)
+                    Icon(Icons.Filled.ShoppingCart, contentDescription = null, tint = GhostOnGreen, modifier = Modifier.size(16.dp))
+                    Text("Ghost it", color = GhostOnGreen, style = MaterialTheme.typography.labelLarge)
                 }
             }
         }
