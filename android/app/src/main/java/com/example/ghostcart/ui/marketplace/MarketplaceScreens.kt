@@ -1223,7 +1223,7 @@ private fun DetailRow(label: String, value: String) {
 private fun HighlightPoint(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, caption: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(90.dp)) {
         Icon(icon, contentDescription = null, tint = GhostGreen, modifier = Modifier.size(18.dp))
-        Text(text = title, color = Ink, fontSize = 9.sp, fontWeight = FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 6.dp))
-        Text(text = caption, color = MutedText, fontSize = 8.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 2.dp))
+        Text(text = title, color = Ink, fontSize = 9.sp, lineHeight = 11.sp, fontWeight = FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 6.dp))
+        Text(text = caption, color = MutedText, fontSize = 8.sp, lineHeight = 10.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 2.dp))
     }
 }
