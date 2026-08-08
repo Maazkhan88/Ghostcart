@@ -149,7 +149,7 @@ fun ProductDiscoverySection(
         modifier = Modifier.fillMaxWidth().onGloballyPositioned { rootBounds = it.boundsInWindow() }
     ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        GhostGlassSurface(modifier = Modifier.fillMaxWidth().height(64.dp)) {
+        Box(modifier = Modifier.fillMaxWidth().height(64.dp)) {
             Box(modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp)) {
                 com.example.ghostcart.ui.GhostCartWordmark(
                     modifier = Modifier.align(Alignment.Center).width(132.dp).height(32.dp),
