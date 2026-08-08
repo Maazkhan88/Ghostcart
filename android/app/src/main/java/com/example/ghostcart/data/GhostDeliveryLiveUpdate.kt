@@ -85,7 +85,9 @@ object GhostDeliveryLiveUpdate {
         val now = System.currentTimeMillis()
         val total = (endMillis - startMillis).coerceAtLeast(1L)
         val elapsed = (now - startMillis).coerceIn(0L, total)
-        val progressPercent = ((elapsed * 100L) / total).toInt().coerceIn(0, 100)
+        // Drains from full to empty as the deadline approaches (time
+        // remaining), not fills up as time passes (time elapsed).
+        val progressPercent = (100 - (elapsed * 100L) / total).toInt().coerceIn(0, 100)
 
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP

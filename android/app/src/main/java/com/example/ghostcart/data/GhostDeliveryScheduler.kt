@@ -49,6 +49,43 @@ object GhostDeliveryScheduler {
                     request
                 )
             }
+        scheduleProgressCheckpoints(workManager, item, nowMillis)
+    }
+
+    // The six delivery-stage triggers alone can leave the live-update
+    // progress bar visibly frozen for hours on a long cooldown. Adds a
+    // fixed, finite list of extra checkpoints purely to refresh the bar's
+    // fill level - deliberately still one-shot WorkManager jobs, never a
+    // recurring PeriodicWorkRequest.
+    private fun scheduleProgressCheckpoints(workManager: WorkManager, item: AlmostBuy, nowMillis: Long) {
+        val start = item.deliveryStartedAtMillis
+        val end = item.deliveryEndsAtMillis
+        val duration = (end - start).coerceAtLeast(1L)
+        val checkpointCount = 20
+        (1 until checkpointCount).forEach { index ->
+            val fraction = index.toDouble() / checkpointCount
+            val triggerAt = start + (duration * fraction).toLong()
+            if (triggerAt < nowMillis) return@forEach
+            val request = OneTimeWorkRequestBuilder<GhostLiveUpdateProgressWorker>()
+                .setInitialDelay((triggerAt - nowMillis).coerceAtLeast(0L), TimeUnit.MILLISECONDS)
+                .setInputData(
+                    workDataOf(
+                        GhostLiveUpdateProgressWorker.KEY_ITEM_ID to item.id,
+                        GhostLiveUpdateProgressWorker.KEY_PRODUCT_NAME to item.name,
+                        GhostLiveUpdateProgressWorker.KEY_START_MILLIS to start,
+                        GhostLiveUpdateProgressWorker.KEY_END_MILLIS to end
+                    )
+                )
+                .addTag(GHOST_LIVE_PROGRESS_WORK_TAG)
+                .addTag(GHOST_DELIVERY_WORK_TAG)
+                .addTag(tagForItem(item.id))
+                .build()
+            workManager.enqueueUniqueWork(
+                "ghost_live_progress_${item.id}_$index",
+                ExistingWorkPolicy.REPLACE,
+                request
+            )
+        }
     }
 
     fun cancel(context: Context, itemId: String) {
