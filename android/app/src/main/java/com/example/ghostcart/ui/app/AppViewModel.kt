@@ -22,7 +22,6 @@ import com.example.ghostcart.data.Analytics
 import com.example.ghostcart.data.AuthRepository
 import com.example.ghostcart.data.CommunityProfileRepository
 import com.example.ghostcart.data.ContentBlockItem
-import com.example.ghostcart.data.AppUpdateInfo
 import com.example.ghostcart.data.LeaderboardDetail
 import com.example.ghostcart.data.LeaderboardEntry
 import com.example.ghostcart.data.UserProfile
@@ -42,8 +41,6 @@ import com.example.ghostcart.data.InvoiceData
 import com.example.ghostcart.data.InvoiceEmailRepository
 import com.example.ghostcart.data.InvoiceLineItem
 import com.example.ghostcart.data.InvoicePdfExporter
-import com.example.ghostcart.data.UpdateDownloader
-import com.example.ghostcart.data.UpdateRepository
 import com.example.ghostcart.data.GhostGiftDraft
 import com.example.ghostcart.data.GhostGiftRepository
 import com.example.ghostcart.data.RevealedGhostGift
@@ -126,9 +123,6 @@ data class AppUiState(
     val notifications: List<com.example.ghostcart.data.NotificationItem> = emptyList(),
     val notificationsLoading: Boolean = false,
     val hasUnreadNotifications: Boolean = false,
-    val availableUpdate: AppUpdateInfo? = null,
-    val updateDismissed: Boolean = false,
-    val updateDownloading: Boolean = false,
     val profileSaving: Boolean = false,
     val profileError: String? = null,
     val captureSeed: AlmostBuyDraft? = null,
@@ -203,7 +197,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         refreshProfile()
         refreshLeaderboard()
         refreshNotifications()
-        checkForUpdate()
         syncDailyGhostReminder("lunch", 13, _uiState.value.walletConfig.lunchReminderEnabled)
         syncDailyGhostReminder("dinner", 20, _uiState.value.walletConfig.dinnerReminderEnabled)
         if (_uiState.value.deliveryStep in 0..3) beginDeliveryClock()
@@ -632,30 +625,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             CommunityProfileRepository.fetchLeaderboard()
                 .onSuccess { entries -> _uiState.update { it.copy(leaderboard = entries, leaderboardLoading = false) } }
                 .onFailure { _uiState.update { it.copy(leaderboardLoading = false) } }
-        }
-    }
-
-    fun checkForUpdate() {
-        viewModelScope.launch {
-            UpdateRepository.checkForUpdate()
-                .onSuccess { info -> _uiState.update { it.copy(availableUpdate = info) } }
-        }
-    }
-
-    fun dismissUpdateBanner() {
-        _uiState.update { it.copy(updateDismissed = true) }
-    }
-
-    fun downloadAndInstallUpdate() {
-        val info = _uiState.value.availableUpdate ?: return
-        _uiState.update { it.copy(updateDownloading = true) }
-        viewModelScope.launch {
-            UpdateDownloader.downloadAndPromptInstall(getApplication(), info.apkUrl, info.latestVersionName)
-                .onSuccess { _uiState.update { it.copy(updateDownloading = false) } }
-                .onFailure { error ->
-                    _uiState.update { it.copy(updateDownloading = false) }
-                    showToast(error.message ?: "Couldn't download the update")
-                }
         }
     }
 

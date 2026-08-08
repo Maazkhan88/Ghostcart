@@ -14,12 +14,6 @@
          relying on it being granted. -->
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
-    <!-- Not on the Play Store yet - in-app updates download an APK directly
-         and launch the system installer, which needs this to work at all
-         on API 26+. The user still gets the standard one-time "allow Ghost
-         Cart to install unknown apps" system prompt; this permission alone
-         does not bypass it. -->
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- Ghost Cart doesn't show ads yet, but the user has confirmed ads are planned for a
          future release - kept in (not removed via tools:node="remove") so that decision
