@@ -1127,7 +1127,7 @@ private fun GhostBottomNav(current: NavKey?, cartItemCount: Int = 0, onNavigate:
                         ) {
                             if (item.central) {
                                 Image(
-                                    painter = painterResource(R.drawable.ghost_cart_icon),
+                                    painter = painterResource(R.drawable.notification_ghost_icon),
                                     contentDescription = item.label,
                                     colorFilter = ColorFilter.tint(Ink),
                                     modifier = Modifier.size(32.dp)
