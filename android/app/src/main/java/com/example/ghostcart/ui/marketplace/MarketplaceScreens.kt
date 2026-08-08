@@ -527,9 +527,9 @@ fun MarketplaceProductCard(
                 .clickable(onClick = onAdd),
             contentAlignment = Alignment.Center
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Icon(Icons.Filled.ShoppingBag, contentDescription = null, tint = Color(0xFF0A0A0A), modifier = Modifier.size(16.dp))
                 Text(text = "Ghost it", color = Color(0xFF0A0A0A), fontSize = 13.sp, lineHeight = 15.sp, fontWeight = FontWeight.Bold)
-                Text(text = "Add to Ghost Cart", color = Color(0xFF0A0A0A).copy(alpha = 0.68f), fontSize = 9.sp, lineHeight = 11.sp)
             }
         }
     }
