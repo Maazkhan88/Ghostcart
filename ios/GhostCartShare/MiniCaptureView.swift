@@ -149,6 +149,17 @@ struct MiniCaptureView: View {
                     }
                 }
 
+                Toggle(isOn: $model.shareWithCommunity) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Share anonymously to the community shelf")
+                            .font(.caption.weight(.bold))
+                        Text("No account or identity attached.")
+                            .font(.caption2)
+                            .foregroundStyle(Color.secondary)
+                    }
+                }
+                .tint(Color.ghostGreenColor)
+
                 Button {
                     Task { await model.confirmGhostIt() }
                 } label: {

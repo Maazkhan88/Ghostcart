@@ -19,6 +19,12 @@ final class MiniCaptureModel: ObservableObject {
     @Published private(set) var product: ImportedProduct?
     @Published var manualAmountText: String = ""
     @Published var cooldownMinutes: Int = AlmostBuyCategory.other.recommendedCooldownMinutes
+    // Defaults on, matching CaptureView's own default for shared-link
+    // captures (the user already made the product public by sharing it
+    // externally) - previously the extension only created the almost-buy
+    // itself and never called /api/community-products at all, so nothing
+    // shared this way ever appeared under "User Ghosted" anywhere.
+    @Published var shareWithCommunity = true
 
     private var resolvedSourceURL: String?
     private var token: String?
@@ -98,6 +104,20 @@ final class MiniCaptureModel: ObservableObject {
             bearerToken: token
         )
         if ok {
+            if shareWithCommunity, let resolvedSourceURL {
+                // Best-effort, matching CaptureView.submit's own "never
+                // blocks, never fails the main save" treatment of this -
+                // the almost-buy is already saved either way.
+                Task {
+                    await ProductImportService.publish(
+                        title: displayTitle,
+                        category: category,
+                        amount: amount,
+                        sourceURL: resolvedSourceURL,
+                        imageURL: product?.imageURL
+                    )
+                }
+            }
             stage = .saved
         } else {
             saveForLater()
