@@ -32,44 +32,27 @@ final class ShareViewController: UIViewController {
                 )
             }
             DispatchQueue.main.async {
-                self?.finish()
+                self?.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
             }
         }
     }
 
-    // Hands off to Ghost Cart itself via its own custom URL scheme
-    // (registered in GhostCart/Info.plist) rather than just completing the
-    // extension and leaving the user in whatever app they shared from -
-    // Android's equivalent (an ACTION_SEND intent filter) opens the app
-    // directly, this is the iOS mechanism for the same result.
-    //
-    // NSExtensionContext.open(_:completionHandler:) is the documented API
-    // for this, but is unreliable specifically for share extensions in
-    // practice (confirmed: it silently did not foreground the app). The
-    // long-standing, widely-shipped workaround - used by many production
-    // share extensions for exactly this purpose - is walking the responder
-    // chain to find the host process's UIApplication and invoking its
-    // (non-extension-safe, hence why UIApplication.shared itself is
-    // unavailable at compile time here) openURL: via a runtime selector,
-    // after the extension has finished tearing down.
-    private func finish() {
-        extensionContext?.completeRequest(returningItems: []) { [weak self] _ in
-            guard let openURL = URL(string: "ghostcart://share") else { return }
-            self?.openHostApp(openURL)
-        }
-    }
-
-    private func openHostApp(_ url: URL) {
-        let selector = NSSelectorFromString("openURL:")
-        var responder: UIResponder? = self
-        while let current = responder {
-            if current.responds(to: selector) {
-                current.perform(selector, with: url)
-                return
-            }
-            responder = current.next
-        }
-    }
+    // Deliberately does NOT try to force-foreground Ghost Cart from here.
+    // Two things were tried and both failed in practice on a real device:
+    // NSExtensionContext.open(_:completionHandler:) (the documented API)
+    // and the widely-referenced "walk the responder chain, invoke openURL:
+    // via a runtime selector" workaround - the latter is also an
+    // undocumented private-API pattern Apple's App Review can flag/reject
+    // apps for. SharedImport.swift's own original design note called this
+    // out explicitly: "No auto-foregrounding hack and no custom URL scheme
+    // are required, which keeps the extension App Review-safe." Android's
+    // one-tap "share opens the app directly" has no exact iOS equivalent -
+    // a Share Extension is a separate, sandboxed process by design, and
+    // reliably foregrounding the host app from inside one is not something
+    // Apple's platform guarantees, regardless of technique. The user still
+    // has to switch to Ghost Cart themselves; ContentView's existing
+    // scenePhase-active handleSharedImport() then picks up the pending
+    // share automatically once they do.
 
     private func setUpSavingUI() {
         let icon = UILabel()
