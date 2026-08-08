@@ -408,6 +408,18 @@ struct CaptureView: View {
             sourceURL = url
         }
         importState = .idle
+        // A share-sheet import already resolved the link once, in
+        // ContentView.handleSharedImport, before staging this seed - name/
+        // amount above should already be filled in from that. If they
+        // aren't (that earlier resolution failed, timed out, or only
+        // matched a multi-item listing rather than a single product),
+        // retry automatically here rather than silently landing on a
+        // half-empty form and making the user notice and tap "Fill details
+        // from link" themselves - a share should always attempt to fill
+        // itself in, same as Android's equivalent auto-import.
+        if name.isEmpty, let url = seed.sourceURL, !url.isEmpty {
+            previewLink()
+        }
     }
 
     private func amountString(_ amount: Double) -> String {
