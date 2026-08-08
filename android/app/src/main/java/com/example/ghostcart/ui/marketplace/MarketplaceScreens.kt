@@ -92,6 +92,7 @@ import com.example.ghostcart.ui.common.BackButton
 import com.example.ghostcart.ui.common.CoolingDurationDialog
 import com.example.ghostcart.ui.common.ForwardChevron
 import com.example.ghostcart.ui.common.GhostActionPill
+import com.example.ghostcart.ui.common.GhostItButton
 import com.example.ghostcart.ui.common.PrimaryButton
 import com.example.ghostcart.ui.common.RoundIconButton
 import com.example.ghostcart.ui.common.SecondaryButton
@@ -519,20 +520,7 @@ fun MarketplaceProductCard(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(44.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(GhostGreen)
-                .clickable(onClick = onAdd),
-            contentAlignment = Alignment.Center
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Icon(Icons.Filled.ShoppingCart, contentDescription = null, tint = Color(0xFF0A0A0A), modifier = Modifier.size(16.dp))
-                Text(text = "Ghost it", color = Color(0xFF0A0A0A), fontSize = 13.sp, lineHeight = 15.sp, fontWeight = FontWeight.Bold)
-            }
-        }
+        GhostItButton(onClick = onAdd)
     }
 }
 

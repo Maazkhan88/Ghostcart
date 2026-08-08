@@ -437,25 +437,37 @@ fun GhostProductCard(
                 }
             }
             Box(modifier = Modifier.weight(1f))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(GhostGreen)
-                    .clickable(onClick = onGhost)
-                    .then(
-                        if (spotlightTarget == ProductCardSpotlightTarget.GHOST && onSpotlightBounds != null) {
-                            Modifier.onGloballyPositioned { onSpotlightBounds(it.boundsInWindow()) }
-                        } else Modifier
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Icon(Icons.Filled.ShoppingCart, contentDescription = null, tint = GhostOnGreen, modifier = Modifier.size(16.dp))
-                    Text("Ghost it", color = GhostOnGreen, style = MaterialTheme.typography.labelLarge)
-                }
-            }
+            GhostItButton(
+                onClick = onGhost,
+                modifier = Modifier.then(
+                    if (spotlightTarget == ProductCardSpotlightTarget.GHOST && onSpotlightBounds != null) {
+                        Modifier.onGloballyPositioned { onSpotlightBounds(it.boundsInWindow()) }
+                    } else Modifier
+                )
+            )
+        }
+    }
+}
+
+// The single "Ghost it" CTA used on every product card (Home's marketplace
+// grid/food rail/favorites rail, and every CategoryBrowseScreen listing -
+// Almost-Spent Catalog, Food & Delivery, any category page). Do not inline
+// a second copy of this button anywhere - route every product card through
+// this composable so height/radius/icon/text can never drift apart again.
+@Composable
+fun GhostItButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(52.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(GhostGreen)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Icon(Icons.Filled.ShoppingCart, contentDescription = null, tint = GhostOnGreen, modifier = Modifier.size(16.dp))
+            Text("Ghost it", color = GhostOnGreen, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
