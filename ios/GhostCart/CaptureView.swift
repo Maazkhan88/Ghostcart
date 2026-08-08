@@ -11,6 +11,8 @@ struct CaptureView: View {
     @State private var source: CaptureSource = .manual
     @State private var sourceURL = ""
     @State private var cooldownMinutes = AlmostBuyCategory.other.recommendedCooldownMinutes
+    @State private var isCustomCooldown = false
+    @State private var showCustomDurationSheet = false
     @State private var showCapturedConfirmation = false
 
     // Link-import state
@@ -122,6 +124,7 @@ struct CaptureView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .onChange(of: category) { newCategory in
                         cooldownMinutes = newCategory.recommendedCooldownMinutes
+                        isCustomCooldown = false
                     }
 
                     CaptureFieldLabel(title: "What triggered it?", required: true)
@@ -147,18 +150,48 @@ struct CaptureView: View {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 112), spacing: 10)], spacing: 10) {
                         ForEach(cooldownOptions, id: \.self) { minutes in
                             Button {
+                                isCustomCooldown = false
                                 cooldownMinutes = minutes
                             } label: {
                                 Text(cooldownLabel(minutes))
                                     .font(.subheadline.weight(.bold))
-                                    .foregroundStyle(cooldownMinutes == minutes ? Color.inkColor : Color.primary)
+                                    .foregroundStyle(cooldownMinutes == minutes && !isCustomCooldown ? Color.inkColor : Color.primary)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 12)
-                                    .background(cooldownMinutes == minutes ? Color.ghostGreenColor : Color.primary.opacity(0.055))
+                                    .background(cooldownMinutes == minutes && !isCustomCooldown ? Color.ghostGreenColor : Color.primary.opacity(0.055))
                                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                             }
                             .buttonStyle(.plain)
                         }
+                        // Matches GhostCheckoutView.deliveryTimeSection's
+                        // Custom option (free-text minutes/hours/days entry
+                        // via CustomDurationSheet) - previously only
+                        // available at checkout, not here, even though this
+                        // is the other place a Ghost Delivery duration gets
+                        // chosen (capture -> start cooling directly).
+                        Button {
+                            showCustomDurationSheet = true
+                        } label: {
+                            Text(isCustomCooldown ? GhostDeliveryDuration.formattedCustomLabel(minutes: cooldownMinutes) : "Custom")
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(isCustomCooldown ? Color.inkColor : Color.primary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(isCustomCooldown ? Color.ghostGreenColor : Color.primary.opacity(0.055))
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .stroke(Color.primary.opacity(0.15), lineWidth: isCustomCooldown ? 0 : 1)
+                                }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .sheet(isPresented: $showCustomDurationSheet) {
+                    CustomDurationSheet(initialMinutes: cooldownMinutes) { minutes in
+                        cooldownMinutes = minutes
+                        isCustomCooldown = true
+                        showCustomDurationSheet = false
                     }
                 }
 
@@ -368,6 +401,7 @@ struct CaptureView: View {
         }
         category = AlmostBuyCategory(serverName: product.category)
         cooldownMinutes = category.recommendedCooldownMinutes
+        isCustomCooldown = false
         importedImageURL = product.imageURL
         importedSourceDomain = product.sourceDomain
         importedRetailer = product.retailer
@@ -383,6 +417,7 @@ struct CaptureView: View {
         }
         category = AlmostBuyCategory(serverName: stub.category)
         cooldownMinutes = category.recommendedCooldownMinutes
+        isCustomCooldown = false
         importedImageURL = stub.imageURL
         importedSourceDomain = stub.sourceDomain
         importedRetailer = stub.retailer
@@ -409,6 +444,7 @@ struct CaptureView: View {
         }
         category = seed.category
         cooldownMinutes = seed.category.recommendedCooldownMinutes
+        isCustomCooldown = false
         importedImageURL = seed.imageURL
         importedSourceDomain = seed.sourceDomain
         importedRetailer = seed.retailer
@@ -501,6 +537,7 @@ struct CaptureView: View {
         category = .other
         trigger = .boredom
         cooldownMinutes = AlmostBuyCategory.other.recommendedCooldownMinutes
+        isCustomCooldown = false
         importState = .idle
         importedImageURL = nil
         importedSourceDomain = nil

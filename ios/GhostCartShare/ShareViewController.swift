@@ -42,18 +42,32 @@ final class ShareViewController: UIViewController {
     // extension and leaving the user in whatever app they shared from -
     // Android's equivalent (an ACTION_SEND intent filter) opens the app
     // directly, this is the iOS mechanism for the same result.
-    // NSExtensionContext.open(_:completionHandler:) both dismisses the
-    // extension and foregrounds the target app in one call when it
-    // succeeds; completeRequest is only needed as a fallback if opening the
-    // app URL itself fails for some reason.
+    //
+    // NSExtensionContext.open(_:completionHandler:) is the documented API
+    // for this, but is unreliable specifically for share extensions in
+    // practice (confirmed: it silently did not foreground the app). The
+    // long-standing, widely-shipped workaround - used by many production
+    // share extensions for exactly this purpose - is walking the responder
+    // chain to find the host process's UIApplication and invoking its
+    // (non-extension-safe, hence why UIApplication.shared itself is
+    // unavailable at compile time here) openURL: via a runtime selector,
+    // after the extension has finished tearing down.
     private func finish() {
-        guard let openURL = URL(string: "ghostcart://share") else {
-            extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
-            return
+        extensionContext?.completeRequest(returningItems: []) { [weak self] _ in
+            guard let openURL = URL(string: "ghostcart://share") else { return }
+            self?.openHostApp(openURL)
         }
-        extensionContext?.open(openURL) { [weak self] success in
-            guard !success else { return }
-            self?.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+    }
+
+    private func openHostApp(_ url: URL) {
+        let selector = NSSelectorFromString("openURL:")
+        var responder: UIResponder? = self
+        while let current = responder {
+            if current.responds(to: selector) {
+                current.perform(selector, with: url)
+                return
+            }
+            responder = current.next
         }
     }
 
