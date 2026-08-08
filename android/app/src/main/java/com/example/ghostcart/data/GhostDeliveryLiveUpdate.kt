@@ -104,6 +104,15 @@ object GhostDeliveryLiveUpdate {
             .setProgress(progressPercent)
             .addProgressSegment(NotificationCompat.ProgressStyle.Segment(100).setColor(GHOST_LIVE_UPDATE_COLOR))
 
+        // Declaring POST_PROMOTED_NOTIFICATIONS in the manifest is necessary
+        // but not sufficient - the OS/user still gate actual promotion at
+        // runtime. Only request it when this returns true; otherwise this
+        // still posts as a normal ongoing notification (everything else on
+        // the builder is unaffected), it just never asks to be promoted.
+        val canPromote = runCatching {
+            NotificationManagerCompat.from(context).canPostPromotedNotifications()
+        }.getOrDefault(false)
+
         val builder = NotificationCompat.Builder(context, GHOST_DELIVERY_CHANNEL_ID)
             .setSmallIcon(R.drawable.notification_ghost_icon)
             .setContentTitle(stageLabel(state))
@@ -118,7 +127,7 @@ object GhostDeliveryLiveUpdate {
             .setChronometerCountDown(true)
             .setWhen(endMillis)
             .setStyle(progressStyle)
-            .setRequestPromotedOngoing(true)
+            .apply { if (canPromote) setRequestPromotedOngoing(true) }
 
         try {
             NotificationManagerCompat.from(context).notify(GHOST_LIVE_UPDATE_TAG, notificationId(itemId), builder.build())
