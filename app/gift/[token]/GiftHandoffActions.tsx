@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 
 const PACKAGE_NAME = "com.ghostcart.app";
 const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${PACKAGE_NAME}`;
-const APP_STORE_ID = "6796950263";
-const APP_STORE_URL = `https://apps.apple.com/app/id${APP_STORE_ID}`;
+// iOS is TestFlight-only for now, not yet a public App Store listing - point
+// here instead of apps.apple.com/app/id6796950263 until it actually ships
+// publicly, otherwise this link 404s/dead-ends for real users.
+const APP_STORE_URL = "https://testflight.apple.com/join/F5FKfrXc";
 
 function isAppleMobileDevice() {
   const userAgent = navigator.userAgent;
@@ -38,7 +40,7 @@ export function GiftHandoffActions({ token }: { token: string }) {
     // just point at the store.
     return (
       <div className="gc-gift-actions">
-        <a className="gc-button gc-button-green" href={APP_STORE_URL}>Get Ghost Cart on the App Store</a>
+        <a className="gc-button gc-button-green" href={APP_STORE_URL}>Join the Ghost Cart TestFlight beta</a>
         <p>After installing, return to the email and tap the gift link again.</p>
       </div>
     );
