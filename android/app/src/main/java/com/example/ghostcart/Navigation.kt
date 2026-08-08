@@ -1126,11 +1126,9 @@ private fun GhostBottomNav(current: NavKey?, cartItemCount: Int = 0, onNavigate:
                             contentAlignment = Alignment.Center
                         ) {
                             if (item.central) {
-                                Image(
-                                    painter = painterResource(R.drawable.notification_ghost_icon),
-                                    contentDescription = item.label,
-                                    colorFilter = ColorFilter.tint(Ink),
-                                    modifier = Modifier.size(32.dp)
+                                GhostMascotPose(
+                                    poseName = "cart",
+                                    modifier = Modifier.size(36.dp)
                                 )
                             } else {
                                 Icon(
