@@ -16,5 +16,9 @@
 	<array>
 		<string>applinks:theghostcart.com</string>
 	</array>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>2A5Q764W66.com.ghostcart.app.shared</string>
+	</array>
 </dict>
 </plist>

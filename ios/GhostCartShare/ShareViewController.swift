@@ -1,87 +1,45 @@
 import UIKit
+import SwiftUI
 import UniformTypeIdentifiers
 
-// Share Extension entry point. Ghost Cart registers as a share target for
-// public web links (and plain text containing one). It does NOT open a real
-// cart, sign in, or buy anything: it only writes the shared link into the
-// App Group container so the main app can turn it into a cooling-off capture
-// the next time it is opened.
+// Share Extension entry point. Hosts a "mini Ghost Cart" - a rich,
+// WhatsApp-style capture experience directly inside the extension, instead
+// of either the plain system "Cancel/Post" compose template or (previously
+// tried and reverted) attempting to auto-foreground the main app, which
+// iOS does not reliably support for share extensions and which risks App
+// Review rejection via undocumented private-API workarounds.
 //
-// A plain UIViewController rather than SLComposeServiceViewController on
-// purpose: the system-provided "Cancel/Post" compose template requires an
-// explicit user tap to complete, which put a confusing, unbranded extra
-// step (indistinguishable from e.g. X's own "Post" share sheet) between
-// sharing and Ghost Cart's own capture screen. Android's equivalent
-// (MainActivity.captureSharedProduct, an ACTION_SEND intent filter) has no
-// such intermediate step - it resolves the link and hands off immediately.
-// This mirrors that: resolve the shared URL and complete automatically,
-// with only a brief branded "Saving to Ghost Cart" spinner while that
-// resolution (typically well under a second) runs.
+// Signed-in + successful extraction: saves a real, permanent, server-side
+// almost-buy directly (ExtensionAlmostBuyService) - no need to open the
+// main app at all for it to "count". Signed-out, extraction failure, or a
+// multi-item listing page: falls back to the existing pending-import App
+// Group mechanism (SharedImportBridge) unchanged - the main app picks it
+// up next time it's opened, exactly as it did before this change.
 final class ShareViewController: UIViewController {
-    private static let ghostGreen = UIColor(red: 0.39, green: 0.84, blue: 0.29, alpha: 1)
+    private let model = MiniCaptureModel()
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemBackground
-        setUpSavingUI()
+
+        let hosting = UIHostingController(rootView: MiniCaptureView(model: model, onDone: { [weak self] in
+            self?.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+        }))
+        addChild(hosting)
+        view.addSubview(hosting.view)
+        hosting.view.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            hosting.view.topAnchor.constraint(equalTo: view.topAnchor),
+            hosting.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            hosting.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            hosting.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+        ])
+        hosting.didMove(toParent: self)
 
         resolveSharedURL { [weak self] resolvedURL in
-            if let resolvedURL {
-                SharedImportBridge.save(
-                    PendingSharedImport(sourceURL: resolvedURL, sharedTitle: nil, sharedImageURL: nil)
-                )
-            }
-            DispatchQueue.main.async {
-                self?.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+            Task { @MainActor in
+                await self?.model.start(sourceURL: resolvedURL)
             }
         }
-    }
-
-    // Deliberately does NOT try to force-foreground Ghost Cart from here.
-    // Two things were tried and both failed in practice on a real device:
-    // NSExtensionContext.open(_:completionHandler:) (the documented API)
-    // and the widely-referenced "walk the responder chain, invoke openURL:
-    // via a runtime selector" workaround - the latter is also an
-    // undocumented private-API pattern Apple's App Review can flag/reject
-    // apps for. SharedImport.swift's own original design note called this
-    // out explicitly: "No auto-foregrounding hack and no custom URL scheme
-    // are required, which keeps the extension App Review-safe." Android's
-    // one-tap "share opens the app directly" has no exact iOS equivalent -
-    // a Share Extension is a separate, sandboxed process by design, and
-    // reliably foregrounding the host app from inside one is not something
-    // Apple's platform guarantees, regardless of technique. The user still
-    // has to switch to Ghost Cart themselves; ContentView's existing
-    // scenePhase-active handleSharedImport() then picks up the pending
-    // share automatically once they do.
-
-    private func setUpSavingUI() {
-        let icon = UILabel()
-        icon.text = "👻"
-        icon.font = .systemFont(ofSize: 40)
-        icon.translatesAutoresizingMaskIntoConstraints = false
-
-        let label = UILabel()
-        label.text = "Saving to Ghost Cart…"
-        label.font = .systemFont(ofSize: 15, weight: .semibold)
-        label.textColor = .label
-        label.translatesAutoresizingMaskIntoConstraints = false
-
-        let spinner = UIActivityIndicatorView(style: .medium)
-        spinner.color = Self.ghostGreen
-        spinner.startAnimating()
-        spinner.translatesAutoresizingMaskIntoConstraints = false
-
-        let stack = UIStackView(arrangedSubviews: [icon, spinner, label])
-        stack.axis = .vertical
-        stack.alignment = .center
-        stack.spacing = 14
-        stack.translatesAutoresizingMaskIntoConstraints = false
-
-        view.addSubview(stack)
-        NSLayoutConstraint.activate([
-            stack.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            stack.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-        ])
     }
 
     // MARK: - URL extraction

@@ -165,14 +165,23 @@ final class AuthService: ObservableObject {
 }
 
 // Minimal Keychain wrapper - just enough for a single opaque session token.
+// Shared with GhostCartShare via Keychain Sharing (the
+// keychain-access-groups entitlement on both targets) so the share
+// extension's mini-capture UI can read the same session token without any
+// new, separately-secured storage - Apple's supported mechanism for this,
+// not a workaround. Without an explicit access group, a Keychain item
+// resolves to the app's own private group (TEAMID.bundleID) and is
+// invisible to any other target, extensions included.
 private enum KeychainToken {
     private static let service = "com.ghostcart.auth"
     private static let account = "accessToken"
+    static let sharedAccessGroup = "2A5Q764W66.com.ghostcart.app.shared"
 
     static func save(_ token: String?) {
         let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
                                      kSecAttrService as String: service,
-                                     kSecAttrAccount as String: account]
+                                     kSecAttrAccount as String: account,
+                                     kSecAttrAccessGroup as String: sharedAccessGroup]
         SecItemDelete(query as CFDictionary)
         guard let token, let data = token.data(using: .utf8) else { return }
         var addQuery = query
@@ -184,6 +193,7 @@ private enum KeychainToken {
         let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
                                      kSecAttrService as String: service,
                                      kSecAttrAccount as String: account,
+                                     kSecAttrAccessGroup as String: sharedAccessGroup,
                                      kSecReturnData as String: true,
                                      kSecMatchLimit as String: kSecMatchLimitOne]
         var result: AnyObject?

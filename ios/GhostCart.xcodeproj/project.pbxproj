@@ -28,6 +28,15 @@
 		A10000000000000000000012 /* SharedImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000012 /* SharedImport.swift */; };
 		A10000000000000000000020 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000020 /* ShareViewController.swift */; };
 		A10000000000000000000021 /* SharedImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000012 /* SharedImport.swift */; };
+		49C0AF5E689F1ED3EE312487 /* ApiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000010 /* ApiClient.swift */; };
+		104BD29CB32F1CCEC8FDEF36 /* ProductImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000011 /* ProductImport.swift */; };
+		593DCBB13E3876157869DEAF /* AlmostBuy.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* AlmostBuy.swift */; };
+		7B305260EB6ECB95846265B2 /* GhostDelivery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2132F4C28430EC3DA8A16888 /* GhostDelivery.swift */; };
+		04B4FE95F32C758AE7A97FD8 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000005 /* Theme.swift */; };
+		3791ED2314450D1183DBCC7F /* ExtensionAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A6487D76C0B4B927598567 /* ExtensionAuth.swift */; };
+		3223E1ED5B2D2F9E2AB0189B /* ExtensionAlmostBuyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80D139A7AE45E1B894E0F14C /* ExtensionAlmostBuyService.swift */; };
+		98B6BB2FD4CB7DEA7C21A916 /* MiniCaptureModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ED03C5C598EB0348C7BF852 /* MiniCaptureModel.swift */; };
+		FAE6A147A6899324EEA36D75 /* MiniCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF619561638EF4CF359055FA /* MiniCaptureView.swift */; };
 		A10000000000000000000022 /* GhostCartShare.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = B10000000000000000000024 /* GhostCartShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A10000000000000000000030 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000030 /* AuthService.swift */; };
 		A10000000000000000000031 /* OnboardingState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000031 /* OnboardingState.swift */; };
@@ -140,6 +149,10 @@
 		B10000000000000000000013 /* GhostCart.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GhostCart.entitlements; sourceTree = "<group>"; };
 		B10000000000000000000020 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		B10000000000000000000021 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D0A6487D76C0B4B927598567 /* ExtensionAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionAuth.swift; sourceTree = "<group>"; };
+		80D139A7AE45E1B894E0F14C /* ExtensionAlmostBuyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionAlmostBuyService.swift; sourceTree = "<group>"; };
+		0ED03C5C598EB0348C7BF852 /* MiniCaptureModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniCaptureModel.swift; sourceTree = "<group>"; };
+		AF619561638EF4CF359055FA /* MiniCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniCaptureView.swift; sourceTree = "<group>"; };
 		B10000000000000000000022 /* GhostCartShare.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GhostCartShare.entitlements; sourceTree = "<group>"; };
 		B10000000000000000000024 /* GhostCartShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = GhostCartShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		B10000000000000000000030 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
@@ -338,6 +351,10 @@
 			isa = PBXGroup;
 			children = (
 				B10000000000000000000020 /* ShareViewController.swift */,
+				D0A6487D76C0B4B927598567 /* ExtensionAuth.swift */,
+				80D139A7AE45E1B894E0F14C /* ExtensionAlmostBuyService.swift */,
+				0ED03C5C598EB0348C7BF852 /* MiniCaptureModel.swift */,
+				AF619561638EF4CF359055FA /* MiniCaptureView.swift */,
 				B10000000000000000000021 /* Info.plist */,
 				B10000000000000000000022 /* GhostCartShare.entitlements */,
 			);
@@ -604,6 +621,15 @@
 			files = (
 				A10000000000000000000020 /* ShareViewController.swift in Sources */,
 				A10000000000000000000021 /* SharedImport.swift in Sources */,
+				49C0AF5E689F1ED3EE312487 /* ApiClient.swift in Sources */,
+				104BD29CB32F1CCEC8FDEF36 /* ProductImport.swift in Sources */,
+				593DCBB13E3876157869DEAF /* AlmostBuy.swift in Sources */,
+				7B305260EB6ECB95846265B2 /* GhostDelivery.swift in Sources */,
+				04B4FE95F32C758AE7A97FD8 /* Theme.swift in Sources */,
+				3791ED2314450D1183DBCC7F /* ExtensionAuth.swift in Sources */,
+				3223E1ED5B2D2F9E2AB0189B /* ExtensionAlmostBuyService.swift in Sources */,
+				98B6BB2FD4CB7DEA7C21A916 /* MiniCaptureModel.swift in Sources */,
+				FAE6A147A6899324EEA36D75 /* MiniCaptureView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
