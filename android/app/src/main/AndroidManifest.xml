@@ -3,6 +3,16 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Gates whether the Ghost Delivery live-update notification
+         (GhostDeliveryLiveUpdate.kt) can actually be promoted to a
+         status-bar chip / Now Bar on Android 16+. Without this, that
+         notification still posts as a normal ongoing notification in the
+         shade (setRequestPromotedOngoing degrades gracefully) - it just
+         never gets promoted. Declaring the permission alone doesn't
+         guarantee promotion either; the OS/user still gate it at runtime,
+         see NotificationManagerCompat.canPostPromotedNotifications() before
+         relying on it being granted. -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
     <!-- Not on the Play Store yet - in-app updates download an APK directly
          and launch the system installer, which needs this to work at all
