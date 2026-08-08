@@ -31,7 +31,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.ShoppingBag
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -665,7 +665,7 @@ private fun DiscoveryProductCard(
             contentAlignment = Alignment.Center
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Icon(Icons.Filled.ShoppingBag, contentDescription = null, tint = Color(0xFF0A0A0A), modifier = Modifier.size(16.dp))
+                Icon(Icons.Filled.ShoppingCart, contentDescription = null, tint = Color(0xFF0A0A0A), modifier = Modifier.size(16.dp))
                 Text("Ghost it", color = Color(0xFF0A0A0A), fontSize = 13.sp, lineHeight = 15.sp, fontWeight = FontWeight.Bold)
             }
         }

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.RateReview
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -440,7 +441,7 @@ fun GhostProductCard(
                 onClick = onGhost,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp)
+                    .height(44.dp)
                     .then(
                         if (spotlightTarget == ProductCardSpotlightTarget.GHOST && onSpotlightBounds != null) {
                             Modifier.onGloballyPositioned { onSpotlightBounds(it.boundsInWindow()) }
@@ -453,9 +454,9 @@ fun GhostProductCard(
                 ),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp),
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(Icons.Filled.ShoppingCart, contentDescription = null, modifier = Modifier.size(16.dp))
                     Text("Ghost it", style = MaterialTheme.typography.labelLarge)
-                    Text("Add to Ghost Cart", fontSize = 9.sp, fontWeight = FontWeight.Medium)
                 }
             }
         }
