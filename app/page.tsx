@@ -77,7 +77,7 @@ const FAQS = [
   ],
   [
     "Is Ghost Cart available on iPhone?",
-    "Not yet. Our Ghost devs are working hard to bring Ghost Cart to Apple devices. Join the waitlist for iOS updates.",
+    "Yes, in TestFlight beta. Join at testflight.apple.com/join/F5FKfrXc.",
   ],
 ] as const;
 

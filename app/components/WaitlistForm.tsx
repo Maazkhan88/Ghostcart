@@ -42,7 +42,17 @@ export function WaitlistForm() {
         <button type="button" className={platform === "android" ? "is-active" : ""} aria-pressed={platform === "android"} onClick={() => setPlatform("android")}>Android</button>
         <button type="button" className={platform === "ios" ? "is-active" : ""} aria-pressed={platform === "ios"} onClick={() => setPlatform("ios")}>iPhone</button>
       </fieldset>
-      {platform === "ios" ? <p className="gc-v3-apple-note">Our Ghost devs are working hard to bring Ghost Cart to Apple devices. Join for iOS updates.</p> : <p className="gc-v3-android-note">Android is currently in closed testing. Join for the next opportunity and release updates.</p>}
+      {platform === "ios" ? (
+        <p className="gc-v3-apple-note">
+          Ghost Cart for iPhone is live in TestFlight beta.{" "}
+          <a href="https://testflight.apple.com/join/F5FKfrXc" target="_blank" rel="noopener noreferrer">
+            Join the beta
+          </a>
+          , or leave your email for release updates.
+        </p>
+      ) : (
+        <p className="gc-v3-android-note">Android is currently in closed testing. Join for the next opportunity and release updates.</p>
+      )}
       <div>
         <label htmlFor="waitlist-email" className="gc-sr-only">Email address</label>
         <input id="waitlist-email" name="email" type="email" autoComplete="email" inputMode="email" placeholder="you@example.com" required />
