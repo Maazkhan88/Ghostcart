@@ -102,6 +102,7 @@ fun ProductDiscoverySection(
     onToggleFavorite: (String) -> Unit,
     onShareProduct: (MarketplaceProduct) -> Unit,
     onNotifications: () -> Unit,
+    hasUnreadNotifications: Boolean = false,
     onViewAllCatalog: (String) -> Unit,
     onViewAllFavorites: () -> Unit,
     activeDelivery: AlmostBuy? = null,
@@ -160,7 +161,8 @@ fun ProductDiscoverySection(
                     icon = Icons.Filled.Notifications,
                     contentDescription = "Notifications",
                     onClick = onNotifications,
-                    modifier = Modifier.align(Alignment.CenterEnd)
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                    iconTint = if (hasUnreadNotifications) com.example.ghostcart.theme.GhostGreen else ExpressivePrimaryText
                 )
             }
         }

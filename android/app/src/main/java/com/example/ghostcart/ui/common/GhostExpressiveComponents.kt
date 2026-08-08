@@ -95,13 +95,14 @@ fun GhostIconButton(
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    iconTint: androidx.compose.ui.graphics.Color = ExpressivePrimaryText,
 ) {
     Surface(
         onClick = onClick,
         modifier = modifier.size(48.dp),
         shape = CircleShape,
         color = ExpressiveSurfaceHigh,
-        contentColor = ExpressivePrimaryText,
+        contentColor = iconTint,
         tonalElevation = 1.dp,
     ) {
         Box(contentAlignment = Alignment.Center) {

@@ -41,3 +41,4 @@ import kotlinx.serialization.Serializable
 @Serializable data class LegalDocument(val docId: String) : NavKey
 @Serializable data object Leaderboard : NavKey
 @Serializable data class LeaderboardDetail(val username: String) : NavKey
+@Serializable data object Notifications : NavKey

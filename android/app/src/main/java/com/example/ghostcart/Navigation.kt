@@ -504,7 +504,8 @@ fun MainNavigation(
                             onOpen = { id -> backStack.add(ProductDetail(id)) },
                             onToggleFavorite = appViewModel::toggleFavorite,
                             onShareProduct = { product -> shareGhostItem(context, product.toGhostShareItem()) },
-                            onNotifications = { backStack.add(GhostCardSettings) },
+                            onNotifications = { backStack.add(Notifications) },
+                            hasUnreadNotifications = state.hasUnreadNotifications,
                             onViewAllCatalog = { categoryId -> backStack.add(CategoryBrowse(categoryId)) },
                             onViewAllFavorites = { backStack.add(CategoryBrowse("favorites")) },
                             onNotificationsGranted = appViewModel::enableMealRemindersByDefault,
@@ -871,6 +872,14 @@ fun MainNavigation(
                     }
                     entry<Gifts> {
                         GiftsScreen(onBack = { backStack.removeLastOrNull() })
+                    }
+                    entry<Notifications> {
+                        com.example.ghostcart.ui.notifications.NotificationsScreen(
+                            notifications = state.notifications,
+                            loading = state.notificationsLoading,
+                            onBack = { backStack.removeLastOrNull() },
+                            onOpen = { appViewModel.markNotificationsSeen() }
+                        )
                     }
                     entry<LegalDocument> { key ->
                         LegalDocumentScreen(docId = key.docId, onBack = { backStack.removeLastOrNull() })

@@ -123,6 +123,9 @@ data class AppUiState(
     val leaderboardLoading: Boolean = false,
     val leaderboardDetail: LeaderboardDetail? = null,
     val leaderboardDetailLoading: Boolean = false,
+    val notifications: List<com.example.ghostcart.data.NotificationItem> = emptyList(),
+    val notificationsLoading: Boolean = false,
+    val hasUnreadNotifications: Boolean = false,
     val availableUpdate: AppUpdateInfo? = null,
     val updateDismissed: Boolean = false,
     val updateDownloading: Boolean = false,
@@ -199,6 +202,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         refreshGhostCartStories()
         refreshProfile()
         refreshLeaderboard()
+        refreshNotifications()
         checkForUpdate()
         syncDailyGhostReminder("lunch", 13, _uiState.value.walletConfig.lunchReminderEnabled)
         syncDailyGhostReminder("dinner", 20, _uiState.value.walletConfig.dinnerReminderEnabled)
@@ -596,6 +600,30 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 }
             _uiState.update { it.copy(profileSaving = false) }
         }
+    }
+
+    fun refreshNotifications() {
+        val context = getApplication<Application>()
+        _uiState.update { it.copy(notificationsLoading = true) }
+        viewModelScope.launch {
+            com.example.ghostcart.data.NotificationsRepository.fetchNotifications(context)
+                .onSuccess { items ->
+                    _uiState.update {
+                        it.copy(
+                            notifications = items,
+                            notificationsLoading = false,
+                            hasUnreadNotifications = com.example.ghostcart.data.NotificationsRepository.hasUnread(context, items)
+                        )
+                    }
+                }
+                .onFailure { _uiState.update { it.copy(notificationsLoading = false) } }
+        }
+    }
+
+    fun markNotificationsSeen() {
+        val context = getApplication<Application>()
+        com.example.ghostcart.data.NotificationsRepository.markSeen(context, _uiState.value.notifications)
+        _uiState.update { it.copy(hasUnreadNotifications = false) }
     }
 
     fun refreshLeaderboard() {

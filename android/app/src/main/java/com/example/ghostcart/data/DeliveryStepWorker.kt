@@ -43,6 +43,9 @@ class DeliveryStepWorker(
         val image = loadRemoteProductImage(applicationContext, inputData.getString(KEY_PRODUCT_IMAGE_URL))
             ?: decodeLocalPlaceholder(applicationContext)
         showNotification(itemId, orderId, state, copy.first, copy.second, image)
+        // Best-effort mirror into the synced notifications feed - never blocks
+        // or fails this worker if it doesn't go through (offline, signed out).
+        NotificationsRepository.postDeliveryUpdate(applicationContext, copy.first, copy.second, "ghostDeliveryTracker/$itemId")
         return Result.success()
     }
 
