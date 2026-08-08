@@ -73,6 +73,25 @@ struct CaptureView: View {
                     linkImportSection
                 }
 
+                // Shows whatever picture got captured (from a link import,
+                // a shared-in product, or a manually attached image) so the
+                // user can actually see and verify it before confirming -
+                // importedImageURL was already being captured correctly
+                // into the AlmostBuy, it just was never rendered anywhere
+                // on this screen for the user to check.
+                if let importedImageURL {
+                    VStack(alignment: .leading, spacing: 8) {
+                        CaptureFieldLabel(title: "Picture", required: false)
+                        ProductThumbnail(
+                            imageURL: importedImageURL,
+                            systemImage: category.systemImage,
+                            productName: name,
+                            fillWidthHeight: 160,
+                            cornerRadius: 16
+                        )
+                    }
+                }
+
                 VStack(alignment: .leading, spacing: 16) {
                     CaptureFieldLabel(title: "What are you tempted by?", required: true)
                     TextField("Example: noise-cancelling headphones", text: $name)
