@@ -2,7 +2,9 @@
 
 Date: 2026-08-08
 
-Branch: `fix/amazon-preview-size-and-caption` (off `main`, commit `f40b732`)
+> **Update, same day:** merged to `main` (fast-forward, `cb0f0e4`) and the Cloudflare Worker is deployed live (Version ID `30b9df55-2160-4575-9a12-d9c1ece86524`, verified `theghostcart.com` responding 200 after deploy). **The backend fix (item 1 below) is live now for every client, no app update needed.** The two client-side regex changes (items 2-3 below) still need their own app builds/releases to actually reach users - the source is already on `main`, nothing further to merge there.
+
+Branch: `fix/amazon-preview-size-and-caption` (off `main`, merged `cb0f0e4`)
 
 ## What was broken
 
@@ -28,7 +30,6 @@ A user shared a real Amazon product via the iOS share sheet (`https://amzn.eu/d/
 
 ## What's needed to actually fix this for users
 
-Three separate deploys, none of which have happened yet:
-1. Merge this branch to `main` and deploy the Cloudflare Worker (fixes the size-cap bug for everyone immediately, both platforms, no app update needed).
-2. New Android build/release (fixes the caption fallback edge case on Android).
-3. New iOS build (fixes the same edge case on iOS) - after verifying the Swift change compiles.
+1. ~~Merge to `main` and deploy the Worker~~ - **done**, live now, no app update needed for this part.
+2. New Android build/release - fixes the caption fallback edge case on Android. A debug APK from this branch already exists (`android-debug-amazon-preview-fix-20260808` on GitHub Releases) for testing, but a real release build is still outstanding.
+3. **New iOS build** - fixes the same edge case on iOS, after verifying the Swift change in `ios/GhostCart/ProductImport.swift` (already on `main`) actually compiles and behaves as expected. This is the one open item for whoever picks up iOS next.
