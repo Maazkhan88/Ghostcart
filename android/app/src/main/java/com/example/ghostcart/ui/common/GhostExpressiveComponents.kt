@@ -332,7 +332,13 @@ fun GhostProductCard(
         onClick = onOpen,
         modifier = modifier
             .width(202.dp)
-            .height(352.dp)
+            // Was 352.dp - the fixed-height Surface clips its content, and the
+            // stacked content (image 132 + category + title + price + reviews
+            // row + button) now needs ~336dp against a 328dp budget (352 minus
+            // 12dp padding x2) since GhostItButton grew to 52dp - the button's
+            // bottom ~8dp was being silently clipped, which is why increasing
+            // its height in code had no visible effect. +8dp closes that gap.
+            .height(360.dp)
             .then(
                 if (spotlightTarget == ProductCardSpotlightTarget.CARD && onSpotlightBounds != null) {
                     Modifier.onGloballyPositioned { onSpotlightBounds(it.boundsInWindow()) }

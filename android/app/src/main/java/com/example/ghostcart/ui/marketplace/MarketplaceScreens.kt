@@ -426,7 +426,11 @@ fun MarketplaceProductCard(
     // label, title, Dirham-glyph price, and one predictable Ghost action.
     Column(
         modifier = modifier
-            .height(310.dp)
+            // Was 310.dp - same clipping issue as GhostProductCard: stacked
+            // content now needs ~289dp against a 286dp budget (310 minus 12dp
+            // padding x2) since GhostItButton grew to 52dp, clipping its
+            // bottom ~3dp. +5dp closes that gap with a small margin.
+            .height(315.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(Paper)
             .border(1.dp, FaintBorder, RoundedCornerShape(20.dp))
