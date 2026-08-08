@@ -146,14 +146,34 @@ enum GiftDeepLink {
     }
 }
 
+// A theghostcart.com/cooldown/{uuid} Universal Link, as used by the Cooling
+// Off Live Activity's widgetURL (GhostCartWidgets/CoolingOffLiveActivityView
+// .swift) - reuses the same associated domain as gift links rather than a
+// second deep-link mechanism.
+enum CooldownDeepLink {
+    static func itemID(from url: URL) -> UUID? {
+        guard url.host?.lowercased() == "theghostcart.com" else { return nil }
+        let segments = url.pathComponents.filter { $0 != "/" }
+        guard segments.count == 2, segments[0] == "cooldown" else { return nil }
+        return UUID(uuidString: segments[1])
+    }
+}
+
 // Holds an incoming gift-link token until the app is ready to present the
 // reveal screen (mirrors Android's ghostGiftRequest app state).
 @MainActor
 final class DeepLinkRouter: ObservableObject {
     @Published var pendingGiftToken: String?
+    @Published var pendingCooldownID: UUID?
 
     func handle(_ url: URL) {
-        guard let token = GiftDeepLink.token(from: url) else { return }
-        pendingGiftToken = token
+        if let token = GiftDeepLink.token(from: url) {
+            pendingGiftToken = token
+            return
+        }
+        if let itemID = CooldownDeepLink.itemID(from: url) {
+            LiveActivityDebugLog.log("DEEP LINK OPENED cooldown/\(itemID.uuidString)")
+            pendingCooldownID = itemID
+        }
     }
 }

@@ -64,7 +64,17 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
         .output({ format: "image/jpeg", quality: 58 });
       const response = await transformed.response();
       const headers = new Headers(response.headers);
-      headers.set("Cache-Control", "private, no-store, max-age=0");
+      // Public, cacheable - the access control here is the unguessable
+      // 43-char token in the URL itself (same trust model as
+      // /api/product-images/), not response privacy. A "private, no-store"
+      // directive here previously made this image unreliable in email
+      // clients: Gmail/Outlook proxy and cache images embedded in mail
+      // server-side before showing them to the recipient, and an origin
+      // response that explicitly forbids storage breaks or is refused by
+      // that proxy - showing up as a broken image icon in the received
+      // gift email, even though the endpoint works fine when fetched
+      // directly (e.g. from a browser or curl).
+      headers.set("Cache-Control", "public, max-age=86400");
       headers.set("X-Content-Type-Options", "nosniff");
       return new Response(response.body, { status: response.status, headers });
     } catch (transformErr) {
@@ -74,7 +84,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
         status: 200,
         headers: {
           "Content-Type": "image/jpeg",
-          "Cache-Control": "private, no-store, max-age=0",
+          "Cache-Control": "public, max-age=86400",
           "X-Content-Type-Options": "nosniff",
         },
       });

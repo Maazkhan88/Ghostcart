@@ -128,6 +128,7 @@ struct SimulationDisclosure: View {
 func bundledProductPhotoName(for productName: String) -> String? {
     let name = productName.lowercased().trimmingCharacters(in: .whitespaces)
     let table: [(String, String)] = [
+        ("ghost cart coffee & donut combo", "TutorialCoffeeDonutCombo"),
         ("spanish latte", "product_marketplace_spanish_latte"),
         ("midnight burger", "product_marketplace_midnight_burger"),
         ("blackout burger combo", "product_marketplace_blackout_burger_combo"),

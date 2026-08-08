@@ -36,7 +36,6 @@
 		A10000000000000000000034 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000034 /* AuthView.swift */; };
 		A10000000000000000000035 /* ProfileSelectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000035 /* ProfileSelectView.swift */; };
 		A10000000000000000000036 /* PersonalizationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000036 /* PersonalizationView.swift */; };
-		A10000000000000000000037 /* TutorialView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000037 /* TutorialView.swift */; };
 		A10000000000000000000038 /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000038 /* OnboardingFlowView.swift */; };
 		A10000000000000000000039 /* ContentBlocks.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000039 /* ContentBlocks.swift */; };
 		A1000000000000000000003A /* MarketplaceSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000003A /* MarketplaceSection.swift */; };
@@ -61,12 +60,21 @@
 		67F277451BAF627FA53F2A69 /* ProductReviews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B334EEFF5A554ECF6DB97D7 /* ProductReviews.swift */; };
 		3E6F6DA571C93E237BC3D1F7 /* InAppMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5C09287D0081D7688510CDB /* InAppMessage.swift */; };
 		00D3B7226C180750EBB5D899 /* PushDebugLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72D4BF8CA3C2B32C9B24944F /* PushDebugLog.swift */; };
+		7772615819590E73AF15A434 /* TutorialState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73424F0E399BA9DE7A8BBC82 /* TutorialState.swift */; };
+		0CDD45DDDF816F783E040706 /* TutorialGuideOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 969EC399491870DF1C6D44BC /* TutorialGuideOverlay.swift */; };
+		6AA0357F1AA96382EA126B7E /* TutorialCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50E26C365F682923834CF2CA /* TutorialCoordinator.swift */; };
 		A20000000000000000000001 /* FirebaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000001 /* FirebaseService.swift */; };
 		A20000000000000000000002 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = P20000000000000000000002 /* FirebaseAnalytics */; };
 		A20000000000000000000003 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = P20000000000000000000003 /* FirebaseMessaging */; };
 		A20000000000000000000004 /* FirebaseInAppMessaging-Beta in Frameworks */ = {isa = PBXBuildFile; productRef = P20000000000000000000004 /* FirebaseInAppMessaging-Beta */; };
 		A20000000000000000000005 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000003 /* GoogleService-Info.plist */; };
 		A20000000000000000000006 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = P20000000000000000000006 /* GoogleSignIn */; };
+		6470A41774749B2007DDD029 /* GhostLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 576FAC6011DFF3F44ACD388D /* GhostLiveActivityAttributes.swift */; };
+		F9DC34811630E91434E8F0A1 /* LiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCD11EBC9F6D5832C76D9181 /* LiveActivityManager.swift */; };
+		7BC66536C16EB42250354383 /* GhostLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 576FAC6011DFF3F44ACD388D /* GhostLiveActivityAttributes.swift */; };
+		90B64C079C8F57481698F5A2 /* GhostCartWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BDEDF6455C5D624B8DA711C /* GhostCartWidgetsBundle.swift */; };
+		4A083C50B23B334F54D1FBA4 /* CoolingOffLiveActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70D61CC6272984306BEEFCDF /* CoolingOffLiveActivityView.swift */; };
+		1D7B5DFCC036CFA068BDFB7B /* GhostCartWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = F20796A36B91248FD3BD998C /* GhostCartWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -84,6 +92,13 @@
 			remoteGlobalIDString = D10000000000000000000001;
 			remoteInfo = GhostCart;
 		};
+		DF9A8D1A8558FC0D05A3147A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D10000000000000000000004 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D8D2B148F1C8D0ED0CB8F7D8;
+			remoteInfo = GhostCartWidgets;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -94,6 +109,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				A10000000000000000000022 /* GhostCartShare.appex in Embed App Extensions */,
+				1D7B5DFCC036CFA068BDFB7B /* GhostCartWidgets.appex in Embed App Extensions */,
 			);
 			name = "Embed App Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -132,7 +148,6 @@
 		B10000000000000000000034 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 		B10000000000000000000035 /* ProfileSelectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSelectView.swift; sourceTree = "<group>"; };
 		B10000000000000000000036 /* PersonalizationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalizationView.swift; sourceTree = "<group>"; };
-		B10000000000000000000037 /* TutorialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialView.swift; sourceTree = "<group>"; };
 		B10000000000000000000038 /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowView.swift; sourceTree = "<group>"; };
 		B10000000000000000000039 /* ContentBlocks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentBlocks.swift; sourceTree = "<group>"; };
 		B1000000000000000000003A /* MarketplaceSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketplaceSection.swift; sourceTree = "<group>"; };
@@ -158,11 +173,20 @@
 		7B334EEFF5A554ECF6DB97D7 /* ProductReviews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductReviews.swift; sourceTree = "<group>"; };
 		B5C09287D0081D7688510CDB /* InAppMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppMessage.swift; sourceTree = "<group>"; };
 		72D4BF8CA3C2B32C9B24944F /* PushDebugLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushDebugLog.swift; sourceTree = "<group>"; };
+		73424F0E399BA9DE7A8BBC82 /* TutorialState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialState.swift; sourceTree = "<group>"; };
+		969EC399491870DF1C6D44BC /* TutorialGuideOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialGuideOverlay.swift; sourceTree = "<group>"; };
+		50E26C365F682923834CF2CA /* TutorialCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialCoordinator.swift; sourceTree = "<group>"; };
 		B20000000000000000000001 /* FirebaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseService.swift; sourceTree = "<group>"; };
 		B20000000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B20000000000000000000003 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		48AE7D87BDECBB92D7DF436E /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		8EDD9662FCE7F0F7242571C1 /* ar */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ar; path = ar.lproj/Localizable.strings; sourceTree = "<group>"; };
+		576FAC6011DFF3F44ACD388D /* GhostLiveActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivity/GhostLiveActivityAttributes.swift; sourceTree = "<group>"; };
+		DCD11EBC9F6D5832C76D9181 /* LiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivity/LiveActivityManager.swift; sourceTree = "<group>"; };
+		9BDEDF6455C5D624B8DA711C /* GhostCartWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhostCartWidgetsBundle.swift; sourceTree = "<group>"; };
+		70D61CC6272984306BEEFCDF /* CoolingOffLiveActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoolingOffLiveActivityView.swift; sourceTree = "<group>"; };
+		DB97EB70AA1766A5710AA52A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F20796A36B91248FD3BD998C /* GhostCartWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = GhostCartWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXVariantGroup section */
@@ -203,6 +227,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		873A26F03084A5C3B18F0784 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -211,9 +242,20 @@
 			children = (
 				C10000000000000000000003 /* GhostCart */,
 				C10000000000000000000010 /* GhostCartShare */,
+				754FEA0071A95469D585075A /* GhostCartWidgets */,
 				T10000000000000000000004 /* GhostCartTests */,
 				C10000000000000000000004 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		754FEA0071A95469D585075A /* GhostCartWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				9BDEDF6455C5D624B8DA711C /* GhostCartWidgetsBundle.swift */,
+				70D61CC6272984306BEEFCDF /* CoolingOffLiveActivityView.swift */,
+				DB97EB70AA1766A5710AA52A /* Info.plist */,
+			);
+			path = GhostCartWidgets;
 			sourceTree = "<group>";
 		};
 		T10000000000000000000004 /* GhostCartTests */ = {
@@ -252,7 +294,6 @@
 				B10000000000000000000034 /* AuthView.swift */,
 				B10000000000000000000035 /* ProfileSelectView.swift */,
 				B10000000000000000000036 /* PersonalizationView.swift */,
-				B10000000000000000000037 /* TutorialView.swift */,
 				B10000000000000000000038 /* OnboardingFlowView.swift */,
 				B10000000000000000000039 /* ContentBlocks.swift */,
 				B1000000000000000000003A /* MarketplaceSection.swift */,
@@ -275,6 +316,11 @@
 				7B334EEFF5A554ECF6DB97D7 /* ProductReviews.swift */,
 				B5C09287D0081D7688510CDB /* InAppMessage.swift */,
 				72D4BF8CA3C2B32C9B24944F /* PushDebugLog.swift */,
+				73424F0E399BA9DE7A8BBC82 /* TutorialState.swift */,
+				969EC399491870DF1C6D44BC /* TutorialGuideOverlay.swift */,
+				50E26C365F682923834CF2CA /* TutorialCoordinator.swift */,
+				576FAC6011DFF3F44ACD388D /* GhostLiveActivityAttributes.swift */,
+				DCD11EBC9F6D5832C76D9181 /* LiveActivityManager.swift */,
 				B20000000000000000000001 /* FirebaseService.swift */,
 				B20000000000000000000002 /* Info.plist */,
 				B20000000000000000000003 /* GoogleService-Info.plist */,
@@ -300,6 +346,7 @@
 			children = (
 				B10000000000000000000000 /* GhostCart.app */,
 				B10000000000000000000024 /* GhostCartShare.appex */,
+				F20796A36B91248FD3BD998C /* GhostCartWidgets.appex */,
 				T10000000000000000000000 /* GhostCartTests.xctest */,
 			);
 			name = Products;
@@ -321,6 +368,7 @@
 			);
 			dependencies = (
 				D10000000000000000000015 /* PBXTargetDependency */,
+				EA71805F69CB9D7989D9951E /* PBXTargetDependency */,
 			);
 			name = GhostCart;
 			packageProductDependencies = (
@@ -368,6 +416,23 @@
 			productReference = T10000000000000000000000 /* GhostCartTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		D8D2B148F1C8D0ED0CB8F7D8 /* GhostCartWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A3BE10D899ACAF56224DBEBA /* Build configuration list for PBXNativeTarget "GhostCartWidgets" */;
+			buildPhases = (
+				E93EC197986E238651330817 /* Sources */,
+				873A26F03084A5C3B18F0784 /* Frameworks */,
+				D1B09488020BDF258C118AE7 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = GhostCartWidgets;
+			productName = GhostCartWidgets;
+			productReference = F20796A36B91248FD3BD998C /* GhostCartWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -384,6 +449,11 @@
 						ProvisioningStyle = Automatic;
 					};
 					D10000000000000000000010 = {
+						CreatedOnToolsVersion = 15.0;
+						DevelopmentTeam = 2A5Q764W66;
+						ProvisioningStyle = Automatic;
+					};
+					D8D2B148F1C8D0ED0CB8F7D8 = {
 						CreatedOnToolsVersion = 15.0;
 						DevelopmentTeam = 2A5Q764W66;
 						ProvisioningStyle = Automatic;
@@ -414,6 +484,7 @@
 			targets = (
 				D10000000000000000000001 /* GhostCart */,
 				D10000000000000000000010 /* GhostCartShare */,
+				D8D2B148F1C8D0ED0CB8F7D8 /* GhostCartWidgets */,
 				T10000000000000000000006 /* GhostCartTests */,
 			);
 		};
@@ -438,6 +509,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		T10000000000000000000008 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D1B09488020BDF258C118AE7 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -475,7 +553,6 @@
 				A10000000000000000000034 /* AuthView.swift in Sources */,
 				A10000000000000000000035 /* ProfileSelectView.swift in Sources */,
 				A10000000000000000000036 /* PersonalizationView.swift in Sources */,
-				A10000000000000000000037 /* TutorialView.swift in Sources */,
 				A10000000000000000000038 /* OnboardingFlowView.swift in Sources */,
 				A10000000000000000000039 /* ContentBlocks.swift in Sources */,
 				A1000000000000000000003A /* MarketplaceSection.swift in Sources */,
@@ -498,7 +575,22 @@
 				67F277451BAF627FA53F2A69 /* ProductReviews.swift in Sources */,
 				3E6F6DA571C93E237BC3D1F7 /* InAppMessage.swift in Sources */,
 				00D3B7226C180750EBB5D899 /* PushDebugLog.swift in Sources */,
+				7772615819590E73AF15A434 /* TutorialState.swift in Sources */,
+				0CDD45DDDF816F783E040706 /* TutorialGuideOverlay.swift in Sources */,
+				6AA0357F1AA96382EA126B7E /* TutorialCoordinator.swift in Sources */,
 				A20000000000000000000001 /* FirebaseService.swift in Sources */,
+				6470A41774749B2007DDD029 /* GhostLiveActivityAttributes.swift in Sources */,
+				F9DC34811630E91434E8F0A1 /* LiveActivityManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E93EC197986E238651330817 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7BC66536C16EB42250354383 /* GhostLiveActivityAttributes.swift in Sources */,
+				90B64C079C8F57481698F5A2 /* GhostCartWidgetsBundle.swift in Sources */,
+				4A083C50B23B334F54D1FBA4 /* CoolingOffLiveActivityView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -532,6 +624,11 @@
 			isa = PBXTargetDependency;
 			target = D10000000000000000000001 /* GhostCart */;
 			targetProxy = T10000000000000000000005 /* PBXContainerItemProxy */;
+		};
+		EA71805F69CB9D7989D9951E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D8D2B148F1C8D0ED0CB8F7D8 /* GhostCartWidgets */;
+			targetProxy = DF9A8D1A8558FC0D05A3147A /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -574,7 +671,7 @@
 				CODE_SIGN_ENTITLEMENTS = GhostCart/GhostCart.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 2A5Q764W66;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 11;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = GhostCart/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Ghost Cart";
@@ -603,7 +700,7 @@
 				CODE_SIGN_STYLE = Manual;
 				PROVISIONING_PROFILE_SPECIFIER = "GhostCart App Store";
 				DEVELOPMENT_TEAM = 2A5Q764W66;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 11;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = GhostCart/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Ghost Cart";
@@ -629,7 +726,7 @@
 				CODE_SIGN_ENTITLEMENTS = GhostCartShare/GhostCartShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 2A5Q764W66;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 11;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = GhostCartShare/Info.plist;
@@ -654,7 +751,7 @@
 				CODE_SIGN_STYLE = Manual;
 				PROVISIONING_PROFILE_SPECIFIER = "GhostCart Share App Store";
 				DEVELOPMENT_TEAM = 2A5Q764W66;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 11;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = GhostCartShare/Info.plist;
@@ -676,7 +773,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 2A5Q764W66;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 11;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MARKETING_VERSION = 1.0;
@@ -697,7 +794,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 2A5Q764W66;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 11;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MARKETING_VERSION = 1.0;
@@ -708,6 +805,51 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/GhostCart.app/GhostCart";
+			};
+			name = Release;
+		};
+		FB5A216699DEF1960E071095 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 2A5Q764W66;
+				CURRENT_PROJECT_VERSION = 11;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = GhostCartWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				MARKETING_VERSION = 2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ghostcart.app.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		FAA4354A07D1DA7889E0119E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				CODE_SIGN_STYLE = Manual;
+				PROVISIONING_PROFILE_SPECIFIER = "GhostCart Widgets App Store";
+				DEVELOPMENT_TEAM = 2A5Q764W66;
+				CURRENT_PROJECT_VERSION = 11;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = GhostCartWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				MARKETING_VERSION = 2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ghostcart.app.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -746,6 +888,15 @@
 			buildConfigurations = (
 				T10000000000000000000011 /* Debug */,
 				T10000000000000000000012 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A3BE10D899ACAF56224DBEBA /* Build configuration list for PBXNativeTarget "GhostCartWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FB5A216699DEF1960E071095 /* Debug */,
+				FAA4354A07D1DA7889E0119E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

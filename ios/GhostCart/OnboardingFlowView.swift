@@ -58,10 +58,10 @@ struct OnboardingFlowView: View {
                         }
                     )
                 case .tutorial:
-                    TutorialView(onFinish: {
+                    Color.clear.onAppear {
                         onboarding.progress.tutorialComplete = true
                         onComplete()
-                    })
+                    }
                 }
             }
         }

@@ -13,8 +13,10 @@ struct ContentView: View {
     @EnvironmentObject private var store: GhostCartStore
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
+    @StateObject private var tutorialCoordinator = TutorialCoordinator()
     @State private var selectedTab: AppTab = .home
     @State private var activeInAppMessage: InAppMessage?
+    @State private var showTutorialTrackerOrDecision = false
 
     init() {
         #if DEBUG
@@ -52,6 +54,7 @@ struct ContentView: View {
             handleSharedImport()
             handleNotificationAction()
             Task { activeInAppMessage = await InAppMessageService.nextToShow() }
+            if tutorialCoordinator.shouldAutoLaunch { tutorialCoordinator.startIfNeeded() }
         }
         .onChange(of: scenePhase) { phase in
             if phase == .active { handleSharedImport() }
@@ -72,6 +75,46 @@ struct ContentView: View {
             }
         }
         .animation(.default, value: activeInAppMessage)
+        .environmentObject(tutorialCoordinator)
+        .onPreferenceChange(TutorialTargetFramesKey.self) { frames in
+            for entry in frames { tutorialCoordinator.targetFrames[entry.id] = entry.frame }
+        }
+        .overlay {
+            if tutorialCoordinator.isActive {
+                TutorialOverlayHost(
+                    coordinator: tutorialCoordinator,
+                    onOpenTracker: { showTutorialTrackerOrDecision = true },
+                    onExit: { selectedTab = .home }
+                )
+                .transition(.opacity)
+            }
+        }
+        .animation(.default, value: tutorialCoordinator.state)
+        .fullScreenCover(isPresented: Binding(
+            get: { showTutorialTrackerOrDecision && [.cooling, .decision].contains(tutorialCoordinator.state.currentStep) },
+            set: { if !$0 { showTutorialTrackerOrDecision = false } }
+        )) {
+            NavigationStack {
+                if tutorialCoordinator.state.currentStep == .cooling {
+                    GhostDeliveryTrackerView(
+                        itemID: tutorialCoordinator.tutorialItem.id,
+                        onClose: { tutorialCoordinator.finishCooling(); showTutorialTrackerOrDecision = false },
+                        previewItem: tutorialCoordinator.tutorialItem,
+                        onTutorialDecision: { _ in tutorialCoordinator.finishCooling() }
+                    )
+                } else {
+                    GhostDeliveryDecisionView(
+                        itemID: tutorialCoordinator.tutorialItem.id,
+                        onClose: { showTutorialTrackerOrDecision = false },
+                        previewItem: tutorialCoordinator.tutorialItem,
+                        onTutorialDecision: { action in
+                            tutorialCoordinator.handleTutorialDecision(action)
+                            showTutorialTrackerOrDecision = false
+                        }
+                    )
+                }
+            }
+        }
     }
 
     private func dismissInAppMessage(_ message: InAppMessage) {

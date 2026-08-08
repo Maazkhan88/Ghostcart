@@ -3,6 +3,7 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject private var store: GhostCartStore
+    @EnvironmentObject private var tutorialCoordinator: TutorialCoordinator
     @State private var banners: [ContentBlock] = []
     @State private var stories: [ContentBlock] = []
     @State private var products: [MarketplaceProduct] = []
@@ -24,6 +25,27 @@ struct HomeView: View {
     // sorted by decisionAt ascending.
     private var activeGhostDelivery: AlmostBuy? {
         store.coolingItems.first
+    }
+
+    // Injected into the real marketplace list only while the tutorial is at
+    // PRODUCT - the same real card, real "Ghost it" button, real
+    // ProductThumbnail rendering every other card uses, just spotlighted.
+    // Never written into GhostCartStore.items/products; purely a display-time
+    // addition to this one @State array.
+    private var isTutorialProductStep: Bool {
+        tutorialCoordinator.isActive && tutorialCoordinator.state.currentStep == .product
+    }
+    private var displayProducts: [MarketplaceProduct] {
+        guard isTutorialProductStep else { return products }
+        let tutorialProduct = MarketplaceProduct(
+            id: tutorialProductID,
+            name: "Ghost Cart Coffee & Donut Combo",
+            category: "Food & delivery",
+            priceCents: 1500,
+            imageUrl: nil,
+            isUserGhosted: false
+        )
+        return [tutorialProduct] + products
     }
 
     var body: some View {
@@ -67,11 +89,16 @@ struct HomeView: View {
                 }
 
                 MarketplaceSection(
-                    products: products,
+                    products: displayProducts,
                     favoriteIds: favoriteIds,
                     onToggleFavorite: toggleFavorite,
                     onAddToCart: addToCart,
-                    onOpenCart: onOpenCart
+                    onOpenCart: onOpenCart,
+                    tutorialProductIDs: isTutorialProductStep ? [tutorialProductID] : [],
+                    onGhostItDirect: { _ in
+                        tutorialCoordinator.addPracticeItemToCart()
+                        tutorialCoordinator.openTutorialCart()
+                    }
                 )
 
                 if !stories.isEmpty {

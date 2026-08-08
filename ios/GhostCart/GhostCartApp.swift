@@ -40,6 +40,19 @@ struct GhostCartApp: App {
                             .environmentObject(store)
                     }
                 }
+                // Opened from the Cooling Off Live Activity / Dynamic Island
+                // (widgetURL points at theghostcart.com/cooldown/{id}).
+                .fullScreenCover(isPresented: Binding(
+                    get: { deepLinks.pendingCooldownID != nil },
+                    set: { if !$0 { deepLinks.pendingCooldownID = nil } }
+                )) {
+                    if let itemID = deepLinks.pendingCooldownID {
+                        NavigationStack {
+                            GhostDeliveryTrackerView(itemID: itemID, onClose: { deepLinks.pendingCooldownID = nil })
+                                .environmentObject(store)
+                        }
+                    }
+                }
         }
     }
 }

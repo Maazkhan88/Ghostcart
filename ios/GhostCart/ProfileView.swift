@@ -5,9 +5,9 @@ struct ProfileView: View {
     @EnvironmentObject private var store: GhostCartStore
     @EnvironmentObject private var auth: AuthService
     @EnvironmentObject private var onboarding: OnboardingState
+    @EnvironmentObject private var tutorialCoordinator: TutorialCoordinator
     @State private var showMembership = false
     @State private var showLeaderboard = false
-    @State private var showTutorial = false
     @State private var showSignIn = false
     @State private var communityProfile: CommunityProfile?
 
@@ -68,8 +68,7 @@ struct ProfileView: View {
                         .buttonStyle(.plain)
                     }
                     Button {
-                        TutorialView.resetSavedSession()
-                        showTutorial = true
+                        tutorialCoordinator.replay()
                     } label: {
                         SettingsRow(image: "play.rectangle", title: "Replay app tutorial", subtitle: "Practice the complete cooling and decision journey")
                     }
@@ -121,13 +120,6 @@ struct ProfileView: View {
         }
         .sheet(isPresented: $showLeaderboard) {
             NavigationStack { LeaderboardView() }
-        }
-        .fullScreenCover(isPresented: $showTutorial) {
-            TutorialView(onFinish: {
-                onboarding.progress.tutorialComplete = true
-                showTutorial = false
-            })
-            .environmentObject(store)
         }
         .sheet(isPresented: $showSignIn) {
             NavigationStack {

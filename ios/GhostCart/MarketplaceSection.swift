@@ -167,12 +167,18 @@ struct MarketplaceSection: View {
 
     private var marketplaceRow: [MarketplaceProduct] {
         searched
-            .filter { !$0.isFood && category.matches($0.category) }
-            .filter { !userGhostedOnly || $0.isUserGhosted }
+            .filter { tutorialProductIDs.contains($0.id) || (!$0.isFood && category.matches($0.category)) }
+            .filter { tutorialProductIDs.contains($0.id) || !userGhostedOnly || $0.isUserGhosted }
     }
 
+    // The tutorial's synthetic product is food-categorized (for display
+    // copy only) but must always surface in the "Marketplace products" rail
+    // above - that's the only rail guaranteed visible without scrolling
+    // past the search bar/category chips, unlike "Food & delivery" further
+    // down the page. Excluding it here prevents it from also duplicating
+    // into this buried rail.
     private var foodRow: [MarketplaceProduct] {
-        searched.filter { $0.isFood }
+        searched.filter { $0.isFood && !tutorialProductIDs.contains($0.id) }
     }
 
     private var favoritesRow: [MarketplaceProduct] {
@@ -430,6 +436,20 @@ private struct MarketplaceProductCard: View {
                 .background(Color.ghostGreenColor)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .accessibilityHint("Starts a simulated Ghost Order for this item")
+                .background {
+                    // Reports this button's real on-screen frame for the
+                    // tutorial spotlight overlay, only while this specific
+                    // card is the injected tutorial item - a no-op background
+                    // read for every other (real) product card.
+                    if isTutorial {
+                        GeometryReader { proxy in
+                            Color.clear.preference(
+                                key: TutorialTargetFramesKey.self,
+                                value: [TutorialTargetFrame(id: "tutorial.ghostIt", frame: proxy.frame(in: .global))]
+                            )
+                        }
+                    }
+                }
 
                 ShareLink(item: shareText) {
                     Image(systemName: "square.and.arrow.up")
