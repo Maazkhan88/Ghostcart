@@ -16,6 +16,14 @@
 				<string>com.googleusercontent.apps.172577078460-7h38fc6737bttb21lm3rtcb6i542gur2</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>ghostcart</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>

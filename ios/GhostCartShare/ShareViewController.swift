@@ -32,8 +32,28 @@ final class ShareViewController: UIViewController {
                 )
             }
             DispatchQueue.main.async {
-                self?.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+                self?.finish()
             }
+        }
+    }
+
+    // Hands off to Ghost Cart itself via its own custom URL scheme
+    // (registered in GhostCart/Info.plist) rather than just completing the
+    // extension and leaving the user in whatever app they shared from -
+    // Android's equivalent (an ACTION_SEND intent filter) opens the app
+    // directly, this is the iOS mechanism for the same result.
+    // NSExtensionContext.open(_:completionHandler:) both dismisses the
+    // extension and foregrounds the target app in one call when it
+    // succeeds; completeRequest is only needed as a fallback if opening the
+    // app URL itself fails for some reason.
+    private func finish() {
+        guard let openURL = URL(string: "ghostcart://share") else {
+            extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+            return
+        }
+        extensionContext?.open(openURL) { [weak self] success in
+            guard !success else { return }
+            self?.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
         }
     }
 
