@@ -190,15 +190,43 @@ private enum KeychainToken {
     }
 
     static func load() -> String? {
-        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+        if let token = load(accessGroup: sharedAccessGroup) { return token }
+        // Migration path: anyone who signed in before this build has their
+        // token stored under the implicit, per-target default access group
+        // (no kSecAttrAccessGroup at all) - a Keychain item's access group
+        // is part of its identity, so simply changing the query above would
+        // otherwise make every existing session invisible (silently
+        // signing everyone out, not just in the new share extension) rather
+        // than actually finding nothing. Re-save under the new shared
+        // group and clean up the old entry so this only ever runs once per
+        // install.
+        guard let legacyToken = load(accessGroup: nil) else { return nil }
+        // Delete the legacy (no-access-group) entry before writing the new
+        // one, not after - deleting without an explicit access group could
+        // otherwise ambiguously match the just-written shared-group item
+        // too, undoing the migration it was meant to complete.
+        deleteLegacy()
+        save(legacyToken)
+        return legacyToken
+    }
+
+    private static func load(accessGroup: String?) -> String? {
+        var query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
                                      kSecAttrService as String: service,
                                      kSecAttrAccount as String: account,
-                                     kSecAttrAccessGroup as String: sharedAccessGroup,
                                      kSecReturnData as String: true,
                                      kSecMatchLimit as String: kSecMatchLimitOne]
+        if let accessGroup { query[kSecAttrAccessGroup as String] = accessGroup }
         var result: AnyObject?
         guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
               let data = result as? Data else { return nil }
         return String(data: data, encoding: .utf8)
+    }
+
+    private static func deleteLegacy() {
+        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+                                     kSecAttrService as String: service,
+                                     kSecAttrAccount as String: account]
+        SecItemDelete(query as CFDictionary)
     }
 }
