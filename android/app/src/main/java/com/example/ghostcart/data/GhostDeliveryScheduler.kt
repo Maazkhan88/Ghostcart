@@ -16,6 +16,7 @@ object GhostDeliveryScheduler {
         cancel(context, item.id)
         val orderId = item.ghostOrderId ?: item.id
         val durationLabel = formatGhostDeliveryDuration(item.selectedDeliveryDurationMillis)
+        GhostDeliveryLiveUpdate.start(context, item.id, item.name, item.deliveryStartedAtMillis, item.deliveryEndsAtMillis)
         ghostStageSchedule(item.deliveryStartedAtMillis, item.deliveryEndsAtMillis)
             .filter {
                 it.triggerAtMillis >= nowMillis ||
@@ -34,7 +35,9 @@ object GhostDeliveryScheduler {
                             DeliveryStepWorker.KEY_PRODUCT_NAME to item.name,
                             DeliveryStepWorker.KEY_PRODUCT_IMAGE_URL to item.imageUrl,
                             DeliveryStepWorker.KEY_DURATION_LABEL to durationLabel,
-                            DeliveryStepWorker.KEY_STATE to scheduled.state.name
+                            DeliveryStepWorker.KEY_STATE to scheduled.state.name,
+                            DeliveryStepWorker.KEY_START_MILLIS to item.deliveryStartedAtMillis,
+                            DeliveryStepWorker.KEY_END_MILLIS to item.deliveryEndsAtMillis
                         )
                     )
                     .addTag(GHOST_DELIVERY_WORK_TAG)
@@ -50,10 +53,12 @@ object GhostDeliveryScheduler {
 
     fun cancel(context: Context, itemId: String) {
         WorkManager.getInstance(context).cancelAllWorkByTag(tagForItem(itemId))
+        GhostDeliveryLiveUpdate.cancel(context, itemId)
     }
 
     fun cancelAll(context: Context) {
         WorkManager.getInstance(context).cancelAllWorkByTag(GHOST_DELIVERY_WORK_TAG)
+        GhostDeliveryLiveUpdate.cancelAll(context)
     }
 
     fun restore(context: Context, items: List<AlmostBuy>, nowMillis: Long = System.currentTimeMillis()) {

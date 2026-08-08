@@ -37,12 +37,17 @@ class DeliveryStepWorker(
         val state = inputData.getString(KEY_STATE)
             ?.let { runCatching { GhostDeliveryState.valueOf(it) }.getOrNull() }
             ?: return Result.failure()
+        val startMillis = inputData.getLong(KEY_START_MILLIS, 0L)
+        val endMillis = inputData.getLong(KEY_END_MILLIS, 0L)
 
         val copy = notificationCopy(state, productName, durationLabel) ?: return Result.success()
         Analytics.logGhostOrderEvent(applicationContext, "ghost_stage_reached", orderId, state.name)
         val image = loadRemoteProductImage(applicationContext, inputData.getString(KEY_PRODUCT_IMAGE_URL))
             ?: decodeLocalPlaceholder(applicationContext)
         showNotification(itemId, orderId, state, copy.first, copy.second, image)
+        if (startMillis > 0L && endMillis > 0L) {
+            GhostDeliveryLiveUpdate.updateStage(applicationContext, itemId, productName, state, startMillis, endMillis)
+        }
         // Best-effort mirror into the synced notifications feed - never blocks
         // or fails this worker if it doesn't go through (offline, signed out).
         NotificationsRepository.postDeliveryUpdate(applicationContext, copy.first, copy.second, "ghostDeliveryTracker/$itemId")
@@ -157,6 +162,8 @@ class DeliveryStepWorker(
         const val KEY_PRODUCT_IMAGE_URL = "productImageUrl"
         const val KEY_DURATION_LABEL = "durationLabel"
         const val KEY_STATE = "state"
+        const val KEY_START_MILLIS = "startMillis"
+        const val KEY_END_MILLIS = "endMillis"
 
         fun stableNotificationId(orderId: String, state: GhostDeliveryState): Int =
             ("$orderId:${state.name}".hashCode() and 0x7FFFFFFF).coerceAtLeast(1)
