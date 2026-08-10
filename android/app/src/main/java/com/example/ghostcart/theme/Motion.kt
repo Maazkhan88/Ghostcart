@@ -48,6 +48,10 @@ object GhostMotion {
         if (reduceMotion()) snap() else MaterialTheme.motionScheme.defaultEffectsSpec()
 
     @Composable
+    fun fadeSpec(): FiniteAnimationSpec<Float> =
+        if (reduceMotion()) snap() else MaterialTheme.motionScheme.defaultEffectsSpec()
+
+    @Composable
     fun popSpec(): FiniteAnimationSpec<Float> =
         if (reduceMotion()) snap() else MaterialTheme.motionScheme.fastSpatialSpec()
 

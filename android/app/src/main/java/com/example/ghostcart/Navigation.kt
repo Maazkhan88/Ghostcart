@@ -1,10 +1,14 @@
 package com.example.ghostcart
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
@@ -187,6 +191,8 @@ fun MainNavigation(
         else -> Splash
     }
     val backStack = rememberNavBackStack(initial)
+    val navSlideSpec = GhostMotion.offsetSpec()
+    val navFadeSpec = GhostMotion.fadeSpec()
     val appViewModel: AppViewModel = viewModel()
     val tutorialViewModel: TutorialViewModel = viewModel()
     val context = LocalContext.current
@@ -372,6 +378,44 @@ fun MainNavigation(
                 backStack = backStack,
                 modifier = Modifier.padding(insets),
                 onBack = { backStack.removeLastOrNull() },
+                // Directional shared-axis: forward navigation slides the new screen in from the
+                // end edge (with the outgoing screen sliding + fading out toward the start edge),
+                // back navigation reverses it - so forward/backward always read as opposite
+                // directions instead of the previous default (an undirected crossfade), which is
+                // what made back-navigation feel disorienting. slideIntoContainer/
+                // slideOutOfContainer (not manual offsets) so this is correct in RTL layouts too.
+                // Both specs come from GhostMotion, so this - like everything else in the M3E
+                // migration - falls back to an instant snap under reduced-motion.
+                transitionSpec = {
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                        animationSpec = navSlideSpec,
+                    ) + fadeIn(animationSpec = navFadeSpec) togetherWith
+                        slideOutOfContainer(
+                            towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                            animationSpec = navSlideSpec,
+                        ) + fadeOut(animationSpec = navFadeSpec)
+                },
+                popTransitionSpec = {
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.End,
+                        animationSpec = navSlideSpec,
+                    ) + fadeIn(animationSpec = navFadeSpec) togetherWith
+                        slideOutOfContainer(
+                            towards = AnimatedContentTransitionScope.SlideDirection.End,
+                            animationSpec = navSlideSpec,
+                        ) + fadeOut(animationSpec = navFadeSpec)
+                },
+                predictivePopTransitionSpec = {
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.End,
+                        animationSpec = navSlideSpec,
+                    ) + fadeIn(animationSpec = navFadeSpec) togetherWith
+                        slideOutOfContainer(
+                            towards = AnimatedContentTransitionScope.SlideDirection.End,
+                            animationSpec = navSlideSpec,
+                        ) + fadeOut(animationSpec = navFadeSpec)
+                },
                 entryProvider = entryProvider {
                     entry<Splash> {
                         OfficialBrandSplashScreen(
