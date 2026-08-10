@@ -2,6 +2,7 @@ package com.example.ghostcart
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
@@ -1112,11 +1113,28 @@ private fun GhostBottomNav(current: NavKey?, cartItemCount: Int = 0, onNavigate:
                 val interactionSource = remember { MutableInteractionSource() }
                 val isPressed by interactionSource.collectIsPressedAsState()
                 val morph = rememberGhostMorph(GhostMorphShapes.circle, GhostMorphShapes.blob)
-                val morphProgress by animateFloatAsState(
-                    targetValue = if (item.central && isPressed) 1f else 0f,
-                    animationSpec = GhostMotion.morphSpec(),
-                    label = "navCentralMorph"
-                )
+                val morphSpec = GhostMotion.morphSpec()
+                val morphProgressAnimatable = remember { Animatable(0f) }
+
+                LaunchedEffect(isPressed) {
+                    if (item.central) {
+                        morphProgressAnimatable.animateTo(if (isPressed) 1f else 0f, animationSpec = morphSpec)
+                    }
+                }
+
+                if (item.central) {
+                    var previousCartCount by remember { mutableStateOf(cartItemCount) }
+                    LaunchedEffect(cartItemCount) {
+                        // One-shot circle->blob->circle pulse when the cart goes from empty to
+                        // non-empty, skipped while the button is actively being pressed so it
+                        // doesn't fight the press-driven morph above.
+                        if (previousCartCount == 0 && cartItemCount > 0 && !isPressed) {
+                            morphProgressAnimatable.animateTo(1f, animationSpec = morphSpec)
+                            morphProgressAnimatable.animateTo(0f, animationSpec = morphSpec)
+                        }
+                        previousCartCount = cartItemCount
+                    }
+                }
 
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -1139,7 +1157,7 @@ private fun GhostBottomNav(current: NavKey?, cartItemCount: Int = 0, onNavigate:
                                 .height(if (item.central) 46.dp else 34.dp)
                                 .let {
                                     if (item.central) {
-                                        it.ghostMorphClip(morph) { morphProgress }
+                                        it.ghostMorphClip(morph) { morphProgressAnimatable.value }
                                     } else {
                                         it.clip(RoundedCornerShape(18.dp))
                                     }
