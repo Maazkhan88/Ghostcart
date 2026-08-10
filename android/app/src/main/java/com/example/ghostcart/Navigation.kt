@@ -4,12 +4,14 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -101,6 +103,10 @@ import com.example.ghostcart.theme.ExpressiveSurfaceHigh
 import com.example.ghostcart.theme.GhostGlass
 import com.example.ghostcart.theme.GhostSubtleBorder
 import com.example.ghostcart.theme.GhostCartTheme
+import com.example.ghostcart.theme.GhostMorphShapes
+import com.example.ghostcart.theme.GhostMotion
+import com.example.ghostcart.theme.ghostMorphClip
+import com.example.ghostcart.theme.rememberGhostMorph
 import com.example.ghostcart.ui.GhostMascotPose
 import com.example.ghostcart.ui.GhostCartWordmark
 import com.example.ghostcart.ui.app.AppViewModel
@@ -1085,23 +1091,31 @@ private fun GhostBottomNav(current: NavKey?, cartItemCount: Int = 0, onNavigate:
                         selected -> GhostGreen
                         else -> Color.Transparent
                     },
-                    animationSpec = spring(dampingRatio = 0.78f, stiffness = 560f),
+                    animationSpec = GhostMotion.colorSpec(),
                     label = "navIndicator"
                 )
                 val iconColor by animateColorAsState(
                     targetValue = if (selected) Color(0xFF071006) else ExpressiveSecondaryText,
-                    animationSpec = spring(dampingRatio = 0.78f, stiffness = 560f),
+                    animationSpec = GhostMotion.colorSpec(),
                     label = "navIconColor"
                 )
                 val indicatorWidth by animateDpAsState(
-                    targetValue = if (selected || item.central) 50.dp else 40.dp,
-                    animationSpec = spring(dampingRatio = 0.72f, stiffness = 520f),
+                    targetValue = if (selected || item.central) 52.dp else 40.dp,
+                    animationSpec = GhostMotion.sizeSpec(),
                     label = "navIndicatorWidth"
                 )
                 val iconScale by animateFloatAsState(
                     targetValue = if (selected) 1.08f else 1f,
-                    animationSpec = spring(dampingRatio = 0.68f, stiffness = 480f),
+                    animationSpec = GhostMotion.popSpec(),
                     label = "navIconScale"
+                )
+                val interactionSource = remember { MutableInteractionSource() }
+                val isPressed by interactionSource.collectIsPressedAsState()
+                val morph = rememberGhostMorph(GhostMorphShapes.circle, GhostMorphShapes.blob)
+                val morphProgress by animateFloatAsState(
+                    targetValue = if (item.central && isPressed) 1f else 0f,
+                    animationSpec = GhostMotion.morphSpec(),
+                    label = "navCentralMorph"
                 )
 
                 Column(
@@ -1111,7 +1125,11 @@ private fun GhostBottomNav(current: NavKey?, cartItemCount: Int = 0, onNavigate:
                         .weight(1f)
                         .height(62.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .clickable(role = Role.Tab) { onNavigate(item.destination) }
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = LocalIndication.current,
+                            role = Role.Tab
+                        ) { onNavigate(item.destination) }
                         .padding(vertical = 4.dp)
                 ) {
                     Box(contentAlignment = Alignment.TopEnd) {
@@ -1119,7 +1137,13 @@ private fun GhostBottomNav(current: NavKey?, cartItemCount: Int = 0, onNavigate:
                             modifier = Modifier
                                 .width(indicatorWidth)
                                 .height(if (item.central) 46.dp else 34.dp)
-                                .clip(if (item.central) CircleShape else RoundedCornerShape(18.dp))
+                                .let {
+                                    if (item.central) {
+                                        it.ghostMorphClip(morph) { morphProgress }
+                                    } else {
+                                        it.clip(RoundedCornerShape(18.dp))
+                                    }
+                                }
                                 .background(indicatorColor)
                                 .graphicsLayer { scaleX = iconScale; scaleY = iconScale },
                             contentAlignment = Alignment.Center
