@@ -200,7 +200,11 @@ fun GhostDeliveryTrackerScreen(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(Paper),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 18.dp, 0.dp, 40.dp),
+        // Bottom padding sized to clear the floating nav pill (72dp row + 8dp surface
+        // padding + system gesture inset) so scrolling to the end rests above it, not
+        // behind it - content can still scroll past this point mid-scroll, since the
+        // pill is a transparent overlay, not a layout-level content boundary.
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 18.dp, 0.dp, 96.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {

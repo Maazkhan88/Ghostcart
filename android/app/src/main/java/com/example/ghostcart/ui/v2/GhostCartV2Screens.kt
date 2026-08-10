@@ -182,7 +182,9 @@ fun GhostHomeScreen(
     ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(Paper),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 20.dp, 0.dp, 28.dp),
+        // Bottom padding sized to clear the floating nav pill so the end of scroll
+        // rests above it, not behind it (content can still pass behind it mid-scroll).
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 20.dp, 0.dp, 96.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         item {
@@ -327,7 +329,7 @@ fun CaptureAlmostBuyScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize().background(Paper),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 16.dp, 0.dp, 32.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 16.dp, 0.dp, 96.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         item { GhostTopBar(title = stringResource(R.string.ghost_an_almost_buy), onBack = onBack) }
@@ -648,7 +650,7 @@ fun CooldownsScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize().background(Paper),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 20.dp, 0.dp, 32.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 20.dp, 0.dp, 96.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
@@ -727,7 +729,7 @@ fun ProgressScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize().background(Paper),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 20.dp, 0.dp, 32.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 20.dp, 0.dp, 96.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         item {
@@ -1171,7 +1173,7 @@ fun ProfileScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize().background(Paper),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 20.dp, 0.dp, 32.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 20.dp, 0.dp, 96.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         item {

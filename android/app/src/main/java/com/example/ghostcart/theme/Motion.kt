@@ -83,10 +83,11 @@ fun rememberGhostMorph(start: RoundedPolygon, end: RoundedPolygon): Morph =
     remember(start, end) { Morph(start, end) }
 
 /**
- * RoundedPolygon/Morph coordinates are normalized around the origin with a
- * radius of roughly 1, so every consumer needs the same scale+translate into
- * the actual layout bounds. Centralized here so call sites only ever pass a
- * plain 0f..1f progress.
+ * RoundedPolygon/Morph coordinates from MaterialShapes (verified empirically via
+ * MorphGeometryProbeTest against the actual resolved graphics-shapes jar, not assumed)
+ * are normalized to a [0,1] box centered at (0.5,0.5) - NOT [-1,1] centered at the
+ * origin. A straight scale by the full layout size maps that directly onto the actual
+ * bounds; every consumer only ever passes a plain 0f..1f progress.
  */
 private class GhostMorphShape(
     private val morph: Morph,
@@ -97,8 +98,7 @@ private class GhostMorphShape(
     override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
         matrix.reset()
         val path = morph.toPath(progress().coerceIn(0f, 1f)).asComposePath()
-        matrix.scale(size.width / 2f, size.height / 2f)
-        matrix.translate(1f, 1f)
+        matrix.scale(size.width, size.height)
         path.transform(matrix)
         return Outline.Generic(path)
     }

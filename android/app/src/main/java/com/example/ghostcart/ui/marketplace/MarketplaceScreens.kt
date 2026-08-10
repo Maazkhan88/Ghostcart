@@ -76,6 +76,7 @@ import com.example.ghostcart.data.Marketplace
 import com.example.ghostcart.data.MarketplaceCategory
 import com.example.ghostcart.data.MarketplaceProduct
 import com.example.ghostcart.data.iconForProduct
+import com.example.ghostcart.theme.ExpressiveSurface
 import com.example.ghostcart.theme.FaintBorder
 import com.example.ghostcart.theme.GhostGreen
 import com.example.ghostcart.theme.GreenTint
@@ -424,18 +425,19 @@ fun MarketplaceProductCard(
     // Mirrors the home DiscoveryProductCard so listing/community cards match the
     // home screen: white image tile with a top-right favorite, green category
     // label, title, Dirham-glyph price, and one predictable Ghost action.
-    Column(
+    Surface(
+        onClick = onClick,
         modifier = modifier
             // Was 310.dp - same clipping issue as GhostProductCard: stacked
             // content now needs ~289dp against a 286dp budget (310 minus 12dp
             // padding x2) since GhostItButton grew to 52dp, clipping its
             // bottom ~3dp. +5dp closes that gap with a small margin.
-            .height(315.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(Paper)
-            .clickable(onClick = onClick)
-            .padding(12.dp)
+            .height(315.dp),
+        shape = RoundedCornerShape(20.dp),
+        color = ExpressiveSurface,
+        tonalElevation = 1.dp,
     ) {
+    Column(modifier = Modifier.padding(12.dp)) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -524,6 +526,7 @@ fun MarketplaceProductCard(
         Spacer(modifier = Modifier.weight(1f))
 
         GhostItButton(onClick = onAdd)
+    }
     }
 }
 

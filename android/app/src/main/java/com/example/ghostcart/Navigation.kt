@@ -1128,7 +1128,10 @@ private fun GhostBottomNav(current: NavKey?, cartItemCount: Int = 0, onNavigate:
         color = GhostGlass,
         contentColor = ExpressivePrimaryText,
         tonalElevation = 4.dp,
-        shadowElevation = 6.dp
+        // No shadowElevation: a drop shadow is meant to be cast onto an opaque backdrop -
+        // now that the area behind this pill is genuinely transparent (content scrolls
+        // through it), the shadow's own rendering was showing up as a stray band/line.
+        shadowElevation = 0.dp
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

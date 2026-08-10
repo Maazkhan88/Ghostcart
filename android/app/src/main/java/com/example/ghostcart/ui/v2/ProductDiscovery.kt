@@ -229,7 +229,7 @@ fun ProductDiscoverySection(
                                     AsyncImage(
                                         model = product.imageUrl,
                                         contentDescription = "${product.name} product image",
-                                        contentScale = ContentScale.Crop,
+                                        contentScale = ContentScale.Fit,
                                         modifier = Modifier.fillMaxSize().background(Color.White)
                                     )
                                 }
@@ -274,7 +274,7 @@ fun ProductDiscoverySection(
                                     AsyncImage(
                                         model = product.imageUrl,
                                         contentDescription = "${product.name} food image",
-                                        contentScale = ContentScale.Crop,
+                                        contentScale = ContentScale.Fit,
                                         modifier = Modifier.fillMaxSize().background(Color.White)
                                     )
                                 }
@@ -317,7 +317,7 @@ fun ProductDiscoverySection(
                                     AsyncImage(
                                         model = product.imageUrl,
                                         contentDescription = "${product.name} product image",
-                                        contentScale = ContentScale.Crop,
+                                        contentScale = ContentScale.Fit,
                                         modifier = Modifier.fillMaxSize().background(Color.White)
                                     )
                                 }
@@ -325,7 +325,9 @@ fun ProductDiscoverySection(
                         },
                         onOpen = { onOpen(product.id) },
                         onToggleFavorite = { onToggleFavorite(product.id) },
-                        onGhost = { onGhost(product.id) }
+                        onGhost = { onGhost(product.id) },
+                        onShare = { onShareProduct(product) },
+                        onReviews = { onOpen(product.id) }
                     )
                 }
             }
