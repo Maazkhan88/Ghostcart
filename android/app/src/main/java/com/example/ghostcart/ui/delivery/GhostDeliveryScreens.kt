@@ -154,7 +154,8 @@ fun GhostDeliveryTimeDialog(
                             FilterChip(
                                 selected = customUnit == unit,
                                 onClick = { customUnit = unit },
-                                label = { Text(unit.replaceFirstChar(Char::uppercase)) }
+                                label = { Text(unit.replaceFirstChar(Char::uppercase)) },
+                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = GhostGreen, selectedLabelColor = Color(0xFF050505))
                             )
                         }
                     }
