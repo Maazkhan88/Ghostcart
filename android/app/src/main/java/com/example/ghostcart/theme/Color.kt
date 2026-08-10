@@ -23,8 +23,9 @@ val FaintBorder: Color get() = if (GhostPaletteState.darkMode) Color(0xFF343432)
 val GreenTint: Color get() = if (GhostPaletteState.darkMode) Color(0xFF18301A) else Color(0xFFE3F6DE)
 val DangerRed = Color(0xFFE0453C)
 
-// Material 3 Expressive surface roles. These remain semantic so the shared
-// Compose UI can modernize without changing product behavior or data flow.
+// App-specific semantic surface roles, independent of the M3 ColorScheme.
+// These stay separate from MaterialTheme.colorScheme's roles so existing
+// call sites keep working unchanged as the app adopts real M3E APIs.
 val ExpressiveBackground: Color get() = if (GhostPaletteState.darkMode) Color(0xFF080909) else Color(0xFFF7F8F6)
 val ExpressiveSurface: Color get() = if (GhostPaletteState.darkMode) Color(0xFF121413) else Color(0xFFFFFFFF)
 val ExpressiveSurfaceHigh: Color get() = if (GhostPaletteState.darkMode) Color(0xFF1A1C1B) else Color(0xFFF0F2EF)
