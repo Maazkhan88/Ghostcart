@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -40,7 +41,9 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,6 +53,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -62,6 +66,7 @@ import com.example.ghostcart.theme.ExpressiveSurfaceHigh
 import com.example.ghostcart.theme.GhostGlass
 import com.example.ghostcart.theme.GhostGlassHighlight
 import com.example.ghostcart.theme.GhostGreen
+import com.example.ghostcart.theme.GhostMotion
 import com.example.ghostcart.theme.GhostOnGreen
 import com.example.ghostcart.theme.GhostSubtleBorder
 import com.example.ghostcart.ui.DirhamGlyph
@@ -155,17 +160,23 @@ fun GhostCategoryChip(
     modifier: Modifier = Modifier,
 ) {
     val container by animateColorAsState(
-        if (selected) GhostGreen else ExpressiveSurfaceHigh,
+        targetValue = if (selected) GhostGreen else ExpressiveSurfaceHigh,
+        animationSpec = GhostMotion.colorSpec(),
         label = "categoryContainer",
     )
     val foreground by animateColorAsState(
-        if (selected) GhostOnGreen else ExpressiveSecondaryText,
+        targetValue = if (selected) GhostOnGreen else ExpressiveSecondaryText,
+        animationSpec = GhostMotion.colorSpec(),
         label = "categoryForeground",
     )
-    val elevation by animateDpAsState(if (selected) 3.dp else 0.dp, label = "categoryElevation")
+    val elevation by animateDpAsState(
+        targetValue = if (selected) 3.dp else 0.dp,
+        animationSpec = GhostMotion.sizeSpec(),
+        label = "categoryElevation",
+    )
     val scale by animateFloatAsState(
         targetValue = if (selected) 1.04f else 1f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = 520f),
+        animationSpec = GhostMotion.popSpec(),
         label = "categoryScale",
     )
     Surface(
@@ -191,41 +202,74 @@ fun GhostSegmentedControl(
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    val density = LocalDensity.current
+    var containerWidth by remember { mutableStateOf(0.dp) }
+    val segmentSpacing = 4.dp
+    val containerPadding = 4.dp
+    val segmentCount = options.size
+
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(26.dp))
             .background(ExpressiveSurfaceHigh)
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+            .onGloballyPositioned { containerWidth = with(density) { it.size.width.toDp() } }
+            .padding(containerPadding),
     ) {
-        options.forEachIndexed { index, label ->
-            GhostSegment(label = label, selected = selectedIndex == index) { onSelect(index) }
+        // Shared sliding indicator, positioned behind the segment Row below.
+        // Computed in Dp (not px) so it can drive an ordinary animateDpAsState
+        // using the same GhostMotion specs every other selectable uses.
+        if (segmentCount > 0 && containerWidth > 0.dp) {
+            val contentWidth = (containerWidth - containerPadding * 2 - segmentSpacing * (segmentCount - 1))
+                .coerceAtLeast(0.dp)
+            val segmentWidth = contentWidth / segmentCount
+            val indicatorOffset by animateDpAsState(
+                targetValue = (segmentWidth + segmentSpacing) * selectedIndex,
+                animationSpec = GhostMotion.sizeSpec(),
+                label = "segmentIndicatorOffset",
+            )
+            val indicatorWidth by animateDpAsState(
+                targetValue = segmentWidth,
+                animationSpec = GhostMotion.sizeSpec(),
+                label = "segmentIndicatorWidth",
+            )
+            Box(
+                modifier = Modifier
+                    .offset(x = indicatorOffset)
+                    .width(indicatorWidth)
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(GhostGreen),
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(segmentSpacing),
+        ) {
+            options.forEachIndexed { index, label ->
+                GhostSegment(label = label, selected = selectedIndex == index) { onSelect(index) }
+            }
         }
     }
 }
 
 @Composable
 private fun RowScope.GhostSegment(label: String, selected: Boolean, onClick: () -> Unit) {
-    val container by animateColorAsState(
-        if (selected) GhostGreen else Color.Transparent,
-        label = "segmentContainer",
-    )
     val foreground by animateColorAsState(
-        if (selected) GhostOnGreen else ExpressiveSecondaryText,
+        targetValue = if (selected) GhostOnGreen else ExpressiveSecondaryText,
+        animationSpec = GhostMotion.colorSpec(),
         label = "segmentForeground",
     )
     val scale by animateFloatAsState(
         targetValue = if (selected) 1f else 0.96f,
-        animationSpec = spring(dampingRatio = 0.78f, stiffness = 600f),
+        animationSpec = GhostMotion.popSpec(),
         label = "segmentScale",
     )
     Box(
         modifier = Modifier
             .weight(1f)
             .height(44.dp)
-            .clip(RoundedCornerShape(22.dp))
-            .background(container)
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
