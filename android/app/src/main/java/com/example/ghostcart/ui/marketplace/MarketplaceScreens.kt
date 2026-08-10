@@ -433,7 +433,6 @@ fun MarketplaceProductCard(
             .height(315.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(Paper)
-            .border(1.dp, FaintBorder, RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
             .padding(12.dp)
     ) {

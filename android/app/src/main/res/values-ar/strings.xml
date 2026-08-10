@@ -69,6 +69,7 @@
     <string name="dinner_reminder_body">اختياري، ومتوقف افتراضيًا.</string>
     <string name="card_disclosure">عضوية غوست ليست بطاقة دفع. لا تحتوي على رمز أمان أو تاريخ انتهاء أو حساب أو رصيد أو وظيفة شراء.</string>
     <string name="sign_out">تسجيل الخروج</string>
+    <string name="sign_in_sign_up">تسجيل الدخول / إنشاء حساب</string>
     <string name="name_on_membership_card">الاسم على بطاقة العضوية</string>
     <string name="save">حفظ</string>
     <string name="cancel">إلغاء</string>

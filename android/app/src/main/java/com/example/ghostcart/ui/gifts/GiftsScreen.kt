@@ -66,7 +66,7 @@ fun GiftsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     val visible = if (selectedTab == "Received") lists.received else lists.sent
     LazyColumn(
         modifier = modifier.fillMaxSize().background(Paper),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp, 16.dp, 20.dp, 120.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 16.dp, 0.dp, 120.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {

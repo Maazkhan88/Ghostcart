@@ -120,6 +120,7 @@ data class AppUiState(
     val leaderboardLoading: Boolean = false,
     val leaderboardDetail: LeaderboardDetail? = null,
     val leaderboardDetailLoading: Boolean = false,
+    val leaderboardDetailNotFound: Boolean = false,
     val notifications: List<com.example.ghostcart.data.NotificationItem> = emptyList(),
     val notificationsLoading: Boolean = false,
     val hasUnreadNotifications: Boolean = false,
@@ -629,11 +630,22 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun openLeaderboardDetail(username: String) {
-        _uiState.update { it.copy(leaderboardDetail = null, leaderboardDetailLoading = true) }
+        _uiState.update {
+            it.copy(leaderboardDetail = null, leaderboardDetailLoading = true, leaderboardDetailNotFound = false)
+        }
         viewModelScope.launch {
             CommunityProfileRepository.fetchLeaderboardDetail(username)
-                .onSuccess { detail -> _uiState.update { it.copy(leaderboardDetail = detail, leaderboardDetailLoading = false) } }
-                .onFailure { _uiState.update { it.copy(leaderboardDetailLoading = false) } }
+                .onSuccess { detail ->
+                    _uiState.update { it.copy(leaderboardDetail = detail, leaderboardDetailLoading = false) }
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            leaderboardDetailLoading = false,
+                            leaderboardDetailNotFound = error is com.example.ghostcart.data.LeaderboardMemberNotFoundException
+                        )
+                    }
+                }
         }
     }
 

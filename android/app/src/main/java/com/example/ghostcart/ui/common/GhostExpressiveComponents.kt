@@ -170,13 +170,22 @@ fun GhostCategoryChip(
         label = "categoryForeground",
     )
     val elevation by animateDpAsState(
-        targetValue = if (selected) 3.dp else 0.dp,
+        targetValue = if (selected) 8.dp else 0.dp,
         animationSpec = GhostMotion.sizeSpec(),
         label = "categoryElevation",
     )
+    // Local spring (not GhostMotion.popSpec()) so this chip's pop can be bouncier than the
+    // shared spec used elsewhere (e.g. the bottom nav icons) without changing their feel too.
     val scale by animateFloatAsState(
-        targetValue = if (selected) 1.04f else 1f,
-        animationSpec = GhostMotion.popSpec(),
+        targetValue = if (selected) 1.12f else 1f,
+        animationSpec = if (GhostMotion.reduceMotion()) {
+            androidx.compose.animation.core.snap()
+        } else {
+            androidx.compose.animation.core.spring(
+                dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                stiffness = androidx.compose.animation.core.Spring.StiffnessMedium,
+            )
+        },
         label = "categoryScale",
     )
     Surface(
@@ -392,7 +401,6 @@ fun GhostProductCard(
         color = ExpressiveSurface,
         contentColor = ExpressivePrimaryText,
         tonalElevation = 1.dp,
-        border = androidx.compose.foundation.BorderStroke(1.dp, GhostSubtleBorder),
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Box(

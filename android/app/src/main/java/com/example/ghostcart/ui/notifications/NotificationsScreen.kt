@@ -74,7 +74,7 @@ fun NotificationsScreen(
                 }
             }
             else -> LazyColumn(
-                contentPadding = PaddingValues(20.dp, 16.dp, 20.dp, 120.dp),
+                contentPadding = PaddingValues(0.dp, 16.dp, 0.dp, 120.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(notifications, key = { it.id }) { notification ->

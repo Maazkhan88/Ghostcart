@@ -9,6 +9,11 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.UUID
 
+/** Thrown by [CommunityProfileRepository.fetchLeaderboardDetail] specifically for a 404 - the
+ * member has never opted into (or has since opted out of) the public leaderboard, as opposed to
+ * a transient network/server failure. */
+class LeaderboardMemberNotFoundException(message: String) : Exception(message)
+
 data class UserProfile(
     val email: String,
     val displayName: String?,
@@ -201,6 +206,11 @@ object CommunityProfileRepository {
             val text = (if (responseCode in 200..299) conn.inputStream else conn.errorStream)
                 ?.bufferedReader()?.use { it.readText() }.orEmpty()
             val json = if (text.isBlank()) JSONObject() else JSONObject(text)
+            if (responseCode == 404) {
+                throw LeaderboardMemberNotFoundException(
+                    json.optString("error", "This member is not on the public leaderboard.")
+                )
+            }
             if (responseCode !in 200..299) {
                 throw Exception(json.optString("error", "This member's details are unavailable"))
             }

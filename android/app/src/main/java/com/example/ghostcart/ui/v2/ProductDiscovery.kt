@@ -229,7 +229,7 @@ fun ProductDiscoverySection(
                                     AsyncImage(
                                         model = product.imageUrl,
                                         contentDescription = "${product.name} product image",
-                                        contentScale = ContentScale.Fit,
+                                        contentScale = ContentScale.Crop,
                                         modifier = Modifier.fillMaxSize().background(Color.White)
                                     )
                                 }
@@ -274,7 +274,7 @@ fun ProductDiscoverySection(
                                     AsyncImage(
                                         model = product.imageUrl,
                                         contentDescription = "${product.name} food image",
-                                        contentScale = ContentScale.Fit,
+                                        contentScale = ContentScale.Crop,
                                         modifier = Modifier.fillMaxSize().background(Color.White)
                                     )
                                 }
@@ -317,7 +317,7 @@ fun ProductDiscoverySection(
                                     AsyncImage(
                                         model = product.imageUrl,
                                         contentDescription = "${product.name} product image",
-                                        contentScale = ContentScale.Fit,
+                                        contentScale = ContentScale.Crop,
                                         modifier = Modifier.fillMaxSize().background(Color.White)
                                     )
                                 }

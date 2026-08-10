@@ -69,6 +69,7 @@
     <string name="dinner_reminder_body">Optional. Off by default.</string>
     <string name="card_disclosure">Ghost Membership is not a payment card. It has no CVV, expiry, account, balance, or purchasing function.</string>
     <string name="sign_out">Sign out</string>
+    <string name="sign_in_sign_up">Sign in / Sign up</string>
     <string name="name_on_membership_card">Name on membership card</string>
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>

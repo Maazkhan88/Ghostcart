@@ -12,7 +12,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -106,7 +105,6 @@ import com.example.ghostcart.theme.ExpressivePrimaryText
 import com.example.ghostcart.theme.ExpressiveSecondaryText
 import com.example.ghostcart.theme.ExpressiveSurfaceHigh
 import com.example.ghostcart.theme.GhostGlass
-import com.example.ghostcart.theme.GhostSubtleBorder
 import com.example.ghostcart.theme.GhostCartTheme
 import com.example.ghostcart.theme.GhostMorphShapes
 import com.example.ghostcart.theme.GhostMotion
@@ -349,34 +347,18 @@ fun MainNavigation(
         )
     } else {
     Box(Modifier.fillMaxSize()) {
+        // GhostBottomNav is deliberately NOT in Scaffold's bottomBar slot - that slot reserves
+        // its measured height as a hard bottom inset on content, so nothing can ever render
+        // behind it, transparent or not. Instead it's a plain overlay below (drawn after, so on
+        // top of) the Scaffold, and content gets no bottom inset at all - scrollable screens keep
+        // clearing the bar via their own contentPadding, but can scroll further and show through
+        // the transparent gaps around the floating pill, and dimly through its own glass color.
         Scaffold(
             containerColor = Paper,
-            bottomBar = {
-                if (showBottomNav) {
-                    Column {
-                        if (showDeliveryBanner) {
-                            val (order, snapshot) = activeBannerOrder
-                            DeliveryTrackingBanner(
-                                order = order,
-                                state = snapshot.state,
-                                onClick = { backStack.add(GhostDeliveryTracker(order.id)) },
-                                onClose = { dismissedOrderId = order.id }
-                            )
-                        }
-                        GhostBottomNav(
-                            current = selectedBottomDestination(current),
-                            cartItemCount = state.cartQuantities.values.sum(),
-                            onNavigate = { destination ->
-                                if (backStack.lastOrNull() != destination) backStack.add(destination)
-                            }
-                        )
-                    }
-                }
-            }
         ) { insets ->
             NavDisplay(
                 backStack = backStack,
-                modifier = Modifier.padding(insets),
+                modifier = Modifier.padding(top = insets.calculateTopPadding()),
                 onBack = { backStack.removeLastOrNull() },
                 // Directional shared-axis: forward navigation slides the new screen in from the
                 // end edge (with the outgoing screen sliding + fading out toward the start edge),
@@ -898,6 +880,7 @@ fun MainNavigation(
                                 backStack.clear()
                                 backStack.add(Splash)
                             },
+                            onSignIn = { backStack.add(Auth) },
                             profile = state.profile,
                             profileSaving = state.profileSaving,
                             profileError = state.profileError,
@@ -953,12 +936,34 @@ fun MainNavigation(
                         com.example.ghostcart.ui.community.LeaderboardDetailScreen(
                             detail = state.leaderboardDetail?.takeIf { it.username == key.username },
                             loading = state.leaderboardDetailLoading,
+                            notFound = state.leaderboardDetailNotFound,
                             isYou = state.profile?.username == key.username,
                             onBack = { backStack.removeLastOrNull() }
                         )
                     }
                 }
             )
+        }
+
+        if (showBottomNav) {
+            Column(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
+                if (showDeliveryBanner) {
+                    val (order, snapshot) = activeBannerOrder
+                    DeliveryTrackingBanner(
+                        order = order,
+                        state = snapshot.state,
+                        onClick = { backStack.add(GhostDeliveryTracker(order.id)) },
+                        onClose = { dismissedOrderId = order.id }
+                    )
+                }
+                GhostBottomNav(
+                    current = selectedBottomDestination(current),
+                    cartItemCount = state.cartQuantities.values.sum(),
+                    onNavigate = { destination ->
+                        if (backStack.lastOrNull() != destination) backStack.add(destination)
+                    }
+                )
+            }
         }
 
         pendingGhostCheckout?.let { checkout ->
@@ -1080,6 +1085,8 @@ private fun DeliveryTrackingBanner(order: AlmostBuy, state: GhostDeliveryState, 
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
+            .padding(horizontal = 4.dp)
+            .clip(RoundedCornerShape(20.dp))
             .background(DarkGray)
             .clickable(onClick = onClick)
             .padding(start = 16.dp, end = 4.dp, top = 10.dp, bottom = 10.dp)
@@ -1115,14 +1122,13 @@ private fun GhostBottomNav(current: NavKey?, cartItemCount: Int = 0, onNavigate:
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .padding(horizontal = 4.dp, vertical = 4.dp)
             .navigationBarsPadding(),
         shape = RoundedCornerShape(32.dp),
         color = GhostGlass,
         contentColor = ExpressivePrimaryText,
         tonalElevation = 4.dp,
-        shadowElevation = 6.dp,
-        border = BorderStroke(1.dp, GhostSubtleBorder)
+        shadowElevation = 6.dp
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -1145,7 +1151,12 @@ private fun GhostBottomNav(current: NavKey?, cartItemCount: Int = 0, onNavigate:
                     label = "navIconColor"
                 )
                 val indicatorWidth by animateDpAsState(
-                    targetValue = if (selected || item.central) 52.dp else 40.dp,
+                    // Central item's indicator is clipped to a circle/blob, not a plain
+                    // rounded-rect - a square icon inscribed in a circle always loses its
+                    // corners unless the circle is noticeably bigger than the icon (a circle
+                    // touching all 4 sides of a square has diameter = side * sqrt(2)). Give it
+                    // more width than the "selected" bump the other 4 tabs get.
+                    targetValue = if (item.central) 56.dp else if (selected) 52.dp else 40.dp,
                     animationSpec = GhostMotion.sizeSpec(),
                     label = "navIndicatorWidth"
                 )
@@ -1198,7 +1209,11 @@ private fun GhostBottomNav(current: NavKey?, cartItemCount: Int = 0, onNavigate:
                         Box(
                             modifier = Modifier
                                 .width(indicatorWidth)
-                                .height(if (item.central) 46.dp else 34.dp)
+                                // Central item shows no label below it (unlike the other 4 tabs),
+                                // so its Column has 8dp of unused vertical slack (54dp usable minus
+                                // the old 46dp) - use it so the shape-morph clip has more room and
+                                // stops cropping the mascot artwork.
+                                .height(if (item.central) 54.dp else 34.dp)
                                 .let {
                                     if (item.central) {
                                         it.ghostMorphClip(morph) { morphProgressAnimatable.value }
@@ -1213,7 +1228,7 @@ private fun GhostBottomNav(current: NavKey?, cartItemCount: Int = 0, onNavigate:
                             if (item.central) {
                                 GhostMascotPose(
                                     poseName = "cart",
-                                    modifier = Modifier.size(36.dp)
+                                    modifier = Modifier.size(42.dp)
                                 )
                             } else {
                                 Icon(

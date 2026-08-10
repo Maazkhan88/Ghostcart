@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -171,6 +172,7 @@ private fun ActivityRow(entry: LeaderboardActivityEntry) {
 fun LeaderboardDetailScreen(
     detail: LeaderboardDetail?,
     loading: Boolean,
+    notFound: Boolean = false,
     isYou: Boolean,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
@@ -186,7 +188,16 @@ fun LeaderboardDetailScreen(
         }
         if (detail == null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("This member isn't available right now", color = MutedText, fontSize = 12.sp)
+                Text(
+                    text = if (notFound) {
+                        "This member isn't on the public leaderboard - they may have opted out."
+                    } else {
+                        "Couldn't load this member's details. Check your connection and try again."
+                    },
+                    color = MutedText,
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center
+                )
             }
             return
         }
