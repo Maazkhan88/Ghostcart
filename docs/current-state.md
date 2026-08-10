@@ -1,6 +1,79 @@
 # Current State
 
-Last updated: 2026-08-01 (Claude Code — background-agent re-audit of Codex's pass confirms it closed far more than its commit message claimed (real story splash, full Story Viewer gestures, 11-state tutorial, Category Browse/Product Detail, full Cart->Checkout->Success->Delivery, real Leaderboard); added authenticated almost-buy sync against /api/almost-buys, the top remaining gap from the 2026-07-31 deep-audit plan; all iOS work now committed to git, 7 commits ahead of origin/main, not pushed).
+Last updated: 2026-08-11 (Claude Code — Android M3E motion migration got its first real build/verify pass on branch `claude/ghostcart-current-state-5f6imz`; found and fixed a real coordinate-system bug in the shape-morph nav button plus several UI regressions from the pass itself; release-signed AAB/APK now buildable for Play Store submission).
+
+> ## STATUS REPORT (Claude Code, 2026-08-11 — M3E motion migration: build, fix, polish)
+>
+> **First real compile of the M3E motion migration.** The 6 commits on
+> `claude/ghostcart-current-state-5f6imz` (`MaterialExpressiveTheme` +
+> `MotionScheme.expressive()` theme swap, shape-morph Ghost-it nav button,
+> sliding segmented-control pill, directional screen transitions on
+> NavDisplay) were written in a cloud sandbox with no access to
+> `dl.google.com`, so none of it had ever actually compiled. It didn't:
+> material3 1.4.0 **stable** stripped `MaterialExpressiveTheme`/
+> `MotionScheme`/`MaterialShapes` back to `internal` at release (Google
+> descoped the Expressive theming surface from that stable cut, confirmed
+> by decompiling the actual resolved jar, not just reading the error text).
+> Fixed by pinning material3 to `1.4.0-alpha18` (`strictly`, plus a
+> `resolutionStrategy` force — the Gradle module metadata redirects to a
+> separate `material3-android` coordinate that a plain `strictly` on the
+> umbrella coordinate doesn't reach) — the last pre-strip alpha in the same
+> 1.4.0 line, so it only pulls compose-ui/foundation up to 1.8.x rather than
+> forcing the whole stack to the 1.5.0-alpha train's 1.12.0-beta. Also
+> pinned `graphics-shapes` to 1.1.0 (`Morph.toPath()` doesn't exist in the
+> 1.0.1 material3 pulls transitively). `testDebugUnitTest`, `lintDebug`,
+> `assembleDebug` all pass clean now.
+>
+> **The nav button's mascot was still visibly broken after that** —
+> cropped so only the cart half of the ghost-pushing-a-cart artwork showed,
+> no matter how much the container/icon were resized. Root-caused it
+> properly instead of guessing again: wrote a throwaway JVM unit test that
+> constructed `MaterialShapes.Circle` directly via the actual resolved
+> `graphics-shapes` jar and printed its real coordinate bounds. They're
+> `[0,1]` centered at `(0.5,0.5)`, not `[-1,1]` centered on the origin like
+> `GhostMorphShape`'s clip transform assumed — the old
+> `scale(width/2,height/2)` + `translate(1,1)` math squeezed the entire
+> clip shape into roughly the right half of the button, permanently hiding
+> the left half (the ghost) regardless of size. Fixed to a direct
+> `scale(width,height)`.
+>
+> **UI polish pass** driven by the user testing debug APKs live on-device
+> (no emulator available in this environment — no hypervisor/WHPX
+> installed, confirmed rather than assumed): nav bar pulled out of
+> Scaffold's `bottomBar` slot into a transparent overlay so content
+> genuinely scrolls behind the floating pill instead of hitting an opaque
+> hard stop; removed the pill's `shadowElevation` (a drop shadow expects an
+> opaque backdrop — likely cause of a faint line artifact once the backdrop
+> went transparent); every screen's bottom `contentPadding` bumped to
+> ~96dp so the *end* of a scroll rests above the pill rather than behind
+> it; outlines removed from the nav bar and product cards; Google Sans
+> (SIL OFL licensed, user-supplied `.ttf`s, see
+> `android/licenses/GoogleSans-OFL.txt`) applied across every Material3
+> typography slot; edge-to-edge — zeroed the 20dp horizontal screen-root
+> padding app-wide. Caught and reverted one of my own regressions along
+> the way: switched Home's product images to `ContentScale.Crop` to fix
+> excess white padding, which then cropped real product content (a
+> perfume bottle's cap) and diverged from the "View all" screens — reverted
+> to `Fit`. Also fixed real pre-existing bugs surfaced while in this code:
+> the "Your favorites" row never passed `onShare`/`onReviews` to its card
+> at all (silently no share button, no reviews pill); `MarketplaceProductCard`
+> used `Paper` (same near-black as the page) instead of the `ExpressiveSurface`
+> + tonal-elevation treatment Home's cards use, so "View all" cards never
+> visually separated from the page; Profile screen had a gated Sign Out
+> button for signed-in users but no Sign In counterpart for guests at all;
+> leaderboard detail showed the same "member isn't available" message for
+> a 404 (never opted into the public leaderboard) and a genuine request
+> failure — now distinguished, matching how the backend actually behaves
+> (binary not-listed vs. listed-with-optional-`activityPrivate`, not a
+> separate private-profile rejection as first assumed).
+>
+> **Release signing in progress for this branch's first submission.** No
+> `keystore.properties`/`.jks` existed in this worktree (gitignored,
+> machine-local) — located the real release keystore already present in
+> the `ghostcart-phase5-stories` worktree on this same machine. Copying it
+> into this worktree was blocked by an automated safety check (touches
+> signing credentials, even between the user's own local paths) pending
+> explicit user action/confirmation — not yet resolved as of this entry.
 
 > ## STATUS REPORT (Claude Code, 2026-08-01, part 2)
 >
