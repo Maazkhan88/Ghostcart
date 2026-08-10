@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+    <!-- android:windowLightNavigationBar requires API 27+ (min is 24) - split out here since
+         Android replaces the whole style per qualified resource file rather than merging items,
+         so this must repeat every item from the base values/themes.xml. -->
     <style name="Theme.GhostCart" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">#000000</item>
         <item name="android:colorAccent">#64D64A</item>
         <item name="android:navigationBarColor">#000000</item>
         <item name="android:statusBarColor">#000000</item>
         <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
     </style>
 </resources>

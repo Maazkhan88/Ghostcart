@@ -102,6 +102,9 @@ dependencies {
   implementation(libs.androidx.compose.ui.tooling.preview)
   implementation(libs.androidx.compose.material3)
   implementation(libs.androidx.compose.material.icons.extended)
+  // graphics-shapes 1.0.1 (what material3 pulls in transitively) has no Morph.toPath() - only
+  // added in 1.1.0. Needed for the shape-morph nav button (theme/Motion.kt).
+  implementation(libs.androidx.graphics.shapes)
   // Tooling
   debugImplementation(libs.androidx.compose.ui.tooling)
   // Instrumented tests
@@ -148,4 +151,21 @@ dependencies {
   // just images)
   implementation(libs.media3.exoplayer)
   implementation(libs.media3.ui)
+}
+
+// material3's Gradle module metadata redirects the "material3" coordinate to the real
+// "material3-android" platform artifact via an "available-at" pointer. `strictly` on the
+// material3 catalog entry only pins that first coordinate - the redirect target is resolved
+// as a separate module request and the compose BOM's plain (non-strict) "1.4.0" constraint on
+// material3-android was winning that second round, silently bumping past our pin. Forcing both
+// coordinates here closes that gap. See gradle/libs.versions.toml for why 1.4.0-alpha18 specifically.
+configurations.all {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "androidx.compose.material3" &&
+            (requested.name == "material3" || requested.name == "material3-android")
+        ) {
+            useVersion("1.4.0-alpha18")
+            because("material3 1.4.0 stable stripped MaterialExpressiveTheme/MotionScheme/MaterialShapes back to internal")
+        }
+    }
 }
