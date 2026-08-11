@@ -1248,7 +1248,12 @@ private fun GhostBottomNav(current: NavKey?, cartItemCount: Int = 0, onNavigate:
                         if (item.central && cartItemCount > 0) {
                             Box(
                                 modifier = Modifier
-                                    .offset(x = 4.dp, y = (-2).dp)
+                                    // The central icon box grew (52->56dp wide) to stop clipping
+                                    // the mascot artwork - the old +4dp/-2dp offset now pushes this
+                                    // badge past the parent Column's own clip bounds (rounded 24dp,
+                                    // one of 5 equal-weight nav items). No extra offset needed - the
+                                    // outer Box's TopEnd alignment against the bigger icon box already
+                                    // lands it in the right spot.
                                     .size(18.dp)
                                     .clip(CircleShape)
                                     .background(Color(0xFFE4342F)),

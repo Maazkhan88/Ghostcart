@@ -200,7 +200,7 @@ fun GhostDeliveryTrackerScreen(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(Paper),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 18.dp, 0.dp, 96.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 18.dp, 0.dp, 120.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {

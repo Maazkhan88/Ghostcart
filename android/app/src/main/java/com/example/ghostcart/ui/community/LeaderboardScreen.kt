@@ -240,7 +240,7 @@ fun LeaderboardScreen(
             val rest = entries.drop(3)
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
-                contentPadding = PaddingValues(bottom = 96.dp)
+                contentPadding = PaddingValues(bottom = 120.dp)
             ) {
                 if (top3.isNotEmpty()) {
                     item {

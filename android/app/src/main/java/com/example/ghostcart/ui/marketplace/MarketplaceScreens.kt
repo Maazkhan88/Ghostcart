@@ -641,7 +641,7 @@ fun CategoryBrowseScreen(
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(top = 16.dp, bottom = 96.dp),
+                contentPadding = PaddingValues(top = 16.dp, bottom = 120.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.weight(1f)
@@ -1162,7 +1162,7 @@ fun ProductDetailScreen(
             // 96dp (not 24dp) - this Column scrolls under the transparent floating nav pill
             // (Navigation.kt), so its natural resting/end-of-scroll position needs to clear
             // the pill's real height, or the "Ghost it" button lands behind it.
-            modifier = Modifier.padding(top = 7.dp, bottom = 96.dp)
+            modifier = Modifier.padding(top = 7.dp, bottom = 120.dp)
         )
 
     }

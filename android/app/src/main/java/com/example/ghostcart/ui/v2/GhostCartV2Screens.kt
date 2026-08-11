@@ -182,7 +182,7 @@ fun GhostHomeScreen(
     ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(Paper),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 20.dp, 0.dp, 96.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 20.dp, 0.dp, 120.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         item {
@@ -327,7 +327,7 @@ fun CaptureAlmostBuyScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize().background(Paper),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 16.dp, 0.dp, 96.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 16.dp, 0.dp, 120.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         item { GhostTopBar(title = stringResource(R.string.ghost_an_almost_buy), onBack = onBack) }
@@ -648,7 +648,7 @@ fun CooldownsScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize().background(Paper),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 20.dp, 0.dp, 96.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 20.dp, 0.dp, 120.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
@@ -727,7 +727,7 @@ fun ProgressScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize().background(Paper),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 20.dp, 0.dp, 96.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 20.dp, 0.dp, 120.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         item {
@@ -1171,7 +1171,7 @@ fun ProfileScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize().background(Paper),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 20.dp, 0.dp, 96.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 20.dp, 0.dp, 120.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         item {
@@ -1487,7 +1487,7 @@ fun LegalDocumentScreen(docId: String, onBack: () -> Unit, modifier: Modifier = 
         }
         androidx.compose.foundation.lazy.LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 20.dp)) {
             item {
-                Text(body, color = MutedText, fontSize = 13.sp, lineHeight = 19.sp, modifier = Modifier.padding(bottom = 96.dp))
+                Text(body, color = MutedText, fontSize = 13.sp, lineHeight = 19.sp, modifier = Modifier.padding(bottom = 120.dp))
             }
         }
     }
