@@ -347,18 +347,42 @@ fun MainNavigation(
         )
     } else {
     Box(Modifier.fillMaxSize()) {
-        // GhostBottomNav is deliberately NOT in Scaffold's bottomBar slot - that slot reserves
-        // its measured height as a hard bottom inset on content, so nothing can ever render
-        // behind it, transparent or not. Instead it's a plain overlay below (drawn after, so on
-        // top of) the Scaffold, and content gets no bottom inset at all - scrollable screens keep
-        // clearing the bar via their own contentPadding, but can scroll further and show through
-        // the transparent gaps around the floating pill, and dimly through its own glass color.
+        // GhostBottomNav lives in Scaffold's bottomBar slot so every screen - scrollable
+        // LazyColumns and screens with their own fixed/sticky bottom button alike - gets a
+        // correct bottom inset automatically, without relying on each screen remembering its
+        // own padding. An earlier attempt moved the nav bar to a transparent overlay with no
+        // content inset at all so content could scroll behind the pill, but that silently broke
+        // any screen with a fixed-position bottom element (e.g. ProductDetailScreen's sticky
+        // "Ghost it" button landed directly behind the bar, illegible and untappable) - not
+        // worth it for a visual effect.
         Scaffold(
             containerColor = Paper,
+            bottomBar = {
+                if (showBottomNav) {
+                    Column {
+                        if (showDeliveryBanner) {
+                            val (order, snapshot) = activeBannerOrder
+                            DeliveryTrackingBanner(
+                                order = order,
+                                state = snapshot.state,
+                                onClick = { backStack.add(GhostDeliveryTracker(order.id)) },
+                                onClose = { dismissedOrderId = order.id }
+                            )
+                        }
+                        GhostBottomNav(
+                            current = selectedBottomDestination(current),
+                            cartItemCount = state.cartQuantities.values.sum(),
+                            onNavigate = { destination ->
+                                if (backStack.lastOrNull() != destination) backStack.add(destination)
+                            }
+                        )
+                    }
+                }
+            }
         ) { insets ->
             NavDisplay(
                 backStack = backStack,
-                modifier = Modifier.padding(top = insets.calculateTopPadding()),
+                modifier = Modifier.padding(insets),
                 onBack = { backStack.removeLastOrNull() },
                 // Directional shared-axis: forward navigation slides the new screen in from the
                 // end edge (with the outgoing screen sliding + fading out toward the start edge),
@@ -943,27 +967,6 @@ fun MainNavigation(
                     }
                 }
             )
-        }
-
-        if (showBottomNav) {
-            Column(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
-                if (showDeliveryBanner) {
-                    val (order, snapshot) = activeBannerOrder
-                    DeliveryTrackingBanner(
-                        order = order,
-                        state = snapshot.state,
-                        onClick = { backStack.add(GhostDeliveryTracker(order.id)) },
-                        onClose = { dismissedOrderId = order.id }
-                    )
-                }
-                GhostBottomNav(
-                    current = selectedBottomDestination(current),
-                    cartItemCount = state.cartQuantities.values.sum(),
-                    onNavigate = { destination ->
-                        if (backStack.lastOrNull() != destination) backStack.add(destination)
-                    }
-                )
-            }
         }
 
         pendingGhostCheckout?.let { checkout ->
