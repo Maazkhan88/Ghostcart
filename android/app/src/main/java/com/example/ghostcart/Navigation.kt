@@ -347,42 +347,21 @@ fun MainNavigation(
         )
     } else {
     Box(Modifier.fillMaxSize()) {
-        // GhostBottomNav lives in Scaffold's bottomBar slot so every screen - scrollable
-        // LazyColumns and screens with their own fixed/sticky bottom button alike - gets a
-        // correct bottom inset automatically, without relying on each screen remembering its
-        // own padding. An earlier attempt moved the nav bar to a transparent overlay with no
-        // content inset at all so content could scroll behind the pill, but that silently broke
-        // any screen with a fixed-position bottom element (e.g. ProductDetailScreen's sticky
-        // "Ghost it" button landed directly behind the bar, illegible and untappable) - not
-        // worth it for a visual effect.
+        // GhostBottomNav is a transparent overlay, not Scaffold's bottomBar slot - that slot
+        // reserves its height as a hard bottom inset, so nothing (not even scrolled content)
+        // can ever render behind it. Overlay + no Scaffold inset lets content genuinely scroll
+        // behind the floating pill and show through its transparent gaps. The tradeoff: every
+        // screen must explicitly clear the bar's height itself - both scrollable LazyColumns
+        // (via contentPadding) AND any fixed/sticky bottom element (e.g. ProductDetailScreen's
+        // "Ghost it" button, via its own bottom padding/offset) - since there's no automatic
+        // inset doing this for free anymore. Audited every screen with a fixed-position bottom
+        // element after this landed once without that audit and broke Product Detail's button.
         Scaffold(
             containerColor = Paper,
-            bottomBar = {
-                if (showBottomNav) {
-                    Column {
-                        if (showDeliveryBanner) {
-                            val (order, snapshot) = activeBannerOrder
-                            DeliveryTrackingBanner(
-                                order = order,
-                                state = snapshot.state,
-                                onClick = { backStack.add(GhostDeliveryTracker(order.id)) },
-                                onClose = { dismissedOrderId = order.id }
-                            )
-                        }
-                        GhostBottomNav(
-                            current = selectedBottomDestination(current),
-                            cartItemCount = state.cartQuantities.values.sum(),
-                            onNavigate = { destination ->
-                                if (backStack.lastOrNull() != destination) backStack.add(destination)
-                            }
-                        )
-                    }
-                }
-            }
         ) { insets ->
             NavDisplay(
                 backStack = backStack,
-                modifier = Modifier.padding(insets),
+                modifier = Modifier.padding(top = insets.calculateTopPadding()),
                 onBack = { backStack.removeLastOrNull() },
                 // Directional shared-axis: forward navigation slides the new screen in from the
                 // end edge (with the outgoing screen sliding + fading out toward the start edge),
@@ -967,6 +946,27 @@ fun MainNavigation(
                     }
                 }
             )
+        }
+
+        if (showBottomNav) {
+            Column(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
+                if (showDeliveryBanner) {
+                    val (order, snapshot) = activeBannerOrder
+                    DeliveryTrackingBanner(
+                        order = order,
+                        state = snapshot.state,
+                        onClick = { backStack.add(GhostDeliveryTracker(order.id)) },
+                        onClose = { dismissedOrderId = order.id }
+                    )
+                }
+                GhostBottomNav(
+                    current = selectedBottomDestination(current),
+                    cartItemCount = state.cartQuantities.values.sum(),
+                    onNavigate = { destination ->
+                        if (backStack.lastOrNull() != destination) backStack.add(destination)
+                    }
+                )
+            }
         }
 
         pendingGhostCheckout?.let { checkout ->

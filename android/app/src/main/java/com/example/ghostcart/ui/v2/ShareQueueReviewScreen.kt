@@ -85,7 +85,7 @@ fun ShareQueueReviewScreen(
         modifier = modifier
             .fillMaxSize()
             .background(Paper)
-            .padding(horizontal = 20.dp, vertical = 16.dp)
+            .padding(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 96.dp)
     ) {
         GhostTopBar(
             title = "Shared review queue",

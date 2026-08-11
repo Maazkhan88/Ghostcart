@@ -91,7 +91,7 @@ fun WalletHomeScreen(
     onViewGoals: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
+    Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 96.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             GhostMascotPose(poseName = "wave", modifier = Modifier.size(36.dp))
             Text(text = "Ghost Wallet", color = Ink, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f).padding(start = 10.dp))
@@ -274,7 +274,7 @@ fun WalletSetupScreen(
     onContinueWithDefaults: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
+    Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 96.dp)) {
         GhostTopBar(title = "Ghost Wallet", onBack = onBack)
         Text(text = "Set up your Ghost Wallet", color = Ink, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 16.dp))
         Text(text = "Choose the amount you want to protect and track inside Ghost Cart.", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
@@ -354,7 +354,7 @@ private fun SetupRow(icon: androidx.compose.ui.graphics.vector.ImageVector, labe
 
 @Composable
 fun SalaryShieldScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
+    Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 96.dp)) {
         GhostTopBar(
             title = "Salary Shield",
             onBack = onBack,
@@ -473,7 +473,7 @@ private fun NeedsCravingsColumn(title: String, subtitle: String, items: List<Pai
 
 @Composable
 fun GoalsScreen(goals: List<SavingsGoal> = WalletDemoData.goals, onAllocateSavings: () -> Unit, onCreateGoal: () -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
+    Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 96.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             GhostMascotPose(poseName = "wave", modifier = Modifier.size(36.dp))
             Text(text = "Ghost Wallet", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f).padding(start = 10.dp))
@@ -544,7 +544,7 @@ fun WalletActivityScreen(onBack: () -> Unit, onOpenStatement: () -> Unit, modifi
     val filters = listOf("All", "Today", "This Week", "Ghost Pays", "Goals")
     val selectedFilter = "All"
 
-    Column(modifier = modifier.fillMaxSize().background(Paper).padding(horizontal = 20.dp, vertical = 16.dp)) {
+    Column(modifier = modifier.fillMaxSize().background(Paper).padding(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 96.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             BackButton(onBack = onBack)
             Row(modifier = Modifier.weight(1f).padding(start = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -583,7 +583,7 @@ fun WalletActivityScreen(onBack: () -> Unit, onOpenStatement: () -> Unit, modifi
 
 @Composable
 fun WeeklyStatementScreen(onBack: () -> Unit, onDownload: () -> Unit, onShare: () -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
+    Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 96.dp)) {
         GhostTopBar(title = "Ghost Cart", onBack = onBack, trailing = { RoundIconButton(icon = Icons.Filled.Notifications) })
         Text(text = "Weekly Ghost Statement", color = Ink, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 14.dp))
         Text(text = "📅 26 May – 1 Jun 2025", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
@@ -682,7 +682,7 @@ fun GhostCardSettingsScreen(
     }
     val cardForegroundColor = if (config.cardTheme == "Dark") Paper else Ink
 
-    Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
+    Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 96.dp)) {
         GhostTopBar(title = "Ghost Card Settings", onBack = onBack)
 
         GhostHeroCard(

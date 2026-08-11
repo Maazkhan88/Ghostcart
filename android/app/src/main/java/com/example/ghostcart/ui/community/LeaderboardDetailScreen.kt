@@ -177,7 +177,7 @@ fun LeaderboardDetailScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.fillMaxSize().background(Paper).padding(horizontal = 20.dp, vertical = 16.dp)) {
+    Column(modifier = modifier.fillMaxSize().background(Paper).padding(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 96.dp)) {
         GhostTopBar(title = "Leaderboard details", onBack = onBack)
 
         if (loading && detail == null) {

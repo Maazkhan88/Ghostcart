@@ -157,7 +157,7 @@ fun GhostCartListScreen(
                 start = 20.dp,
                 top = 16.dp,
                 end = 20.dp,
-                bottom = if (hasProducts) 112.dp else 24.dp
+                bottom = if (hasProducts) 112.dp else 96.dp
             )
         ) {
             item {
@@ -302,6 +302,10 @@ fun GhostCartListScreen(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
+                    // 96dp: this is a fixed/sticky bar, not scrolling content, so it needs its
+                    // own clearance from the transparent floating nav pill (Navigation.kt) -
+                    // there's no scroll position to rest it above.
+                    .padding(bottom = 96.dp)
                     .background(Paper)
                     .border(width = 1.dp, color = FaintBorder)
                     .padding(horizontal = 20.dp, vertical = 12.dp)
@@ -583,6 +587,9 @@ fun GhostCheckoutScreen(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
+                // 96dp: fixed/sticky bar, needs its own clearance from the transparent
+                // floating nav pill (Navigation.kt) - no scroll position to rest it above.
+                .padding(bottom = 96.dp)
                 .background(Paper)
                 .border(width = 1.dp, color = FaintBorder)
                 .padding(horizontal = 20.dp, vertical = 12.dp)
@@ -708,7 +715,7 @@ fun OrderGhostedSuccessScreen(
             .fillMaxSize()
             .background(Paper)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 32.dp),
+            .padding(start = 24.dp, top = 32.dp, end = 24.dp, bottom = 96.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -973,7 +980,7 @@ fun FakeDeliveryTrackingScreen(
 
     val selectedArea = "Fictional Ghost route"
 
-    Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
+    Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 96.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Text(text = "‹", color = Ink, fontSize = 22.sp, modifier = Modifier.width(38.dp))
             Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
@@ -1324,7 +1331,7 @@ fun PayWithGhostCardScreen(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
+    Column(modifier = modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 96.dp)) {
         GhostTopBar(title = "Ghost Cart", onBack = onBack, trailing = { RoundIconButton(icon = Icons.Filled.Notifications) {} })
         Text(text = "Pay with Ghost Card", color = Ink, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 16.dp))
         Text(text = "Ghost Card is a demo. Nothing will be charged.", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
@@ -1399,7 +1406,7 @@ fun OrderProtectedScreen(
 ) {
     val newBalance = balanceBefore + amountSaved
 
-    Column(modifier = modifier.fillMaxSize().background(Paper).padding(horizontal = 20.dp, vertical = 16.dp)) {
+    Column(modifier = modifier.fillMaxSize().background(Paper).padding(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 96.dp)) {
         GhostTopBar(title = "Ghost Cart", onBack = onBack, trailing = { RoundIconButton(icon = Icons.Filled.Notifications) {} })
 
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(top = 24.dp)) {
