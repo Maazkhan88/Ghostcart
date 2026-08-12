@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.RateReview
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.SwapVert
@@ -45,6 +46,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -410,6 +412,8 @@ fun MarketplaceProductCard(
     product: MarketplaceProduct,
     onClick: () -> Unit,
     onAdd: () -> Unit,
+    onShare: (() -> Unit)? = null,
+    onReviews: (() -> Unit)? = null,
     activityLabel: String? = null,
     isFavorite: Boolean = false,
     onToggleFavorite: (() -> Unit)? = null,
@@ -420,7 +424,7 @@ fun MarketplaceProductCard(
     // label, title, Dirham-glyph price, and one predictable Ghost action.
     Column(
         modifier = modifier
-            .height(266.dp)
+            .height(310.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(Paper)
             .border(1.dp, FaintBorder, RoundedCornerShape(20.dp))
@@ -485,6 +489,33 @@ fun MarketplaceProductCard(
             modifier = Modifier.padding(top = 3.dp)
         )
 
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (onReviews != null) {
+                Surface(
+                    onClick = onReviews,
+                    shape = RoundedCornerShape(12.dp),
+                    color = SoftGray
+                ) {
+                    Row(
+                        Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Filled.RateReview, contentDescription = null, tint = MutedText, modifier = Modifier.size(15.dp))
+                        Text("No reviews yet", color = MutedText, fontSize = 9.sp, modifier = Modifier.padding(start = 4.dp))
+                    }
+                }
+            }
+            Spacer(Modifier.weight(1f))
+            if (onShare != null) {
+                IconButton(onClick = onShare, modifier = Modifier.size(44.dp)) {
+                    Icon(Icons.Filled.Share, contentDescription = "Share product", tint = Ink, modifier = Modifier.size(20.dp))
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.weight(1f))
 
         Box(
@@ -497,8 +528,8 @@ fun MarketplaceProductCard(
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "Add to cart", color = Color(0xFF0A0A0A), fontSize = 13.sp, lineHeight = 15.sp, fontWeight = FontWeight.Bold)
-                Text(text = "Cooldown starts at checkout", color = Color(0xFF0A0A0A).copy(alpha = 0.68f), fontSize = 9.sp, lineHeight = 11.sp)
+                Text(text = "Ghost it", color = Color(0xFF0A0A0A), fontSize = 13.sp, lineHeight = 15.sp, fontWeight = FontWeight.Bold)
+                Text(text = "Add to Ghost Cart", color = Color(0xFF0A0A0A).copy(alpha = 0.68f), fontSize = 9.sp, lineHeight = 11.sp)
             }
         }
     }
@@ -514,6 +545,8 @@ fun CategoryBrowseScreen(
     onBack: () -> Unit,
     onOpenProduct: (String) -> Unit,
     onGhostProduct: (String) -> Unit,
+    onShareProduct: (MarketplaceProduct) -> Unit = {},
+    onReviews: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var selectedFilter by remember(categoryId) { mutableStateOf("All") }
@@ -625,6 +658,8 @@ fun CategoryBrowseScreen(
                         onToggleFavorite = { onToggleFavorite(product.id) },
                         onClick = { onOpenProduct(product.id) },
                         onAdd = { onGhostProduct(product.id) },
+                        onShare = { onShareProduct(product) },
+                        onReviews = { onReviews(product.id) },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -974,7 +1009,8 @@ fun ProductDetailScreen(
     val coolingActive = coolingUntilMillis != null && !coolingComplete
     var rootPosition by remember { mutableStateOf(Offset.Zero) }
     var tutorialTarget by remember { mutableStateOf<Rect?>(null) }
-    val tutorialActionText = if (isInCart) "View Ghost Cart" else "Add to cart"
+    var showReviews by remember { mutableStateOf(false) }
+    val tutorialActionText = if (isInCart) "View Ghost Cart" else "Ghost it"
     val tutorialAction = if (isInCart) onOpenCart else onGhost
 
     Box(
@@ -1079,9 +1115,27 @@ fun ProductDetailScreen(
                 .padding(vertical = 16.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            HighlightPoint(Icons.Filled.ShoppingBag, "Add to cart", "Review it later\nin your cart.")
+            HighlightPoint(Icons.Filled.ShoppingBag, "Ghost it", "Add it to your\nGhost Cart.")
             HighlightPoint(Icons.Filled.Notifications, "Get reminded", "Push, email and\nin-app reminder.")
             HighlightPoint(Icons.Filled.Shield, "Decide calmly", "Skip, buy, record,\nor restart.")
+        }
+
+        Surface(
+            onClick = { showReviews = true },
+            shape = RoundedCornerShape(18.dp),
+            color = SoftGray,
+            modifier = Modifier.fillMaxWidth().padding(top = 14.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Filled.RateReview, contentDescription = null, tint = GhostGreen)
+                Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                    Text("Ratings, reviews & comments", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text("No reviews yet", color = MutedText, fontSize = 11.sp)
+                }
+            }
         }
 
         if (tutorialGuide == null) PrimaryButton(
@@ -1089,7 +1143,7 @@ fun ProductDetailScreen(
                 coolingComplete -> "Make your decision"
                 coolingActive -> "View cooldown"
                 isInCart -> "View Ghost Cart"
-                else -> "Add to cart"
+                else -> "Ghost it"
             },
             onClick = when {
                 coolingUntilMillis != null -> onOpenCooldown
@@ -1102,7 +1156,7 @@ fun ProductDetailScreen(
         )
         if (tutorialGuide == null) Text(
             text = if (coolingUntilMillis == null) {
-                if (isInCart) "The item is waiting in your Ghost Cart." else "Adds to your Ghost Cart. The cooldown starts once you check out."
+                "Add this item to your Ghost Cart. You will choose a Ghost Delivery time at checkout."
             } else if (coolingComplete) {
                 "Your item is ready. Skip it, visit the source, record it as bought, or restart the timer."
             } else {
@@ -1142,6 +1196,19 @@ fun ProductDetailScreen(
         )
     }
     }
+    if (showReviews) {
+        AlertDialog(
+            onDismissRequest = { showReviews = false },
+            title = { Text("Ratings, reviews & comments") },
+            text = {
+                Text(
+                    "No reviews yet. Ghost Cart never invents ratings or community comments.",
+                    color = MutedText
+                )
+            },
+            confirmButton = { TextButton(onClick = { showReviews = false }) { Text("Close") } }
+        )
+    }
 }
 
 @Composable
@@ -1156,7 +1223,7 @@ private fun DetailRow(label: String, value: String) {
 private fun HighlightPoint(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, caption: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(90.dp)) {
         Icon(icon, contentDescription = null, tint = GhostGreen, modifier = Modifier.size(18.dp))
-        Text(text = title, color = Ink, fontSize = 9.sp, fontWeight = FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 6.dp))
-        Text(text = caption, color = MutedText, fontSize = 8.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 2.dp))
+        Text(text = title, color = Ink, fontSize = 9.sp, lineHeight = 11.sp, fontWeight = FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 6.dp))
+        Text(text = caption, color = MutedText, fontSize = 8.sp, lineHeight = 10.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 2.dp))
     }
 }

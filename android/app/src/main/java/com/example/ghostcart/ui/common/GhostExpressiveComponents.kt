@@ -26,6 +26,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.RateReview
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -42,8 +44,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -59,6 +64,8 @@ import com.example.ghostcart.theme.GhostGreen
 import com.example.ghostcart.theme.GhostOnGreen
 import com.example.ghostcart.theme.GhostSubtleBorder
 import com.example.ghostcart.ui.DirhamGlyph
+
+enum class ProductCardSpotlightTarget { CARD, FAVORITE, SHARE, REVIEWS, GHOST }
 
 @Composable
 fun GhostGlassSurface(
@@ -88,13 +95,14 @@ fun GhostIconButton(
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    iconTint: androidx.compose.ui.graphics.Color = ExpressivePrimaryText,
 ) {
     Surface(
         onClick = onClick,
         modifier = modifier.size(48.dp),
         shape = CircleShape,
         color = ExpressiveSurfaceHigh,
-        contentColor = ExpressivePrimaryText,
+        contentColor = iconTint,
         tonalElevation = 1.dp,
     ) {
         Box(contentAlignment = Alignment.Center) {
@@ -313,11 +321,22 @@ fun GhostProductCard(
     onOpen: () -> Unit,
     onToggleFavorite: () -> Unit,
     onGhost: () -> Unit,
+    onShare: (() -> Unit)? = null,
+    onReviews: (() -> Unit)? = null,
+    spotlightTarget: ProductCardSpotlightTarget? = null,
+    onSpotlightBounds: ((Rect) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Surface(
         onClick = onOpen,
-        modifier = modifier.width(194.dp).height(320.dp),
+        modifier = modifier
+            .width(202.dp)
+            .height(352.dp)
+            .then(
+                if (spotlightTarget == ProductCardSpotlightTarget.CARD && onSpotlightBounds != null) {
+                    Modifier.onGloballyPositioned { onSpotlightBounds(it.boundsInWindow()) }
+                } else Modifier
+            ),
         shape = RoundedCornerShape(24.dp),
         color = ExpressiveSurface,
         contentColor = ExpressivePrimaryText,
@@ -336,7 +355,14 @@ fun GhostProductCard(
                 Box(modifier = Modifier.fillMaxSize()) { image() }
                 IconButton(
                     onClick = onToggleFavorite,
-                    modifier = Modifier.align(Alignment.TopEnd).size(48.dp),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .size(48.dp)
+                        .then(
+                            if (spotlightTarget == ProductCardSpotlightTarget.FAVORITE && onSpotlightBounds != null) {
+                                Modifier.onGloballyPositioned { onSpotlightBounds(it.boundsInWindow()) }
+                            } else Modifier
+                        ),
                 ) {
                     Icon(
                         imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
@@ -374,10 +400,52 @@ fun GhostProductCard(
                     Text("Add price", color = ExpressiveSecondaryText, style = MaterialTheme.typography.bodyMedium)
                 }
             }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (onReviews != null) {
+                    Surface(
+                        onClick = onReviews,
+                        shape = RoundedCornerShape(12.dp),
+                        color = ExpressiveSurfaceHigh,
+                        modifier = Modifier.then(
+                            if (spotlightTarget == ProductCardSpotlightTarget.REVIEWS && onSpotlightBounds != null) {
+                                Modifier.onGloballyPositioned { onSpotlightBounds(it.boundsInWindow()) }
+                            } else Modifier
+                        )
+                    ) {
+                        Row(Modifier.padding(horizontal = 8.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.RateReview, contentDescription = null, modifier = Modifier.size(15.dp), tint = ExpressiveSecondaryText)
+                            Text("No reviews yet", color = ExpressiveSecondaryText, fontSize = 9.sp, modifier = Modifier.padding(start = 4.dp))
+                        }
+                    }
+                }
+                Box(Modifier.weight(1f))
+                if (onShare != null) {
+                    IconButton(
+                        onClick = onShare,
+                        modifier = Modifier.size(44.dp).then(
+                            if (spotlightTarget == ProductCardSpotlightTarget.SHARE && onSpotlightBounds != null) {
+                                Modifier.onGloballyPositioned { onSpotlightBounds(it.boundsInWindow()) }
+                            } else Modifier
+                        )
+                    ) {
+                        Icon(Icons.Filled.Share, contentDescription = "Share product", tint = ExpressivePrimaryText, modifier = Modifier.size(20.dp))
+                    }
+                }
+            }
             Box(modifier = Modifier.weight(1f))
             Button(
                 onClick = onGhost,
-                modifier = Modifier.fillMaxWidth().height(48.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .then(
+                        if (spotlightTarget == ProductCardSpotlightTarget.GHOST && onSpotlightBounds != null) {
+                            Modifier.onGloballyPositioned { onSpotlightBounds(it.boundsInWindow()) }
+                        } else Modifier
+                    ),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = GhostGreen,
@@ -386,8 +454,8 @@ fun GhostProductCard(
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp),
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Add to cart", style = MaterialTheme.typography.labelLarge)
-                    Text("Cooldown starts at checkout", fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                    Text("Ghost it", style = MaterialTheme.typography.labelLarge)
+                    Text("Add to Ghost Cart", fontSize = 9.sp, fontWeight = FontWeight.Medium)
                 }
             }
         }

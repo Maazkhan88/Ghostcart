@@ -53,6 +53,7 @@ fun buildGhostShareUrl(item: GhostShareItem): String = Uri.parse(GHOST_SHARE_BAS
     .toString()
 
 fun shareGhostItem(context: Context, item: GhostShareItem) {
+    Analytics.logGhostOrderEvent(context, "product_shared")
     CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
         val shareUrl = createShortGhostShareUrl(item).getOrElse { buildGhostShareUrl(item) }
         val shareIntent = Intent(Intent.ACTION_SEND).apply {

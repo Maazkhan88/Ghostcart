@@ -162,6 +162,20 @@ object AlmostBuySync {
                                 ?: capturedAtMillis,
                             coolingDurationMillis = ((coolOffMillis ?: capturedAtMillis) -
                                 (isoToEpochMillis(jsonNullableString(value, "updatedAt")) ?: capturedAtMillis))
+                                .coerceAtLeast(60_000L),
+                            deliveryState = when (status) {
+                                AlmostBuyStatus.SKIPPED -> GhostDeliveryState.RESOLVED_SKIPPED
+                                AlmostBuyStatus.BOUGHT_INTENTIONALLY -> GhostDeliveryState.RESOLVED_BOUGHT_ALREADY
+                                AlmostBuyStatus.COOLING -> ghostDeliverySnapshot(
+                                    nowMillis = System.currentTimeMillis(),
+                                    startMillis = isoToEpochMillis(jsonNullableString(value, "updatedAt")) ?: capturedAtMillis,
+                                    endMillis = coolOffMillis ?: capturedAtMillis
+                                ).state
+                            },
+                            deliveryStartedAtMillis = isoToEpochMillis(jsonNullableString(value, "updatedAt")) ?: capturedAtMillis,
+                            deliveryEndsAtMillis = coolOffMillis ?: capturedAtMillis,
+                            selectedDeliveryDurationMillis = ((coolOffMillis ?: capturedAtMillis) -
+                                (isoToEpochMillis(jsonNullableString(value, "updatedAt")) ?: capturedAtMillis))
                                 .coerceAtLeast(60_000L)
                         )
                     )

@@ -55,7 +55,7 @@ private val BronzeColor = Color(0xFFCD7F32)
 @Composable
 private fun AvatarCircle(avatarUrl: String?, avatarPresetId: String?, username: String, size: Dp = 40.dp) {
     Box(
-        modifier = Modifier.size(size).clip(CircleShape).background(FaintBorder),
+        modifier = Modifier.size(size).clip(CircleShape).background(Ink),
         contentAlignment = Alignment.Center
     ) {
         val preset = avatarPresetById(avatarPresetId)
@@ -71,7 +71,7 @@ private fun AvatarCircle(avatarUrl: String?, avatarPresetId: String?, username: 
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize().clip(CircleShape)
             )
-            else -> Text(username.take(1).uppercase(), color = Ink, fontWeight = FontWeight.ExtraBold)
+            else -> Text(username.take(1).uppercase(), color = Paper, fontWeight = FontWeight.ExtraBold)
         }
     }
 }

@@ -96,7 +96,7 @@ fun ShareQueueReviewScreen(
         )
 
         Text(
-            text = "Review the products, then Ghost them together for the standard 24-hour cooldown.",
+            text = "Review the products, then add them to Ghost Cart together. You will choose Ghost Delivery time at checkout.",
             color = MutedText,
             fontSize = 12.sp,
             modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)

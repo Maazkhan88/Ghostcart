@@ -152,6 +152,7 @@ fun GiftsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
 
 @Composable
 private fun GiftCard(item: GiftListItem, received: Boolean) {
+    var imageLoadFailed by remember(item.imageUrl) { mutableStateOf(false) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -166,12 +167,13 @@ private fun GiftCard(item: GiftListItem, received: Boolean) {
             modifier = Modifier.size(92.dp).clip(RoundedCornerShape(16.dp)).background(Color.White),
             contentAlignment = Alignment.Center
         ) {
-            if (item.imageUrl != null) {
+            if (item.imageUrl != null && !imageLoadFailed) {
                 AsyncImage(
                     model = item.imageUrl,
                     contentDescription = item.itemTitle,
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize().padding(8.dp)
+                    modifier = Modifier.fillMaxSize().padding(8.dp),
+                    onError = { imageLoadFailed = true }
                 )
             } else {
                 GhostMascotPose("cart", Modifier.size(64.dp))

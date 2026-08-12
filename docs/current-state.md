@@ -1,5 +1,9 @@
 # Current State
 
+> Current UX supersession (2026-08-02): `Ghost it` now means **add to Ghost Cart**. Users choose **Ghost Delivery time** only when placing the Ghost Order at checkout. Older notes below that describe primary `Ghost it` starting a cooldown are historical context only.
+>
+> Latest Codex handoff for Claude/iOS: read `docs/claude-ios-handoff-android-ux-delta-2026-08-02.md`. It lists the exact Android cart-first UX cleanup and SwiftUI parity requirements.
+
 Last updated: 2026-07-27 (Antigravity — daily gifting limits increased to 10 sends/receives, Resend API integration with verified domain theghostcart.com & DMARC authentication, live gift email delivery verified end-to-end, teaser image fallback deployed, debug APK v2.10.0-68 published on GitHub releases, signed release APK & AAB built, ADB tablet automation).
 
 > ## STATUS REPORT (Antigravity, 2026-07-27)
@@ -2410,3 +2414,69 @@ section-alignment instructions (still current). For the asset situation:
 - Imported product images are retained in cart and checkout.
 - Profile contains a persistent app appearance setting: System, Light, or Dark.
 - The app remains simulation-only: real amount charged is always zero and simulated checkout is not automatically counted as confirmed Money Kept.
+# 2026-08-02 — Ghost Order flow correction, delivered decisions, and new app identity
+
+Work is on `agent/ghost-delivery-v1`. This entry supersedes older notes that describe `Ghost it` as immediately opening the delivery-duration picker or describe the random Story splash as the current cold-start experience.
+
+## Corrected Ghost Order flow
+
+- `Ghost it` now adds the selected product to the real Ghost Cart only.
+- The user reviews the cart and proceeds to Fake Checkout.
+- Ghost Delivery time is selected at checkout, immediately before placing the simulated order.
+- The six-stage Ghost Delivery simulation is created only after checkout confirmation.
+- The chosen duration is applied to every item in that checkout; the cart is cleared only after the simulated order is created.
+- Product details show `View Ghost Cart` when that item is already present.
+- The normal flow no longer exposes per-item cooling shortcuts inside the cart.
+
+## Orders and delivered decisions
+
+- Past-order titles are limited to two lines with ellipsis.
+- `Skipped · counted as Money Kept` is constrained to one line.
+- Profile and leaderboard avatar fallbacks now use black backgrounds rather than green.
+- `Make a decision` is plain section text, not a navigation button.
+- Delivered orders show the resolution actions directly: Skip the purchase, Buy it from source, I bought it already, Send it around again, and Ask a friend.
+
+## Approved app icon and splash
+
+- New source icon: `design/brand/ghost-cart-app-icon-source.jpg`.
+- New splash reference: `design/brand/ghost-cart-splash-reference.jpg`.
+- Android launcher icons now use the opaque black square with the supplied white ghost-cart mark across adaptive, round, and legacy density assets.
+- Android 12+ system splash uses the full padded supplied black-square icon on a black system splash background. Do not crop this icon again.
+- The Compose cold-start screen now renders `design/brand/ghost-cart-splash-reference.jpg` directly via `ghost_cart_splash_reference`, preserving the black background, white GhostCart lockup, and tagline exactly as supplied. The random Story splash has been removed.
+- In-app brand icon resources and the center Ghost Cart navigation identity use the new mark.
+- Push notifications use a dedicated Android-compliant monochrome white silhouette. Expanded delivery notifications use the full new icon as their large icon fallback.
+- iOS was deliberately left untouched. Claude's exact iOS implementation instructions are in `docs/claude-ios-handoff-brand-icon.md`.
+
+## Windows/Gradle JDK fix
+
+- The laptop-local `C:/Users/Admin/.gradle/gradle.properties` now pins `org.gradle.java.home=C:/Program Files/Android/Android Studio/jbr` so Gradle no longer fails when PowerShell exposes the legacy Java 8 launcher. The absolute Windows path is deliberately not committed to the shared repository, preserving GitHub Actions and other developer environments.
+- The Windows user-level `JAVA_HOME` and user `Path` were also updated to Android Studio's bundled JBR for future terminals.
+- Verified from a plain shell with no temporary override: the Gradle launcher may still report the legacy Java executable in the current already-running Codex process, but the Gradle daemon correctly selects the pinned Android Studio JBR and the build succeeds.
+
+## Validation
+
+- `:app:compileDebugKotlin`: passed.
+- `:app:testDebugUnitTest`: passed.
+- `:app:assembleDebug`: passed; new APK generated successfully.
+- Resource/manifest processing passed for all launcher, adaptive-icon, splash, and notification resources.
+- Connected tablet installation was intentionally not forced because its installed closed-testing build is Play-signed and the local debug APK has a different signature. Android rejected the in-place update with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`; preserving the tablet's signed app data is safer than uninstalling it.
+
+## 2026-08-02 follow-up: icon padding and inverted splash correction
+
+- Regenerated Android launcher/icon resources from `design/brand/ghost-cart-app-icon-source.jpg` as a full square so the original black padding is preserved.
+- Kept the Android notification small icon as a transparent monochrome silhouette because Android status-bar notification icons cannot use a full black-square bitmap.
+- Added `android/app/src/main/res/drawable-nodpi/ghost_cart_splash_reference.jpg` from the supplied splash reference and changed `SplashContent()` to render that exact black splash artwork.
+- Changed `Theme.GhostCart` from a light base theme to a dark/no-action-bar base with black window, status-bar, navigation-bar, and Android 12+ splash backgrounds to prevent the white pre-Compose flash.
+
+# 2026-08-08 — bottom-nav icon, app icon crop, header pill, notifications feed, live Ghost Delivery update
+
+Work is on `agent/ghost-delivery-v1` (commits `16975a7`, `d1d4c2d`, `60c53e4`, `e3c337c`, `1ebf169`, `002605c`, `1bc990b`, `2192dbe`).
+
+- **Bottom-nav mascot icon fixed**: the center nav icon had been repointed at the opaque black-square app icon (from the identity refresh above) and tinted, which painted a solid block instead of a ghost. Restored `GhostMascotPose("cart")`, matching `main`'s already-correct implementation.
+- **Launcher icon crop fixed**: `mipmap-*/ic_launcher.png`/`ic_launcher_round.png` were baked as center-cropped renders, clipping the wheels/motion lines. Regenerated as a plain, uncropped resize of the approved `design/brand/ghost-cart-app-icon-source.jpg` square at all five densities.
+- **Home header no longer looks like a button**: dropped the `GhostGlassSurface` pill (rounded fill/border/highlight) wrapping the wordmark + bell; now a plain `Box`.
+- **Marketplace `HighlightPoint` line-spacing fixed**: `fontSize` was overridden (9sp/8sp) without `lineHeight`, so both `Text`s inherited the ambient Material3 default line height sized for ~14-16sp body text - a full body-text-sized gap between tiny wrapped lines. Set explicit `lineHeight` proportional to each `fontSize`.
+- **New backend-synced notifications feed** (migration `drizzle/0025_clever_blizzard.sql`, `notifications` table - nullable `userId` for global/broadcast rows vs personal rows, no server-side read-state by design). `GET/POST /api/me/notifications`; hooked into `ghost-gifts/reveal` (notifies sender when their gift opens) and `in-app-messages` POST (writes a global row for active announcements). Android: `NotificationsRepository`, `NotificationsScreen`, wired to the bell icon (previously routed to Profile). Bell turns Ghost Green when unread (local last-seen cursor, not server-tracked). Full iOS handoff at `docs/claude-ios-handoff-notifications.md`, including a separate confirmed bug/fix: iOS's `shareWithCommunity` toggle defaults off even for shared-link imports, so items shared in from Amazon etc. and then ghosted never appear under "User Ghosted" anywhere (Android already gets this right - `seed?.sourceUrl != null` defaults it on). This is a client-side gate; nothing to fix on the backend.
+- **Live-ticking Ghost Delivery notification** (Android's answer to the iOS Live Activity / Dynamic Island the user already shipped, matching Samsung's Now Bar): one continuous ongoing notification per item, spanning the whole cooling/delivery window, using `NotificationCompat`'s native chronometer (`setUsesChronometer` + `setChronometerCountDown` + `setWhen`) for an OS-driven live countdown with no app-side polling, `NotificationCompat.ProgressStyle` for the progress bar, and `setRequestPromotedOngoing(true)` to request Android 16 / One UI 7 promote it to a status-bar live update / Now Bar chip (silently a no-op pre-API 36). compileSdk/targetSdk are already 36 and androidx.core is 1.18.0 - both confirmed via `javap` against the resolved jar to actually carry these APIs, not assumed. New `GhostDeliveryLiveUpdate.kt`; started from `GhostDeliveryScheduler.schedule`, updated from `DeliveryStepWorker` at each of the six existing stage triggers, cancelled at the same points the existing six-notification system already cancels (resolution, restart, full reset). No iOS work needed here - iOS already has this.
+
+All of the above validated via `:app:compileDebugKotlin` (Android) and `npm test` - build + full suite, 42/44 passing, the 2 failures are pre-existing website copy-text drift unrelated to any of this (backend). No APK was built and no device/emulator QA was run for any of this session's changes - explicitly deferred pending approval, per the user's standing instruction this session.

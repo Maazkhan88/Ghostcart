@@ -54,6 +54,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontStyle
@@ -62,6 +63,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ghostcart.data.TUTORIAL_COOLDOWN_MILLIS
+import com.example.ghostcart.data.TUTORIAL_PRODUCT_ID
+import com.example.ghostcart.data.AlmostBuy
+import com.example.ghostcart.data.AlmostBuyStatus
+import com.example.ghostcart.data.GhostDeliveryState
+import com.example.ghostcart.data.GhostOrderResolution
+import com.example.ghostcart.data.ghostDeliverySnapshot
 import com.example.ghostcart.data.TutorialDecision
 import com.example.ghostcart.data.TutorialState
 import com.example.ghostcart.data.TutorialStep
@@ -76,6 +83,7 @@ import com.example.ghostcart.ui.DirhamAmount
 import com.example.ghostcart.ui.GhostCartWordmark
 import com.example.ghostcart.ui.common.PrimaryButton
 import com.example.ghostcart.ui.common.SecondaryButton
+import com.example.ghostcart.ui.delivery.GhostDeliveryTrackerScreen
 import com.ghostcart.app.R
 import kotlinx.coroutines.delay
 import kotlin.math.ceil
@@ -94,7 +102,6 @@ fun TutorialScreen(
     onFinishCooling: () -> Unit,
     onChooseDecision: (TutorialDecision) -> Unit,
     onContinueFromReceipt: () -> Unit,
-    onStartDelivery: () -> Unit,
     onDeliveryFinished: () -> Unit,
     onReplay: () -> Unit,
     onExit: () -> Unit,
@@ -126,8 +133,12 @@ fun TutorialScreen(
                 )
                 TutorialStep.DECISION -> DecisionStep(onChooseDecision)
                 TutorialStep.GHOST_RECEIPT -> ReceiptStep(state.decision, onContinueFromReceipt)
-                TutorialStep.COMPLETE -> CompleteStep(onStartDelivery, onReplay)
-                TutorialStep.DELIVERY -> TutorialDeliveryStep(onDeliveryFinished)
+                TutorialStep.COMPLETE -> CompleteStep(onDeliveryFinished, onReplay)
+                TutorialStep.DELIVERY -> TutorialDeliveryTracker(
+                    state = state,
+                    onBack = { showExitDialog = true },
+                    onChooseDecision = onChooseDecision
+                )
             }
         }
     }
@@ -271,20 +282,20 @@ private fun PracticeIntroStep(onContinue: () -> Unit) {
 private fun ProductStep(onAddToCart: () -> Unit) {
     TutorialPage(
         step = TutorialStep.PRODUCT,
-        title = "Ghost Cart Coffee & Donut Combo",
+        title = "Coffee and donut",
         subtitle = "A warm coffee and glazed donut, on the house for your first Ghost Cart practice run.",
         hero = { TutorialProductImage(250.dp) }
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Ghost Cart Café", color = GhostGreen, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+                Text("Ghost Café · Tutorial", color = GhostGreen, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
                 Text("Food & delivery", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 3.dp))
             }
-            DirhamAmount("15.00", fontSize = 20.sp, glyphSize = 17.dp)
+            DirhamAmount("31.00", fontSize = 20.sp, glyphSize = 17.dp)
         }
-        CoachMark("Start by adding the item to your Ghost Cart.", modifier = Modifier.padding(top = 20.dp)) {
+        CoachMark("Start by Ghosting the item.", modifier = Modifier.padding(top = 20.dp)) {
             PrimaryButton(
-                text = "Add to cart",
+                text = "Ghost it",
                 onClick = onAddToCart,
                 leadingIcon = Icons.Filled.ShoppingCart,
                 containerColor = GhostGreen,
@@ -310,10 +321,10 @@ private fun CartStep(onProceed: () -> Unit) {
             Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 TutorialProductImage(82.dp)
                 Column(Modifier.weight(1f).padding(start = 14.dp)) {
-                    Text("Ghost Cart Coffee & Donut Combo", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("Coffee and donut", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
                     Text("Tutorial item · Qty 1", color = MutedText, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
                 }
-                DirhamAmount("15.00", fontSize = 14.sp, glyphSize = 12.dp)
+                DirhamAmount("31.00", fontSize = 14.sp, glyphSize = 12.dp)
             }
         }
         CoachMark("This is your simulated cart. Nothing here will be ordered or charged.", Modifier.padding(top = 18.dp)) {
@@ -405,11 +416,11 @@ private fun FakeCheckoutStep(onComplete: () -> Unit) {
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
         ) {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                CheckoutSummaryRow("Practice item", "Coffee & Donut Combo")
+                CheckoutSummaryRow("Practice item", "Coffee and donut")
                 CheckoutSummaryRow("Cooldown", "10 seconds — Tutorial")
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text("Simulated total", color = Ink, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
-                    DirhamAmount("15.00", fontSize = 18.sp, glyphSize = 15.dp)
+                    DirhamAmount("31.00", fontSize = 18.sp, glyphSize = 15.dp)
                 }
             }
         }
@@ -493,7 +504,7 @@ private fun DecisionStep(onChoose: (TutorialDecision) -> Unit) {
         }
     ) {
         DecisionCard("Ghost it", "Skip the simulated purchase.", recommended = true) { onChoose(TutorialDecision.GHOSTED) }
-        DecisionCard("Cool it longer", "Give the decision more time.") { onChoose(TutorialDecision.COOL_LONGER) }
+        DecisionCard("Send it around again", "Give the decision more time.") { onChoose(TutorialDecision.COOL_LONGER) }
         DecisionCard("I’d still buy it", "That’s okay — the goal is an intentional decision.") { onChoose(TutorialDecision.STILL_BUY) }
         DisclosureCard("Your practice choice will not affect Wallet, Money Kept, history or leaderboards.", Modifier.padding(top = 14.dp))
     }
@@ -545,12 +556,12 @@ private fun ReceiptStep(decision: TutorialDecision?, onContinue: () -> Unit) {
         ) {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
                 Text("TUTORIAL GHOST RECEIPT", color = GhostGreen, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
-                CheckoutSummaryRow("Product", "Ghost Cart Coffee & Donut Combo")
+                CheckoutSummaryRow("Product", "Coffee and donut")
                 CheckoutSummaryRow("Result", result)
                 CheckoutSummaryRow("Cooling period", "10-second tutorial")
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text("Simulated price", color = MutedText, fontSize = 12.sp, modifier = Modifier.weight(1f))
-                    DirhamAmount("15.00", fontSize = 15.sp, glyphSize = 13.dp)
+                    DirhamAmount("31.00", fontSize = 15.sp, glyphSize = 13.dp)
                 }
                 Text(
                     "Tutorial record only. No purchase, payment or delivery occurred.",
@@ -566,23 +577,126 @@ private fun ReceiptStep(decision: TutorialDecision?, onContinue: () -> Unit) {
 }
 
 @Composable
-private fun CompleteStep(onStartDelivery: () -> Unit, onReplay: () -> Unit) {
+private fun CompleteStep(onExplore: () -> Unit, onReplay: () -> Unit) {
     TutorialPage(
         step = TutorialStep.COMPLETE,
         title = "You’re ready to Ghost 👻",
-        subtitle = "You’ve learned the full Ghost Cart flow: capture it, cool it and decide when the impulse is quieter.",
+        subtitle = "You’ve learned the full Ghost Cart flow: discover it, choose a Ghost Delivery time, track it and decide when the impulse is quieter.",
         hero = {
             TutorialTeacherImage(
-                imageRes = R.drawable.tutorial_teacher_board,
-                contentDescription = "Ghost Cart teacher explaining the final simulated delivery",
+                imageRes = R.drawable.tutorial_teacher_confetti,
+                contentDescription = "Ghost Cart teacher celebrating tutorial completion",
                 size = 150.dp
             )
         }
     ) {
-        DisclosureCard("The guided lesson is complete. Your tutorial-only simulated delivery starts next.")
-        PrimaryButton("Start simulated delivery", onStartDelivery, modifier = Modifier.padding(top = 18.dp), containerColor = GhostGreen, contentColor = Color.Black)
+        DisclosureCard("The practice product and Ghost Order now vanish. They never enter your Wallet, Orders, history or Leaderboard.")
+        PrimaryButton("Explore Ghost Cart", onExplore, modifier = Modifier.padding(top = 18.dp), containerColor = GhostGreen, contentColor = Color.Black)
         SecondaryButton("Replay tutorial", onReplay, modifier = Modifier.padding(top = 10.dp))
     }
+}
+
+@Composable
+private fun TutorialDeliveryTracker(
+    state: TutorialState,
+    onBack: () -> Unit,
+    onChooseDecision: (TutorialDecision) -> Unit
+) {
+    val context = LocalContext.current
+    val end = state.coolingEndsAt ?: (System.currentTimeMillis() + TUTORIAL_COOLDOWN_MILLIS)
+    val start = end - TUTORIAL_COOLDOWN_MILLIS
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(state.sessionId, end) {
+        while (now < end) {
+            delay(250L)
+            now = System.currentTimeMillis()
+        }
+    }
+    val tutorialSnapshot = ghostDeliverySnapshot(now, start, end, GhostDeliveryState.PLACED)
+    val tutorialOrder = remember(state.sessionId, end) {
+        AlmostBuy(
+            id = "tutorial_delivery_${state.sessionId.orEmpty()}",
+            name = "Coffee and donut",
+            amountCents = 3_100,
+            category = "Food & delivery",
+            trigger = "Tutorial",
+            createdAtMillis = start,
+            coolingUntilMillis = end,
+            status = AlmostBuyStatus.COOLING,
+            imageUrl = "android.resource://${context.packageName}/${R.drawable.tutorial_coffee_donut_combo}",
+            sourceKind = "tutorial",
+            ghostOrderId = "TUTORIAL-GHOST-ORDER",
+            coolingStartedAtMillis = start,
+            coolingDurationMillis = TUTORIAL_COOLDOWN_MILLIS,
+            productId = TUTORIAL_PRODUCT_ID,
+            sourceMerchant = "Ghost Café · Tutorial",
+            deliveryState = GhostDeliveryState.PLACED,
+            deliveryStartedAtMillis = start,
+            deliveryEndsAtMillis = end,
+            selectedDeliveryDurationMillis = TUTORIAL_COOLDOWN_MILLIS,
+            routeSeed = 31L,
+            tutorialOnly = true
+        )
+    }
+    Box(Modifier.fillMaxSize()) {
+        GhostDeliveryTrackerScreen(
+            item = tutorialOrder,
+            onBack = onBack,
+            onResolve = { resolution ->
+                onChooseDecision(
+                    when (resolution) {
+                        GhostOrderResolution.SKIPPED -> TutorialDecision.GHOSTED
+                        GhostOrderResolution.BUY_FROM_SOURCE,
+                        GhostOrderResolution.BOUGHT_ALREADY -> TutorialDecision.STILL_BUY
+                    }
+                )
+            },
+            onRestart = { onChooseDecision(TutorialDecision.COOL_LONGER) },
+            onOpenSource = { onChooseDecision(TutorialDecision.STILL_BUY) },
+            onShare = { onChooseDecision(TutorialDecision.COOL_LONGER) },
+            tutorialMode = true
+        )
+        AnimatedContent(
+            targetState = tutorialSnapshot.state,
+            label = "tutorial_stage_banner",
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 72.dp, start = 24.dp, end = 24.dp)
+        ) { stage ->
+            Surface(
+                color = Ink.copy(alpha = 0.94f),
+                contentColor = Paper,
+                shape = RoundedCornerShape(18.dp),
+                shadowElevation = 6.dp
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.tutorial_teacher_pointer),
+                        contentDescription = null,
+                        modifier = Modifier.size(34.dp)
+                    )
+                    Text(
+                        text = tutorialStageNotification(stage),
+                        color = Paper,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(start = 10.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun tutorialStageNotification(state: GhostDeliveryState): String = when (state) {
+    GhostDeliveryState.PLACED -> "Ghost Order placed · your decision is cooling"
+    GhostDeliveryState.PREPARING -> "Your Ghost Order is being prepared"
+    GhostDeliveryState.RIDER_PICKING_UP -> "Ghost Rider is picking up your order"
+    GhostDeliveryState.OUT_FOR_DELIVERY -> "Out for Ghost Delivery"
+    GhostDeliveryState.RIDER_NEARBY -> "Your Ghost Rider is nearby"
+    GhostDeliveryState.DELIVERED -> "Your Ghost Order has arrived"
+    else -> "Tutorial decision recorded"
 }
 
 @Composable

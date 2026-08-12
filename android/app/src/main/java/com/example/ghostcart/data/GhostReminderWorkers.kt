@@ -127,7 +127,7 @@ object GhostNotificationPublisher {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         val builder = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ghost_cart_icon)
+            .setSmallIcon(R.drawable.notification_ghost_icon)
             .setContentTitle(title)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
