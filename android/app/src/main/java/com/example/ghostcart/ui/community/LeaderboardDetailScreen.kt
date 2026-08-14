@@ -260,14 +260,15 @@ fun LeaderboardDetailScreen(
                     }
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 18.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    DetailStat("Ghosted", "${detail.ghostedCount} items", modifier = Modifier.weight(1f))
-                    DetailStat("Cooled", "${detail.coolingCount} items", modifier = Modifier.weight(1f))
-                    DetailStat("Money saved", formatDirhamAmount(detail.moneyKeptCents), modifier = Modifier.weight(1f))
-                    DetailStat("Current streak", "${detail.currentStreakDays} days", modifier = Modifier.weight(1f))
+                Column(modifier = Modifier.fillMaxWidth().padding(top = 18.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        DetailStat("Ghosted", "${detail.ghostedCount} items", modifier = Modifier.weight(1f))
+                        DetailStat("Cooled", "${detail.coolingCount} items", modifier = Modifier.weight(1f))
+                    }
+                    Row(modifier = Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                        DetailStat("Money saved", formatDirhamAmount(detail.moneyKeptCents), modifier = Modifier.weight(1f))
+                        DetailStat("Current streak", "${detail.currentStreakDays} days", modifier = Modifier.weight(1f))
+                    }
                 }
             }
 

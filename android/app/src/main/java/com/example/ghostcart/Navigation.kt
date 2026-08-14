@@ -1,5 +1,7 @@
 package com.example.ghostcart
 
+import android.app.Activity
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.animateColorAsState
@@ -58,6 +60,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -141,6 +144,7 @@ import com.example.ghostcart.ui.tutorial.TutorialScreen
 import com.example.ghostcart.ui.tutorial.TutorialGuideSpec
 import com.example.ghostcart.ui.tutorial.TutorialViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private val onboardingDestinations: Set<NavKey> = setOf(Splash, Auth, ProfileSelect, Personalization, Tutorial)
 
@@ -233,6 +237,24 @@ fun MainNavigation(
         current == GhostCartList || current == GhostCheckout
     BackHandler(enabled = tutorialActive && tutorialProductionRoute) {
         showTutorialExitDialog = true
+    }
+
+    // Home is the app's root destination - back-pressing there has nothing to pop to, so
+    // Android's default behavior is to exit immediately. Require a confirming second press
+    // (standard "tap back again to exit" pattern) so a stray back tap doesn't kill the app.
+    var homeExitArmed by remember { mutableStateOf(false) }
+    val exitArmScope = rememberCoroutineScope()
+    BackHandler(enabled = current == Home && !tutorialActive) {
+        if (homeExitArmed) {
+            (context as? Activity)?.finish()
+        } else {
+            homeExitArmed = true
+            Toast.makeText(context, "Tap back again to exit", Toast.LENGTH_SHORT).show()
+            exitArmScope.launch {
+                delay(2000)
+                homeExitArmed = false
+            }
+        }
     }
 
     LaunchedEffect(state.simulationConsentStatus?.accepted, state.simulationConsentStatus?.version) {

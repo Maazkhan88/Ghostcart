@@ -84,6 +84,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ghostcart.data.Marketplace
@@ -225,15 +226,15 @@ fun GhostCartListScreen(
                                 .clickable { onOpenProduct(product.id) }
                                 .padding(horizontal = 12.dp)
                         ) {
-                            Text(text = product.name, color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                            com.example.ghostcart.ui.DirhamAmount("${product.price}", tint = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Normal, glyphSize = 9.dp)
                             Text(
-                                text = "Delivery time chosen at checkout",
-                                color = MutedText,
-                                fontSize = 10.sp,
+                                text = product.name,
+                                color = Ink,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(top = 4.dp)
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
                             )
+                            com.example.ghostcart.ui.DirhamAmount("${product.price}", tint = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Normal, glyphSize = 9.dp)
                         }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -298,7 +299,7 @@ fun GhostCartListScreen(
         }
 
         if (hasProducts) {
-            Box(
+            Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
@@ -307,22 +308,23 @@ fun GhostCartListScreen(
                     // there's no scroll position to rest it above.
                     .padding(bottom = 120.dp)
                     .background(Paper)
-                    .border(width = 1.dp, color = FaintBorder)
-                    .padding(horizontal = 20.dp, vertical = 12.dp)
             ) {
-                PrimaryButton(
-                    text = "Proceed to Ghost Checkout",
-                    onClick = onCheckout,
-                    modifier = Modifier.then(
-                        if (tutorialGuide != null) {
-                            Modifier.onGloballyPositioned { coordinates ->
-                                tutorialTarget = coordinates.boundsInRoot().translate(
-                                    Offset(-rootPosition.x, -rootPosition.y)
-                                )
-                            }
-                        } else Modifier
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(FaintBorder))
+                Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
+                    PrimaryButton(
+                        text = "Proceed to Ghost Checkout",
+                        onClick = onCheckout,
+                        modifier = Modifier.then(
+                            if (tutorialGuide != null) {
+                                Modifier.onGloballyPositioned { coordinates ->
+                                    tutorialTarget = coordinates.boundsInRoot().translate(
+                                        Offset(-rootPosition.x, -rootPosition.y)
+                                    )
+                                }
+                            } else Modifier
+                        )
                     )
-                )
+                }
             }
         }
 
